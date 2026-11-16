@@ -3,7 +3,7 @@
 --             5회 실패 잠금과 전역 상한, 실패 기록이 남는 것, 동의 처리
 begin;
 select plan(20);
-delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
+delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('c1000000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false), -- 가족F 자녀

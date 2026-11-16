@@ -3,7 +3,7 @@
 --             같은 질문에 다시 답해도(콘텐츠 순환) 오류 없이 갱신, 동의 없는 저장 거부, 입력 검증
 begin;
 select plan(15);
-delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만)
+delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만)
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('61000000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false), -- 자녀
@@ -55,7 +55,7 @@ select throws_like($$ select public.save_answer('6c000000-0000-0000-0000-0000000
 
 -- 12. 콘텐츠가 없으면 null
 reset role;
-delete from public.answers; delete from public.content_photos; delete from public.content_questions;
+delete from public.answers; delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 select pg_temp.act_as('61000000-0000-0000-0000-0000000000a1', true);
 select is(public.get_today_content(), null::jsonb, '콘텐츠가 없으면 null이다');
 

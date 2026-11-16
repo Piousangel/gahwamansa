@@ -2,7 +2,7 @@
 -- 보호하는 것: 다른 가족 데이터 비공개, 쓰기 권한 분리, 동의 거부 시 답변 저장 금지
 begin;
 select plan(17);
-delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
+delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
 
 -- ---------- 시드 (테스트 트랜잭션 안에서만 존재, 마지막에 rollback) ----------
 insert into auth.users (id, aud, role, is_anonymous) values
