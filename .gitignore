@@ -1,0 +1,25 @@
+# 의존성·빌드 산출물
+node_modules/
+
+# macOS
+.DS_Store
+
+# 작업 도구 상태(진행 기록은 flow 규칙상 커밋하지 않음)
+.claude/
+.gstack/
+
+# Supabase 로컬 상태
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# 비밀값·서명 키: 절대 커밋하지 않는다
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+!debug.keystore
+google-services.json
+GoogleService-Info.plist
+app/src/lib/config.local.ts
