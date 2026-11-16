@@ -1,0 +1,359 @@
+[
+ {
+  "file": "child/c0_login/C0_cancelled.dc.html",
+  "id": "C0",
+  "state": "cancelled",
+  "title": "C0 로그인 · 취소",
+  "interactive": false
+ },
+ {
+  "file": "child/c0_login/C0_default.dc.html",
+  "id": "C0",
+  "state": "default",
+  "title": "C0 로그인 · 기본",
+  "interactive": false
+ },
+ {
+  "file": "child/c0_login/C0_error.dc.html",
+  "id": "C0",
+  "state": "error",
+  "title": "C0 로그인 · 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c0_login/C0_loading.dc.html",
+  "id": "C0",
+  "state": "loading",
+  "title": "C0 로그인 · 로그인 중",
+  "interactive": false
+ },
+ {
+  "file": "child/c1_family/C1_creating.dc.html",
+  "id": "C1",
+  "state": "creating",
+  "title": "C1 가족 만들기 · 생성 중",
+  "interactive": false
+ },
+ {
+  "file": "child/c1_family/C1_error.dc.html",
+  "id": "C1",
+  "state": "error",
+  "title": "C1 가족 만들기 · 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c1_family/C1_error_already.dc.html",
+  "id": "C1",
+  "state": "error_already",
+  "title": "C1 가족 만들기 · 이미 가족 있음(already_has_profile)",
+  "interactive": false
+ },
+ {
+  "file": "child/c1_family/C1_first.dc.html",
+  "id": "C1",
+  "state": "first",
+  "title": "C1 가족 만들기 · 첫 가입 직후",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_copied.dc.html",
+  "id": "C2",
+  "state": "copied",
+  "title": "C2 초대 번호 · 복사됨",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_default.dc.html",
+  "id": "C2",
+  "state": "default",
+  "title": "C2 초대 번호 · 기본(복사 눌러 보기)",
+  "interactive": true
+ },
+ {
+  "file": "child/c2_invite/C2_error.dc.html",
+  "id": "C2",
+  "state": "error",
+  "title": "C2 초대 번호 · 발급 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_expired.dc.html",
+  "id": "C2",
+  "state": "expired",
+  "title": "C2 초대 번호 · 만료됨",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_issuing.dc.html",
+  "id": "C2",
+  "state": "issuing",
+  "title": "C2 초대 번호 · 만드는 중",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_multiple.dc.html",
+  "id": "C2",
+  "state": "multiple",
+  "title": "C2 초대 번호 · 여러 개(최대 5)",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_reconnect.dc.html",
+  "id": "C2",
+  "state": "reconnect",
+  "title": "C2 초대 번호 · 재연결 번호 24시간",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_reconnect_copied.dc.html",
+  "id": "C2",
+  "state": "reconnect_copied",
+  "title": "C2 초대 번호 · 재연결 번호 복사됨",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_reconnect_error.dc.html",
+  "id": "C2",
+  "state": "reconnect_error",
+  "title": "C2 초대 번호 · 재연결 번호 발급 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c2_invite/C2_reconnect_expired.dc.html",
+  "id": "C2",
+  "state": "reconnect_expired",
+  "title": "C2 초대 번호 · 재연결 번호 만료",
+  "interactive": false
+ },
+ {
+  "file": "child/c3_wait/C3_connected.dc.html",
+  "id": "C3",
+  "state": "connected",
+  "title": "C3 연결 완료",
+  "interactive": false
+ },
+ {
+  "file": "child/c3_wait/C3_waiting.dc.html",
+  "id": "C3",
+  "state": "waiting",
+  "title": "C3 연결 대기",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_cheer_error.dc.html",
+  "id": "C4",
+  "state": "cheer_error",
+  "title": "C4 자녀 홈 · 응원 보내기 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_cheer_selected.dc.html",
+  "id": "C4",
+  "state": "cheer_selected",
+  "title": "C4 자녀 홈 · 응원 문구 선택됨",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_cheer_sending.dc.html",
+  "id": "C4",
+  "state": "cheer_sending",
+  "title": "C4 자녀 홈 · 응원 보내는 중",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_cheer_sent.dc.html",
+  "id": "C4",
+  "state": "cheer_sent",
+  "title": "C4 자녀 홈 · 응원 보냄",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_cheer_sheet.dc.html",
+  "id": "C4",
+  "state": "cheer_sheet",
+  "title": "C4 자녀 홈 · 응원 문구 8개 시트",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_declined.dc.html",
+  "id": "C4",
+  "state": "declined",
+  "title": "C4 자녀 홈 · 거부 상태",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_done.dc.html",
+  "id": "C4",
+  "state": "done",
+  "title": "C4 자녀 홈 · 오늘 참여 완료(응원 눌러 보기)",
+  "interactive": true
+ },
+ {
+  "file": "child/c4_home/C4_empty.dc.html",
+  "id": "C4",
+  "state": "empty",
+  "title": "C4 자녀 홈 · 어르신 연결 전",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_error.dc.html",
+  "id": "C4",
+  "state": "error",
+  "title": "C4 자녀 홈 · 오류",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_loading.dc.html",
+  "id": "C4",
+  "state": "loading",
+  "title": "C4 자녀 홈 · 로딩",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_partial.dc.html",
+  "id": "C4",
+  "state": "partial",
+  "title": "C4 자녀 홈 · 진행 중(1/3)",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_pending.dc.html",
+  "id": "C4",
+  "state": "pending",
+  "title": "C4 자녀 홈 · 오늘 아직(0/3)",
+  "interactive": false
+ },
+ {
+  "file": "child/c4_home/C4_zoom150.dc.html",
+  "id": "C4",
+  "state": "zoom150",
+  "title": "C4 자녀 홈 · 글자 확대 150%",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_data.dc.html",
+  "id": "C5",
+  "state": "data",
+  "title": "C5 리포트 · 최근 선택 있음",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_declined.dc.html",
+  "id": "C5",
+  "state": "declined",
+  "title": "C5 리포트 · 거부 상태",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_empty.dc.html",
+  "id": "C5",
+  "state": "empty",
+  "title": "C5 리포트 · 데이터 없음",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_error.dc.html",
+  "id": "C5",
+  "state": "error",
+  "title": "C5 리포트 · 오류",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_loading.dc.html",
+  "id": "C5",
+  "state": "loading",
+  "title": "C5 리포트 · 로딩",
+  "interactive": false
+ },
+ {
+  "file": "child/c5_report/C5_unlinked.dc.html",
+  "id": "C5",
+  "state": "unlinked",
+  "title": "C5 리포트 · 어르신 연결 전",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_child_1.dc.html",
+  "id": "C8",
+  "state": "child_1",
+  "title": "C8 삭제 확인 · 내 계정만 · 1차",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_child_2.dc.html",
+  "id": "C8",
+  "state": "child_2",
+  "title": "C8 삭제 확인 · 내 계정만 · 2차 확인",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_deleting_child.dc.html",
+  "id": "C8",
+  "state": "deleting_child",
+  "title": "C8 삭제 확인 · 삭제 중 · 내 계정",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_deleting_family.dc.html",
+  "id": "C8",
+  "state": "deleting_family",
+  "title": "C8 삭제 확인 · 삭제 중 · 가족 전체",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_failed.dc.html",
+  "id": "C8",
+  "state": "failed",
+  "title": "C8 삭제 확인 · 삭제 실패",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_family.dc.html",
+  "id": "C8",
+  "state": "family",
+  "title": "C8 삭제 확인 · 마지막 보호자 · 입력 전",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_family_typed.dc.html",
+  "id": "C8",
+  "state": "family_typed",
+  "title": "C8 삭제 확인 · 마지막 보호자 · 입력 완료",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_preview_failed.dc.html",
+  "id": "C8",
+  "state": "preview_failed",
+  "title": "C8 삭제 확인 · 사전 조회 실패 · 입력 전",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_preview_failed_typed.dc.html",
+  "id": "C8",
+  "state": "preview_failed_typed",
+  "title": "C8 삭제 확인 · 사전 조회 실패 · 입력 완료",
+  "interactive": false
+ },
+ {
+  "file": "child/c8_delete/C8_preview_loading.dc.html",
+  "id": "C8",
+  "state": "preview_loading",
+  "title": "C8 삭제 확인 · 사전 조회 중",
+  "interactive": false
+ },
+ {
+  "file": "child/c9_deleted/C9_child.dc.html",
+  "id": "C9",
+  "state": "child",
+  "title": "C9 삭제 완료 · 내 계정",
+  "interactive": false
+ },
+ {
+  "file": "child/c9_deleted/C9_family.dc.html",
+  "id": "C9",
+  "state": "family",
+  "title": "C9 삭제 완료 · 가족 전체",
+  "interactive": false
+ }
+]

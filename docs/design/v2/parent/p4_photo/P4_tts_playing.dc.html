@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>P4_tts_playing · 읽어 주세요 재생 중</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Jua&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#FBF1DC;color:#2F2A24;font-family:'Noto Sans KR',sans-serif;display:flex;flex-direction:column;position:relative;padding:56px 24px 28px;gap:14px"><div style="position:absolute;left:24px;top:14px;right:24px;font-size:12px;font-weight:700;color:#5C4E33">[시안 메모] P4 읽어 주세요 재생 중 · 누르면 읽기/멈추기 전환 · [문구 확정 필요] "읽어 주세요"</div><div style="display:flex;align-items:center;justify-content:space-between"><div style="font-family:'Jua',sans-serif;font-size:26px;color:#9A3412">1단계 · 사진 보기</div><div style="font-size:20px;color:#5C4E33;font-weight:700">1 / 3</div></div><div style="position:relative;align-self:center;width:300px;transform:rotate(-1deg)"><div style="position:absolute;left:104px;top:-12px;width:92px;height:26px;background:#F3E3B8;transform:rotate(3deg);z-index:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:#5C4E33">[테이프]</div><div style="background:#fff;padding:14px;box-shadow:0 6px 14px rgba(92,78,51,0.28);display:flex;flex-direction:column;gap:8px"><div style="width:272px;height:200px;box-sizing:border-box;flex-shrink:0;border:2px dashed #8C7A55;background:#EFE4CC;color:#5C4E33;display:flex;align-items:center;justify-content:center;text-align:center;font-size:16px;font-weight:700;line-height:1.2">[사진 자리]<br>AI 옛날 사진 · 272x200</div><div style="font-family:'Nanum Pen Script',cursive;font-size:32px;color:#6B4F25;text-align:center;line-height:1.1">마을 입구 나무</div></div></div><div style="display:flex;align-items:center;gap:12px"><div style="width:56px;height:56px;box-sizing:border-box;flex-shrink:0;border:2px dashed #8C7A55;background:#EFE4CC;color:#5C4E33;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:700;line-height:1.2">[해님:<br>기본]</div><div style="font-size:20px;font-weight:500;line-height:1.4">천천히 보세요. 서두르지 않아도 돼요</div></div><div style="background:#fff;border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 0 #E3D3B0"><div style="display:flex;gap:10px;padding:6px 8px;border-radius:12px;background:{{hl}};font-size:22px;font-weight:500;line-height:1.4"><span style="font-weight:700;color:#9A3412">1</span><span>이 나무 아래서 쉬어 본 적 있으세요?</span></div><div style="display:flex;gap:10px;padding:6px 8px;border-radius:12px;background:transparent;font-size:22px;font-weight:500;line-height:1.4"><span style="font-weight:700;color:#9A3412">2</span><span>어떤 계절의 나무가 떠오르세요?</span></div></div><div style="flex-grow:1"></div><div role="button"  style="display:flex;align-items:center;justify-content:center;height:72px;border-radius:36px;box-sizing:border-box;background:#C2410C;color:#fff;font-family:'Jua',sans-serif;font-size:32px;box-shadow:0 4px 0 #7C2D12;">다 봤어요</div><div role="button" onClick="{{toggle}}" style="display:flex;align-items:center;justify-content:center;gap:10px;height:64px;border-radius:32px;background:{{subBg}};border:3px solid {{subBd}};box-sizing:border-box;color:#9A3412;font-family:'Jua',sans-serif;font-size:26px"><div style="width:32px;height:32px;box-sizing:border-box;flex-shrink:0;border:2px dashed #8C7A55;background:#EFE4CC;color:#5C4E33;display:flex;align-items:center;justify-content:center;text-align:center;font-size:8px;font-weight:700;line-height:1.2">[아이콘:<br>스피커]</div>{{subLabel}}</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { playing: true };
+  }
+  renderVals() {
+    const p = this.state.playing;
+    return {
+      subLabel: p ? '멈추기' : '읽어 주세요',
+      subBg: p ? '#FFD9C2' : '#FFFFFF',
+      subBd: p ? '#C2410C' : '#9A3412',
+      hl: p ? '#FFD9C2' : 'transparent',
+      toggle: () => this.setState({ playing: !p })
+    };
+  }
+}
+</script>
+</body>
+</html>

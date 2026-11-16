@@ -1,0 +1,247 @@
+[
+ {
+  "file": "parent/p0_start/P0_loading.dc.html",
+  "id": "P0",
+  "state": "loading",
+  "title": "P0 시작 · 복원 중(로딩)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p0_start/P0_restore_failed.dc.html",
+  "id": "P0",
+  "state": "restore_failed",
+  "title": "P0 시작 · 복원 실패(P1로 이동)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_default.dc.html",
+  "id": "P1",
+  "state": "default",
+  "title": "P1 코드 입력 · 기본",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_typing.dc.html",
+  "id": "P1",
+  "state": "typing",
+  "title": "P1 코드 입력 · 입력 중(3자리)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_complete.dc.html",
+  "id": "P1",
+  "state": "complete",
+  "title": "P1 코드 입력 · 6자리 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_checking.dc.html",
+  "id": "P1",
+  "state": "checking",
+  "title": "P1 코드 입력 · 확인 중(로딩)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_invalid.dc.html",
+  "id": "P1",
+  "state": "error_invalid",
+  "title": "P1 코드 입력 · 오류 invalid",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_used.dc.html",
+  "id": "P1",
+  "state": "error_used",
+  "title": "P1 코드 입력 · 오류 used",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_expired.dc.html",
+  "id": "P1",
+  "state": "error_expired",
+  "title": "P1 코드 입력 · 오류 expired",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_already_linked.dc.html",
+  "id": "P1",
+  "state": "error_already_linked",
+  "title": "P1 코드 입력 · 오류 already_linked",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_not_parent_device.dc.html",
+  "id": "P1",
+  "state": "error_not_parent_device",
+  "title": "P1 코드 입력 · 오류 not_parent_device",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_offline.dc.html",
+  "id": "P1",
+  "state": "error_offline",
+  "title": "P1 코드 입력 · 오류 offline",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_error_server.dc.html",
+  "id": "P1",
+  "state": "error_server",
+  "title": "P1 코드 입력 · 오류 서버오류(임시 문구)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_locked.dc.html",
+  "id": "P1",
+  "state": "locked",
+  "title": "P1 코드 입력 · 잠금(rate_limited, 남은 시간)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_busy.dc.html",
+  "id": "P1",
+  "state": "busy",
+  "title": "P1 코드 입력 · busy",
+  "interactive": false
+ },
+ {
+  "file": "parent/p1_connect/P1_zoom150.dc.html",
+  "id": "P1",
+  "state": "zoom150",
+  "title": "P1 코드 입력 · 글자 확대 150%",
+  "interactive": false
+ },
+ {
+  "file": "parent/p2_consent/P2_default.dc.html",
+  "id": "P2",
+  "state": "default",
+  "title": "P2 동의 · 기본(누르면 거부 안내로 전환)",
+  "interactive": true
+ },
+ {
+  "file": "parent/p2_consent/P2_processing.dc.html",
+  "id": "P2",
+  "state": "processing",
+  "title": "P2 동의 · 동의 처리 중",
+  "interactive": false
+ },
+ {
+  "file": "parent/p2_consent/P2_failed.dc.html",
+  "id": "P2",
+  "state": "failed",
+  "title": "P2 동의 · 동의 실패(오류)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p2_consent/P2_declined.dc.html",
+  "id": "P2",
+  "state": "declined",
+  "title": "P2 동의 · 거부 후 안내(보기만 가능)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_step0.dc.html",
+  "id": "P3",
+  "state": "step0",
+  "title": "P3 코스 홈 · 0/3 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_step1.dc.html",
+  "id": "P3",
+  "state": "step1",
+  "title": "P3 코스 홈 · 1/3 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_step2.dc.html",
+  "id": "P3",
+  "state": "step2",
+  "title": "P3 코스 홈 · 2/3 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_step3.dc.html",
+  "id": "P3",
+  "state": "step3",
+  "title": "P3 코스 홈 · 3/3 완료(방금 마침)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_done_today.dc.html",
+  "id": "P3",
+  "state": "done_today",
+  "title": "P3 코스 홈 · 오늘 완료(course_done_today)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_stamps_0.dc.html",
+  "id": "P3",
+  "state": "stamps_0",
+  "title": "P3 코스 홈 · 도장 줄 0일",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_stamps_1.dc.html",
+  "id": "P3",
+  "state": "stamps_1",
+  "title": "P3 코스 홈 · 도장 줄 1일",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_stamps_3.dc.html",
+  "id": "P3",
+  "state": "stamps_3",
+  "title": "P3 코스 홈 · 도장 줄 3일",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_stamps_7.dc.html",
+  "id": "P3",
+  "state": "stamps_7",
+  "title": "P3 코스 홈 · 도장 줄 7일",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_stamps_8plus.dc.html",
+  "id": "P3",
+  "state": "stamps_8plus",
+  "title": "P3 코스 홈 · 도장 줄 8일 이상(9일 예시)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_loading.dc.html",
+  "id": "P3",
+  "state": "loading",
+  "title": "P3 코스 홈 · 로딩",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_no_content.dc.html",
+  "id": "P3",
+  "state": "no_content",
+  "title": "P3 코스 홈 · 콘텐츠 없음(no_content)",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_offline.dc.html",
+  "id": "P3",
+  "state": "offline",
+  "title": "P3 코스 홈 · 오프라인",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_declined.dc.html",
+  "id": "P3",
+  "state": "declined",
+  "title": "P3 코스 홈 · 거부 상태(작은 동의 안내 \"좋아요\")",
+  "interactive": false
+ },
+ {
+  "file": "parent/p3_coursehome/P3_zoom150.dc.html",
+  "id": "P3",
+  "state": "zoom150",
+  "title": "P3 코스 홈 · 글자 확대 150%",
+  "interactive": false
+ }
+]

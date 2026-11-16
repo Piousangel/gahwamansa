@@ -1,0 +1,212 @@
+[
+ {
+  "file": "parent/p10_delete_done/P10_done.dc.html",
+  "id": "P10",
+  "state": "done",
+  "title": "P10 · 삭제 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p4_photo/P4_photo_load_failed.dc.html",
+  "id": "P4",
+  "state": "photo_load_failed",
+  "title": "P4 · 사진 로드 실패",
+  "interactive": false
+ },
+ {
+  "file": "parent/p4_photo/P4_photo_ok.dc.html",
+  "id": "P4",
+  "state": "photo_ok",
+  "title": "P4 · 사진 있음",
+  "interactive": false
+ },
+ {
+  "file": "parent/p4_photo/P4_photo_placeholder.dc.html",
+  "id": "P4",
+  "state": "photo_placeholder",
+  "title": "P4 · 사진 준비 중",
+  "interactive": false
+ },
+ {
+  "file": "parent/p4_photo/P4_record_error.dc.html",
+  "id": "P4",
+  "state": "record_error",
+  "title": "P4 · 기록 실패",
+  "interactive": false
+ },
+ {
+  "file": "parent/p4_photo/P4_tts_playing.dc.html",
+  "id": "P4",
+  "state": "tts_playing",
+  "title": "P4 · 읽어 주세요 재생 중",
+  "interactive": true
+ },
+ {
+  "file": "parent/p4_photo/P4_tts_pressed.dc.html",
+  "id": "P4",
+  "state": "tts_pressed",
+  "title": "P4 · 읽어 주세요 눌림",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_declined_proceed.dc.html",
+  "id": "P5",
+  "state": "declined_proceed",
+  "title": "P5 · 저장 안 함 진행",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_no_prompt.dc.html",
+  "id": "P5",
+  "state": "no_prompt",
+  "title": "P5 · 질문 문장 없음 폴백",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_preselected.dc.html",
+  "id": "P5",
+  "state": "preselected",
+  "title": "P5 · 이미 고른 답 미리 선택",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_save_error.dc.html",
+  "id": "P5",
+  "state": "save_error",
+  "title": "P5 · 저장 실패",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_selected_a.dc.html",
+  "id": "P5",
+  "state": "selected_a",
+  "title": "P5 · A 선택됨",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_selected_b.dc.html",
+  "id": "P5",
+  "state": "selected_b",
+  "title": "P5 · B 선택됨",
+  "interactive": false
+ },
+ {
+  "file": "parent/p5_question/P5_unselected.dc.html",
+  "id": "P5",
+  "state": "unselected",
+  "title": "P5 · 선택 전",
+  "interactive": true
+ },
+ {
+  "file": "parent/p6_hangul/P6_before.dc.html",
+  "id": "P6",
+  "state": "before",
+  "title": "P6 · 쓰기 전",
+  "interactive": false
+ },
+ {
+  "file": "parent/p6_hangul/P6_done.dc.html",
+  "id": "P6",
+  "state": "done",
+  "title": "P6 · 완료",
+  "interactive": false
+ },
+ {
+  "file": "parent/p6_hangul/P6_erased.dc.html",
+  "id": "P6",
+  "state": "erased",
+  "title": "P6 · 지우고 다시",
+  "interactive": false
+ },
+ {
+  "file": "parent/p6_hangul/P6_record_error.dc.html",
+  "id": "P6",
+  "state": "record_error",
+  "title": "P6 · 기록 실패",
+  "interactive": false
+ },
+ {
+  "file": "parent/p6_hangul/P6_writing.dc.html",
+  "id": "P6",
+  "state": "writing",
+  "title": "P6 · 쓰는 중",
+  "interactive": false
+ },
+ {
+  "file": "parent/p9_delete/P9_deleting.dc.html",
+  "id": "P9",
+  "state": "deleting",
+  "title": "P9 · 삭제 중",
+  "interactive": false
+ },
+ {
+  "file": "parent/p9_delete/P9_error.dc.html",
+  "id": "P9",
+  "state": "error",
+  "title": "P9 · 삭제 실패",
+  "interactive": false
+ },
+ {
+  "file": "parent/p9_delete/P9_step1.dc.html",
+  "id": "P9",
+  "state": "step1",
+  "title": "P9 · 1차 확인",
+  "interactive": false
+ },
+ {
+  "file": "parent/p9_delete/P9_step2.dc.html",
+  "id": "P9",
+  "state": "step2",
+  "title": "P9 · 2차 확인",
+  "interactive": false
+ },
+ {
+  "file": "common/s1_error/S1_offline.dc.html",
+  "id": "S1",
+  "state": "offline",
+  "title": "S1 · 오프라인",
+  "interactive": false
+ },
+ {
+  "file": "common/s1_error/S1_retrying.dc.html",
+  "id": "S1",
+  "state": "retrying",
+  "title": "S1 · 다시 하기 확인 중",
+  "interactive": false
+ },
+ {
+  "file": "common/s1_error/S1_server_error.dc.html",
+  "id": "S1",
+  "state": "server_error",
+  "title": "S1 · 서버 오류",
+  "interactive": false
+ },
+ {
+  "file": "common/s2_loading_empty/S2_empty.dc.html",
+  "id": "S2",
+  "state": "empty",
+  "title": "S2 · 빈 상태",
+  "interactive": false
+ },
+ {
+  "file": "common/s2_loading_empty/S2_loading.dc.html",
+  "id": "S2",
+  "state": "loading",
+  "title": "S2 · 로딩",
+  "interactive": false
+ },
+ {
+  "file": "common/s2_loading_empty/S2_loading_skeleton.dc.html",
+  "id": "S2",
+  "state": "loading_skeleton",
+  "title": "S2 · 로딩 자리 잡기",
+  "interactive": false
+ },
+ {
+  "file": "common/s2_loading_empty/S2_rules.dc.html",
+  "id": "S2",
+  "state": "rules",
+  "title": "S2 · 규칙표",
+  "interactive": false
+ }
+]
