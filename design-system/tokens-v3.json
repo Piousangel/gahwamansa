@@ -1,0 +1,802 @@
+{
+  "_meta": {
+    "name": "토큰 v3 확정안",
+    "date": "2026-11-17",
+    "status": "제안(v3 색 방향은 사용자 승인됨). 폰트는 라이선스 미확인으로 확정하지 않음(fontCandidate). inkTitle(#4E2F14) 도입은 TOKENS-V2-PROPOSAL T3 승인 대기",
+    "basis": "docs/design/tokens-v2.json 색 매핑, docs/team/designer.md §8~9, app/src/ui/tokens.ts. 대비는 WCAG 2.x 상대휘도 공식으로 계산(소수 2자리)",
+    "rule": "색은 역할 이름으로만 참조. 헥스 직접 사용 금지"
+  },
+  "color": {
+    "paper": {
+      "value": "#F6F3EE",
+      "role": "종이(화면 바탕)",
+      "v2From": "#FBF1DC"
+    },
+    "card": {
+      "value": "#FFFFFF",
+      "role": "카드·폴라로이드 흰색"
+    },
+    "paperSoft": {
+      "value": "#EFE9E0",
+      "role": "연한 종이 면·로딩 자리",
+      "v2From": "#EFE4CC"
+    },
+    "paperEdge": {
+      "value": "#E6DCD0",
+      "role": "종이 가장자리·얇은 구분",
+      "v2From": "#E3D3B0"
+    },
+    "ink": {
+      "value": "#744821",
+      "role": "본문 글씨, 주 버튼 배경, 손글씨",
+      "v2From": "#2F2A24",
+      "note": "손글씨(v2 #6B4F25)도 같은 값"
+    },
+    "inkTitle": {
+      "value": "#4E2F14",
+      "role": "제목 글씨(v2 제안 T3, 승인 대기)",
+      "note": "v2에 없던 신규. 제목·강조 글자 전용"
+    },
+    "inkSub": {
+      "value": "#85592F",
+      "role": "보조 글씨(20 이상에서만)",
+      "v2From": "#5C4E33"
+    },
+    "action": {
+      "value": "#744821",
+      "role": "주 버튼·선택 테두리",
+      "v2From": "#C2410C"
+    },
+    "actionPressed": {
+      "value": "#5A3716",
+      "role": "주 버튼 눌림",
+      "v2From": "#9A3412"
+    },
+    "actionSoft": {
+      "value": "#EFE0CF",
+      "role": "선택됨·지금 단계 면",
+      "v2From": "#FFD9C2"
+    },
+    "noticeSoft": {
+      "value": "#F1E4D4",
+      "role": "안내·입력 중 면",
+      "v2From": "#FFF3E0"
+    },
+    "line": {
+      "value": "#A67C5A",
+      "role": "테두리·빈 칸(조작 요소)",
+      "v2From": "#8C7A55"
+    },
+    "lineSoft": {
+      "value": "#E3D5C5",
+      "role": "구분선(정보 전달 안 함)",
+      "v2From": "#D9CBB0"
+    },
+    "lineGhost": {
+      "value": "#D8C6B0",
+      "role": "가장 연한 장식선",
+      "v2From": "#D2C29D"
+    },
+    "disabledBg": {
+      "value": "#ECE8E3",
+      "role": "비활성 면",
+      "v2From": "#E6D9BD"
+    },
+    "disabledInk": {
+      "value": "#6B5C4A",
+      "role": "비활성 글자"
+    },
+    "tape": {
+      "value": "#EADBC4",
+      "role": "폴라로이드 테이프",
+      "v2From": "#F3E3B8"
+    },
+    "done": {
+      "value": "#166534",
+      "role": "완료 아이콘"
+    },
+    "doneInk": {
+      "value": "#14532D",
+      "role": "완료 글자"
+    },
+    "doneSoft": {
+      "value": "#CDEBDD",
+      "role": "완료 면"
+    },
+    "danger": {
+      "value": "#B91C1C",
+      "role": "오류 테두리·오류 글자(종이/카드 위)"
+    },
+    "dangerInk": {
+      "value": "#991B1B",
+      "role": "위험 글자·위험 테두리"
+    },
+    "dangerSoft": {
+      "value": "#FEE2E2",
+      "role": "위험·오류 면"
+    },
+    "sky": {
+      "value": "#CFE6F7",
+      "role": "한글 쓰기 단계 면"
+    },
+    "sun": {
+      "value": "#FFC93C",
+      "role": "해님 노랑(캐릭터 전용)"
+    },
+    "sunRay": {
+      "value": "#F59E0B",
+      "role": "해님 햇살"
+    },
+    "blush": {
+      "value": "#FF9E7A",
+      "role": "해님 볼"
+    }
+  },
+  "colorRules": [
+    "주황이 아니라 갈색 계열: 누르는 곳·지금 할 차례·선택 = action 계열, 끝난 것 = done 초록. 반대로 쓰지 않음",
+    "색만으로 상태를 구분하지 않음: 항상 글자 또는 아이콘 또는 모양(두께·외곽선)을 함께 씀",
+    "danger와 action의 명도 대비는 1.21로 거의 같음: 위험은 외곽선(비채움) + 경고 아이콘 + 문구로 구분",
+    "inkSub는 20px 이상 글자에만, paperSoft·noticeSoft·actionSoft·sky 위에서는 4.68~4.84로 여유가 작아 크기를 줄이지 않음",
+    "inkSub를 lineSoft(#E3D5C5) 위에 쓰지 않음(4.21, 기준 미달)",
+    "line(#A67C5A)은 noticeSoft(2.97)·actionSoft(2.87) 위에서 3 미만이라 단독 경계로 쓰지 않고 action 테두리나 아이콘·글자 단서를 함께 씀",
+    "해님 노랑·햇살·볼은 캐릭터 전용, 글자 배경으로 쓰지 않음(글자는 ink 5.08, 큰 글자만)"
+  ],
+  "contrast": {
+    "method": "WCAG 2.x 상대휘도, (L1+0.05)/(L2+0.05)",
+    "text": [
+      {
+        "fg": "#744821",
+        "bg": "#F6F3EE",
+        "fgRole": "ink",
+        "bgRole": "paper",
+        "use": "본문 on 종이",
+        "ratio": 7.05,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#FFFFFF",
+        "fgRole": "ink",
+        "bgRole": "card",
+        "use": "본문 on 카드",
+        "ratio": 7.8,
+        "pass45": true
+      },
+      {
+        "fg": "#4E2F14",
+        "bg": "#F6F3EE",
+        "fgRole": "inkTitle",
+        "bgRole": "paper",
+        "use": "제목 on 종이",
+        "ratio": 10.9,
+        "pass45": true
+      },
+      {
+        "fg": "#4E2F14",
+        "bg": "#FFFFFF",
+        "fgRole": "inkTitle",
+        "bgRole": "card",
+        "use": "제목 on 카드",
+        "ratio": 12.06,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#F6F3EE",
+        "fgRole": "inkSub",
+        "bgRole": "paper",
+        "use": "보조글 on 종이",
+        "ratio": 5.47,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#FFFFFF",
+        "fgRole": "inkSub",
+        "bgRole": "card",
+        "use": "보조글 on 카드",
+        "ratio": 6.06,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#EFE9E0",
+        "fgRole": "inkSub",
+        "bgRole": "paperSoft",
+        "use": "보조글 on 연한면",
+        "ratio": 5.02,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#F1E4D4",
+        "fgRole": "inkSub",
+        "bgRole": "noticeSoft",
+        "use": "보조글 on 안내상자",
+        "ratio": 4.84,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#EFE0CF",
+        "fgRole": "inkSub",
+        "bgRole": "actionSoft",
+        "use": "보조글 on 선택면",
+        "ratio": 4.68,
+        "pass45": true
+      },
+      {
+        "fg": "#FFFFFF",
+        "bg": "#744821",
+        "fgRole": "white",
+        "bgRole": "action",
+        "use": "주버튼 글자",
+        "ratio": 7.8,
+        "pass45": true
+      },
+      {
+        "fg": "#FFFFFF",
+        "bg": "#5A3716",
+        "fgRole": "white",
+        "bgRole": "actionPressed",
+        "use": "주버튼 눌림 글자",
+        "ratio": 10.54,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#EFE0CF",
+        "fgRole": "ink",
+        "bgRole": "actionSoft",
+        "use": "본문 on 선택·지금 카드",
+        "ratio": 6.03,
+        "pass45": true
+      },
+      {
+        "fg": "#4E2F14",
+        "bg": "#EFE0CF",
+        "fgRole": "inkTitle",
+        "bgRole": "actionSoft",
+        "use": "제목 on 선택·지금 카드",
+        "ratio": 9.33,
+        "pass45": true
+      },
+      {
+        "fg": "#5A3716",
+        "bg": "#EFE0CF",
+        "fgRole": "actionPressed",
+        "bgRole": "actionSoft",
+        "use": "보조버튼 눌림 글자",
+        "ratio": 8.15,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#F1E4D4",
+        "fgRole": "ink",
+        "bgRole": "noticeSoft",
+        "use": "본문 on 안내상자",
+        "ratio": 6.24,
+        "pass45": true
+      },
+      {
+        "fg": "#4E2F14",
+        "bg": "#F1E4D4",
+        "fgRole": "inkTitle",
+        "bgRole": "noticeSoft",
+        "use": "제목 on 안내상자",
+        "ratio": 9.64,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#EFE9E0",
+        "fgRole": "ink",
+        "bgRole": "paperSoft",
+        "use": "본문 on 연한면",
+        "ratio": 6.47,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#EADBC4",
+        "fgRole": "ink",
+        "bgRole": "tape",
+        "use": "본문 on 테이프색",
+        "ratio": 5.73,
+        "pass45": true
+      },
+      {
+        "fg": "#6B5C4A",
+        "bg": "#ECE8E3",
+        "fgRole": "disabledInk",
+        "bgRole": "disabledBg",
+        "use": "비활성 버튼 글자",
+        "ratio": 5.29,
+        "pass45": true
+      },
+      {
+        "fg": "#14532D",
+        "bg": "#CDEBDD",
+        "fgRole": "doneInk",
+        "bgRole": "doneSoft",
+        "use": "완료 글자",
+        "ratio": 7.17,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#CDEBDD",
+        "fgRole": "ink",
+        "bgRole": "doneSoft",
+        "use": "본문 on 완료 면",
+        "ratio": 6.14,
+        "pass45": true
+      },
+      {
+        "fg": "#166534",
+        "bg": "#FFFFFF",
+        "fgRole": "done",
+        "bgRole": "card",
+        "use": "완료 아이콘·글자 on 카드",
+        "ratio": 7.13,
+        "pass45": true
+      },
+      {
+        "fg": "#991B1B",
+        "bg": "#FEE2E2",
+        "fgRole": "dangerInk",
+        "bgRole": "dangerSoft",
+        "use": "위험 제목·글자",
+        "ratio": 6.8,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#FEE2E2",
+        "fgRole": "ink",
+        "bgRole": "dangerSoft",
+        "use": "본문 on 위험 면",
+        "ratio": 6.39,
+        "pass45": true
+      },
+      {
+        "fg": "#B91C1C",
+        "bg": "#F6F3EE",
+        "fgRole": "danger",
+        "bgRole": "paper",
+        "use": "위험 글자 on 종이",
+        "ratio": 5.85,
+        "pass45": true
+      },
+      {
+        "fg": "#B91C1C",
+        "bg": "#FFFFFF",
+        "fgRole": "danger",
+        "bgRole": "card",
+        "use": "위험 글자 on 카드",
+        "ratio": 6.47,
+        "pass45": true
+      },
+      {
+        "fg": "#991B1B",
+        "bg": "#FFFFFF",
+        "fgRole": "dangerInk",
+        "bgRole": "card",
+        "use": "위험 외곽선 버튼 글자",
+        "ratio": 8.31,
+        "pass45": true
+      },
+      {
+        "fg": "#FFFFFF",
+        "bg": "#991B1B",
+        "fgRole": "white",
+        "bgRole": "dangerInk",
+        "use": "위험 라벨칩 글자",
+        "ratio": 8.31,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#CFE6F7",
+        "fgRole": "ink",
+        "bgRole": "sky",
+        "use": "본문 on 하늘면",
+        "ratio": 6.06,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#CFE6F7",
+        "fgRole": "inkSub",
+        "bgRole": "sky",
+        "use": "보조글 on 하늘면",
+        "ratio": 4.71,
+        "pass45": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#FFC93C",
+        "fgRole": "ink",
+        "bgRole": "sun",
+        "use": "글자 on 해님노랑(큰 글자만)",
+        "ratio": 5.08,
+        "pass45": true
+      },
+      {
+        "fg": "#85592F",
+        "bg": "#E3D5C5",
+        "fgRole": "inkSub",
+        "bgRole": "lineSoft",
+        "use": "보조글 on 연한선색(금지 확인)",
+        "ratio": 4.21,
+        "pass45": false
+      }
+    ],
+    "nonText": [
+      {
+        "fg": "#A67C5A",
+        "bg": "#F6F3EE",
+        "fgRole": "line",
+        "bgRole": "paper",
+        "use": "테두리·빈칸 on 종이",
+        "ratio": 3.36,
+        "pass3": true
+      },
+      {
+        "fg": "#A67C5A",
+        "bg": "#FFFFFF",
+        "fgRole": "line",
+        "bgRole": "card",
+        "use": "테두리 on 카드",
+        "ratio": 3.72,
+        "pass3": true
+      },
+      {
+        "fg": "#A67C5A",
+        "bg": "#F1E4D4",
+        "fgRole": "line",
+        "bgRole": "noticeSoft",
+        "use": "테두리 on 안내상자",
+        "ratio": 2.97,
+        "pass3": false
+      },
+      {
+        "fg": "#A67C5A",
+        "bg": "#EFE0CF",
+        "fgRole": "line",
+        "bgRole": "actionSoft",
+        "use": "테두리 on 선택면",
+        "ratio": 2.87,
+        "pass3": false
+      },
+      {
+        "fg": "#744821",
+        "bg": "#FFFFFF",
+        "fgRole": "action",
+        "bgRole": "card",
+        "use": "선택 테두리 on 카드",
+        "ratio": 7.8,
+        "pass3": true
+      },
+      {
+        "fg": "#744821",
+        "bg": "#F1E4D4",
+        "fgRole": "action",
+        "bgRole": "noticeSoft",
+        "use": "입력 중 칸 on 안내면",
+        "ratio": 6.24,
+        "pass3": true
+      },
+      {
+        "fg": "#B91C1C",
+        "bg": "#FFFFFF",
+        "fgRole": "danger",
+        "bgRole": "card",
+        "use": "오류 테두리 on 카드",
+        "ratio": 6.47,
+        "pass3": true
+      },
+      {
+        "fg": "#991B1B",
+        "bg": "#FEE2E2",
+        "fgRole": "dangerInk",
+        "bgRole": "dangerSoft",
+        "use": "위험 테두리 on 위험면",
+        "ratio": 6.8,
+        "pass3": true
+      },
+      {
+        "fg": "#166534",
+        "bg": "#CDEBDD",
+        "fgRole": "done",
+        "bgRole": "doneSoft",
+        "use": "완료 체크 on 완료면",
+        "ratio": 5.61,
+        "pass3": true
+      },
+      {
+        "fg": "#D8C6B0",
+        "bg": "#F6F3EE",
+        "fgRole": "lineGhost",
+        "bgRole": "paper",
+        "use": "연한 선(장식, 정보 전달 안 함)",
+        "ratio": 1.5,
+        "pass3": false
+      }
+    ],
+    "note": "글자 조합 중 4.5 미만은 \"inkSub on lineSoft 4.21\" 한 건이며 금지 조합이라 쓰지 않는다(확인용으로 기재)."
+  },
+  "fontCandidate": {
+    "status": "미확정(라이선스 미확인: 사용자가 눈누 등에서 상업 이용 가능 여부 확인 필요, 앱에는 웹폰트가 아니라 폰트 파일 번들 필요)",
+    "current": {
+      "title": "Jua",
+      "body": "Noto Sans KR",
+      "hand": "Nanum Pen Script"
+    },
+    "roba": {
+      "title": "이사만루 Medium",
+      "body": "인피니티산스 Regular",
+      "hand": "(로바 가이드에 없음, Nanum Pen Script 유지 후보)",
+      "notes": "이사만루 Light는 가늘어 어르신 본문 금지, 큰 제목 장식 후보"
+    },
+    "compareChecklist": [
+      "한글 받침·이중모음이 20px에서 또렷한가",
+      "굵기 3단(보통/굵게/아주 굵게) 제공 여부",
+      "숫자(번호 칸 34px)의 모양 구분(1·7, 0·6)",
+      "150% 확대에서 줄 간격 1.3~1.5 유지",
+      "번들 용량과 라이선스 문구"
+    ],
+    "decisionNow": "시안과 앱은 현재 폰트를 유지하고 토큰 이름은 font.title/body/hand 로 추상화해 둠(교체 시 값만 바꿈)"
+  },
+  "typeScale": {
+    "unit": "px (RN dp)",
+    "elder": {
+      "display": 36,
+      "title": 32,
+      "titleSm": 28,
+      "bubble": 24,
+      "bodyLg": 22,
+      "body": 20,
+      "hand": 32,
+      "handMin": 30,
+      "hangulGuide": 120,
+      "buttonPrimary": 32,
+      "buttonSecondary": 26,
+      "min": 20
+    },
+    "child": {
+      "childTitle": 30,
+      "childBody": 18,
+      "childMin": 16,
+      "min": 16
+    },
+    "rule": "어르신 화면 어떤 글자도 20 미만 금지(손글씨는 30 미만 금지). 자녀 16 미만 금지. 14·12 글자는 시안의 개발용 라벨 박스에만 있고 앱에 없음",
+    "fontScaling": {
+      "allowFontScaling": true,
+      "maxFontSizeMultiplier": 1.5,
+      "note": "designer.md 의 1.3 상한을 150% 요구에 맞춰 1.5로 올리는 제안(결정 필요). 손글씨·탭 글자는 1.3 상한 권장. 모든 컴포넌트는 minHeight만 쓰고 고정 height 금지"
+    }
+  },
+  "lineHeight": {
+    "title": 1.3,
+    "bubble": 1.35,
+    "bodyElder": 1.5,
+    "bodyChild": 1.5,
+    "hand": 1.15,
+    "button": 1.2,
+    "rule": "한글은 자간을 줄이지 않음(letterSpacing 0)"
+  },
+  "space": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 20,
+    "screenX": 24,
+    "screenXChild": 20,
+    "bottom": 28,
+    "xxl": 32,
+    "topSafeMin": 52,
+    "note": "버튼 사이 12 이상, 카드 사이 12~14, 본문 형제 16, 화면 좌우 24(어르신)/20(자녀)"
+  },
+  "radius": {
+    "chip": 12,
+    "childCard": 16,
+    "input": 16,
+    "card": 22,
+    "select": 24,
+    "sheet": 28,
+    "button": 36,
+    "note": "버튼 반경 36은 높이가 커져도 그대로(알약)"
+  },
+  "shadow": {
+    "soft": {
+      "css": "0 4px 12px rgba(116,72,33,.18)",
+      "use": "버튼·말풍선·배너·시트 안 버튼"
+    },
+    "lifted": {
+      "css": "0 6px 16px rgba(116,72,33,.26)",
+      "use": "폴라로이드"
+    },
+    "dialog": {
+      "css": "0 12px 32px rgba(78,47,20,.28)",
+      "use": "대화상자"
+    },
+    "sheet": {
+      "css": "0 -8px 24px rgba(78,47,20,.22)",
+      "use": "시트"
+    },
+    "scrim": "rgba(78,47,20,.58)",
+    "rule": "단단한 하단 그림자(0 4px 0)는 폐기. 그림자는 장식이며 정보 전달에 쓰지 않음. RN: iOS shadow*, Android elevation 차이는 개발 확인(미확인)"
+  },
+  "states": {
+    "pressed": {
+      "primary": "배경 actionPressed, 그림자 줄임(0 1 3), 움직임 없음, 지연 100ms 이하",
+      "secondary": "배경 actionSoft, 글자 actionPressed(8.15)",
+      "danger": "배경 dangerSoft",
+      "link": "배경 actionSoft, 글자 actionPressed",
+      "card": "배경 paperSoft + 테두리 action",
+      "androidRipple": "금지(번쩍임), 색 변화만"
+    },
+    "disabled": {
+      "bg": "disabledBg",
+      "ink": "disabledInk(5.29)",
+      "shadow": "none",
+      "rule": "비활성이면 이유를 글자로 한 줄 알림. 비활성 글자도 4.5 이상 유지"
+    },
+    "loading": {
+      "label": "잠시만요",
+      "rule": "누르기 막음, 글자·아이콘 정지 또는 1.6초 이상 느린 변화"
+    },
+    "selected": {
+      "bg": "actionSoft",
+      "border": "4px action",
+      "plus": "채운 체크 + 글자 \"골랐어요\""
+    },
+    "error": {
+      "border": "danger 또는 dangerInk",
+      "plus": "경고 아이콘 + 글자 필수",
+      "rule": "흔들기 금지"
+    },
+    "focus": {
+      "outline": "4px inkTitle, offset 3",
+      "use": "스위치·키보드·보이스오버 포커스"
+    },
+    "zoom150": {
+      "rule": "글자 1.5배에서 줄바꿈하며 컴포넌트가 늘어남. 잘림·고정 높이·말줄임(…) 금지. 하단 고정 영역은 화면 40% 이하"
+    }
+  },
+  "touch": {
+    "elderMin": 64,
+    "buttonPrimary": 72,
+    "buttonSecondary": 64,
+    "codeBox": 68,
+    "selectCard": 132,
+    "iconButton": 64,
+    "link": 64,
+    "gapMin": 12,
+    "childMin": 48,
+    "childRecommended": 56,
+    "tab": 56,
+    "childButton": 56,
+    "rule": "시각 크기가 작아도 누르는 영역(hitSlop 포함)이 최소값 이상. 서로 다른 터치 영역은 겹치지 않음(간격 8 이상, 주 버튼과 링크 24 이상). 주 버튼은 오른쪽 아래 한 손 영역"
+  },
+  "motion": {
+    "duration": {
+      "instantFeedback": "100ms 이하(눌림 색 변화만, 움직임 아님)",
+      "base": 300,
+      "slow": 450,
+      "childMin": 200
+    },
+    "easing": "cubic-bezier(.4,0,.2,1) (ease-in-out)",
+    "elderForbidden": [
+      "초당 3회 이상 깜박임·점멸",
+      "흔들기(오류 shake 포함)",
+      "화면 전체가 움직이는 전환(슬라이드)",
+      "1초 미만 반복 애니메이션",
+      "회전 스피너",
+      "Android 리플 번쩍임"
+    ],
+    "allowed": [
+      "불투명도 페이드 300ms",
+      "도장 붙이기 scale 1→1.12→1 300ms 한 번",
+      "점선 막대 1.6초 이상 천천히 또는 정지"
+    ],
+    "reducedMotion": {
+      "setting": "시스템 \"동작 줄이기\"(iOS Reduce Motion / Android 애니메이션 끔)",
+      "rule": "movement·scale 모두 제거, 도장 즉시 표시, 로딩 정지 + 글자만, 전환 즉시. 불투명도 페이드만 남김"
+    }
+  },
+  "koreanText": {
+    "wordBreak": "keep-all",
+    "overflowWrap": "break-word",
+    "textWrapPretty": true,
+    "textWrapBalance": "제목·말풍선·카드 제목",
+    "orphanGuard": "마지막 두 어절 사이를 NBSP(U+00A0)로 묶음. RN은 CSS가 없어 copy.ts 의 nbsp() 도우미로 문구 데이터에서 처리. 줄을 직접 나눌 곳은 문구에 줄바꿈 문자 삽입",
+    "lineBreakUnit": "의미 단위(조사는 앞 말에 붙임)",
+    "limits": {
+      "elderSentence": "20자 안팎",
+      "bigButton": "7자 이내",
+      "selectCard": "14자 이내",
+      "stepTitleCompact": "10자",
+      "stepTitleFull": "14자",
+      "title": "14자",
+      "noticeBody": "2문장",
+      "dialogBody": "2문장",
+      "handCaption": "12자 한 줄"
+    },
+    "words": {
+      "rule": "같은 개념은 같은 단어(\"번호\"로 통일, \"코드\" 금지), 해요체, 한자어·영어 금지, 오류 코드명 노출 금지"
+    },
+    "rn": "RN 안드로이드는 textBreakStrategy 와 lineBreakWordStyle(API 33+)이 한국어 줄바꿈에 영향, iOS는 단어 단위 기본. keep-all 과 완전히 같은지는 실기기 확인 필요(미확인)"
+  },
+  "slots": {
+    "icon": {
+      "label": "[아이콘: 이름]",
+      "sizes": {
+        "inButton": 32,
+        "inRow": 28,
+        "inBox": 40,
+        "tab": 26,
+        "topBackElder": 64,
+        "topBackChild": 48,
+        "topBackVisual": 32,
+        "close": 48,
+        "speakerButton": 64
+      },
+      "note": "어르신 아이콘 선 굵기 2.5 이상 요청(아이콘팀). 시각 크기보다 터치 영역이 큼(hitSlop). 장식 아이콘은 읽어주지 않음"
+    },
+    "sun": {
+      "label": "[해님: 표정]",
+      "sizes": [
+        88,
+        72,
+        56,
+        40,
+        "도장 44"
+      ],
+      "position": "말풍선 왼쪽·세로 중앙·간격 14, 한 화면 큰 해님 1개, 사진·쓰기 영역·버튼 안 금지",
+      "expressions": [
+        "기본",
+        "활짝",
+        "걱정",
+        "기다림"
+      ]
+    },
+    "stamp": {
+      "label": "[도장]",
+      "size": 44,
+      "tiltDeg": "-4~+4 날짜 해시로 고정"
+    },
+    "tape": {
+      "label": "[테이프]",
+      "size": "92x28",
+      "tiltDeg": "기울기의 반대 x2"
+    },
+    "devLabelRule": "점선 박스(#FFF59D)는 시안 전용, 출시 빌드 없음. 크기는 최종 에셋과 같게"
+  },
+  "layout": {
+    "frame": "TopSafe → TopBar(선택) → Body(스크롤, flex:1) → BottomDock(고정)",
+    "topSafe": 52,
+    "bodyPadding": {
+      "top": 4,
+      "x": 24,
+      "bottom": 24,
+      "gap": 16
+    },
+    "dock": {
+      "paddingTop": 12,
+      "paddingBottom": "max(28, insets.bottom)",
+      "x": 24,
+      "maxHeightRatio": 0.4,
+      "primaryButtons": 1,
+      "secondaryMax": 1
+    },
+    "artboard": {
+      "width": 390,
+      "height": 844
+    },
+    "courseHomeCheck": "844 - 52 - 112 = 680 본문, 내용 약 670(스크롤 없이 들어가는 계산값, 여유 10 미만이라 렌더링 확인 필요)"
+  }
+}

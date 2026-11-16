@@ -1,0 +1,2 @@
+<!-- album-stitch-wave-tile / 스티치 물결선 반복용 타일 24x12(CSS background-repeat: repeat-x, 길이 가변) / 최소 높이 12px -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 12" width="24" height="12" color="#A67C5A" aria-hidden="true"><path d="M0 6Q6 1 12 6T24 6" pathLength="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="6.5 5.5" stroke-dashoffset="-2.75"/></svg>

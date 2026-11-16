@@ -1,0 +1,2 @@
+<!-- album-stitch-wave-long / 스티치 물결선 긴 360px(구분선·진행 표시, 가로로 이어 붙이기 가능) / 최소 높이 12px -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 12" width="360" height="12" color="#A67C5A" aria-hidden="true"><path d="M0 6Q6 1 12 6T24 6T36 6T48 6T60 6T72 6T84 6T96 6T108 6T120 6T132 6T144 6T156 6T168 6T180 6T192 6T204 6T216 6T228 6T240 6T252 6T264 6T276 6T288 6T300 6T312 6T324 6T336 6T348 6T360 6" pathLength="360" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="6.5 5.5" stroke-dashoffset="-2.75"/></svg>

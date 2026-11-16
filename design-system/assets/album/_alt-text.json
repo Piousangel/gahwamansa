@@ -1,0 +1,18 @@
+{
+  "album-corner-tl": "",
+  "album-corner-tr": "",
+  "album-corner-bl": "",
+  "album-corner-br": "",
+  "album-tape-plain": "",
+  "album-tape-dots": "",
+  "album-tape-wave": "",
+  "album-stitch-wave-short": "",
+  "album-stitch-wave-medium": "",
+  "album-stitch-wave-long": "",
+  "album-stitch-wave-tile": "",
+  "album-polaroid-tilt-left": "",
+  "album-polaroid-tilt-slight": "",
+  "album-polaroid-tilt-right": "",
+  "album-paper-grain": "",
+  "_note": "빈 문자열 = 장식(aria-hidden). 스크린 리더가 읽지 않는다. 진행 표시로 쓸 때는 부모 요소에 role=progressbar와 문구를 둔다"
+}

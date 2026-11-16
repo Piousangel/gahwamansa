@@ -1,0 +1,2 @@
+<!-- album-polaroid-tilt-slight / 폴라로이드 프레임(오른쪽으로 1.5도 기울임, 사진 창은 투명, 사진 272x236 + 아래 흰 여백에 손글씨) / 최소 폭 150px -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 334" width="320" height="334" color="#FFFFFF" aria-hidden="true"><g transform="translate(160 167) rotate(1.5) translate(-150 -157)"><path d="M3 0H297Q300 0 300 3V311Q300 314 297 314H3Q0 314 0 311V3Q0 0 3 0ZM14 14H286V250H14Z" fill="#FFFFFF" fill-rule="evenodd" stroke="#E6DCD0" stroke-width="2"/></g></svg>

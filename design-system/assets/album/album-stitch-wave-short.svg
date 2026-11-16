@@ -1,0 +1,2 @@
+<!-- album-stitch-wave-short / 스티치 물결선 짧은 120px(구분선·진행 표시, 가로로 이어 붙이기 가능) / 최소 높이 12px -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 12" width="120" height="12" color="#A67C5A" aria-hidden="true"><path d="M0 6Q6 1 12 6T24 6T36 6T48 6T60 6T72 6T84 6T96 6T108 6T120 6" pathLength="120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="6.5 5.5" stroke-dashoffset="-2.75"/></svg>

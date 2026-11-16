@@ -1,0 +1,2 @@
+<!-- album-corner-tr / 사진 모서리 꽂이(오른쪽 위, 4개 한 세트) / 최소 20px, 사진·카드 모서리에 겹쳐 놓기 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" color="#85592F" aria-hidden="true"><g transform="translate(30 0) scale(-1 1)"><path d="M4 4H26L4 26Z" fill="currentColor" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M18 6L6 18" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/></g></svg>

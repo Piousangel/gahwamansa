@@ -1,0 +1,2 @@
+<!-- album-paper-grain / 종이 결 질감 타일 160x160(투명 바탕, 최대 불투명 약 8%, 배경에만 깔고 글자 위에는 올리지 않기) / 타일 그대로 반복 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" color="#4E2F14" aria-hidden="true"><filter id="bumoGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.28  0 0 0 0 0.13  0.8 0 0 0 -0.32"/></filter><rect width="160" height="160" filter="url(#bumoGrain)" opacity=".25"/></svg>
