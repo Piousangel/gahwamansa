@@ -1,0 +1,163 @@
+# AI 사진 큐레이터 가이드 (photo-curator)
+
+작성 2026-11-17 · 대상: "부모와 자식" 앱의 AI 옛날 사진 14장(첫 빌드) → 30장(공개 전)
+이 문서는 프롬프트·규칙·검수표만 담는다. 이미지 생성, 도구 호출, 계정 로그인은 하지 않았다.
+
+## 0. 가정과 기준
+- 일차·장면·단어는 `supabase/seed_content_14d.sql`(1~14일 caption, keyword)을 기준으로 한다. 원본 일차(writer.md 30일 표)는 각 행에 병기한다. 순서가 바뀌면 SQL이 기준이고, 이 표는 일차 열만 고친다.
+- 장면 설명(느티나무+돌 의자 등)은 writer.md 30일 표의 "사진 장면"을 그대로 썼다.
+- 이미지 도구·가격·약관은 모두 **미확인**이다. 도구는 사용자가 선택한다.
+- 컨셉: 종이색 앨범 위 폴라로이드(designer.md 4절). 사진 비율은 약 1:0.87(가로가 약간 더 긴 사각), 앱이 흰 테두리·테이프·손글씨를 따로 얹으므로 **생성 이미지에 프레임·테두리·글자를 넣지 않는다**.
+
+## 1. 스타일 가이드 (14장이 한 앨범처럼 보이게)
+| 항목 | 규칙 |
+|---|---|
+| 색감 | 따뜻한 바랜 컬러 필름. 노랑·주황이 살짝 도는 따뜻한 톤, 채도 낮춤, 검정은 짙은 갈색 쪽으로 들뜸. 앱 종이색(#FBF1DC) 위에서 어울리게 |
+| 질감 | 약한 필름 입자, 가장자리 약한 비네팅. 과한 스크래치·얼룩·빛샘 금지(어르신 눈에 오류처럼 보임) |
+| 구도 | 가로형, 중심 피사체 1개를 화면 중앙 60% 안에 둔다. 가장자리 10%는 비워 둔다(폴라로이드 안쪽 여백·둥근 모서리에서 안 잘리게) |
+| 인물 | 가급적 없음. 넣는다면 멀리, 작게(화면 높이의 1/5 이하), 뒷모습·실루엣. 얼굴 클로즈업 금지, 손 클로즈업 금지 |
+| 시선 높이 | 어른 눈높이 또는 약간 낮은 눈높이. 항공·극단적 앙각 금지 |
+| 시간대·계절 | 장면마다 하나만 정한다(표 참고). 한 장 안에 계절 단서를 섞지 않는다 |
+| 빛 | 부드러운 자연광(아침 이슬빛, 오후 햇살). 강한 역광·어두운 밤 장면은 피한다(보름달 장면도 푸른 어둠이 아니라 밝은 청남색 하늘) |
+| 시대 | 1970~80년대 시골·소도시 한국. 현대 물건(플라스틱 간판, 전선 뭉치, 에어컨 실외기, 아스팔트 선, 스마트 기기)은 배경에도 두지 않는다 |
+| 핵심 사물 | 한글 단어의 사물이 사진의 주인공. 화면의 1/3 이상을 차지하고 초점이 맞아야 한다 |
+
+### 쓰면 안 되는 것
+- 글자: 간판, 표지, 달력, 공책 표지, 라디오 눈금 숫자 등 **읽히는 문구 일체**(한글·한자·영문). 글자가 필요한 사물은 글자가 안 보이는 각도·크기로.
+- 로고·브랜드·제품 디자인(라디오·고무신·우산·도시락 통 포함).
+- 실존 인물·유명인·역사적 인물 닮음. 특정 연예인·정치인 요청 문구 금지.
+- 정치·종교 상징(태극기·새마을기 포함해 깃발류 일체, 십자가, 불상, 부적, 제사상 위패 등).
+- 불편한 소재: 전쟁, 가난·결핍 강조, 아픈 사람, 죽음·장례, 동물 학대, 위험한 불(아궁이는 불이 작고 차분한 장면으로).
+- 얼굴 클로즈업, 손가락 클로즈업.
+- AI 오류가 눈에 띄는 요소: 손가락, 글자, 대칭이 깨진 창문·기와, 녹아내린 사물 경계.
+
+## 2. 공통 프롬프트 뼈대 (영어, 도구 중립)
+```
+[SUBJECT: 핵심 사물과 장면], Korean countryside, 1970s-1980s, nostalgic faded color film photograph,
+warm muted palette, soft natural [LIGHT], [SEASON / TIME OF DAY],
+subject clearly in focus and prominent in the center, wide margin of empty space around the edges,
+eye-level, calm quiet atmosphere, gentle film grain, light vignette,
+no people (or: one small distant figure seen from behind),
+landscape orientation, no frame, no border, no text
+```
+- `[…]`만 바꾸고 나머지는 14장 모두 고정한다. 순서도 같게 유지한다(도구가 앞쪽 단어를 더 반영하는 경우가 많으나 이는 도구마다 다를 수 있어 미확인).
+- 시드(seed) 값·가로세로 비율·화질 옵션 이름은 도구마다 다르다. 도구가 정해지면 같은 설정을 14장에 고정해 쓴다.
+
+### 네거티브 규칙 (네거티브 입력란이 없는 도구는 긍정 문장 끝에 "Avoid: …"로 붙인다)
+```
+text, letters, signs, writing, logo, brand, watermark, caption, frame, border, polaroid frame,
+close-up face, portrait, hands, fingers, modern objects, plastic, smartphone, car, power lines, neon,
+flag, religious symbol, celebrity, deformed, blurry subject, oversaturated, HDR, cartoon, 3d render, illustration
+```
+- 도구가 네거티브를 무시하면 결과로 걸러낸다(4절). 효과는 도구마다 달라 미확인.
+
+## 3. 14일분 프롬프트 표
+공통: 위 뼈대 뒤에 아래 `SUBJECT / LIGHT / SEASON`을 채운다. "확인 항목"은 사진에 한글 단어의 사물이 **눈에 띄게** 있는지 보는 기준이다.
+
+| 일차 (원본) | 장면 | 영어 프롬프트 (SUBJECT, LIGHT, SEASON) | 한글 캡션 | 따라 쓰기 단어와 사진 일치 확인 항목 |
+|---|---|---|---|---|
+| 1 (1) | 마을 입구 큰 느티나무와 아래 돌 의자 | a huge old zelkova tree at a village entrance with a flat stone bench beneath it, dirt path, soft morning light, early autumn | 마을 입구 나무 | **나무**: 나무가 화면 한복판 큰 비중, 줄기와 잎이 선명. 돌 의자는 보조. 간판·표지석 글자 없음 |
+| 2 (7) | 마당 감나무에 주홍빛 감이 가득 | a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn | 감 익는 마당 | **감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격 |
+| 3 (8) | 한옥 지붕 위로 뜬 커다란 보름달 | a large full moon rising over a traditional Korean tiled roof with curved eaves, bright blue-gray dusk sky, soft glow | 한가위 보름달 | **달**: 둥근 보름달이 지붕 위에서 눈에 띄게 큼(화면 폭 1/5 이상). 달 표면 얼굴 모양·글자 없음. 지붕 선 좌우 대칭 점검 |
+| 4 (9) | 장독대에 줄지어 선 항아리들, 아침 이슬 | rows of brown earthenware jars on a raised stone platform in a yard, dew drops, morning mist, clear sunrise light, early summer | 장독대 아침 | **항아리**: 항아리가 5~8개 보이고 뚜껑이 닫혀 있다. 모양·크기가 서로 다르되 녹지 않을 것. 독 위 글자 금지 |
+| 5 (3) | 안방 선반 위 라디오, 오후 햇살 | a small vintage transistor radio on a wooden shelf in a plain Korean room, paper-lattice window, warm afternoon sunlight, no visible dial numbers or brand | 라디오가 있던 방 | **라디오**: 라디오가 선반 위 주인공이고 안테나·스피커 격자가 보인다. 눈금 숫자·상표 글자 금지, 현대 TV·콘센트 없음 |
+| 6 (5) | 처마 아래 걸린 우산과 떨어지는 빗방울 | an old paper-and-bamboo style umbrella hanging under the eaves of a thatched farmhouse, raindrops falling from the roof edge, soft gray rainy light, early summer | 비 오는 날 처마 | **우산**: 우산(살과 손잡이)이 화면 안에 크게, 접히거나 걸린 모양 분명. 비닐·로고 우산 금지, 빗방울 선이 글자처럼 보이지 않게 |
+| 7 (10) | 툇마루 앞 댓돌에 놓인 고무신 한 켤레 | a single pair of rubber shoes on a stone step in front of a wooden porch of a Korean house, gentle midday light, spring | 툇마루 고무신 | **고무신**: 한 켤레(좌우 한 쌍)가 선명. 앞코 모양 대칭, 상표·바닥 무늬 글자 금지. 개수가 3개 이상이면 재생성 |
+| 8 (13) | 명절 상 위 접시에 담긴 송편 | a ceramic plate of half-moon rice cakes (songpyeon) with pine needles on a low wooden table, warm indoor light, Chuseok morning | 송편 빚는 날 | **송편**: 반달 모양 떡이 접시 위에 6개 안팎, 솔잎 자국. 손·얼굴 없음. 만두·경단으로 보이면 불합격 |
+| 9 (16) | 소풍 날 풀밭 보자기 위 도시락 | a cloth wrapping square spread on grass with an aluminum lunchbox and rice balls, green meadow, bright spring picnic light | 소풍 도시락 | **도시락**: 도시락통(뚜껑 열려 음식이 보임)이 보자기 위 중앙. 브랜드·캐릭터 그림 금지 |
+| 10 (18) | 여름 저녁 마당 평상 위 수박 한 통 | a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional | 여름 저녁 평상 | **평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지 |
+| 11 (11) | 교실 나무 책상 위 연필과 공책 | a wooden school desk with a pencil and an open plain notebook, soft window light, no writing on the page, spring morning classroom | 공책과 연필 | **연필**: 연필 1~2자루가 선명히 길게 보임(깎은 심). 공책 속 글씨·표지 글자 없음(백지). 손가락 나오면 불합격 |
+| 12 (15) | 우물가 두레박과 돌로 쌓은 우물 | a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer | 우물가 한낮 | **두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검) |
+| 13 (23) | 시골 부엌 아궁이와 벽에 걸린 바가지 | a traditional Korean farmhouse kitchen with a clay stove (agungi), iron pot, gourd ladles hanging on the wall, soft smoke, warm dim light, winter morning | 시골집 부엌 | **부엌**: 아궁이·솥·바가지가 한 화면에서 부엌임을 알 수 있게. 불은 작고 조용히, 검댕·위험 느낌 없음 |
+| 14 (27) | 가을 산길에 수북한 빨간 단풍잎 | a mountain path covered with red maple leaves, a few leaves in sharp focus in the foreground, soft light through trees, autumn | 단풍 든 산길 | **단풍잎**: 앞쪽에 단풍잎 모양(손바닥형 5갈래)이 크게 선명. 잎 모양 대칭 확인. 사람·표지판 없음 |
+
+- 인물을 넣어야 하면 뼈대의 "no people"를 `one small distant figure seen from behind`로 바꾸되 14장 중 1~2장 이내로 제한한다.
+- 5·13번은 실내라 필름 톤이 어두워지기 쉽다. 밝기를 올려 폴라로이드 안에서 사물이 보이게 한다.
+
+## 4. 검수 체크리스트 (한 항목이라도 불합격이면 재생성)
+| # | 항목 | 합격 | 불합격 예 |
+|---|---|---|---|
+| 1 | 시대 고증 | 초가·기와·툇마루·흙길 등 70~80년대 느낌 | 신식 타일 지붕, 샷시 창, 콘크리트 담 |
+| 2 | 시대착오 요소 | 기기·옷·간판이 시대에 맞거나 아예 없음 | 스마트폰, 현대 운동화, 플라스틱 통, 전선, 차량, 형광색 옷 |
+| 3 | 글자 | 화면 어디에도 읽히거나 읽히는 척하는 글자 없음(2배 확대 확인) | 간판·달력·공책·라디오 눈금의 글자 |
+| 4 | AI 오류 | 손가락 없음 또는 정상, 사물 경계 선명, 좌우·원근 자연스러움 | 6손가락, 녹은 항아리, 끊긴 두레박 줄, 휜 지붕선 |
+| 5 | 실존 인물 | 인물 없음/뒷모습 실루엣. 특정인을 떠올리지 않음 | 유명인 닮은 얼굴, 얼굴이 또렷한 인물 |
+| 6 | 단어 일치 | 따라 쓰기 단어(keyword) 사물이 주인공, 화면 1/3 이상, 초점 | 단어 사물이 작거나 가려짐, 비슷한 다른 사물(감↔귤) |
+| 7 | 어르신 불편 요소 | 평온한 분위기, 위험·어두운 소재 없음 | 불길, 어두운 밤, 시든 풍경, 아픈·죽음 연상 |
+| 8 | 상징 | 정치·종교 상징 없음 | 깃발, 십자가, 불상 |
+| 9 | 구도·프레임 | 핵심이 중앙 60% 안, 가장자리 10%에 핵심 없음(모서리 둥근 마스크, 위 14·좌우 14 테두리를 얹어도 안 잘림) | 달·우산이 가장자리에 걸림 |
+| 10 | 해상도·화질 | 가로 1200px 이상으로 만든 원본, 확대해도 입자 이외 뭉개짐 없음 | 흐릿한 주 피사체 |
+| 11 | 앨범 일관성 | 14장을 나란히 놓았을 때 색 온도·밝기·입자가 비슷 | 한 장만 쨍한 채도, 한 장만 흑백 |
+| 12 | 저작권 | 특정 작품·사진을 그대로 닮지 않음, 상표 없음 | 알려진 사진 구도 모방 |
+
+### 재생성 규칙과 상한(제안)
+1. 불합격 원인을 하나 골라 프롬프트에서 그 부분만 바꾼다(전부 바꾸지 않는다).
+2. 장면당 후보를 한 번에 4장 정도 만들어 최선을 고른다(수치는 제안, 도구 비용은 미확인).
+3. 재시도 상한 장면당 **5라운드**. 넘으면 장면을 단순화(사물만, 배경 줄이기)하거나 다음 대체 장면(7절)으로 교체한다.
+4. 손·글자 오류만 남은 경우 사용자가 이미지 편집 도구로 해당 영역을 자르거나 지우는 것을 허용하되, 편집한 장은 기록한다.
+5. 채택본은 위 12항목 점검 후 "합격 사유 한 줄"을 파일 옆 메모로 남긴다.
+
+## 5. 파일 규격 제안 (제안값, 확정은 개발과 협의)
+| 항목 | 제안 |
+|---|---|
+| 비율 | 약 1:0.87 (예: 1200x1044). 앱이 사진 영역을 이 비율로 자른다(designer.md 4절). 만들 때는 4:3 이상 가로형으로 만들고 중앙 기준으로 잘라 맞춘다 |
+| 해상도 | 1200x1044 (제안). 폰 화면 390dp 기준 3배 해상도에 해당하나 기기별 실제 요구는 미확인 |
+| 포맷 | WebP(품질 80 안팎 제안), 원본은 PNG 또는 도구가 주는 형식으로 따로 보관 |
+| 용량 | 장당 300KB 이하(제안값). 초과 시 품질을 낮추거나 입자를 줄여 재변환 |
+| 파일명 | `day-01.webp` ~ `day-14.webp` (두 자리 일차, SQL day_index와 같다). 30일 확장 시 `day-15` ~ `day-30`. 원본 보관은 `day-01.src.png` |
+| 보관 | 프롬프트·시드·사용 도구·생성일을 `day-01.meta.txt`에 기록(약관 확인·재현용) |
+
+### Supabase Storage 업로드와 content_photos.image_url
+1. Storage에 공개 읽기 버킷(예: `content-photos`)을 만들고 `day-01.webp` ~ `day-14.webp`를 올린다(버킷 이름·공개 여부는 개발과 결정, 공개 버킷이면 로그인 없이 URL로 읽힌다).
+2. 올린 뒤 각 파일의 공개 URL을 `content_photos.image_url`에 넣는다. 형식은 `https://<프로젝트>.supabase.co/storage/v1/object/public/content-photos/day-01.webp` 모양이다(공식 문서 `https://supabase.com/docs/guides/storage`에서 확인 필요, 이 문서 작성 중에는 조회하지 않아 **미확인**).
+3. 지금 시드 SQL의 `pending://day-N`이 자리표시이므로, 업로드 후 `update`로 교체하거나 시드 SQL을 갱신한다(이 작업은 개발 담당이 한다).
+4. 사진을 바꿀 때는 같은 파일명으로 덮어쓰면 기기 캐시 때문에 안 바뀔 수 있다. 파일명 뒤에 버전(`day-01.v2.webp`)을 붙이고 image_url을 바꾸는 방식을 권한다(제안).
+
+## 6. AI 표기와 권리
+### 앱 안 "AI가 만든 그림" 표기 의사결정
+| | 넣는다 | 안 넣는다(스토어 설명에만) |
+|---|---|---|
+| 장점 | 어르신이 실제 옛 사진으로 오해해 "내 동네와 다르다"고 불안해하는 일을 줄임. 투명성·신뢰. 향후 AI 표시 요구가 있을 때 대비(법·플랫폼 요건은 **미확인**, policy.md 확인 필요) | 화면이 단순. 폴라로이드 손글씨 영역이 깔끔 |
+| 단점 | 어르신 화면 글자가 늘고, "가짜"라는 느낌을 줄 수 있음 | 사진을 실제 기록으로 받아들이는 오해 가능, 스토어 심사·약관에서 문제될 가능성 미확인 |
+| 제안 | 사진 아래 작은 고정 문구 "해님이 그린 옛날 느낌 그림이에요"(톤은 writer 확인) 또는 첫 실행 안내 1회. 결정은 사용자 |
+
+### 생성물 이용 약관 확인 체크리스트 (도구마다 다르므로 사용자가 직접 확인)
+- [ ] 생성 이미지의 상업적 이용(앱 내 사용, 스토어 노출) 허용 여부
+- [ ] 무료·유료 플랜에 따라 허용 범위가 다른지
+- [ ] 생성물 소유권·이용권이 누구에게 있는지, 크레딧 표기 의무가 있는지
+- [ ] 약관이 바뀔 때 이미 만든 이미지에 영향이 있는지
+- [ ] 입력 프롬프트·결과물을 도구 회사가 학습·공개에 쓰는지(공개 갤러리 설정 끄기 가능 여부)
+- [ ] 실존 인물·브랜드·저작물 유사 생성에 대한 면책 조항
+- [ ] AI 생성 표시(워터마크·메타데이터) 의무나 제거 금지 조항
+- [ ] 앱 스토어(Google Play) AI 생성 콘텐츠 정책 요건(공개 문서 확인 필요, 미확인)
+- [ ] 약관 확인일·URL·캡처를 `docs/` 아래 별도 기록으로 보관
+
+## 7. 30일 확장 추가 장면 16개 제안 (15~30일, 제목 한 줄)
+writer.md 표의 남은 장면을 그대로 두고 필요 시 순서만 조정한다. 15~30일 기준으로 아래와 같다.
+1. 장날 아침(좌판 위 채소 바구니, 단어 바구니)
+2. 시골 정류장 버스(흙길, 버스)
+3. 수업 시작 종(학교 복도 종)
+4. 방과 후 교실(칠판과 분필)
+5. 설빔 걸린 방(횃대 위 한복)
+6. 등굣길 책가방(현관 계단)
+7. 마당 쓰는 아침(대나무 빗자루)
+8. 대청마루 여름(선풍기와 부채)
+9. 장터 국밥집(큰 솥과 국자)
+10. 둥근 밥상(밥그릇과 숟가락)
+11. 가마솥 김(마당 가마솥, 하얀 김)
+12. 결혼식 날 꽃(탁자 위 꽃다발, 글자 있는 방명록은 백지로)
+13. 잔치하는 앞마당(천막과 긴 상)
+14. 냇가 낚시(바위 위 낚싯대)
+15. 닭장 아침(마당 닭장과 햇살)
+16. 흙담 골목 저녁(노을, 멀리 걷는 작은 사람 1명 허용)
+- 결혼식·장터·교실 장면은 사람이 늘기 쉽다. 사람 없는 사물 구도로 먼저 시도한다.
+- 대체 후보(재생성 5회 실패 시): 샘가 빨래터는 손 오류 위험 → 빨랫줄 흰 빨래, 마당 멍석 위 고추, 대문 앞 감나무 그늘 평상.
+
+## 8. 사용자가 직접 해야 하는 일
+1. **이미지 도구 선택**(기능·가격·약관은 미확인, 사용자 판단).
+2. **생성 실행**(14장, 프롬프트 표 3절 사용, 도구 설정은 14장 동일하게 고정).
+3. **약관 확인**(6절 체크리스트) 및 기록 보관.
+4. **최종 선별**(4절 12항목 검수 통과본만, 2배 확대 점검 포함).
+5. WebP 변환·용량 점검 후 Storage 업로드와 image_url 교체(개발 담당과 협의).
+6. 앱 안 "AI가 만든 그림" 표기 여부 결정.
+7. 가능하면 어르신 1~2분께 14장을 보여 드려 "무슨 사진 같으세요?"를 물어, 단어가 사진에서 바로 떠오르는지 확인(시험 결과는 이 문서에 없음).
