@@ -1,6 +1,6 @@
 -- 코드 리뷰(2026-11-17) 반영 테스트: redeem 멱등·재연결 코드 탈취 방지·24시간 만료·코드 5개 상한 교체·콘텐츠 번호 구멍·답변 이력 보존
 begin;
-select plan(12);
+select plan(15);
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -77,6 +77,13 @@ select is((public.get_today_content()) ->> 'answered_choice', null, '지난 회�
 select public.save_answer('8c000000-0000-0000-0000-000000000005', 'B');
 reset role;
 select is((select count(*)::int from public.answers where parent_id = '8b300000-0000-0000-0000-0000000000a1'), 2, '회차별 답이 이력으로 남는다');
+
+-- 13~15. 앱 복원용 값: 동의 여부, 오늘 끝낸 단계, 연속일을 서버가 돌려준다
+select pg_temp.act_as('83000000-0000-0000-0000-0000000000a1', true);
+select is((public.get_today_content()) ->> 'consented', 'true', '동의 여부를 돌려준다');
+select public.record_session_step('photo', 30);
+select is((public.get_today_content()) -> 'completed_steps', '["photo"]'::jsonb, '오늘 끝낸 단계를 돌려준다(앱 재시작 후 복원)');
+select is((public.get_today_content()) ->> 'streak', '0', '연속일을 돌려준다(3단계를 모두 끝내기 전이라 0)');
 
 select * from finish();
 rollback;
