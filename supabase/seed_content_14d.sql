@@ -2,11 +2,9 @@
 -- 원본: docs/team/writer.md 30일 표. 괄호는 원본 일차.
 -- image_url은 자리표시(pending://day-N). AI 사진이 완성되면 교체한다.
 -- 전제: content_photos.recall_questions(text[], 2개), content_questions.prompt(text) 컬럼이 이미 있어야 한다.
--- 다시 실행해도 같은 결과가 되도록 1~14일 행을 지우고 넣는다.
+-- 다시 실행해도 같은 결과가 되도록 day_index 충돌 시 갱신한다(질문 id가 바뀌지 않아 쌓인 답변과 충돌하지 않음).
 begin;
 
-delete from public.content_photos    where day_index between 1 and 14;
-delete from public.content_questions where day_index between 1 and 14;
 
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions) values
   (1,  'pending://day-1',  '마을 입구 나무',   '나무',   array['나무 아래서 쉬어 본 적 있으세요?', '어떤 계절의 나무가 떠오르세요?']),                -- 원본 1
@@ -22,7 +20,8 @@ insert into public.content_photos (day_index, image_url, caption, keyword, recal
   (11, 'pending://day-11', '공책과 연필',      '연필',   array['연필을 깎아 본 기억이 있어요?', '공책에 처음 쓴 글자는 뭐였어요?']),                -- 원본 11
   (12, 'pending://day-12', '우물가 한낮',      '두레박', array['우물물을 길어 본 적 있어요?', '우물가에서 사람들이 뭘 했나요?']),                   -- 원본 15
   (13, 'pending://day-13', '시골집 부엌',      '부엌',   array['부엌에서 나던 냄새가 기억나세요?', '불 지피던 모습을 본 적 있어요?']),              -- 원본 23
-  (14, 'pending://day-14', '단풍 든 산길',     '단풍잎', array['단풍 구경을 가 보셨어요?', '낙엽을 주워 본 기억이 있어요?']);                       -- 원본 27
+  (14, 'pending://day-14', '단풍 든 산길',     '단풍잎', array['단풍 구경을 가 보셨어요?', '낙엽을 주워 본 기억이 있어요?'])
+on conflict (day_index) do update set image_url = excluded.image_url, caption = excluded.caption, keyword = excluded.keyword, recall_questions = excluded.recall_questions;
 
 insert into public.content_questions (day_index, option_a, option_b, prompt) values
   (1,  '봄',          '가을',          '어느 계절이 더 좋으세요?'),
@@ -38,6 +37,7 @@ insert into public.content_questions (day_index, option_a, option_b, prompt) val
   (11, '일기 쓰기',   '편지 쓰기',     '쓴다면 어느 쪽이 좋아요?'),
   (12, '시원한 물',   '따뜻한 물',     '마시고 싶은 물은요?'),
   (13, '구수한 숭늉', '달콤한 식혜',   '마시고 싶은 건요?'),
-  (14, '가을 산',     '봄 산',         '걷고 싶은 산은요?');
+  (14, '가을 산',     '봄 산',         '걷고 싶은 산은요?')
+on conflict (day_index) do update set option_a = excluded.option_a, option_b = excluded.option_b, prompt = excluded.prompt;
 
 commit;

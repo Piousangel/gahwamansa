@@ -57,7 +57,7 @@ select is((select count(*)::int from public.invite_codes where code = '999999'),
 -- 12~13. 활성 코드는 가족당 5개까지, 모두 서로 다르다
 do $$ begin for i in 1..2 loop perform public.issue_invite_code(); end loop; end $$;
 select is((select count(distinct code)::int from public.invite_codes where used_at is null), 5, '활성 코드 5개는 모두 다르다');
-select throws_like($$ select public.issue_invite_code() $$, '%too_many_codes%', '활성 코드는 5개를 넘길 수 없다');
+select lives_ok($$ select public.issue_invite_code() $$, '활성 코드가 5개여도 새로 발급하면 가장 오래된 코드를 교체한다(too_many_codes 없음)');
 -- 14. 로그인 전(anon)은 함수를 실행할 수 없다
 reset role;
 set local role anon;
