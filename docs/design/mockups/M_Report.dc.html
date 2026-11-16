@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>혼합 · 자녀 리포트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Jua&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FBF1DC; color: #2F2A24; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; position: relative;">
+  <div style="position: absolute; left: 12px; right: 12px; top: 10px; display: flex; gap: 6px; align-items: center"><span style="font-size: 12px; color: #5C4E33; font-weight: 700">[시안 상태 전환]</span><button onClick="{{goData}}" style="height: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid #8C7A55; background: #FFFFFF; color: #2F2A24; font-family: inherit; font-size: 14px; font-weight: 700">답이 있는 날</button><button onClick="{{goNone}}" style="height: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid #8C7A55; background: #FFFFFF; color: #2F2A24; font-family: inherit; font-size: 14px; font-weight: 700">답 안 남긴 경우</button></div>
+  <div style="flex-grow: 1; padding: 56px 20px 12px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-family: 'Nanum Pen Script', cursive; font-size: 26px; color: #6B4F25; line-height: 1">11월 16일 월요일</div>
+      <h1 style="margin: 0; font-family: 'Jua', sans-serif; font-size: 30px; font-weight: 400; line-height: 1.3">어머니의 취향</h1>
+    </div>
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; box-shadow: 0 2px 0 #E3D3B0; display: flex; flex-direction: column; gap: 12px">
+      <div style="font-size: 18px; font-weight: 900">최근 선택</div>
+      <div style="display: {{dataDisplay}}; flex-direction: column; gap: 12px"><div style="display: flex; justify-content: space-between; align-items: center; gap: 12px"><div style="font-size: 16px; color: #5C4E33">여름 나들이</div><div style="font-size: 18px; font-weight: 700">시원한 바닷가</div></div><div style="height: 2px; background: #E3D3B0"></div><div style="display: flex; justify-content: space-between; align-items: center; gap: 12px"><div style="font-size: 16px; color: #5C4E33">간식</div><div style="font-size: 18px; font-weight: 700">따뜻한 호떡</div></div><div style="height: 2px; background: #E3D3B0"></div><div style="display: flex; justify-content: space-between; align-items: center; gap: 12px"><div style="font-size: 16px; color: #5C4E33">좋아하는 노래</div><div style="font-size: 18px; font-weight: 700">트로트</div></div></div>
+      <div style="display: {{noneDisplay}}; font-size: 18px; line-height: 1.5; font-weight: 500">어르신이 답을 남기지 않기로 했어요</div>
+    </div>
+    <div style="background: #FFF3E0; border: 2px solid #9A3412; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 18px; font-weight: 900">대화 주제 추천</div><div style="padding: 4px 10px; border-radius: 12px; background: #9A3412; color: #FFFFFF; font-size: 16px; font-weight: 700; flex-shrink: 0">곧 유료</div></div>
+      <div style="font-size: 18px; line-height: 1.5; font-weight: 500">"엄마, 어릴 때 시장 가면 뭐 사 먹었어?"</div>
+      <div style="font-size: 16px; color: #5C4E33; line-height: 1.5">지금은 무료로 열려 있어요. 나중에 유료 플랜에 포함돼요.</div>
+    </div>
+    <div style="background: #FFF3E0; border: 2px solid #9A3412; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 18px; font-weight: 900">상세 리포트</div><div style="padding: 4px 10px; border-radius: 12px; background: #9A3412; color: #FFFFFF; font-size: 16px; font-weight: 700; flex-shrink: 0">곧 유료</div></div>
+      <div style="font-size: 16px; line-height: 1.5; font-weight: 500">한 달 동안의 선택 모아 보기</div>
+    </div>
+  </div>
+  <div style="display: flex; border-top: 2px solid #D9CBB0; background: #FFFFFF; padding: 8px 20px 24px; gap: 8px">
+    <a href="M_ChildHome.dc.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; color: #5C4E33; font-size: 16px; font-weight: 700; text-decoration: none"><div style="width: 26px; height: 26px; box-sizing: border-box; flex-shrink: 0; border: 2px dashed #8C7A55; background: #EFE4CC; color: #5C4E33; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 9px; font-weight: 700; line-height: 1.2; ">[ ]</div>홈</a><a href="M_Report.dc.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; color: #9A3412; font-size: 16px; font-weight: 900; text-decoration: none"><div style="width: 26px; height: 26px; box-sizing: border-box; flex-shrink: 0; border: 2px dashed #8C7A55; background: #EFE4CC; color: #5C4E33; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 9px; font-weight: 700; line-height: 1.2; ">[ ]</div>리포트</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { none: false };
+  }
+  renderVals() {
+    const n = this.state.none;
+    return {
+      dataDisplay: n ? 'none' : 'flex',
+      noneDisplay: n ? 'block' : 'none',
+      goData: () => this.setState({ none: false }),
+      goNone: () => this.setState({ none: true })
+    };
+  }
+}
+</script>
+</body>
+</html>
