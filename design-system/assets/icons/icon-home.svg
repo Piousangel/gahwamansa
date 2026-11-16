@@ -1,0 +1,6 @@
+<!-- icon-home / 처음(오늘 화면)으로 / b -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="홈">
+  <title>홈</title>
+  <path d="M4 11.5l8-7 8 7"/>
+  <path d="M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/>
+</svg>

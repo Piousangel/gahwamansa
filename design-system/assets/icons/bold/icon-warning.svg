@@ -1,0 +1,7 @@
+<!-- icon-warning / 주의가 필요하다(삭제 경고 등) / b / 굵은 변형(3.5) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="주의">
+  <title>주의</title>
+  <path d="M12 4.5l8 14.5H4z"/>
+  <path d="M12 11v1.6"/>
+  <path d="M12 16h.01"/>
+</svg>

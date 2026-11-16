@@ -1,0 +1,5 @@
+<!-- icon-report / 부모님 기록 한눈에 보기 / b -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="리포트">
+  <title>리포트</title>
+  <path d="M6.5 20v-6.5M12 20V6M17.5 20v-10"/>
+</svg>

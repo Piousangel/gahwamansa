@@ -1,0 +1,7 @@
+<!-- icon-calendar / 날짜·기간(7일 남음 등) / b / 굵은 변형(3.5) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="달력">
+  <title>달력</title>
+  <rect x="4" y="5.5" width="16" height="14.5" rx="3.5"/>
+  <path d="M4 10.5h16"/>
+  <path d="M8 3.5v4M16 3.5v4"/>
+</svg>

@@ -1,0 +1,5 @@
+<!-- icon-plus / 추가(번호 더 만들기) / b / 굵은 변형(3.5) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="추가">
+  <title>추가</title>
+  <path d="M12 5v14M5 12h14"/>
+</svg>
