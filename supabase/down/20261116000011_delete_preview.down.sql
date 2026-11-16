@@ -1,0 +1,1 @@
+-- 되돌리기: drop function if exists public.delete_scope_preview();
