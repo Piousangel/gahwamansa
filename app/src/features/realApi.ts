@@ -48,6 +48,22 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       const {error} = await sb.auth.signUp({email, password});
       if (error) fail('가입', error);
     },
+    async deleteScopePreview() {
+      const {data, error} = await sb.rpc('delete_scope_preview');
+      if (error) fail('delete_scope_preview', error);
+      return {scope: data.scope};
+    },
+    async deleteMyAccount() {
+      const {data, error} = await sb.rpc('delete_my_account');
+      if (error) fail('delete_my_account', error);
+      // 서버는 앱 데이터만 지운다. 인증 계정은 남으므로 이 기기의 세션을 끊는다(실패해도 데이터는 이미 지워짐).
+      try {
+        await sb.auth.signOut();
+      } catch {
+        // 무시
+      }
+      return {scope: data.scope};
+    },
     async restoreSession() {
       const {data, error} = await sb.auth.getSession();
       if (error) fail('세션 확인', error);

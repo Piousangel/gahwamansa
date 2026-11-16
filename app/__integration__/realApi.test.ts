@@ -132,3 +132,18 @@ test('자녀 홈: 오늘 참여, 연속 1일', async () => {
   const home = await child.fetchChildHome();
   expect(home).toEqual({participatedToday: true, streak: 1});
 });
+
+test('어르신이 삭제하면 scope parent, 이후 get_today_content 는 실패', async () => {
+  expect((await parent.deleteScopePreview()).scope).toBe('parent');
+  const r = await parent.deleteMyAccount();
+  expect(r.scope).toBe('parent');
+  await expect(parent.getTodayContent()).rejects.toThrow();
+});
+
+test('자녀가 둘이면 child, 혼자면 family(미리보기와 삭제 결과 일치)', async () => {
+  // 두 번째 자녀: 서버에 자녀 합류 RPC 가 아직 없어 이 시나리오는 혼자일 때만 검증한다.
+  expect((await child.deleteScopePreview()).scope).toBe('family');
+  const r = await child.deleteMyAccount();
+  expect(r.scope).toBe('family');
+  state.familyId = undefined; // 이미 삭제됨
+});

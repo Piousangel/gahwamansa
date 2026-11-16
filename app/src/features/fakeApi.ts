@@ -28,6 +28,9 @@ export type FakeOptions = {
   completedSteps?: StepName[]; // 오늘 이미 끝낸 단계
   streak?: number;
   failRecord?: number; // recordSessionStep 이 처음 N번 실패
+  deleteScope?: 'parent' | 'child' | 'family'; // deleteMyAccount 결과(기본 parent)
+  failPreview?: boolean; // deleteScopePreview 실패
+  failDelete?: number; // deleteMyAccount 가 처음 N번 실패
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
@@ -36,6 +39,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
   let consented = opts.consented ?? false;
+  let failDelete = opts.failDelete ?? 0;
   let failRecord = opts.failRecord ?? 0;
   let failChildHome = opts.failChildHome ?? 0;
   const baseStreak = opts.streak ?? 0;
@@ -54,6 +58,21 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return reason === 'rate_limited'
         ? {ok: false, reason, retry_after_sec: 600}
         : {ok: false, reason};
+    },
+    async deleteScopePreview() {
+      if (opts.failPreview) {
+        throw new OfflineError('offline');
+      }
+      return {scope: opts.deleteScope ?? 'parent'};
+    },
+    async deleteMyAccount() {
+      if (failDelete > 0) {
+        failDelete -= 1;
+        throw new OfflineError('offline');
+      }
+      steps.clear();
+      consented = false;
+      return {scope: opts.deleteScope ?? 'parent'};
     },
     async restoreSession() {
       return opts.linked ? 'linked' : 'unlinked';

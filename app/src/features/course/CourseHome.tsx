@@ -6,6 +6,7 @@ import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy, offlineMessage} from '../../copy/copy';
+import {DeleteLink} from '../account/DeleteLink';
 import {useLoadTodayContent} from './useTodayContent';
 import type {StepName} from '../types';
 
@@ -86,6 +87,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         }
         return <Text20 key={s.step} size={24}>{`${s.label} - 기다려요`}</Text20>;
       })}
+      <DeleteLink minHeight={64} onPress={() => navigation.navigate('DeleteAccount')} />
     </Screen>
   );
 }

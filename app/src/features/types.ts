@@ -5,6 +5,7 @@ export type CreateFamilyResult = {family_id: string; profile_id: string};
 export type RedeemResult =
   | {ok: true; family_id: string; profile_id: string}
   | {ok: false; reason: FailReason; retry_after_sec?: number};
+export type DeleteScope = 'parent' | 'child' | 'family';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
 
@@ -30,6 +31,10 @@ export interface Api {
   redeemInviteCode(code: string): Promise<RedeemResult>;
   giveConsent(): Promise<void>;
   // 시작 시 복원: 이 기기가 이미 어르신으로 연결돼 있는지
+  // 앱 데이터 삭제(delete_my_account) 후 로그아웃까지. scope 는 서버가 알려 준다.
+  // 삭제 전 범위 조회(delete_scope_preview). 삭제는 하지 않는다.
+  deleteScopePreview(): Promise<{scope: DeleteScope}>;
+  deleteMyAccount(): Promise<{scope: DeleteScope}>;
   restoreSession(): Promise<'linked' | 'unlinked'>;
   getTodayContent(): Promise<TodayContent | null>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
