@@ -1,0 +1,21 @@
+-- 되돌리기: 20261116000002_rls.sql (Supabase CLI는 down을 자동 실행하지 않으므로 수동 실행용)
+drop policy if exists tokens_own on public.device_tokens;
+drop policy if exists ent_read on public.entitlements;
+drop policy if exists cheers_mark_read on public.cheers;
+drop policy if exists cheers_insert on public.cheers;
+drop policy if exists cheers_read on public.cheers;
+drop policy if exists sessions_read on public.daily_sessions;
+drop policy if exists answers_insert on public.answers;
+drop policy if exists answers_read on public.answers;
+drop policy if exists plans_read on public.plans;
+drop policy if exists questions_read on public.content_questions;
+drop policy if exists photos_read on public.content_photos;
+drop policy if exists codes_read on public.invite_codes;
+drop policy if exists profiles_read on public.profiles;
+drop policy if exists families_read on public.families;
+grant all on all tables in schema public to anon;
+grant update on public.cheers to authenticated;
+drop function if exists public.my_consented();
+drop function if exists public.my_role();
+drop function if exists public.my_family_id();
+drop function if exists public.my_profile_id();
