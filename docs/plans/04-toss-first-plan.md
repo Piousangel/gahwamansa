@@ -52,3 +52,19 @@
 ## 6. Play 트랙(2순위)
 - 기존 RN 앱과 서버는 유지한다. Play 계정 절차(본인 확인, 테스터 모집)는 비용이 적으니 사용자 쪽에서 계속 진행하고, 엔지니어링은 토스에 집중한다.
 - 토스와 Play는 같은 Supabase를 쓰는 독립 제품이다. 같은 가족이 두 채널에 걸치는 경우(예: 자녀는 토스, 어르신은 Play 앱)는 **6자리 번호를 사용자가 직접 전달**하는 방식으로만 연결한다(설치 유도 금지).
+
+## 7. 스파이크 T1 결과 (2026-11-17, 로컬, 계정 없이 확인)
+| 확인 항목 | 결과 | 증거 |
+|---|---|---|
+| WebView 프로젝트 구성 | **가능**: Vite+React로 만들고 `@apps-in-toss/web-framework`(3.10.0) 설치, `apps-in-toss.config.ts` 작성 후 `npm run build`가 성공하고 `bumo-jasik.ait`가 생성됨 | 빌드 로그 "앱인토스 빌드가 완료되었습니다" |
+| Node 26 호환 | 설치·빌드 정상(SDK가 Node 엔진 제한을 명시하지 않음) | 위 빌드 |
+| `ait init` | 터미널 프롬프트(TTY) 필수라 자동화 불가 → 설정 파일을 직접 작성(형식은 SDK 타입 `AppsInTossConfig`에서 확인: `permissions` 필수, `navigationBar.theme`, `webView`, `webBundleDir`). `init`이 빌드 스크립트에 `ait build`를 중복 추가해 정정함 | 생성 결과 |
+| SDK 함수 | `User.createAnonymousKeyAuthCode`, `getAnonymousKey`, `Notification.requestAgreement`, 안전 영역 등 존재 | `index.d.ts` 검색 |
+| 브라우저→Supabase(CORS) | 로컬 Supabase는 사전 요청에 `Access-Control-Allow-Origin: *` 응답. 원격 프로젝트도 같은 기본값일 가능성이 높으나 **미확인** | curl OPTIONS |
+| **Edge Function mTLS** | 로컬 Edge 런타임(supabase-edge-runtime 1.78.1, Deno 2.1.4 호환)에 `Deno.createHttpClient`가 **함수로 존재**하고 PEM 옵션을 해석함(잘못된 값에 "No certificates found in certificate data"). 실제 앱인토스 인증서로 호출이 되는지, 원격 런타임에서도 같은지는 **미확인** | 탐침 함수 호출(삭제함) |
+| 샌드박스 | SDK 3.x는 샌드박스 앱이 없고 브라우저 devtools(`@apps-in-toss/devtools`, `ait init`이 devDependency로 추가). 실제 토스 앱 테스트는 콘솔 QR(사용자 계정 필요) | 공식 문서 |
+
+### 스파이크 결론
+- **서버 쪽 큰 장애물(mTLS)이 하나 덜어졌다**: Edge Function으로 인증 코드 교환을 구현할 수 있을 가능성이 높다. 남은 확인은 "발급받은 인증서로 실제 호출"이며 콘솔 계정이 필요하다(T2~T3).
+- 클라이언트는 **웹 프로젝트라 우리 RN 화면 코드는 재사용할 수 없고**, 도메인 로직·문구·API 계약·디자인 토큰만 공유한다(`packages/core` 분리 제안).
+
