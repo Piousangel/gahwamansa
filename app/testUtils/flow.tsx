@@ -28,3 +28,10 @@ export async function toHome(api: Api, accept = true) {
   }
   await waitFor(() => screen.getByText('오늘의 코스'));
 }
+
+// 서버가 이미 동의한 상태: 동의 화면을 건너뛰고 코스 홈으로 간다.
+export async function toHomeConsented(api: Api) {
+  render(<AppRoot api={api} role="parent" />);
+  await enterCode('123456');
+  await waitFor(() => screen.getByText('오늘의 코스'));
+}

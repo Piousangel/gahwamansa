@@ -1,4 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
+import {OfflineError} from './types';
 import type {
   Api, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
@@ -8,8 +9,15 @@ export interface RealApi extends Api {
   signUpChild(email: string, password: string): Promise<void>;
 }
 
-function fail(what: string, error: {message: string; code?: string}): never {
-  const e = new Error(`${what}: ${error.message}`);
+const OFFLINE_RE = /network request failed|failed to fetch|fetch failed|timeout|timed out|offline|ECONN|ENOTFOUND/i;
+type SbError = {message: string; code?: string; status?: number; name?: string};
+const looksOffline = (e: SbError) =>
+  OFFLINE_RE.test(e.message) || e.status === 0 || e.name === 'AuthRetryableFetchError';
+
+function fail(what: string, error: SbError): never {
+  const e = looksOffline(error)
+    ? new OfflineError(`${what}: ${error.message}`)
+    : new Error(`${what}: ${error.message}`);
   (e as Error & {code?: string}).code = error.code;
   throw e;
 }
@@ -17,7 +25,8 @@ function fail(what: string, error: {message: string; code?: string}): never {
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 export function createRealApi(sb: SupabaseClient): RealApi {
   const myUid = async (): Promise<string> => {
-    const {data} = await sb.auth.getSession();
+    const {data, error} = await sb.auth.getSession();
+    if (error) fail('세션 확인', error);
     const id = data.session?.user.id;
     if (!id) throw new Error('로그인 세션이 없어요');
     return id;
@@ -39,6 +48,19 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       const {error} = await sb.auth.signUp({email, password});
       if (error) fail('가입', error);
     },
+    async restoreSession() {
+      const {data, error} = await sb.auth.getSession();
+      if (error) fail('세션 확인', error);
+      if (!data.session) return 'unlinked';
+      const {data: p, error: pe} = await sb
+        .from('profiles')
+        .select('id')
+        .eq('user_id', data.session.user.id)
+        .eq('role', 'parent')
+        .maybeSingle();
+      if (pe) fail('프로필 조회', pe);
+      return p ? 'linked' : 'unlinked';
+    },
     async createFamily(): Promise<CreateFamilyResult> {
       const {data, error} = await sb.rpc('create_family');
       if (error) fail('create_family', error);
@@ -50,7 +72,9 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       return data as string;
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
-      const {data: s} = await sb.auth.getSession();
+      const {data: s, error: se} = await sb.auth.getSession();
+      // 세션을 못 읽은 것과 세션이 없는 것은 다르다. 못 읽었으면 새 익명 사용자를 만들지 않는다.
+      if (se) throw new OfflineError(`세션 확인: ${se.message}`);
       if (!s.session) {
         const {error: e} = await sb.auth.signInAnonymously();
         if (e) fail('익명 로그인', e);
@@ -78,31 +102,26 @@ export function createRealApi(sb: SupabaseClient): RealApi {
         p_duration: durationSec,
       });
       if (error) fail('record_session_step', error);
-      return {completed: !!data.completed, streak: Number(data.streak ?? 0)};
+      return {completed: !!data.completed, streak: Number(data.streak ?? 0), steps: data.steps};
     },
     async fetchChildHome() {
       const me = await myProfile();
-      const {data: today, error: te} = await sb.rpc('kst_today');
-      if (te) fail('kst_today', te);
-      const {data: parent, error: pe} = await sb
-        .from('profiles')
-        .select('id')
-        .eq('family_id', me.family_id)
-        .eq('role', 'parent')
-        .limit(1)
-        .maybeSingle();
-      if (pe) fail('어르신 조회', pe);
+      // 서로 의존하지 않는 조회는 병렬로
+      const [todayRes, parentRes] = await Promise.all([
+        sb.rpc('kst_today'),
+        sb.from('profiles').select('id').eq('family_id', me.family_id).eq('role', 'parent').limit(1).maybeSingle(),
+      ]);
+      if (todayRes.error) fail('kst_today', todayRes.error);
+      if (parentRes.error) fail('어르신 조회', parentRes.error);
+      const parent = parentRes.data;
       if (!parent) return {participatedToday: false, streak: 0};
-      const {data: row, error: se} = await sb
-        .from('daily_sessions')
-        .select('completed_at')
-        .eq('parent_id', parent.id)
-        .eq('session_date', today)
-        .maybeSingle();
-      if (se) fail('세션 조회', se);
-      const {data: streak, error: ste} = await sb.rpc('parent_streak', {p_parent: parent.id});
-      if (ste) fail('parent_streak', ste);
-      return {participatedToday: !!row?.completed_at, streak: Number(streak ?? 0)};
+      const [rowRes, streakRes] = await Promise.all([
+        sb.from('daily_sessions').select('completed_at').eq('parent_id', parent.id).eq('session_date', todayRes.data).maybeSingle(),
+        sb.rpc('parent_streak', {p_parent: parent.id}),
+      ]);
+      if (rowRes.error) fail('세션 조회', rowRes.error);
+      if (streakRes.error) fail('parent_streak', streakRes.error);
+      return {participatedToday: !!rowRes.data?.completed_at, streak: Number(streakRes.data ?? 0)};
     },
   };
 }

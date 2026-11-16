@@ -66,6 +66,11 @@ test('어르신 익명 로그인 -> redeem 성공', async () => {
   state.parentUid = (await parentClient.auth.getUser()).data.user?.id;
 });
 
+test('같은 기기가 같은 코드를 다시 보내도 ok(응답 유실 대비)', async () => {
+  const r = await parent.redeemInviteCode(state.code!);
+  expect(r).toMatchObject({ok: true, family_id: state.familyId});
+});
+
 test('이미 쓴 코드는 used', async () => {
   const r = await stranger.redeemInviteCode(state.code!);
   expect(r).toMatchObject({ok: false, reason: 'used'});
@@ -75,13 +80,16 @@ test('어르신은 오늘의 콘텐츠를 받는다(사진·질문)', async () =
   const c = await parent.getTodayContent();
   expect(c).not.toBeNull();
   expect(c!.day_index).toBeGreaterThanOrEqual(1);
-  expect(c!.photo.caption.length).toBeGreaterThan(0);
-  expect(c!.photo.keyword.length).toBeGreaterThan(0);
-  expect(c!.question.option_a.length).toBeGreaterThan(0);
-  expect(c!.question.prompt).toEqual(expect.any(String));
-  expect(c!.photo.recall_questions).toHaveLength(2);
+  expect(c!.photo!.caption.length).toBeGreaterThan(0);
+  expect(c!.photo!.keyword.length).toBeGreaterThan(0);
+  expect(c!.question!.option_a.length).toBeGreaterThan(0);
+  expect(c!.question!.prompt).toEqual(expect.any(String));
+  expect(c!.photo!.recall_questions).toHaveLength(2);
   expect(c!.answered_choice).toBeNull();
-  state.questionId = c!.question.id;
+  expect(c!.consented).toBe(false);
+  expect(c!.completed_steps).toEqual([]);
+  expect(c!.streak).toBe(0);
+  state.questionId = c!.question!.id;
 });
 
 test('자녀가 get_today_content 를 부르면 parent_required', async () => {
@@ -98,6 +106,7 @@ test('동의 전 답변 저장은 거부된다(consent_required)', async () => {
 
 test('동의 후 save_answer 성공, 같은 질문에 다시 답하면 갱신된다', async () => {
   await parent.giveConsent();
+  expect((await parent.getTodayContent())!.consented).toBe(true);
   await parent.saveAnswer({questionId: state.questionId!, choice: 'A'});
   expect((await parent.getTodayContent())!.answered_choice).toBe('A');
   await parent.saveAnswer({questionId: state.questionId!, choice: 'B'});
@@ -114,6 +123,9 @@ test('3단계 기록 -> completed, streak 1, 같은 날 재호출해도 streak �
   expect(c).toMatchObject({completed: true, streak: 1});
   const again = await parent.recordSessionStep('hangul', 30);
   expect(again.streak).toBe(1);
+  const today = await parent.getTodayContent();
+  expect([...today!.completed_steps].sort()).toEqual(['hangul', 'photo', 'question']);
+  expect(today!.streak).toBe(1);
 });
 
 test('자녀 홈: 오늘 참여, 연속 1일', async () => {

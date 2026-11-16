@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {errorMessage} from '../course/useFinishStep';
 import {StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -9,13 +10,14 @@ import {BigButton} from '../../ui/BigButton';
 import {CodeInput} from '../../ui/CodeInput';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {canSubmit, clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
-import {copy, offlineMessage, reasonToMessage, Message} from '../../copy/copy';
+import {copy, reasonToMessage, Message} from '../../copy/copy';
 
 export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams, 'Connect'>) {
   const {api} = useSession();
   const [code, setCode] = useState('');
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
 
   const submit = async () => {
     setBusy(true);
@@ -25,10 +27,12 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
         navigation.navigate('Consent');
       } else {
         setError(reasonToMessage(res.reason));
+        setReason(res.reason);
         if (res.reason === 'invalid') setCode('');
       }
-    } catch {
-      setError(offlineMessage);
+    } catch (e) {
+      setReason(null);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -45,7 +49,12 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
         <View accessibilityLiveRegion="polite">
           <Text20 size={24} weight="bold">{error.title}</Text20>
           <Text20>{error.body}</Text20>
-          <BigButton variant="secondary" label={error.button} onPress={() => setError(null)} />
+          <BigButton variant="secondary" label={error.button} onPress={() => {
+              setError(null);
+              if (reason === 'already_linked') {
+                navigation.navigate('Consent');
+              }
+            }} />
         </View>
       ) : (
         <>

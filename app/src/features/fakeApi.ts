@@ -1,3 +1,4 @@
+import {OfflineError} from './types';
 import type {Api, RedeemResult, StepName, TodayContent} from './types';
 import type {FailReason} from '../copy/copy';
 
@@ -21,12 +22,23 @@ export type FakeOptions = {
   empty?: boolean; // 콘텐츠 없음
   promptNull?: boolean; // 질문 문장이 없는 경우
   answeredChoice?: 'A' | 'B' | null; // 이미 고른 답
+  questionNull?: boolean; // 번호 구멍으로 question 이 null
+  consented?: boolean; // 서버에 이미 동의한 상태
+  linked?: boolean; // 이미 연결된 기기
+  completedSteps?: StepName[]; // 오늘 이미 끝낸 단계
+  streak?: number;
+  failRecord?: number; // recordSessionStep 이 처음 N번 실패
+  failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
 // in-memory 가짜 구현. '123456' 만 성공, 위 표의 코드는 각 reason, 나머지는 invalid.
 export function createFakeApi(opts: FakeOptions = {}): Api {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
-  const steps = new Set<StepName>();
+  const steps = new Set<StepName>(opts.completedSteps ?? []);
+  let consented = opts.consented ?? false;
+  let failRecord = opts.failRecord ?? 0;
+  let failChildHome = opts.failChildHome ?? 0;
+  const baseStreak = opts.streak ?? 0;
   let issued = 0;
   return {
     async createFamily() {
@@ -43,7 +55,12 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         ? {ok: false, reason, retry_after_sec: 600}
         : {ok: false, reason};
     },
-    async giveConsent() {},
+    async restoreSession() {
+      return opts.linked ? 'linked' : 'unlinked';
+    },
+    async giveConsent() {
+      consented = true;
+    },
     async getTodayContent(): Promise<TodayContent | null> {
       if (opts.empty) {
         return null;
@@ -53,19 +70,30 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return {
         day_index: idx + 1,
         photo: {caption: c.caption, image_url: `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
-        question: {id: `q-${idx + 1}`, option_a: c.a, option_b: c.b, prompt: opts.promptNull ? null : c.prompt},
+        question: opts.questionNull ? null : {id: `q-${idx + 1}`, option_a: c.a, option_b: c.b, prompt: opts.promptNull ? null : c.prompt},
         answered_choice: answered,
+        consented,
+        completed_steps: [...steps],
+        streak: steps.size === 3 ? Math.max(1, baseStreak) : baseStreak,
       };
     },
     async saveAnswer({choice}) {
       answered = choice;
     },
     async recordSessionStep(step) {
+      if (failRecord > 0) {
+        failRecord -= 1;
+        throw new OfflineError('offline');
+      }
       steps.add(step);
       const completed = steps.size === 3;
-      return {completed, streak: completed ? 1 : 0};
+      return {completed, streak: completed ? Math.max(1, baseStreak) : baseStreak, steps: [...steps]};
     },
     async fetchChildHome() {
+      if (failChildHome > 0) {
+        failChildHome -= 1;
+        throw new OfflineError('offline');
+      }
       return {participatedToday: steps.size === 3, streak: steps.size === 3 ? 1 : 0};
     },
   };

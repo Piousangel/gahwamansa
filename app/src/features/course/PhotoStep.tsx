@@ -8,16 +8,22 @@ import {BigButton} from '../../ui/BigButton';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {useSession} from '../../app/session';
 import {appCopy} from '../../copy/copy';
+import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
 export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
-  const finish = useFinishStep();
+  const {finish, error} = useFinishStep();
   const [imageFailed, setImageFailed] = useState(false);
   const {content} = useSession();
-  if (!content) {
+  const photo = content?.photo;
+  if (!photo) {
     return null;
   }
-  const {photo} = content;
+  const go = async () => {
+    if (await finish('photo')) {
+      navigation.navigate('CourseHome');
+    }
+  };
   return (
     <Screen>
       {photo.image_url.startsWith('pending://') || imageFailed ? (
@@ -30,13 +36,8 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
       {photo.recall_questions.map(q => (
         <Text20 key={q} size={24}>{q}</Text20>
       ))}
-      <BigButton
-        label="다 봤어요"
-        onPress={async () => {
-          await finish('photo');
-          navigation.navigate('CourseHome');
-        }}
-      />
+      <BigButton label="다 봤어요" onPress={go} />
+      <StepError error={error} onRetry={go} />
     </Screen>
   );
 }

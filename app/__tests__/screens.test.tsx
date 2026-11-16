@@ -65,7 +65,7 @@ test('콘텐츠가 없으면 이해하기 쉬운 빈 화면을 보여 준다', a
 test('하루 단위 순환: 콘텐츠 수를 넘기면 1일차로 돌아온다', async () => {
   const api = createFakeApi({day: 4}); // fake 는 3일치 -> 4일차는 1일차 콘텐츠
   const c = await api.getTodayContent();
-  expect(c?.photo.caption).toBe('마을 입구 나무');
+  expect(c?.photo?.caption).toBe('마을 입구 나무');
 });
 
 test('질문 화면 제목은 서버 prompt 를 쓴다', async () => {

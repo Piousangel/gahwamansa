@@ -13,9 +13,9 @@ export type ParentParams = {
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 
-export function ParentStack() {
+export function ParentStack({initialRouteName = 'Connect'}: {initialRouteName?: keyof ParentParams}) {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{headerShown: false}}>
       <Stack.Screen name="Connect" component={ConnectScreen} />
       <Stack.Screen name="Consent" component={ConsentScreen} />
       <Stack.Screen name="CourseHome" component={CourseHome} />

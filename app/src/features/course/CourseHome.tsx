@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -16,9 +16,19 @@ const STEPS: {step: StepName; label: string; route: 'PhotoStep' | 'QuestionStep'
 ];
 
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
-  const {done, streak, content} = useSession();
+  const {api, done, streak, content, consented, applyConsent} = useSession();
+  const [consentError, setConsentError] = useState(false);
   const {failed, retry} = useLoadTodayContent();
   const all = done.length === 3;
+  const consentNow = async () => {
+    setConsentError(false);
+    try {
+      await api.giveConsent();
+      applyConsent();
+    } catch {
+      setConsentError(true);
+    }
+  };
   const current = STEPS.find(s => !done.includes(s.step));
   if (failed) {
     return (
@@ -38,7 +48,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       </Screen>
     );
   }
-  if (content === null) {
+  if (content === null || !content.photo || !content.question) {
     return (
       <Screen>
         <Text20 size={30} weight="bold">오늘의 코스</Text20>
@@ -56,6 +66,13 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           <Text20 size={24}>{copy.praise[0]}</Text20>
           <Text20>{`${streak}일 연속 해냈어요`}</Text20>
           <Text20>{appCopy.course_done_today}</Text20>
+        </>
+      ) : null}
+      {!consented ? (
+        <>
+          <Text20>{copy.consent.title}</Text20>
+          <BigButton variant="secondary" label={copy.consent.accept} onPress={consentNow} />
+          {consentError ? <Text20>{offlineMessage.title}</Text20> : null}
         </>
       ) : null}
       {STEPS.map(s => {

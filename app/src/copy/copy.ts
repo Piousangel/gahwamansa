@@ -16,3 +16,8 @@ export const offlineMessage: Message = copy.errors.offline;
 
 // 라이터 확정 문구는 copy.ko.json 의 app 키. 키가 없어 임시로 둔 문구는 없음.
 export const appCopy = copy.app;
+
+// 임시 문구(라이터 확정 필요, dev-app-notes.md 6e 참고)
+export const tempCopy = {
+  serverError: {title: '앱이 잠깐 헷갈렸어요', body: '잠시 뒤에 다시 해 볼까요?', button: '다시 하기'},
+};
