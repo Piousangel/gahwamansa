@@ -119,7 +119,9 @@ describe('공용 컴포넌트 명세 수치', () => {
   });
   test('BigButton 비활성 이유를 글자로 알린다', () => {
     render(<BigButton label="정했어요" disabled disabledReason="하나를 골라 주세요" onPress={() => {}} />);
-    expect(screen.getByText('하나를 골라 주세요')).toBeTruthy();
+    // 화면엔 글자로 보이고, 화면 읽기는 버튼 힌트로 한 번만 읽는다(TalkBack R8)
+    expect(screen.getByText('하나를 골라 주세요', {includeHiddenElements: true})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '정했어요'}).props.accessibilityHint).toBe('하나를 골라 주세요');
   });
   test('BigButton 로딩이면 "잠시만요"와 누르기 막음', () => {
     const fn = jest.fn();

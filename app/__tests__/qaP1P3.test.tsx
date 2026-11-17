@@ -75,7 +75,7 @@ test('P1#10 "번호가 없어요"를 누르면 도움말이 보인다', async ()
 test('P1#12 비활성 "다음": 테두리 없음 + 위에 이유 줄', async () => {
   render(<BigButton label="다음" disabled disabledReason="번호 6개를 모두 써 주세요" onPress={() => {}} />);
   expect(flat(screen.getByRole('button', {name: '다음'})).borderWidth ?? 0).toBe(0);
-  const reason = screen.getByText('번호 6개를 모두 써 주세요');
+  const reason = screen.getByText('번호 6개를 모두 써 주세요', {includeHiddenElements: true}); // 화면엔 보이고 화면 읽기는 버튼 힌트로(TalkBack R8)
   const tree = JSON.stringify(screen.toJSON());
   expect(tree.indexOf('번호 6개를 모두 써 주세요')).toBeLessThan(tree.indexOf('"다음"'));
   expect(reason).toBeTruthy();
