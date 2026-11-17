@@ -23,6 +23,7 @@ export type FakeOptions = {
   empty?: boolean; // 콘텐츠 없음
   promptNull?: boolean; // 질문 문장이 없는 경우
   answeredChoice?: 'A' | 'B' | null; // 이미 고른 답
+  realImage?: boolean; // 실제 사진 URL(자리표시 아님)
   questionNull?: boolean; // 번호 구멍으로 question 이 null
   consented?: boolean; // 서버에 이미 동의한 상태
   linked?: boolean; // 이미 연결된 기기
@@ -94,7 +95,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       const c = FAKE_CONTENT[idx];
       return {
         day_index: idx + 1,
-        photo: {caption: c.caption, image_url: `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
+        photo: {caption: c.caption, image_url: opts.realImage ? `https://example.test/day-${idx + 1}.jpg` : `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
         question: opts.questionNull ? null : {id: `q-${idx + 1}`, option_a: c.a, option_b: c.b, prompt: opts.promptNull ? null : c.prompt},
         answered_choice: answered,
         consented,

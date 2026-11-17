@@ -1,7 +1,7 @@
 {
   "_meta": "writer.md 말투 규칙(해요체, 어르신 문장 20자 안팎, 버튼 2~6자)을 따른다. errors 키는 서버 RPC reason 값과 같다.",
   "connect": {
-    "greeting": "안녕하세요, 저는 해님이에요",
+    "greeting": "안녕하세요, 해님이에요",
     "title": "자녀분께 받은 번호를 써 주세요",
     "placeholder": "번호 6개",
     "hint": "틀려도 괜찮아요",
@@ -13,16 +13,17 @@
   "consent": {
     "title": "고른 답이 자녀분께 보여요",
     "body": [
-      "어르신이 고른 답은 자녀분이 볼 수 있어요",
-      "자녀분은 그 답으로 이야기를 나눠요",
-      "다른 사람에게는 보이지 않아요"
+      "어느 날 골랐는지도 보여요",
+      "안 한 날은 보이지 않아요",
+      "글씨 쓴 기록은 안 보여요"
     ],
-    "reassure": "마음이 바뀌면 자녀분께 말씀해 주세요",
+    "reassure": "마음이 바뀌면 설정에서 바꿔요",
     "accept": "좋아요",
     "decline": "싫어요",
-    "declined_notice": "괜찮아요. 앱은 그대로 쓸 수 있어요",
-    "declined_detail": "대신 고른 답은 저장되지 않아요",
-    "child_view_declined": "어르신이 답을 남기지 않기로 했어요"
+    "declined_notice": "괜찮아요. 앱은 그대로 써요",
+    "declined_detail": "고른 답은 자녀분께 안 보여요",
+    "declined_reassure": "마음이 바뀌면 설정에서 다시 골라요",
+    "save_failed": "저장이 안 됐어요. 다시 눌러 주세요"
   },
   "errors": {
     "invalid": {
@@ -69,6 +70,11 @@
       "title": "소식을 받지 않기로 했어요",
       "body": "괜찮아요. 앱을 열면 사진을 볼 수 있어요",
       "button": "알겠어요"
+    },
+    "server": {
+      "title": "잠깐 문제가 생겼어요",
+      "body": "잠시 뒤에 다시 해 볼까요?",
+      "button": "다시 하기"
     }
   },
   "praise": [
@@ -80,10 +86,9 @@
     "천천히 해도 충분해요"
   ],
   "cheers": {
-    "well_done": "오늘도 사진 보러 와 주셔서 고마워요",
-    "warm_day": "엄마 덕분에 하루가 따뜻해요",
+    "warm_day": "덕분에 하루가 따뜻해요",
     "take_your_time": "천천히 하셔도 괜찮아요, 응원해요",
-    "curious_answer": "오늘 고른 답이 궁금해요, 이따 이야기해요",
+    "curious_answer": "고른 답 이야기가 듣고 싶어요",
     "want_story": "이 사진 보니 옛날 이야기가 듣고 싶어요",
     "stay_healthy": "오늘도 건강하게 보내세요",
     "love_you": "사랑해요, 오늘도 좋은 하루예요",
@@ -127,11 +132,70 @@
     },
     "photo_look": "천천히 보세요. 서두르지 않아도 돼요",
     "photo_placeholder": "사진을 준비하고 있어요",
-    "photo_load_failed": "사진이 아직 안 보여요. 조금 뒤에 다시 와 주세요",
+    "photo_load_failed": "사진이 열리지 않아요. 잠시 뒤에 다시 해요",
     "question_title": "마음에 드는 쪽을 골라 주세요",
     "question_hint": "정답은 없어요. 마음 가는 쪽을 눌러 주세요",
     "hangul_hint": "틀려도 괜찮아요. 천천히 따라 써 봐요",
     "loading": "잠시만요",
-    "course_done_today": "오늘 코스는 여기까지예요. 내일 또 만나요"
+    "course_done_today": "오늘 코스는 여기까지예요. 내일 또 만나요",
+    "ai_photo_label": "AI가 만든 그림"
+  },
+  "brand": {
+    "name": "가화만사성",
+    "store_short": "가화만사성: 매일 옛날 사진 한 장과 질문 하나. 부모님의 기억을 떠올리고 자녀와 이야기를 나눠요."
+  },
+  "child": {
+    "tab_album": "앨범",
+    "tab_past": "지난 답",
+    "title_suffix": "의 최근 답",
+    "talk": " 이야기를 해 볼까요?",
+    "no_answer": "고른 답이 생기면 여기에 보여요",
+    "not_shared": "답을 나누지 않는 중이에요",
+    "past_title": "지난 답",
+    "delete_link": "내 계정 지우기"
+  },
+  "settings": {
+    "open": "설정",
+    "shared_now": "지금은 답을 나누는 중이에요",
+    "not_shared_now": "고른 답은 자녀분께 안 보여요",
+    "withdraw": "그만 나누기",
+    "withdraw_title": "그만 나눌까요?",
+    "withdraw_body": "그만 나누면 새로 고른 답은 자녀분께 안 보여요. 지금까지 고른 답도 지워져요",
+    "withdraw_yes": "그만 나누기",
+    "keep": "그대로 둘래요",
+    "reconsent": "다시 나누기",
+    "back": "돌아가기",
+    "delete_data": "기록 지우기"
+  },
+  "delete": {
+    "parent": {
+      "title": "고른 답과 기록을 지울까요?",
+      "body": "모두 지워져요. 자녀분 화면에서도 없어져요. 되돌릴 수 없어요",
+      "cancel": "그만둘래요",
+      "start": "지우기",
+      "ask": "정말 지울까요?",
+      "yes": "네, 지울게요",
+      "fail_title": "지우는 중에 문제가 생겼어요",
+      "fail_body": "다시 눌러 주세요",
+      "done": "모두 지웠어요",
+      "back": "처음으로"
+    },
+    "child": {
+      "keep_title": "내 계정 지우기",
+      "keep_body": "내 계정만 지워져요. {호칭}의 고른 답과 기록은 남아요. 되돌릴 수 없어요",
+      "last_title": "{호칭}의 기록도 함께 지워져요",
+      "last_body": "마지막 자녀라서 {호칭}의 고른 답과 기록이 모두 지워져요. 되돌릴 수 없어요",
+      "warn_label": "되돌릴 수 없어요",
+      "cancel": "그만둘래요",
+      "danger": "계정 지우기",
+      "type_hint": "아래 칸에 지우기 두 글자를 써 주세요",
+      "type_word": "지우기",
+      "fail": "지워지지 않았어요. 다시 눌러 주세요",
+      "done_keep": "내 계정이 지워졌어요",
+      "done_last": "계정과 {호칭}의 기록이 모두 지워졌어요",
+      "thanks": "함께해 주셔서 고마워요",
+      "back": "처음으로",
+      "login_placeholder": "다시 로그인해 주세요"
+    }
   }
 }

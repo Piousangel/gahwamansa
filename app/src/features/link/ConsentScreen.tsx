@@ -53,6 +53,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
       <Screen>
         <Text20 size={28} weight="bold">{copy.consent.declined_notice}</Text20>
         <Text20>{copy.consent.declined_detail}</Text20>
+        <Text20>{copy.consent.declined_reassure}</Text20>
         <BigButton label="알겠어요" onPress={() => navigation.navigate('CourseHome')} />
       </Screen>
     );

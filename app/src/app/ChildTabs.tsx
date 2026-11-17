@@ -7,7 +7,7 @@ import {DeleteAccountScreen} from '../features/account/DeleteAccountScreen';
 import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {Screen} from '../ui/Screen';
 import {Text20} from '../ui/Text20';
-import {tempCopy} from '../copy/copy';
+import {copy} from '../copy/copy';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -15,8 +15,8 @@ const Stack = createNativeStackNavigator();
 function Tabs() {
   return (
     <Tab.Navigator screenOptions={{headerShown: false}}>
-      <Tab.Screen name="홈" component={ChildHome} />
-      <Tab.Screen name="리포트" component={ChildReport} />
+      <Tab.Screen name={copy.child.tab_album} component={ChildHome} />
+      <Tab.Screen name={copy.child.tab_past} component={ChildReport} />
     </Tab.Navigator>
   );
 }
@@ -25,7 +25,7 @@ function Tabs() {
 function LoginPlaceholder() {
   return (
     <Screen>
-      <Text20 size={24} weight="bold">{tempCopy.del.childLoginTitle}</Text20>
+      <Text20 size={24} weight="bold">{copy.delete.child.login_placeholder}</Text20>
     </Screen>
   );
 }

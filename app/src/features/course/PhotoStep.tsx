@@ -19,6 +19,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   if (!photo) {
     return null;
   }
+  const showImage = !photo.image_url.startsWith('pending://') && !imageFailed;
   const go = async () => {
     if (await finish('photo')) {
       navigation.navigate('CourseHome');
@@ -31,6 +32,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
       ) : (
         <Image source={{uri: photo.image_url}} style={styles.photo} accessibilityLabel={photo.caption} onError={() => setImageFailed(true)} />
       )}
+      {showImage ? <Text20>{appCopy.ai_photo_label}</Text20> : null}
       <Text20 size={32}>{photo.caption}</Text20>
       <Text20>{appCopy.photo_look}</Text20>
       {photo.recall_questions.map(q => (

@@ -91,3 +91,18 @@ test('콘텐츠 없음 화면에서 다시 보기를 누르면 다시 불러온�
   await press('다시 보기');
   expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
+
+test('실제 사진이면 사진 아래에 "AI가 만든 그림"을 보여 주고 자리표시면 보이지 않는다', async () => {
+  await toHome(createFakeApi({realImage: true}));
+  await press(/사진 보기/);
+  await waitFor(() => screen.getByText('AI가 만든 그림'));
+  const s = StyleSheet.flatten(screen.getByText('AI가 만든 그림').props.style);
+  expect(s.fontSize).toBeGreaterThanOrEqual(20);
+});
+
+test('자리표시 사진에는 AI 표기가 없다', async () => {
+  await toHome(createFakeApi());
+  await press(/사진 보기/);
+  await waitFor(() => screen.getByText('사진을 준비하고 있어요'));
+  expect(screen.queryByText('AI가 만든 그림')).toBeNull();
+});

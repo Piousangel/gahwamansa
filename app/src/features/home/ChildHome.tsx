@@ -5,7 +5,7 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {appCopy, tempCopy, Message} from '../../copy/copy';
+import {appCopy, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import type {ChildSummary} from '../types';
 import {formatAnswerDate} from './formatDate';
@@ -62,14 +62,14 @@ export function ChildHome() {
       </Screen>
     );
   }
-  const c = tempCopy.child;
+  const c = copy.child;
   return (
     <Screen>
-      <Text20 size={24} weight="bold">{`${info?.parentTitle ?? '부모님'}${c.titleSuffix}`}</Text20>
+      <Text20 size={24} weight="bold">{`${info?.parentTitle ?? '부모님'}${c.title_suffix}`}</Text20>
       {loading && !info ? (
         <Text20>{appCopy.loading}</Text20>
       ) : info && !info.shared ? (
-        <Text20>{c.notShared}</Text20>
+        <Text20>{c.not_shared}</Text20>
       ) : info?.latest ? (
         <>
           <Text20 size={36} weight="bold">{info.latest.choiceLabel}</Text20>
@@ -77,7 +77,7 @@ export function ChildHome() {
           <Text20 size={24}>{`${info.latest.choiceLabel}${c.talk}`}</Text20>
         </>
       ) : (
-        <Text20>{c.noAnswer}</Text20>
+        <Text20>{c.no_answer}</Text20>
       )}
     </Screen>
   );

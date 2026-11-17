@@ -76,7 +76,7 @@ test('답변 저장이 실패하면 알리고 진행하지 않는다', async () 
   const rec = jest.spyOn(api, 'recordSessionStep');
   await toQuestion(api);
   await press('정했어요');
-  await waitFor(() => screen.getByText('앱이 잠깐 헷갈렸어요'));
+  await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
   expect(rec).toHaveBeenCalledTimes(1); // 사진 단계만
 });
 
@@ -98,7 +98,7 @@ test('Connect: 오프라인과 기타 오류는 다른 문구', async () => {
   await press('다시 하기');
   jest.spyOn(api, 'redeemInviteCode').mockRejectedValueOnce(new Error('boom'));
   await enterCode('123456');
-  await waitFor(() => screen.getByText('앱이 잠깐 헷갈렸어요'));
+  await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
 });
 
 test('already_linked 버튼은 코스로 이동한다', async () => {
@@ -117,7 +117,7 @@ test('복원: 연결된 기기는 코스 홈으로 시작하고 완료 단계는
 
 test('복원: 연결 안 된 기기는 Connect 로 시작', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" restore />);
-  await waitFor(() => screen.getByText('안녕하세요, 저는 해님이에요'));
+  await waitFor(() => screen.getByText('안녕하세요, 해님이에요'));
 });
 
 test('포그라운드로 돌아오면 서버에서 다시 불러온다', async () => {
