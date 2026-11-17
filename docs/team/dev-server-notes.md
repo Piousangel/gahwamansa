@@ -161,3 +161,17 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 | log_event | 모두(설치 직후 익명 포함) | 이름·속성 화이트리스트, 기기 상한 |
 
 - 콘솔 경고 2건(익명 로그인 허용·유출 비밀번호 보호)은 DB가 아니라 Auth 설정이라 `docs/team/RELEASE.md` §9 사용자 체크리스트에 적었다.
+
+## 8. 재생 검증·원격 확인 (SV-09)
+- **로컬 순차 재생**: `supabase/ops/replay-check.sh` — 공유 DB(54322)를 건드리지 않고 별도 임시 스택(project_id `bumo-jasik-replay`, db 55322)에서 `db reset`(0001→끝 + 시드) → `test db` → 스택 삭제. 로그는 저장소 밖 `${TMPDIR}/bumo-replay-check.log`. 11-18 결과: 마이그레이션 31개 재생 + pgTAP 29파일 **446/446 PASS**(리뷰 M3 해소).
+- **원격 확인(staging, 리드·사용자 실행 — SQL Editor)**:
+  ```sql
+  -- 파기 배치가 하루 이상 지난 뒤: 성공 1회 이상
+  select status, start_time, return_message from cron.job_run_details
+   where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 3;
+  -- 0017·0026 함수 소유자의 auth.users 삭제 권한(둘 다 true여야 탈퇴·가족 삭제가 인증 계정까지 지운다)
+  select p.proname, pg_get_userbyid(p.proowner) owner,
+         has_table_privilege(pg_get_userbyid(p.proowner), 'auth.users', 'delete') can_delete
+    from pg_proc p where p.oid in ('public.delete_my_account()'::regprocedure, 'public.discard_anonymous_session()'::regprocedure);
+  ```
+  결과는 리드가 staging 반영 기록에 붙인다. 실제 탈퇴 1회(staging 테스트 계정)로 auth 사용자 삭제까지 확인하면 더 확실하다.
