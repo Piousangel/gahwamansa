@@ -68,3 +68,32 @@
 2. M1(release 에서 `-PappLinkHost` 차단) 반영
 3. 화면 연결 커밋 전: H1(번호 기기 저장·만료·consumed 삭제), M2(루트 1회 구독·재방출 방지), M3(env.generated 에 APP_LINK_HOST, allowedHost 사용) + 해당 테스트
 4. 출시 전: L1·L2 실기기 확인, L4 페이지를 동결 디자인으로, L5 assetlinks 도메인별 분리
+
+## 재검토 (2026-11-17, 커밋 312224c main 합침 · 5d9a312 수정)
+- 판정: **합치기 가능**. 아래 R1~R4 는 모두 낮음이라 합치기를 막지 않는다(화면 연결 줄에서 함께 처리 권장)
+- 실행 결과(worktree 5d9a312): `tsc --noEmit` 통과, `jest --maxWorkers=2 --testPathIgnorePatterns __integration__` **59 묶음 / 575 테스트 통과**(inviteLinkSources 71건), 새·변경 파일 eslint 통과. `git merge-tree` 로 현재 main(1edb728)과 충돌 없음. 브랜치는 main 보다 21커밋 뒤라 합치기 직전 한 번 더 rebase·테스트. Gradle·실기기는 돌리지 않았다(manifest·도메인 검증 결과는 스파이크 문서 기록을 근거로 봄)
+
+| 지적 | 결과 | 근거 |
+|---|---|---|
+| H1 번호 유실 | 해결 | `InviteModule.readStore/writeStore`(MODE_PRIVATE, `commit()`), `native.ts` 가 시작 시 저장소부터 복원하고 받은 번호를 `expiresAt`(referrer 는 clickTs 기준, 링크는 받은 시각 기준 +7일)과 함께 저장, `consumeInvite` 로 삭제, `parseInviteStore` 가 만료·깨진 값 버림. 구독 해제와 저장이 분리돼(모듈 단일 store) Provider 재마운트로 잃지 않음. 남은 틈은 R2 |
+| M1 host 원본 | 해결 | `-PappLinkHost` 제거 → env 의 `APP_LINK_HOST` 한 곳. 로컬 덮어쓰기는 `-PappLinkHostDebug` 로 바꿔 `buildTypes.debug` 의 placeholder 와 debug 변형의 JS 값에만 적용(release 변형은 `e.APP_LINK_HOST` 고정). production 테스트 도메인(.test·.invalid·example.* 등)·staging=production 같은 host 면 빌드 실패 |
+| M2 재방출·동시 호출 | 해결 | `startInviteSources` 는 앱 수명 동안 promise 하나, 시작 링크는 해시(`handled`, 7일)로 한 번만 반영. Kotlin `getReferrerOnce` 는 진행 중 promise 목록에 묶어 한 번만 읽음. 테스트로 재시작·재호출 확인 |
+| M3 도메인 강제 | 해결 | `APP_LINK_HOST` 를 env.generated.ts 에 넣고(`clean()` 이 아는 키라 유지됨) `codeFromInviteLink(url, allowedHost)` 가 필수 인자, 빈 값이면 링크 출처 꺼짐. 쿼리 `?code=` 는 더 받지 않음 |
+| L1 쿼리 번호 | 해결 | 페이지가 번호를 `S.code` 엑스트라로만 싣고 쿼리를 쓰지 않음 |
+| L2 비활성 alias 검증 | 해결(문서) | 매니페스트 주석을 "해석에서 빠짐, 검증 목록에는 applinks.invalid 가 실패로 남음(무해, API 35 확인)"으로 정정 |
+| L3 메인 스레드·타임아웃 | 해결 | 결과 읽기는 단일 백그라운드 executor, 10초 타임아웃 후 `finish(null, done=false)` |
+| L4 페이지 | 해결 | C_page 시안 구조·문구로 교체, 기간 문구 삭제, 방침 링크·안심 한 줄. 번호 없음 상태는 시안 밖이라 라이터 확인 필요로 표시됨 |
+| L5 assetlinks | 해결 | production·staging 템플릿 분리 |
+| L6 RN 의존 | 해결 | `native.ts` 분리, 토스·contracts 는 `inviteCode.ts` 만 import 하라고 명시 |
+
+### S.code 엑스트라 경로가 M3 도메인 강제를 우회하는가 — **아니다**
+- `InviteIntent.moveCodeExtraToFragment`(InviteIntent.kt:16)는 `ACTION_VIEW` + `https` + 경로 `/c` + 조각 없음일 때만 엑스트라를 **data 의 조각으로 옮길 뿐**이고, host 는 건드리지 않는다. 결과 URL 은 JS 의 `codeFromInviteLink(url, APP_LINK_HOST)` 를 그대로 지나므로, 다른 앱이 명시적 인텐트로 `data=https://evil.test/c` + `S.code=999999` 를 보내면 `https://evil.test/c#999999` 가 되어 **거절**된다. data 없이 `S.code` 만 보내면 `intent.data ?: return` 에서 끝난다
+- 남는 것(새 우회가 아니라 원래부터 있던 범위): 다른 앱·웹 페이지가 **우리 도메인**으로 `https://<우리 host>/c` + `S.code=X`(또는 그냥 `https://<우리 host>/c#X`)를 보내면 X 가 미리 채워진다. 엑스트라 경로를 없애도 조각 경로로 똑같이 가능하므로 S.code 가 공격면을 넓히지 않는다. 완화는 기존대로 P1c 의 peek 호칭 확인 + 자동 연결 금지(SUMMARY A④)
+
+### 새로 본 것(모두 낮음)
+| ID | 위치 | 내용 | 권장 |
+|---|---|---|---|
+| R1 | inviteCode.ts `inviteLinkId`, native.ts `update` | `handled` 해시는 `sha256("invite-link:"+URL)` 인데 번호가 6자리(10^6)라 host 를 알면 즉시 역산된다. 주석 "번호 원문 저장 안 함"과 달리 `consumeInvite` 뒤에도 최대 7일 번호를 복원할 수 있는 값이 남는다(같은 앱 전용 저장소라 실제 노출은 작음) | 설치별 무작위 솔트(같은 prefs 에 32바이트)를 섞거나, 주석을 "역산 가능, 앱 전용 저장소라 허용"으로 사실대로. 법률 질문(1edb728)에 같이 적기 |
+| R2 | InviteModule.kt `finish`→`markDone`(apply) 후 JS `writeStore` | referrer 를 읽어 done 을 쓴 뒤 JS 가 저장하기 전에 프로세스가 죽으면 그 번호는 여전히 잃는다. 창이 수십 ms 라 실사용 영향은 작다 | 원하면 네이티브가 OK 결과 문자열을 store 에 먼저 넣거나, JS `writeStore` 완료 후 `ackReferrer()` 로 done 표시 |
+| R3 | InviteIntent.kt:14 | host 를 네이티브에서 확인하지 않음(주석대로 JS 가 확인). 지금은 문제없지만 JS 쪽 검사가 바뀌면 한 겹뿐 | 방어 겹으로 `BuildConfig`/리소스의 host 와 비교 추가(선택) |
+| R4 | build.gradle `-PappLinkHostDebug` | debug 덮어쓰기는 staging·production **두 debug 변형 모두**에 같은 host 를 준다. 두 debug 앱을 한 폰에 깔면 같은 host 선택 창(로컬 확인용이라 허용 범위) | RELEASE.md 또는 주석에 "debug 확인은 한 앱만 설치" 한 줄 |
