@@ -4,6 +4,7 @@ import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult} from '../api/contract/events';
+import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
 import {parseParentFamily} from '../api/contract/family';
@@ -274,6 +275,13 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     },
     getTodayContent: () => loadToday('get_today_content'),
     startToday: () => loadToday('start_today'),
+    async parentHistory(days = 30) {
+      const {data, error} = await sb.rpc('parent_history', {p_days: clampDays(days)});
+      if (error) fail('parent_history', error);
+      const r = parseParentHistory(data);
+      if (!r) throw new ServerError('parent_history', 'contract_mismatch');
+      return r;
+    },
     async logEvent(name, props = {}) {
       const {data, error} = await sb.rpc('log_event', {p_name: name, p_props: props});
       if (error) fail('log_event', error);

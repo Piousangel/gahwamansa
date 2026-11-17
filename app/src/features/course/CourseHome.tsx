@@ -122,6 +122,12 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
           <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
         </View>
+        {/* P15 진입(시안: 날짜 줄 아래 글자 링크). 미연결 기기는 서버 기록이 없으므로 숨김 */}
+        {preview ? null : (
+          <View style={styles.historyLink}>
+            <TextLink label={c.history_link} touch={64} onPress={() => navigation.navigate('History')} />
+          </View>
+        )}
         {preview ? (
           // 미연결 띠(시안 P3 v4 미연결 보드·talkback "날짜 다음"): 띠 전체가 하나의 버튼. 번호 화면을 위에 쌓아 '이전'이면 여기로(QA B2)
           <Pressable
@@ -213,7 +219,9 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   sub: {color: color.ink},
   header: {flexShrink: 1},
-  headGroup: {gap: 24}, // 날짜 줄 → 띠 = 구역 간격 24(시안, 리뷰 R5)
+  headGroup: {gap: 24},
+  // 링크 줄은 날짜 줄에 붙는다(시안: 위 −16·아래 −8 마진)
+  historyLink: {alignSelf: 'flex-start', marginTop: -16, marginBottom: -8}, // 날짜 줄 → 띠 = 구역 간격 24(시안, 리뷰 R5)
   titleRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8},
   // 구역 사이 24 = 본문 gap 16 + 위아래 8(스티치 위아래)
   section: {marginVertical: 8},
