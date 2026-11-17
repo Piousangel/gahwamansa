@@ -74,6 +74,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
               }
             : c,
         ),
+      applyWithdraw: () => setContent(c => (c ? {...c, consented: false, answered_choice: null} : c)),
       clear: () => setContent(undefined),
       applyConsent: () => setContent(c => (c ? {...c, consented: true} : c)),
     }),

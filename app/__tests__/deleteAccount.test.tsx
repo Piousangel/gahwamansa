@@ -9,7 +9,8 @@ import {press, toHomeConsented} from '../testUtils/flow';
 
 async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
-  await press('설정 데이터 지우기');
+  await press('설정');
+  await press('데이터 지우기');
   await waitFor(() => screen.getByText('지금까지 고른 답과 기록이 지워져요'));
 }
 
@@ -34,7 +35,7 @@ test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => 
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openParentDelete(api);
   await press('그만둘래요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByRole('button', {name: '돌아가기'}));
   expect(del).not.toHaveBeenCalled();
 });
 

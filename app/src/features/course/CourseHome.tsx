@@ -87,7 +87,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         }
         return <Text20 key={s.step} size={24}>{`${s.label} - 기다려요`}</Text20>;
       })}
-      <DeleteLink minHeight={64} onPress={() => navigation.navigate('DeleteAccount')} />
+      <DeleteLink label="설정" minHeight={64} onPress={() => navigation.navigate('Settings')} />
     </Screen>
   );
 }

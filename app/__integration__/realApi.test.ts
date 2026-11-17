@@ -24,7 +24,7 @@ const child = createRealApi(childClient);
 const parent = createRealApi(parentClient);
 const stranger = createRealApi(strangerClient);
 
-const state: {familyId?: string; code?: string; parentUid?: string; questionId?: string; strangerUid?: string} = {};
+const state: {familyId?: string; code?: string; parentUid?: string; questionId?: string; optionB?: string; strangerUid?: string} = {};
 
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const admin: SupabaseClient | null = serviceKey
@@ -90,6 +90,7 @@ test('어르신은 오늘의 콘텐츠를 받는다(사진·질문)', async () =
   expect(c!.completed_steps).toEqual([]);
   expect(c!.streak).toBe(0);
   state.questionId = c!.question!.id;
+  state.optionB = c!.question!.option_b;
 });
 
 test('자녀가 get_today_content 를 부르면 parent_required', async () => {
@@ -100,8 +101,7 @@ test('동의 전 답변 저장은 거부된다(consent_required)', async () => {
   await expect(
     parent.saveAnswer({questionId: state.questionId!, choice: 'A'}),
   ).rejects.toThrow(/consent_required/);
-  const {data} = await childClient.from('answers').select('id');
-  expect(data).toHaveLength(0);
+  expect((await parent.getTodayContent())!.answered_choice).toBeNull();
 });
 
 test('동의 후 save_answer 성공, 같은 질문에 다시 답하면 갱신된다', async () => {
@@ -111,8 +111,6 @@ test('동의 후 save_answer 성공, 같은 질문에 다시 답하면 갱신된
   expect((await parent.getTodayContent())!.answered_choice).toBe('A');
   await parent.saveAnswer({questionId: state.questionId!, choice: 'B'});
   expect((await parent.getTodayContent())!.answered_choice).toBe('B');
-  const {data} = await childClient.from('answers').select('choice');
-  expect(data).toEqual([{choice: 'B'}]);
 });
 
 test('3단계 기록 -> completed, streak 1, 같은 날 재호출해도 streak 유지', async () => {
@@ -128,9 +126,32 @@ test('3단계 기록 -> completed, streak 1, 같은 날 재호출해도 streak �
   expect(today!.streak).toBe(1);
 });
 
-test('자녀 홈: 오늘 참여, 연속 1일', async () => {
-  const home = await child.fetchChildHome();
-  expect(home).toEqual({participatedToday: true, streak: 1});
+test('자녀 홈: child_summary 로 동의한 어르신의 최근 답을 본다(단계·연속일 없음)', async () => {
+  const sum = await child.fetchChildSummary();
+  expect(sum.shared).toBe(true);
+  expect(sum.latest?.choiceLabel).toBe(state.optionB);
+  expect(sum.latest?.answeredDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(Object.keys(sum).sort()).toEqual(['latest', 'parentTitle', 'shared']);
+});
+
+test('자녀는 answers·daily_sessions 를 직접 읽을 수 없다', async () => {
+  const a = await childClient.from('answers').select('id');
+  const d = await childClient.from('daily_sessions').select('parent_id');
+  expect(a.data ?? []).toHaveLength(0);
+  expect(d.data ?? []).toHaveLength(0);
+});
+
+test('호칭: 목록 안이면 저장, 밖이면 invalid_title', async () => {
+  expect(await child.setParentTitle('엄마')).toEqual({ok: true});
+  expect((await child.fetchChildSummary()).parentTitle).toBe('엄마');
+  expect(await child.setParentTitle('사장님')).toEqual({ok: false, reason: 'invalid_title'});
+});
+
+test('동의 철회하면 저장된 답이 지워지고 자녀에게는 shared=false', async () => {
+  await parent.withdrawConsent();
+  const sum = await child.fetchChildSummary();
+  expect(sum.shared).toBe(false);
+  expect(sum.latest).toBeNull();
 });
 
 test('어르신이 삭제하면 scope parent, 이후 get_today_content 는 실패', async () => {

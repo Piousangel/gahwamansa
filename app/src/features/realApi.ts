@@ -1,7 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {OfflineError} from './types';
 import type {
-  Api, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
+  Api, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
 
 export interface RealApi extends Api {
@@ -24,25 +24,6 @@ function fail(what: string, error: SbError): never {
 
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 export function createRealApi(sb: SupabaseClient): RealApi {
-  const myUid = async (): Promise<string> => {
-    const {data, error} = await sb.auth.getSession();
-    if (error) fail('세션 확인', error);
-    const id = data.session?.user.id;
-    if (!id) throw new Error('로그인 세션이 없어요');
-    return id;
-  };
-  const myProfile = async () => {
-    const uid = await myUid();
-    const {data, error} = await sb
-      .from('profiles')
-      .select('id, family_id, role')
-      .eq('user_id', uid)
-      .maybeSingle();
-    if (error) fail('profiles 조회', error);
-    if (!data) throw new Error('연결된 프로필이 없어요');
-    return data as {id: string; family_id: string; role: 'parent' | 'child'};
-  };
-
   return {
     async signUpChild(email, password) {
       const {error} = await sb.auth.signUp({email, password});
@@ -120,24 +101,25 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       if (error) fail('record_session_step', error);
       return {completed: !!data.completed, streak: Number(data.streak ?? 0), steps: data.steps};
     },
-    async fetchChildHome() {
-      const me = await myProfile();
-      // 서로 의존하지 않는 조회는 병렬로
-      const [todayRes, parentRes] = await Promise.all([
-        sb.rpc('kst_today'),
-        sb.from('profiles').select('id').eq('family_id', me.family_id).eq('role', 'parent').limit(1).maybeSingle(),
-      ]);
-      if (todayRes.error) fail('kst_today', todayRes.error);
-      if (parentRes.error) fail('어르신 조회', parentRes.error);
-      const parent = parentRes.data;
-      if (!parent) return {participatedToday: false, streak: 0};
-      const [rowRes, streakRes] = await Promise.all([
-        sb.from('daily_sessions').select('completed_at').eq('parent_id', parent.id).eq('session_date', todayRes.data).maybeSingle(),
-        sb.rpc('parent_streak', {p_parent: parent.id}),
-      ]);
-      if (rowRes.error) fail('세션 조회', rowRes.error);
-      if (streakRes.error) fail('parent_streak', streakRes.error);
-      return {participatedToday: !!rowRes.data?.completed_at, streak: Number(streakRes.data ?? 0)};
+    async fetchChildSummary(): Promise<ChildSummary> {
+      const {data, error} = await sb.rpc('child_summary');
+      if (error) fail('child_summary', error);
+      const first = (data.parents ?? [])[0];
+      const l = first?.latest;
+      return {
+        parentTitle: data.parent_title ?? '부모님',
+        shared: first ? !!first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
+        latest: l ? {prompt: l.prompt ?? null, choiceLabel: l.choice_label, answeredDate: l.answered_date} : null,
+      };
+    },
+    async setParentTitle(title) {
+      const {data, error} = await sb.rpc('set_parent_title', {p_title: title});
+      if (error) fail('set_parent_title', error);
+      return data.ok ? {ok: true} : {ok: false, reason: 'invalid_title'};
+    },
+    async withdrawConsent() {
+      const {error} = await sb.rpc('withdraw_consent');
+      if (error) fail('withdraw_consent', error);
     },
   };
 }

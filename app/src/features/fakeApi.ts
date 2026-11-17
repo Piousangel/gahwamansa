@@ -1,4 +1,5 @@
 import {OfflineError} from './types';
+import {ChildSummary, PARENT_TITLES} from './types';
 import type {Api, RedeemResult, StepName, TodayContent} from './types';
 import type {FailReason} from '../copy/copy';
 
@@ -31,6 +32,9 @@ export type FakeOptions = {
   deleteScope?: 'parent' | 'child' | 'family'; // deleteMyAccount 결과(기본 parent)
   failPreview?: boolean; // deleteScopePreview 실패
   failDelete?: number; // deleteMyAccount 가 처음 N번 실패
+  parentTitle?: string; // 자녀 홈 호칭(기본 부모님)
+  shared?: boolean; // 어르신이 답을 나누는 중인가(기본: 동의 여부)
+  latest?: ChildSummary['latest']; // 자녀에게 보일 최근 답(미지정이면 저장한 답에서 만든다)
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
@@ -39,6 +43,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
   let consented = opts.consented ?? false;
+  let parentTitle = opts.parentTitle ?? '부모님';
+  let savedLabel: string | null = null;
   let failDelete = opts.failDelete ?? 0;
   let failRecord = opts.failRecord ?? 0;
   let failChildHome = opts.failChildHome ?? 0;
@@ -98,6 +104,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
     },
     async saveAnswer({choice}) {
       answered = choice;
+      const c = FAKE_CONTENT[((opts.day ?? 1) - 1) % FAKE_CONTENT.length];
+      savedLabel = choice === 'A' ? c.a : c.b;
     },
     async recordSessionStep(step) {
       if (failRecord > 0) {
@@ -108,12 +116,31 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       const completed = steps.size === 3;
       return {completed, streak: completed ? Math.max(1, baseStreak) : baseStreak, steps: [...steps]};
     },
-    async fetchChildHome() {
+    async fetchChildSummary(): Promise<ChildSummary> {
       if (failChildHome > 0) {
         failChildHome -= 1;
         throw new OfflineError('offline');
       }
-      return {participatedToday: steps.size === 3, streak: steps.size === 3 ? 1 : 0};
+      const shared = opts.shared ?? (opts.latest ? true : consented);
+      const latest =
+        opts.latest !== undefined
+          ? opts.latest
+          : shared && savedLabel
+            ? {prompt: null, choiceLabel: savedLabel, answeredDate: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)}
+            : null;
+      return {parentTitle, shared, latest: shared ? latest : null};
+    },
+    async setParentTitle(title) {
+      if (!(PARENT_TITLES as readonly string[]).includes(title)) {
+        return {ok: false, reason: 'invalid_title'};
+      }
+      parentTitle = title;
+      return {ok: true};
+    },
+    async withdrawConsent() {
+      consented = false;
+      answered = null;
+      savedLabel = null;
     },
   };
 }

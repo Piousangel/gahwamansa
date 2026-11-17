@@ -4,14 +4,14 @@ import {color} from '../../ui/tokens';
 import {tempCopy} from '../../copy/copy';
 
 // 눈에 띄지 않는 작은 링크(터치 영역은 크기 규칙 유지)
-export function DeleteLink({onPress, minHeight}: {onPress: () => void; minHeight: number}) {
+export function DeleteLink({onPress, minHeight, label = tempCopy.del.link}: {onPress: () => void; minHeight: number; label?: string}) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={tempCopy.del.link.replace(' · ', ' ')}
+      accessibilityLabel={label.replace(' · ', ' ')}
       onPress={onPress}
       style={[styles.link, {minHeight}]}>
-      <Text style={styles.text}>{tempCopy.del.link}</Text>
+      <Text style={styles.text}>{label}</Text>
     </Pressable>
   );
 }

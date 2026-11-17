@@ -5,6 +5,12 @@ export type CreateFamilyResult = {family_id: string; profile_id: string};
 export type RedeemResult =
   | {ok: true; family_id: string; profile_id: string}
   | {ok: false; reason: FailReason; retry_after_sec?: number};
+export type ChildSummary = {
+  parentTitle: string;
+  shared: boolean; // 어르신이 답을 나누는 중인가
+  latest: {prompt: string | null; choiceLabel: string; answeredDate: string} | null; // YYYY-MM-DD(KST)
+};
+export const PARENT_TITLES = ['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님'] as const;
 export type DeleteScope = 'parent' | 'child' | 'family';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
@@ -40,5 +46,8 @@ export interface Api {
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
-  fetchChildHome(): Promise<{participatedToday: boolean; streak: number}>;
+  // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
+  fetchChildSummary(): Promise<ChildSummary>;
+  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>;
+  withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
 }

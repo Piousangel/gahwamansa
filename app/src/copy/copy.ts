@@ -19,6 +19,23 @@ export const appCopy = copy.app;
 
 // 임시 문구(라이터 확정 필요, dev-app-notes.md 6e 참고)
 export const tempCopy = {
+  // 라이터 확정(board/r2/writer.md 표). copy.ko.json 에 child 키가 아직 없어 임시로 둔다(이관 필요).
+  child: {
+    titleSuffix: '의 최근 답', // "{호칭}의 최근 답" (호칭+의, 조사 변형 없음)
+    talk: ' 이야기를 해 볼까요?', // "{선택지} 이야기를 해 볼까요?"
+    noAnswer: '고른 답이 생기면 여기에 보여요',
+    notShared: '답을 나누지 않는 중이에요',
+  },
+  settings: {
+    reconsent: '다시 동의하기',
+    withdraw: '동의 철회',
+    withdrawWarn: '고른 답이 지워져요',
+    withdrawYes: '네, 철회할게요',
+    back: '돌아가기',
+    deleteData: '데이터 지우기',
+    sharedNow: '고른 답이 자녀분께 보여요',
+    notSharedNow: '고른 답은 자녀분께 안 보여요',
+  },
   del: {
     link: '설정 · 데이터 지우기',
     parentWarn: '지금까지 고른 답과 기록이 지워져요',

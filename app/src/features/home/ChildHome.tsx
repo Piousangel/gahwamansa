@@ -5,14 +5,16 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {appCopy, copy, Message} from '../../copy/copy';
+import {appCopy, tempCopy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
+import type {ChildSummary} from '../types';
+import {formatAnswerDate} from './formatDate';
 
-type Info = {participatedToday: boolean; streak: number};
+
 
 export function ChildHome() {
   const {api} = useSession();
-  const [info, setInfo] = useState<Info | null>(null);
+  const [info, setInfo] = useState<ChildSummary | null>(null);
   const [error, setError] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
   const seq = useRef(0);
@@ -22,7 +24,7 @@ export function ChildHome() {
     const mine = ++seq.current;
     setLoading(true);
     api
-      .fetchChildHome()
+      .fetchChildSummary()
       .then(r => {
         if (mine === seq.current) {
           setInfo(r);
@@ -60,19 +62,23 @@ export function ChildHome() {
       </Screen>
     );
   }
+  const c = tempCopy.child;
   return (
     <Screen>
-      <Text20 size={24} weight="bold">오늘 참여 여부</Text20>
+      <Text20 size={24} weight="bold">{`${info?.parentTitle ?? '부모님'}${c.titleSuffix}`}</Text20>
       {loading && !info ? (
         <Text20>{appCopy.loading}</Text20>
-      ) : (
+      ) : info && !info.shared ? (
+        <Text20>{c.notShared}</Text20>
+      ) : info?.latest ? (
         <>
-          <Text20>{info?.participatedToday ? '오늘 참여하셨어요' : '오늘은 아직이에요'}</Text20>
-          <Text20>{`연속 ${info?.streak ?? 0}일`}</Text20>
+          <Text20 size={36} weight="bold">{info.latest.choiceLabel}</Text20>
+          <Text20>{formatAnswerDate(info.latest.answeredDate)}</Text20>
+          <Text20 size={24}>{`${info.latest.choiceLabel}${c.talk}`}</Text20>
         </>
+      ) : (
+        <Text20>{c.noAnswer}</Text20>
       )}
-      <Text20 size={24} weight="bold">응원 한마디</Text20>
-      <Text20>{copy.cheers.well_done}</Text20>
     </Screen>
   );
 }
