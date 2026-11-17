@@ -10,15 +10,19 @@ import {color, FONT_SCALE_MAX, radius, shadow} from '../../ui/tokens';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
-import {TextLink} from '../link/TextLink';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
+import {useFocusOnOpen, useScreenReader} from './a11yFocus';
 import {filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
 import type {StepName} from '../types';
 
 const k = copy.keyboard;
 const STEP_ORDER: StepName[] = ['photo', 'question', 'hangul'];
-const STEP_NO = `${STEP_ORDER.indexOf('hangul') + 1} / ${STEP_ORDER.length}`;
+const STEP_IDX = STEP_ORDER.indexOf('hangul') + 1;
+const STEP_NO = `${STEP_IDX} / ${STEP_ORDER.length}`;
+// 명세 R4: 제목 줄은 "자판으로 쓰기, 3단계 중 3단계" 한 덩어리
+const TITLE_A11Y = k.step_a11y.split('{단계}').join(copy.course.step.hangul).split('{전체}').join(String(STEP_ORDER.length)).split('{n}').join(String(STEP_IDX));
+// '읽어 주세요'(PX_read_aloud): 오디오 스파이크(공용 줄) 결론 전까지 자리(낱말 카드 안)만 두고 그리지 않는다(빈 버튼 노출 금지).
 /** 일치 뒤 "낱말을 다 쓰셨어요"를 최소한 보여 주는 시간(시안: 1.5초 이상, 이동은 마치기로만). */
 export const MATCH_HOLD_MS = 1500;
 /** 이 시간이 지나거나 "다 썼어요"를 두 번 누르면 '오늘은 넘어갈게요'를 또렷하게(시안 v4 노트). */
@@ -43,6 +47,9 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const [lateSkip, setLateSkip] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  // 화면 읽기 켜짐: 자판 입력이 어려운 사용자의 대체 경로라 '넘어갈게요'를 처음부터 또렷하게(명세 P6 9번)
+  const reader = useScreenReader();
+  const titleRef = useFocusOnOpen(); // R2: 첫 포커스는 제목
 
   useEffect(() => {
     const t = setTimeout(() => setLateSkip(true), SKIP_STRONG_MS);
@@ -73,7 +80,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const cells = syllables(word);
   const filled = phase === 'matched' ? cells.length : filledCount(text, word);
   const hasText = normalizeWord(text).length > 0;
-  const skipStrong = attempts >= 2 || lateSkip;
+  const skipStrong = reader || attempts >= 2 || lateSkip;
   const open = kbOpen && phase === 'writing';
   const hideTitle = open && fontScale >= 1.5; // 리드 결정: 150% 이상 + 자판 열림일 때만
   const showPhoto = !open && !photo.image_url.startsWith('pending://') && !imageFailed;
@@ -136,7 +143,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
           <BigButton variant="secondary" label={k.skip} disabled={busy} onPress={complete} />
         </View>
       ) : (
-        <TextLink label={k.skip} touch={64} disabled={busy} onPress={complete} />
+        <SkipLink label={k.skip} disabled={busy} onPress={complete} />
       )}
     </>
   );
@@ -147,8 +154,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
         <>
           <BackBar course onBack={toCourseHome} />
           {hideTitle ? null : (
-            <View style={styles.titleRow}>
-              <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.title}>{copy.course.step.hangul}</Text20>
+            <View ref={titleRef} style={styles.titleRow} accessible accessibilityRole="header" accessibilityLabel={TITLE_A11Y}>
+              <Text20 size={28} weight="bold" style={styles.title}>{copy.course.step.hangul}</Text20>
               <Text20 weight="bold" style={styles.stepNo}>{STEP_NO}</Text20>
             </View>
           )}
@@ -158,19 +165,25 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
       {open || phase === 'matched' ? null : <Text20 size={22} weight="bold" style={styles.title}>{k.guide}</Text20>}
       <View style={styles.card}>
         {showPhoto ? (
-          <View style={styles.figure}>
-            <View style={styles.thumb} accessible accessibilityRole="image" accessibilityLabel={k.photo_a11y}>
+          // 명세 P6 4번: 카드(사진+칸)는 한 덩어리로 읽는다 → 사진은 읽기에서 빼고 칸 묶음 라벨이 대표
+          <View style={styles.figure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <View style={styles.thumb}>
               <Image source={{uri: photo.image_url}} style={styles.thumbImg} onError={() => setImageFailed(true)} />
             </View>
             <Text20 style={styles.figcaption}>{appCopy.ai_photo_label}</Text20>
           </View>
         ) : null}
         <WordCells cells={cells} filled={filled} big={!open} />
-        {/* TODO(읽어주기): 시안의 '읽어 주세요' 버튼은 읽어주기(TTS) 작업에서 붙인다 */}
+        {/* TODO(읽어주기): 오디오 스파이크 결론 뒤 '읽어 주세요'(글자 버튼, 화면 읽기 켜짐이면 숨김 R16)를 이 자리에 */}
       </View>
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
       <View style={phase === 'matched' && !error ? styles.hidden : styles.inputWrap}>
-        {open ? null : <Text20 size={20} weight="bold" style={styles.title}>{k.input_label}</Text20>}
+        {/* 보이는 이름표는 입력칸 라벨과 같아 두 번 읽지 않게 숨김 */}
+        {open ? null : (
+          <Text20 size={20} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
+            {k.input_label}
+          </Text20>
+        )}
         <TextInput
           ref={inputRef}
           testID="kb-input"
@@ -183,6 +196,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
           editable={phase === 'writing'}
           // autoCorrect 는 지정하지 않는다: Android 에서 false 는 추천 줄까지 꺼서 "기기 설정 그대로"와 어긋남(리뷰 B).
           // TODO(QA 실기기): 삼성 천지인·두벌식·Gboard 에서 추천 낱말·자동 띄어쓰기·조합 깨짐 확인
+          // TODO(QA 실기기): 입력칸은 본문 자리 그대로(자판 위로 옮기면 다시 그려져 비제어 입력이 지워짐).
+          //   320×640·글자 200%·천지인(자판 높음)에서 자판 열림 때 입력칸·다 썼어요가 가리지 않는지 확인(디자인 대조 1번)
           autoCapitalize="none"
           returnKeyType="done"
           blurOnSubmit
@@ -191,7 +206,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
         />
       </View>
       {phase === 'matched' ? (
-        <View style={styles.matched} accessibilityLiveRegion="polite">
+        // 알림은 announceForAccessibility 1회만(R11). liveRegion 을 같이 두면 두 번 읽힌다
+        <View style={styles.matched}>
           <View style={styles.matchedIcon}>
             <Icon name="icon-check" size={36} color={color.done} />
           </View>
@@ -238,11 +254,28 @@ function WordCells({cells, filled, big}: {cells: string[]; filled: number; big: 
   );
 }
 
+// 약한 넘어가기 링크(글자 20·밑줄·터치 64). 기능 간 import 금지라 link/TextLink 대신 최소판.
+// TODO(ui/TextLink): 리팩터 줄이 TextLink 를 ui/ 로 올리면 교체.
+function SkipLink({label, disabled, onPress}: {label: string; disabled?: boolean; onPress: () => void}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{disabled: !!disabled}}
+      disabled={disabled}
+      onPress={onPress}
+      style={styles.skipLink}>
+      <Text20 weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.skipText}>{label}</Text20>
+    </Pressable>
+  );
+}
+
 // "다 썼어요"를 다른 낱말로 눌렀을 때의 아래 시트. 바깥·뒤로가기는 "다시 써 볼게요"와 같다.
 // TODO(공용 시트): 다른 줄이 만드는 공용 BottomSheet 가 나오면 교체.
 function RetrySheet({visible, cells, filled, written, onRetry, onFinish}: {
   visible: boolean; cells: string[]; filled: number; written: string; onRetry: () => void; onFinish: () => void;
 }) {
+  const titleRef = useFocusOnOpen(visible); // R12: 첫 포커스는 시트 제목
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onRetry} statusBarTranslucent>
       <View style={styles.scrimWrap}>
@@ -251,7 +284,9 @@ function RetrySheet({visible, cells, filled, written, onRetry, onFinish}: {
           <View style={styles.grip} />
           {/* 글자 200%에서도 버튼까지 닿게 시트 안에서 스크롤 */}
           <ScrollView bounces={false} contentContainerStyle={styles.sheetBody}>
-            <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.title}>{k.sheet_title}</Text20>
+            <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={k.sheet_title}>
+              <Text20 size={28} weight="bold" style={styles.title}>{k.sheet_title}</Text20>
+            </View>
             <View style={styles.sheetCard}>
               <WordCells cells={cells} filled={filled} big />
               <View style={styles.written}>
@@ -282,6 +317,8 @@ const styles = StyleSheet.create({
   cellOn: {backgroundColor: color.sky, borderStyle: 'solid', borderColor: color.action},
   badge: {position: 'absolute', right: -7, top: -7, width: 22, height: 22, borderRadius: 11, backgroundColor: color.action, alignItems: 'center', justifyContent: 'center'},
   inputWrap: {gap: 6},
+  skipLink: {minHeight: 64, alignItems: 'center', justifyContent: 'center'},
+  skipText: {textDecorationLine: 'underline', color: color.ink},
   hidden: {display: 'none'},
   // 입력칸(오목): 종이색 면 + 아래 밑줄, 높이 72 이상, 글자 34
   input: {minHeight: 72, paddingHorizontal: 18, paddingVertical: 8, backgroundColor: color.paperSoft, borderTopLeftRadius: radius.input, borderTopRightRadius: radius.input, borderBottomWidth: 3, borderBottomColor: color.line, fontSize: 34, color: color.inkTitle, fontWeight: 'bold'},
@@ -290,8 +327,8 @@ const styles = StyleSheet.create({
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},
   matchedIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: color.doneSoft, alignItems: 'center', justifyContent: 'center'},
   scrimWrap: {flex: 1, justifyContent: 'flex-end'},
-  scrim: {...StyleSheet.absoluteFill, backgroundColor: 'rgba(78,47,20,0.58)'},
-  sheet: {maxHeight: '88%', backgroundColor: color.paper, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 12, paddingHorizontal: 24, paddingBottom: 28},
+  scrim: {...StyleSheet.absoluteFill, backgroundColor: shadow.scrim},
+  sheet: {maxHeight: '88%', backgroundColor: color.paper, boxShadow: shadow.sheet, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 12, paddingHorizontal: 24, paddingBottom: 28},
   sheetBody: {gap: 8},
   grip: {alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: color.lineGhost, marginBottom: 4},
   sheetCard: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 18, gap: 12},

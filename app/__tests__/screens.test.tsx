@@ -44,7 +44,7 @@ test('아직 안 고른 질문은 아무것도 선택되어 있지 않다', asyn
   expect(screen.queryByText('골랐어요')).toBeNull();
 });
 
-test('한글 화면은 오늘의 단어(keyword)를 보여 준다', async () => {
+test('자판으로 쓰기 화면은 오늘의 단어(keyword)를 음절 칸으로 보여 준다', async () => {
   await toHome(createFakeApi({day: 3}));
   await donePhoto();
   await press('이어서 하기');
@@ -53,7 +53,7 @@ test('한글 화면은 오늘의 단어(keyword)를 보여 준다', async () => 
   await press('정했어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
   await press('이어서 하기');
-  await waitFor(() => screen.getByText('라디오'));
+  await waitFor(() => screen.getByLabelText(/^쓸 낱말, 라디오, 세 글자/)); // P6: 음절 칸 카드 한 덩어리 라벨
 });
 
 test('콘텐츠가 없으면 이해하기 쉬운 빈 화면을 보여 준다', async () => {

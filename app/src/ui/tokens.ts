@@ -81,6 +81,9 @@ export const shadow = {
   soft: '0px 4px 12px rgba(116,72,33,0.18)',
   softPressed: '0px 1px 3px rgba(116,72,33,0.18)',
   lifted: '0px 6px 16px rgba(116,72,33,0.26)',
+  dialog: '0px 12px 32px rgba(78,47,20,0.28)', // 대화상자
+  sheet: '0px -8px 24px rgba(78,47,20,0.22)', // 아래 시트
+  scrim: 'rgba(78,47,20,0.58)', // 시트·대화상자 뒤 어둡게(그림자가 아니라 배경색으로 씀)
 } as const;
 
 export const layout = {

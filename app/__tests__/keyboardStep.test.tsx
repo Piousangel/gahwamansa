@@ -1,6 +1,6 @@
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
-import {Keyboard} from 'react-native';
+import {AccessibilityInfo, Keyboard} from 'react-native';
 import {press, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
@@ -201,6 +201,20 @@ test('이전(‹ 오늘 코스)은 기록 없이 코스 홈으로', async () => 
   await press('오늘 코스로 돌아가기');
   await waitFor(() => screen.getByText('오늘의 코스'));
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false);
+});
+
+test('화면 읽기(TalkBack)가 켜져 있으면 넘어가기를 처음부터 또렷하게(명세 P6 9번)', async () => {
+  const sr = jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+  await toKeyboardStep();
+  await waitFor(() => screen.getByTestId('kb-skip-strong'));
+  // 프리셋의 이 함수는 jest.fn 이라 mockRestore 하면 구현이 비어 버린다 → 기본값(false)으로 되돌린다
+  sr.mockImplementation(() => Promise.resolve(false));
+});
+
+test('읽기 라벨: 제목 줄 한 덩어리, 읽어 주세요 빈 버튼 없음', async () => {
+  await toKeyboardStep();
+  expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: '읽어 주세요'})).toBeNull();
 });
 
 test('P3 단계 행·첫 화면 소개는 "자판으로 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {

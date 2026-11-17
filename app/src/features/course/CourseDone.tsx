@@ -11,6 +11,7 @@ import {copy} from '../../copy/copy';
 import {StampRow} from './StampRow';
 import {kstWeekdayIndex, stampsFromDates} from './stamps';
 import {SunDone} from './sunArt';
+import {useFocusOnOpen} from './a11yFocus';
 import type {WeekStamps} from '../types';
 
 const d = copy.done;
@@ -36,6 +37,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       alive = false;
     };
   }, [api, linked]);
+  const titleRef = useFocusOnOpen(); // R2: 첫 포커스는 제목(해님 그림은 장식이라 읽지 않음)
   const toHome = () => navigation.popTo('CourseHome');
   useBackAction(toHome);
 
@@ -49,7 +51,9 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     <Screen bottom={<BigButton label={d.button} onPress={toHome} />}>
       <View style={styles.center}>
         <SunDone />
-        <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
+        <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={d.title}>
+          <Text20 size={32} weight="bold" style={styles.text}>{d.title}</Text20>
+        </View>
         {days ? <StampRow days={days} todayIdx={todayIdx} appearIdx={todayIdx} /> : null}
         {body ? (
           <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>

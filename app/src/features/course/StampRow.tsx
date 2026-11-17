@@ -4,7 +4,7 @@ import {Text20} from '../../ui/Text20';
 import {color, radius} from '../../ui/tokens';
 import {SunStamp} from '../../ui/assets/album';
 import {copy} from '../../copy/copy';
-import {useMotionMode} from '../link/useReduceMotion';
+import {useInstantMotion} from './a11yFocus';
 
 const c = copy.course;
 
@@ -37,18 +37,18 @@ export function StampRow({days, todayIdx, appearIdx}: {days: boolean[]; todayIdx
 }
 
 function FadeIn({children}: {children: React.ReactNode}) {
-  const mode = useMotionMode();
+  const instant = useInstantMotion();
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (mode === null) {
+    if (instant === null) {
       return;
     }
-    if (mode !== 'full') {
+    if (instant) {
       opacity.setValue(1);
       return;
     }
     Animated.timing(opacity, {toValue: 1, duration: 400, useNativeDriver: true}).start();
-  }, [mode, opacity]);
+  }, [instant, opacity]);
   return <Animated.View style={{opacity}}>{children}</Animated.View>;
 }
 
