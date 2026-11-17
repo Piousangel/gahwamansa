@@ -1,7 +1,9 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {EVENT_NAMES, OfflineError, ServerError} from './types';
+import {OfflineError, ServerError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
+import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
+import {parseLogEventResult} from '../api/contract/events';
 import {pairShort} from '../lib/childFormat';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
@@ -41,6 +43,37 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const {error: e} = await sb.auth.signInAnonymously();
       if (e) fail('익명 로그인', e);
     }
+  };
+  // get_today_content(읽기 전용)·start_today(0024, 커서 전진 + 같은 객체 + advanced) 공용. 미연결이면 미리 보기.
+  const loadToday = async (rpc: 'get_today_content' | 'start_today'): Promise<TodayContent | null> => {
+    // 처음 설치한 기기는 세션이 없다. anon 은 RPC 권한이 없으므로 먼저 익명 로그인한다(서버 권한은 열지 않음).
+    await ensureSession();
+    const {data, error} = await sb.rpc(rpc);
+    if (error) {
+      // 프로필이 없는(연결이 풀린) 기기는 미연결 열람 모드로 코스만 보여 준다.
+      // 서버는 프로필 없음도 parent_required 로 알려 주어 자녀와 구분되지 않는다. preview_content 가
+      // 프로필 유무를 판정하므로(있으면 linked_use_get_today_content) 그 경우 원래 오류를 그대로 올린다.
+      if (isRaised(error, 'parent_required') || isRaised(error, 'no_profile')) {
+        const {data: pv, error: pe} = await sb.rpc('preview_content');
+        if (pe) {
+          if (isRaised(pe, 'linked_use_get_today_content')) fail(rpc, error);
+          fail('preview_content', pe);
+        }
+        if (!pv) return null;
+        return {
+          day_index: pv.day_index,
+          photo: pv.photo,
+          question: pv.question,
+          answered_choice: null,
+          consented: false,
+          completed_steps: [],
+          streak: 0,
+          linked: false,
+        };
+      }
+      fail(rpc, error);
+    }
+    return data ? ({...data, linked: true} as TodayContent) : null;
   };
   return {
     async signUpChild(email, password) {
@@ -221,17 +254,6 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
         ? {ok: true, parentTitle: data.parent_title ?? '부모님'}
         : {ok: false, reason: data.reason, retry_after_sec: data.retry_after_sec};
     },
-    async logEvent(name, props) {
-      // 서버 화이트리스트에 없는 이름(PENDING)은 보내지 않는다. 계측 실패는 조용히 넘긴다
-      if (!(EVENT_NAMES as readonly string[]).includes(name)) {
-        return;
-      }
-      try {
-        await sb.rpc('log_event', {p_name: name, p_props: props ?? {}});
-      } catch {
-        // 무시
-      }
-    },
     async giveConsent(version) {
       const {error} = await sb.rpc('give_consent', {p_version: version});
       if (error) fail('give_consent', error);
@@ -241,35 +263,14 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       if (error) fail('my_week_stamps', error);
       return {weekStart: data.week_start, doneDates: data.done_dates ?? []};
     },
-    async getTodayContent(): Promise<TodayContent | null> {
-      // 처음 설치한 기기는 세션이 없다. anon 은 RPC 권한이 없으므로 먼저 익명 로그인한다(서버 권한은 열지 않음).
-      await ensureSession();
-      const {data, error} = await sb.rpc('get_today_content');
-      if (error) {
-        // 프로필이 없는(연결이 풀린) 기기는 미연결 열람 모드로 코스만 보여 준다.
-        // 서버는 프로필 없음도 parent_required 로 알려 주어 자녀와 구분되지 않는다. preview_content 가
-        // 프로필 유무를 판정하므로(있으면 linked_use_get_today_content) 그 경우 원래 오류를 그대로 올린다.
-        if (isRaised(error, 'parent_required') || isRaised(error, 'no_profile')) {
-          const {data: pv, error: pe} = await sb.rpc('preview_content');
-          if (pe) {
-            if (isRaised(pe, 'linked_use_get_today_content')) fail('get_today_content', error);
-            fail('preview_content', pe);
-          }
-          if (!pv) return null;
-          return {
-            day_index: pv.day_index,
-            photo: pv.photo,
-            question: pv.question,
-            answered_choice: null,
-            consented: false,
-            completed_steps: [],
-            streak: 0,
-            linked: false,
-          };
-        }
-        fail('get_today_content', error);
-      }
-      return data ? ({...data, linked: true} as TodayContent) : null;
+    getTodayContent: () => loadToday('get_today_content'),
+    startToday: () => loadToday('start_today'),
+    async logEvent(name, props = {}) {
+      const {data, error} = await sb.rpc('log_event', {p_name: name, p_props: props});
+      if (error) fail('log_event', error);
+      const r = parseLogEventResult(data);
+      if (!r) throw new ServerError('log_event', 'contract_mismatch');
+      return r;
     },
     async saveAnswer({questionId, choice}) {
       const {error} = await sb.rpc('save_answer', {p_question: questionId, p_choice: choice});
@@ -373,6 +374,21 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async withdrawConsent() {
       const {error} = await sb.rpc('withdraw_consent');
       if (error) fail('withdraw_consent', error);
+    },
+    // 0020 응원(계약: api/contract/cheers.ts, 통합 테스트 __integration__/cheers.test.ts)
+    async getMyCheers() {
+      const {data, error} = await sb.rpc('get_my_cheers');
+      if (error) fail('get_my_cheers', error);
+      const parsed = parseMyCheers(data);
+      if (!parsed) throw new ServerError('get_my_cheers', 'contract_mismatch');
+      return parsed;
+    },
+    async markCheersRead(ids) {
+      const {data, error} = await sb.rpc('mark_cheers_read', {p_ids: ids});
+      if (error) fail('mark_cheers_read', error);
+      const n = parseMarkCheersRead(data);
+      if (n === null) throw new ServerError('mark_cheers_read', 'contract_mismatch');
+      return n;
     },
   };
 }

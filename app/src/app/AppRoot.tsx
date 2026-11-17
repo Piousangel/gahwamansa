@@ -33,9 +33,10 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   // 서버에서 오늘 상태를 다시 불러오는 유일한 경로. 실패는 syncError 하나로 알리고(오프라인/서버 오류 구분),
   // 화면은 이전 값을 유지한다. 성공하면 새 값을, 실패하면 undefined 를 돌려준다.
   const [syncError, setSyncError] = useState<Message | null>(null);
-  const sync = useCallback(async (): Promise<TodayContent | null | undefined> => {
+  // first=true 는 코스 홈 진입(start_today, 0024: 날짜가 바뀐 첫 호출에만 콘텐츠 커서 전진). 나머지 다시 받기는 읽기 전용.
+  const load = useCallback(async (first: boolean): Promise<TodayContent | null | undefined> => {
     try {
-      const next = await api.getTodayContent();
+      const next = await (first ? api.startToday() : api.getTodayContent());
       // 미연결 열람은 단계를 서버에 기록하지 않으므로, 같은 날 다시 불러와도 화면에서 한 단계를 지우지 않는다.
       setContent(prev =>
         next && !next.linked && prev && !prev.linked && prev.day_index === next.day_index
@@ -49,6 +50,8 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       return undefined;
     }
   }, [api]);
+  const sync = useCallback(() => load(false), [load]);
+  const startToday = useCallback(() => load(true), [load]);
 
   useEffect(() => {
     if (!restore || role === 'child') {
@@ -96,6 +99,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       done: content?.completed_steps ?? [],
       streak: content?.streak ?? 0,
       sync,
+      startToday,
       applyStep: (step: StepName, streak: number) =>
         setContent(c =>
           c
@@ -121,7 +125,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
         setWho(null);
       },
     }),
-    [api, content, syncError, sync],
+    [api, content, syncError, sync, startToday],
   );
 
   // 스플래시 이어가기: 시작 대기(어느 경로든 첫 로딩)는 이 한 곳의 심볼 대기 화면만 보인다.

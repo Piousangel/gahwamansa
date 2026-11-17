@@ -69,7 +69,7 @@ test('오늘 코스를 마치면 도장 줄을 다시 불러온다', async () =>
   const n = week.mock.calls.length;
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('다 썼어요');
+  await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => expect(week.mock.calls.length).toBeGreaterThan(n));
 });

@@ -31,8 +31,9 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   await press('정했어요');
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('다 썼어요');
+  await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  expect(screen.queryByText(/도장을 찍었어요/)).toBeNull(); // 미연결 열람은 기록하지 않으므로 도장 말 없음
   expect(save).not.toHaveBeenCalled();
   expect(rec).not.toHaveBeenCalled();
 });

@@ -2,6 +2,7 @@ import {useRef, useState} from 'react';
 import {useSession} from '../../app/session';
 import {copy, offlineMessage, Message} from '../../copy/copy';
 import {isOffline, StepName} from '../types';
+import {track} from './track';
 
 export const errorMessage = (e: unknown): Message => (isOffline(e) ? offlineMessage : copy.errors.server);
 
@@ -13,7 +14,8 @@ export function useFinishStep() {
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const finish = async (step: StepName): Promise<boolean> => {
+  // attemptNo: P6 '다 썼어요'를 누른 수(이벤트 attempt_no). 다른 단계는 주지 않는다.
+  const finish = async (step: StepName, attemptNo?: number): Promise<boolean> => {
     if (busy) {
       return false;
     }
@@ -28,6 +30,11 @@ export function useFinishStep() {
       const sec = Math.min(7200, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
       const r = await api.recordSessionStep(step, sec);
       applyStep(step, r.streak);
+      // 계측(0022): 서버가 기록을 인정한 뒤에만. 미연결 열람은 기록하지 않으므로 보내지 않는다
+      track(api, 'course_step_completed', {step, duration_sec: sec, ...(attemptNo !== undefined ? {attempt_no: attemptNo} : {})});
+      if (r.completed) {
+        track(api, 'course_completed', content ? {day_index: content.day_index} : {});
+      }
       return true;
     } catch (e) {
       setError(errorMessage(e));

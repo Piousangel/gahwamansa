@@ -4,6 +4,7 @@ import type {
   PeekResult,
   Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
 } from './types';
+import type {MyCheers} from '../api/contract/cheers';
 import type {FailReason} from '../copy/copy';
 import {pairShort} from '../lib/childFormat';
 
@@ -59,6 +60,10 @@ export type FakeOptions = {
   cheerResult?: SendCheerResult; // sendCheer 결과 고정
   loginMethod?: LoginMethod | null; // 기본 kakao
   failPeek?: boolean; // peekInviteCode 가 오프라인으로 실패
+  cheers?: string[]; // 어르신에게 온 읽지 않은 응원의 message_key(최신순, 서버 get_my_cheers 와 같게)
+  failCheers?: boolean; // getMyCheers 실패
+  failMarkRead?: boolean; // markCheersRead 실패
+  eventResult?: 'rate_limited' | 'no_user' | 'invalid_props' | 'offline'; // logEvent 결과(기본 ok)
 };
 export type FakeParent = {
   parentId?: string;
@@ -117,6 +122,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
           starter: (p.shared ?? true) && p.latest ? (p.starter ?? null) : null,
         }))
       : [single()];
+  let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
   return {
     async signInWithSocial() {
       const r = opts.socialResult ?? 'ok';
@@ -238,9 +244,6 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       const reason = FAIL_CODES[code] ?? 'invalid';
       return reason === 'rate_limited' ? {ok: false, reason, retry_after_sec: 600} : {ok: false, reason};
     },
-    async logEvent() {
-      // 기록만 하고 아무것도 하지 않는다(테스트는 spy 로 확인)
-    },
     async deleteScopePreview() {
       if (opts.failPreview) {
         throw new OfflineError('offline');
@@ -269,6 +272,16 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         set.add(day(idx));
       }
       return {weekStart: day(0), doneDates: [...set].sort()};
+    },
+    async startToday() {
+      return this.getTodayContent(); // 가짜는 커서가 없다(day 옵션 고정)
+    },
+    async logEvent() {
+      const r = opts.eventResult;
+      if (r === 'offline') {
+        throw new OfflineError('offline');
+      }
+      return r ? {ok: false as const, reason: r} : {ok: true as const};
     },
     async getTodayContent(): Promise<TodayContent | null> {
       if (opts.empty) {
@@ -341,6 +354,23 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       consented = false;
       answered = null;
       savedLabel = null;
+    },
+    async getMyCheers() {
+      if (opts.failCheers) {
+        throw new OfflineError('offline');
+      }
+      if (!linked) {
+        throw new ServerError('get_my_cheers', 'parent_required', 'P0001'); // 서버처럼 연결된 어르신만
+      }
+      return {unread_count: unread.length, cheers: unread.slice(0, 20)};
+    },
+    async markCheersRead(ids) {
+      if (opts.failMarkRead) {
+        throw new OfflineError('offline');
+      }
+      const before = unread.length;
+      unread = ids === null ? [] : unread.filter(c => !ids.includes(c.id));
+      return before - unread.length;
     },
   };
 }

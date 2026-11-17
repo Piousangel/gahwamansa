@@ -64,6 +64,6 @@ test('코스 단계(사진 준비 중·한글)에도 개발용 자리표시가 �
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
   await pressCourseNext();
-  await waitFor(() => screen.getByText('나무'));
+  await waitFor(() => screen.getByLabelText(/^쓸 낱말, 나무/));
   noDevBox();
 });

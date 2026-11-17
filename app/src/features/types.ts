@@ -1,4 +1,6 @@
 import type {FailReason} from '../copy/copy';
+import type {MarkCheersReadResult, MyCheers} from '../api/contract/cheers';
+import type {EventName, EventProps, LogEventResult} from '../api/contract/events';
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -85,31 +87,11 @@ export type PeekResult =
   | {ok: true; parentTitle: string}
   | {ok: false; reason: FailReason; retry_after_sec?: number};
 
-// 이벤트(log_event 0022). 서버 화이트리스트와 글자까지 같아야 한다(dev-server-notes §3). 번호·글자 값은 넣지 않는다
-export const EVENT_NAMES = [
-  'app_first_open', 'child_signup_completed', 'invite_code_issued', 'parent_code_redeemed', 'parent_code_failed',
-  'consent_shown', 'parent_consent_accepted', 'parent_consent_declined', 'course_step_completed', 'course_completed',
-  'child_report_viewed', 'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
-] as const;
-// 연결 퍼널(ease-and-joy E). 서버 화이트리스트에 아직 없어 보내지 않는다 → 서버 줄 요청(dev-app-notes)
-export const PENDING_EVENT_NAMES = ['link_opened', 'referrer_found', 'code_prefilled'] as const;
-export type EventName = (typeof EVENT_NAMES)[number] | (typeof PENDING_EVENT_NAMES)[number];
-// 속성은 서버가 허용한 키·값 형식만(번호 값 키 없음)
-export type EventProps = {
-  reason?: 'expired' | 'used' | 'locked' | 'invalid' | 'rate_limited' | 'busy' | 'already_linked' | 'not_parent_device';
-  attempt_no?: number;
-  channel?: 'kakao' | 'sms' | 'copy' | 'share_sheet' | 'other';
-  install_source?: string;
-  is_first?: boolean;
-};
-
 export interface Api {
   createFamily(): Promise<CreateFamilyResult>;
   issueInviteCode(targetProfileId?: string | null): Promise<string>;
   redeemInviteCode(code: string): Promise<RedeemResult>;
   peekInviteCode(code: string): Promise<PeekResult>; // 어르신 기기. 연결하지 않는다
-  // 이벤트 기록. 실패해도 화면을 막지 않는다(throw 하지 않음)
-  logEvent(name: EventName, props?: EventProps): Promise<void>;
   giveConsent(version: string): Promise<void>; // 동의한 문구 버전(CONSENT_VERSION)
   // 앱 데이터 삭제(delete_my_account) 후 로그아웃까지. scope 는 서버가 알려 준다.
   // 삭제 전 범위 조회(delete_scope_preview). 삭제는 하지 않는다.
@@ -126,6 +108,11 @@ export interface Api {
   // 이번 주(KST 월요일 시작) 코스를 마친 날짜. 어르신만(자녀는 parent_required). 미연결 열람에서는 부르지 않는다
   getWeekStamps(): Promise<WeekStamps>;
   getTodayContent(): Promise<TodayContent | null>;
+  // start_today(0024): 코스 홈 진입 때. KST 날짜가 바뀐 첫 호출에만 콘텐츠 커서를 1칸 전진하고 get_today_content 와 같은 객체를 준다.
+  // 미연결 기기는 getTodayContent 와 같게 미리 보기로 떨어진다.
+  startToday(): Promise<TodayContent | null>;
+  // log_event(0022): 계측. 실패도 값으로 돌려준다(예외는 네트워크 등). 화면을 막지 않게 호출부는 결과를 기다리지 않는다.
+  logEvent(name: EventName, props?: EventProps): Promise<LogEventResult>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
@@ -144,4 +131,7 @@ export interface Api {
   // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
   signOut(): Promise<void>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
+  // 응원(P8): get_my_cheers / mark_cheers_read(0020, 계약은 api/contract/cheers.ts). 어르신만, 미연결 열람에서는 부르지 않는다
+  getMyCheers(): Promise<MyCheers>;
+  markCheersRead(ids: string[] | null): Promise<MarkCheersReadResult>;
 }

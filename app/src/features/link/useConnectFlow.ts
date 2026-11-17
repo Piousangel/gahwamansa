@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useReducer, useRef} from 'react';
 import {isOffline} from '../types';
 import type {Api} from '../types';
+import {isSendableEvent, type EventProps, type PendingEventName, type EventName} from '../../api/contract/events';
 import {AUTO_CHECK_MS, connectReducer, initialConnect, shouldAutoCheck} from './connectMachine';
 
 // 번호가 밖에서 들어온 경로(ease-and-joy A②). link = App Links(…/c#번호), referrer = 설치 직후 Install Referrer
@@ -8,6 +9,13 @@ export type Prefill = {code: string; source: 'link' | 'referrer'};
 
 // P1·P1c 흐름 훅: 6자리를 다 쓰면 300ms 뒤 peek(번호를 쓰지 않음) → 확인 화면 → [이 번호로 연결하기]에서만 redeem.
 // 늦게 온 응답은 순번으로 버린다. 이벤트에 번호 값은 넣지 않는다.
+// 계측은 기다리지 않고 실패도 무시한다. 서버 목록에 없는 퍼널 이름(PENDING)은 보내지 않는다
+function track(api: Api, name: EventName | PendingEventName, props?: EventProps) {
+  if (isSendableEvent(name)) {
+    api.logEvent(name, props).catch(() => {});
+  }
+}
+
 export function useConnectFlow(api: Api, prefill?: Prefill) {
   const [state, dispatch] = useReducer(connectReducer, prefill?.code ?? '', initialConnect);
   const seq = useRef(0);
@@ -26,8 +34,8 @@ export function useConnectFlow(api: Api, prefill?: Prefill) {
       return;
     }
     prefilled.current = true;
-    api.logEvent(prefill.source === 'link' ? 'link_opened' : 'referrer_found');
-    api.logEvent('code_prefilled');
+    track(api, prefill.source === 'link' ? 'link_opened' : 'referrer_found');
+    track(api, 'code_prefilled');
   }, [api, prefill]);
 
   const peek = useCallback(
@@ -39,7 +47,7 @@ export function useConnectFlow(api: Api, prefill?: Prefill) {
         if (alive.current && mine === seq.current) {
           dispatch({type: 'peeked', result});
           if (!result.ok) {
-            api.logEvent('parent_code_failed', {reason: result.reason});
+            track(api, 'parent_code_failed', {reason: result.reason});
           }
         }
       } catch (e) {
@@ -74,7 +82,7 @@ export function useConnectFlow(api: Api, prefill?: Prefill) {
       const result = await api.redeemInviteCode(state.code);
       if (alive.current && mine === seq.current) {
         dispatch({type: 'redeemed', result});
-        api.logEvent(result.ok ? 'parent_code_redeemed' : 'parent_code_failed', result.ok ? undefined : {reason: result.reason});
+        track(api, result.ok ? 'parent_code_redeemed' : 'parent_code_failed', result.ok ? undefined : {reason: result.reason});
       }
     } catch (e) {
       if (alive.current && mine === seq.current) {

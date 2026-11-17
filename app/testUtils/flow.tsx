@@ -24,7 +24,7 @@ export async function typeCode(code: string) {
     fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
   }
   await act(async () => {
-    await new Promise(r => setTimeout(r, 350));
+    await new Promise<void>(r => setTimeout(() => r(), 350));
   });
 }
 
