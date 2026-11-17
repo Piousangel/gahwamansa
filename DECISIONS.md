@@ -318,3 +318,9 @@
 - cheer.partial: 어르신 두 분에게 보낼 때 한 분만 성공한 경우. relation.name_taken 범위: 같은 가족 안 어르신끼리만(자녀·형제 간 제한 아님)
 - 기존 문구 정리(11-5) 채택: errors.invalid·connect.success·settings.ai_notice 교체, 요일별 push[] 7문장 폐기, talkback-spec R11 "칭찬 문장"→"완료 문장". 적용은 앱 줄 병합 후 리드 일괄
 - 약관 한 줄 동의 방식(연결/로그인 시 동의) 유효성은 변호사 질문 목록에 추가
+- 11-17 디자인 동결: P3(코스 홈 v4)·P1군(P1_connect_v4·P1c_confirm·FS_link·web/C_page) — 이후 변경은 리드 승인
+
+## 2026-11-17 설치 경로·앱 링크 스파이크: 조건부 가능 — docs/team/spikes/2026-11-17-install-referrer-applinks.md(spike 브랜치)
+- 의존성: Google 공식 com.android.installreferrer:installreferrer:2.2 + 자체 Kotlin 모듈(서드파티 npm 미사용). 첫 실행 1회 읽고 기기 저장
+- App Links host는 env APP_LINK_HOST, 없으면 비활성. staging은 별도 서브도메인
+- 카톡 인앱 intent·Play referrer 보존은 실기기·Play 내부 테스트 트랙 확인 전까지 미확정 → 홍보·스토어 문구에 "자동 채움" 금지. 실패 시 번호 손 입력 + 6자리 자동 확인만

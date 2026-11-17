@@ -14,7 +14,7 @@ async function runCourse() {
   await waitFor(() => screen.getByText('오늘의 코스'));
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('다 썼어요');
+  await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
 }
 
