@@ -1,5 +1,6 @@
-import React, {useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {StyleSheet, Switch, View} from 'react-native';
+import {prefs} from '../../lib/prefs';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -98,6 +99,7 @@ export function ParentSettings() {
           <BigButton variant="secondary" label={copy.course.write_code} onPress={() => navigation.push('Connect', {from: 'course'})} />
         </View>
       )}
+      <SfxRow />
       {/* 앱 정보: AI 그림 고지 1줄 */}
       <View style={styles.section}>
         <Text20 weight="bold">{t.app_info}</Text20>
@@ -107,7 +109,46 @@ export function ParentSettings() {
   );
 }
 
+// 효과음(도장 소리) 토글(시안 P7_motion·P13, 기본 켜짐). 이 기기에만 저장(서버로 보내지 않음).
+// 읽기(talkback R10): "효과음, 스위치, 켜짐, 도장을 찍을 때 짧은 소리". 행 전체 터치 64 이상.
+function SfxRow() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    prefs()
+      .sfxEnabled()
+      .then(v => alive && setOn(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const change = (v: boolean) => {
+    setOn(v);
+    prefs().setSfxEnabled(v);
+  };
+  return (
+    <View testID="sfx-row" style={[styles.section, styles.toggleRow]}>
+      <View style={styles.toggleText} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Text20 size={24} weight="bold">{t.sfx}</Text20>
+        <Text20 style={styles.sub}>{t.sfx_sub}</Text20>
+      </View>
+      <Switch
+        accessibilityRole="switch"
+        accessibilityLabel={t.sfx}
+        accessibilityHint={t.sfx_sub}
+        accessibilityState={{checked: on}}
+        value={on}
+        onValueChange={change}
+        trackColor={{false: color.lineSoft, true: color.done}}
+        thumbColor={color.card}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  toggleRow: {flexDirection: 'row', alignItems: 'center', minHeight: 64},
+  toggleText: {flex: 1, gap: 4},
   title: {paddingBottom: 8},
   section: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 16, gap: 12},
   confirm: {backgroundColor: color.noticeSoft, borderRadius: radius.card, borderWidth: 4, borderColor: color.action, padding: 14, gap: 12},

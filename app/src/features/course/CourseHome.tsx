@@ -1,4 +1,4 @@
-import React, {useCallback, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -41,6 +41,19 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 이번 주 도장: 연결 = 서버, 미연결 = 기기 로컬(useWeekStamps). 오늘 단계가 바뀌면 다시 받는다.
   const linked = content ? content.linked : undefined;
   const week = useWeekStamps(api, linked, done.length);
+  // 단계 체크 모션(시안 P7_motion): 단계를 마치고 돌아온 순간 그 행만. 처음 열 때(이미 한 단계)는 움직이지 않는다
+  const [justDone, setJustDone] = useState<StepName | null>(null);
+  const prevDone = useRef<StepName[] | null>(null);
+  useEffect(() => {
+    if (content === undefined) {
+      return;
+    }
+    const prev = prevDone.current;
+    prevDone.current = done;
+    if (prev && done.length > prev.length) {
+      setJustDone(done.find(x => !prev.includes(x)) ?? null);
+    }
+  }, [done, content]);
   // 아직 아무것도 못 받았는데 실패: 오류만 보여 준다(오프라인/서버 오류 문구가 다름)
   if (content === undefined && syncError) {
     return (
@@ -144,7 +157,17 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           const statusLabel = status === 'done' ? c.status.done : status === 'now' ? c.status.now : c.status.later;
           // 다 마친 뒤 했어요 행 '›' → 그 단계 보기 전용
           const onPress = all ? () => review(s.route) : undefined;
-          return <StepRow key={s.step} title={c.step[s.step]} status={status} statusLabel={statusLabel} onPress={onPress} />;
+          return (
+            <StepRow
+              key={s.step}
+              title={c.step[s.step]}
+              status={status}
+              statusLabel={statusLabel}
+              onPress={onPress}
+              justDone={!all && justDone === s.step}
+              tapeIn={!!justDone && status === 'now'}
+            />
+          );
         })}
       </View>
     </Screen>
@@ -182,14 +205,14 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   sub: {color: color.ink},
   header: {flexShrink: 1},
-  headGroup: {gap: 16},
+  headGroup: {gap: 24}, // 날짜 줄 → 띠 = 구역 간격 24(시안, 리뷰 R5)
   titleRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8},
   // 구역 사이 24 = 본문 gap 16 + 위아래 8(스티치 위아래)
   section: {marginVertical: 8},
   greetGroup: {gap: 8},
   // 미연결 띠(시안): 흰 면, 3px 테두리, 반경 18, 패딩 12/16, wrap, 글 flexBasis 200 + 오른쪽 '번호 쓰기 ›'
   strip: {
-    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4,
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 12, rowGap: 4,
     backgroundColor: color.card, borderWidth: 3, borderColor: color.action, borderRadius: 18,
     paddingVertical: 12, paddingHorizontal: 16, minHeight: size.touchMin,
   },
