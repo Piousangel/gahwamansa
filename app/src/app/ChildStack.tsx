@@ -10,6 +10,9 @@ import {ChildLogin} from '../features/child/ChildLogin';
 import {RelationScreen} from '../features/child/RelationScreen';
 import {ChildCodeScreen} from '../features/child/ChildCodeScreen';
 import {ChildWaitScreen} from '../features/child/ChildWaitScreen';
+import {ChildSettings} from '../features/child/ChildSettings';
+import {ChildAppInfo} from '../features/child/ChildAppInfo';
+import {ChildTabBar} from './ChildChrome';
 import {copy} from '../copy/copy';
 
 const Tab = createBottomTabNavigator();
@@ -20,16 +23,21 @@ export type ChildParams = {
   Code: {code: string; title: string; renewed?: boolean}; // renewed: 지난 번호가 만료돼 새로 받음
   Wait: undefined;
   Tabs: undefined;
+  Settings: undefined;
+  AppInfo: undefined;
   DeleteAccount: undefined;
   DeleteDone: undefined;
 };
 const Stack = createNativeStackNavigator<ChildParams>();
 
+const renderTabBar = (props: React.ComponentProps<typeof ChildTabBar>) => <ChildTabBar {...props} />;
+
+// 하단 탭 바(앨범·지난 답): 연결된 뒤에만 보인다(연결 전에는 대기 화면, 탭 바 숨김 — 보드 A §3).
 function Tabs() {
   return (
-    <Tab.Navigator screenOptions={{headerShown: false}}>
-      <Tab.Screen name={copy.child.tab_album} component={ChildHome} />
-      <Tab.Screen name={copy.child.tab_past} component={ChildReport} />
+    <Tab.Navigator screenOptions={{headerShown: false}} tabBar={renderTabBar}>
+      <Tab.Screen name="Album" options={{title: copy.child.tab_album}} component={ChildHome} />
+      <Tab.Screen name="Past" options={{title: copy.child.tab_past}} component={ChildReport} />
     </Tab.Navigator>
   );
 }
@@ -45,6 +53,8 @@ export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyo
       <Stack.Screen name="Code" component={ChildCodeScreen} />
       <Stack.Screen name="Wait" component={ChildWaitScreen} />
       <Stack.Screen name="Tabs" component={Tabs} />
+      <Stack.Screen name="Settings" component={ChildSettings} />
+      <Stack.Screen name="AppInfo" component={ChildAppInfo} />
       <Stack.Screen name="DeleteAccount">{() => <DeleteAccountScreen role="child" />}</Stack.Screen>
       <Stack.Screen name="DeleteDone" component={DeleteDoneScreen} />
     </Stack.Navigator>

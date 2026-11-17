@@ -1,5 +1,5 @@
 // 0018(가입 번호는 가족당 1개 살아 있음)에 맞춘 자녀 번호 흐름:
-// 살아 있는 번호가 있으면 다시 쓰고(새로 받으면 이미 보낸 번호가 죽는다), "새 번호 받기"는 만료됐을 때만.
+// 살아 있는 번호가 있으면 다시 쓰고(새로 받으면 이미 보낸 번호가 죽는다), "새 번호 만들기"는 만료됐을 때만(C3 v4).
 import React from 'react';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
@@ -42,23 +42,22 @@ test('호칭 화면: 이미 살아 있는 번호가 있으면 새로 받지 않�
   expect(screen.queryByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeNull();
 });
 
-test('대기 화면: 번호가 살아 있으면 "새 번호 받기"가 없다', async () => {
+test('대기 화면: 번호가 살아 있으면 "새 번호 만들기"가 없다', async () => {
   render(<AppRoot api={createFakeApi({who: 'child', childFamily: true})} restore />);
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
-  expect(screen.getByRole('button', {name: '번호 다시 보기'})).toBeTruthy();
-  expect(screen.queryByRole('button', {name: '새 번호 받기'})).toBeNull();
+  await waitFor(() => screen.getByText('123 456'));
+  expect(screen.getByRole('button', {name: '번호 보내기'})).toBeTruthy();
+  expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
 });
 
-test('대기 화면: 번호가 만료됐을 때만 "새 번호 받기", 받으면 "전에 보낸 번호는 이제 쓸 수 없어요"', async () => {
+test('대기 화면: 번호가 만료됐을 때만 "새 번호 만들기", 만들면 "전에 보낸 번호는 이제 쓸 수 없어요"', async () => {
   const api = createFakeApi({who: 'child', childFamily: true, childCodeExpired: true});
   const issue = jest.spyOn(api, 'issueInviteCode');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByRole('button', {name: '새 번호 받기'}));
-  expect(screen.getByText('보낸 번호의 기간이 끝났어요')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: '번호 다시 보기'})).toBeNull();
-  expect(screen.getByRole('button', {name: '번호 보내기'})).toBeDisabled();
-  await press('새 번호 받기');
-  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+  await waitFor(() => screen.getByRole('button', {name: '새 번호 만들기'}));
+  expect(screen.getByText('번호 기간이 지났어요')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: '번호 보내기'})).toBeNull();
+  await press('새 번호 만들기');
+  await waitFor(() => screen.getByText('123 456'));
   expect(issue).toHaveBeenCalledTimes(1);
   expect(screen.getByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeTruthy();
 });
@@ -86,13 +85,13 @@ test('realApi: 살아 있는 번호가 없고 쓰지 않은 지난 가입 번호
   });
 });
 
-test('대기 화면: 번호를 받은 적 없는 가족은 "번호 받기"(만료 안내 없음), 받아도 "전에 보낸 번호" 문구 없음', async () => {
+test('대기 화면: 번호를 받은 적 없는 가족은 "번호 만들기"(만료 안내 없음), 만들어도 "전에 보낸 번호" 문구 없음', async () => {
   const api = createFakeApi({who: 'child', childFamily: true, childCodeNever: true});
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByRole('button', {name: '번호 받기'}));
-  expect(screen.queryByText('보낸 번호의 기간이 끝났어요')).toBeNull();
-  expect(screen.queryByRole('button', {name: '새 번호 받기'})).toBeNull();
-  await press('번호 받기');
-  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+  await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}));
+  expect(screen.queryByText('번호 기간이 지났어요')).toBeNull();
+  expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
+  await press('번호 만들기');
+  await waitFor(() => screen.getByText('123 456'));
   expect(screen.queryByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeNull();
 });

@@ -101,8 +101,8 @@ test('연결 대기 -> 어르신이 번호를 쓰면 연결됨(호칭께서 정�
   await press('번호 만들기');
   await waitFor(() => screen.getByText('번호가 만들어졌어요'));
   await press('연결 기다리기');
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
-  expect(screen.getByText('아빠 폰에서 번호를 쓰면 이어져요')).toBeTruthy();
+  await waitFor(() => screen.getByText('아빠 폰에서 번호를 쓰면 이어져요'));
+  expect(screen.getByText('연결 기다리는 중')).toBeTruthy();
   await api.redeemInviteCode('123456'); // 어르신 폰에서 번호 입력
   await act(async () => {
     handlers.forEach(h => h('active'));
@@ -110,22 +110,20 @@ test('연결 대기 -> 어르신이 번호를 쓰면 연결됨(호칭께서 정�
   await waitFor(() => screen.getByText('연결됐어요'));
   expect(screen.getByText('고른 답을 보여 줄지는 아빠께서 정해요')).toBeTruthy();
   await press('앨범으로');
-  await waitFor(() => screen.getByText('아빠의 최근 답'));
+  await waitFor(() => screen.getByText('우리 집 앨범'));
 });
 
 test('이미 가족이 있는 자녀는 로그인 뒤 만든 번호를 다시 보여 준다(새로 만들지 않음)', async () => {
   const api = createFakeApi({childFamily: true});
   const issue = jest.spyOn(api, 'issueInviteCode');
   await loginAsChild(api);
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
-  await press('번호 다시 보기');
-  await waitFor(() => screen.getByText('123 456'));
+  await waitFor(() => screen.getByText('123 456')); // C3 v4: 대기 화면이 번호를 바로 보여 준다
   expect(issue).not.toHaveBeenCalled();
 });
 
 test('복원: 로그인돼 있고 연결된 자녀는 바로 앨범', async () => {
   render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, childLinked: true})} restore />);
-  await waitFor(() => screen.getByText('부모님의 최근 답'));
+  await waitFor(() => screen.getByText('우리 집 앨범'));
 });
 
 test('어르신 번호 화면에서 not_parent_device 면 처음으로 -> 역할 선택', async () => {
