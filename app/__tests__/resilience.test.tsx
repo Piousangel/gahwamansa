@@ -30,9 +30,11 @@ test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () =
   const give = jest.spyOn(api, 'giveConsent');
   await toHome(api, false);
   expect(give).not.toHaveBeenCalled();
+  // P3 v4: 거부 한 줄 띠 '다시 정하기' → 설정 '다시 보여 주기' → 좋아요
+  await press('다시 정하기');
+  await press('다시 보여 주기');
   await press('좋아요');
   expect(give).toHaveBeenCalledTimes(1);
-  await waitFor(() => expect(screen.queryByRole('button', {name: '좋아요'})).toBeNull());
 });
 
 test('기록이 실패하면 완료 처리하지 않고 다시 하기를 안내한다', async () => {

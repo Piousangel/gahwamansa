@@ -3,6 +3,7 @@ import {Pressable, StyleSheet, View} from 'react-native';
 import {color, radius} from './tokens';
 import {Text20} from './Text20';
 import {Tape} from './assets/album';
+import {Icon} from './assets/icons';
 
 export type StepStatus = 'done' | 'now' | 'wait';
 type Props = {
@@ -42,14 +43,14 @@ export function StepRow({title, status, statusLabel, onPress}: Props) {
       <Text20 size={24} weight="bold" oneLine style={[styles.title, styles.inlineTitle]}>
         {title}
       </Text20>
-      <Text20 oneLine style={status === 'done' ? styles.doneLabel : styles.waitLabel}>
-        {statusLabel}
-      </Text20>
-      {onPress ? (
-        <Text20 size={28} weight="bold" oneLine style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no">
-          ›
+      {/* 상태 묶음: [체크 20](했어요) + 라벨 + [› 22](누를 수 있을 때). 아이콘은 라벨 줄 높이(28)보다 작아 행 64 를 지킨다 */}
+      <View style={styles.status}>
+        {status === 'done' ? <Icon name="icon-check" size={20} color={color.done} /> : null}
+        <Text20 oneLine style={status === 'done' ? styles.doneLabel : styles.waitLabel}>
+          {statusLabel}
         </Text20>
-      ) : null}
+        {onPress ? <Icon name="icon-chevron-right" size={22} color={color.doneInk} /> : null}
+      </View>
     </>
   );
   if (onPress) {
@@ -83,5 +84,5 @@ const styles = StyleSheet.create({
   nowLabel: {color: color.actionPressed},
   doneLabel: {color: color.doneInk, fontWeight: 'bold'},
   waitLabel: {color: color.inkSub},
-  chevron: {color: color.doneInk},
+  status: {flexDirection: 'row', alignItems: 'center', gap: 6},
 });

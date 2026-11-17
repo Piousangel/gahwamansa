@@ -24,10 +24,11 @@ async function previewHome() {
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
 }
 
-test('미연결 안내는 얇은 띠 한 줄 + 작은 링크(터치 48 이상), 큰 버튼은 아래 하나뿐', async () => {
+test('미연결 안내는 띠 전체가 하나의 버튼(터치 48 이상, 어르신 기준 64), 큰 버튼은 아래 하나뿐', async () => {
   await previewHome();
-  const link = screen.getByRole('button', {name: '번호 쓰기'});
-  expect(StyleSheet.flatten(link.props.style).minHeight).toBeGreaterThanOrEqual(48);
+  const strip = screen.getByTestId('course-strip');
+  expect(strip.props.accessibilityRole).toBe('button');
+  expect(StyleSheet.flatten(strip.props.style).minHeight).toBeGreaterThanOrEqual(64);
   expect(screen.getAllByTestId('big-button')).toHaveLength(1); // 지금 할 단계로 가는 주 버튼
 });
 
@@ -40,7 +41,7 @@ test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
   expect(screen.getByText('오늘 코스예요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
   expect(screen.getByTestId('date-line')).toBeTruthy();
-  expect(screen.queryByText('이번 주 도장')).toBeNull();
+  await waitFor(() => screen.getByText('이번 주 도장')); // 미연결도 기기 로컬 도장 줄(리드 결정)
   expect(week).not.toHaveBeenCalled();
   expect(screen.getAllByTestId('stitch', {includeHiddenElements: true}).length).toBeGreaterThanOrEqual(1);
   expect(screen.queryByText(/연속/)).toBeNull();

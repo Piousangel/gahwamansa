@@ -100,6 +100,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       streak: content?.streak ?? 0,
       sync,
       startToday,
+      applyAnswer: (choice: 'A' | 'B') => setContent(c => (c ? {...c, answered_choice: choice} : c)),
       applyStep: (step: StepName, streak: number) =>
         setContent(c =>
           c

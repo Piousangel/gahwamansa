@@ -33,7 +33,10 @@ type Phase = 'writing' | 'sheet' | 'matched';
 // - 시스템 자판 그대로. 입력칸은 비제어(onChangeText 로 읽기만, value 재주입 금지: 삼성 키보드 한글 조합 깨짐 방지).
 // - 판정은 keyboardMatch(NFC·공백 제거). 맞은 음절 칸만 앞에서부터 채우고 틀림 표시는 없다.
 // - 입력 글자는 이 화면 안에서만 쓰고 서버·이벤트로 보내지 않는다(단계 완료만 기록).
-export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
+// review: 다 마친 뒤 보기 전용(동결 P5_P6_review). '오늘의 낱말이에요' + 낱말 칸만, 입력칸·기록 없음, 하단 '돌아가기'.
+// 어르신이 친 글자는 저장하지 않으므로 보여 주지 않는다(정책).
+export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
+  const review = !!route.params?.review;
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
   const {content, done} = useSession();
@@ -83,6 +86,34 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   }
   const word = photo.keyword;
   const cells = syllables(word);
+  if (review) {
+    const hasImage = !photo.image_url.startsWith('pending://') && !imageFailed;
+    return (
+      <Screen
+        top={
+          <>
+            <BackBar course onBack={toCourseHome} />
+            <StepHeader name={copy.course.step.hangul} n={3} review />
+          </>
+        }
+        bottom={<BigButton variant="secondary" label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
+        {hasImage ? (
+          <View style={styles.card}>
+            <View style={styles.figure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={styles.thumb}>
+                <Image source={{uri: photo.image_url}} style={styles.thumbImg} onError={() => setImageFailed(true)} />
+              </View>
+              <Text20 style={styles.figcaption}>{appCopy.ai_photo_label}</Text20>
+            </View>
+          </View>
+        ) : null}
+        <Text20 size={22} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
+          {copy.review.word}
+        </Text20>
+        <WordCells cells={cells} filled={0} big plain label={copy.review.word_a11y.split('{낱말}').join(word)} />
+      </Screen>
+    );
+  }
   const filled = phase === 'matched' ? cells.length : filledCount(text, word);
   const hasText = normalizeWord(text).length > 0;
   const skipStrong = reader || attempts >= 2 || lateSkip;
@@ -241,17 +272,20 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
 
 // 낱말 카드: 음절 칸. 맞게 쓴 칸만 하늘색 + 확인 표시. 다른 칸은 빈 점선 칸 그대로(틀림 표시 없음).
 // 화면 읽기는 카드 한 덩어리로("쓸 낱말, 나무, 두 글자 …"). 칸 변화는 읽지 않는다(소음).
-function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[]; filled: number; big: boolean; idPrefix?: string}) {
+// plain: 보기 전용(점선 대신 실선, 채움 없음). label 을 주면 그 읽기 라벨로.
+function WordCells({cells, filled, big, idPrefix = 'kb-cell', plain, label: labelOverride}: {
+  cells: string[]; filled: number; big: boolean; idPrefix?: string; plain?: boolean; label?: string;
+}) {
   const word = cells.join('');
   const count = k.count_words[cells.length - 1] ?? String(cells.length);
-  const label = k.card_a11y.split('{낱말}').join(word).split('{n}').join(count);
+  const label = labelOverride ?? k.card_a11y.split('{낱말}').join(word).split('{n}').join(count);
   const side = big ? 64 : 52;
   return (
     <View style={styles.cells} accessible accessibilityRole="image" accessibilityLabel={label}>
       {cells.map((ch, i) => {
         const on = i < filled;
         return (
-          <View key={`${ch}-${i}`} testID={`${idPrefix}-${i}`} style={[styles.cell, {width: side, height: side}, on ? styles.cellOn : null]}>
+          <View key={`${ch}-${i}`} testID={`${idPrefix}-${i}`} style={[styles.cell, {width: side, height: side}, plain ? styles.cellPlain : null, on ? styles.cellOn : null]}>
             <Text20 size={big ? 40 : 32} weight="bold" maxFontSizeMultiplier={1} style={styles.title}>{ch}</Text20>
             {on ? (
               <View testID={`${idPrefix}-check-${i}`} style={styles.badge}>
@@ -290,6 +324,7 @@ const styles = StyleSheet.create({
   figcaption: {color: color.ink, fontSize: 20},
   cells: {flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center'},
   cell: {borderRadius: 14, borderWidth: 3, borderStyle: 'dashed', borderColor: color.line, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
+  cellPlain: {borderStyle: 'solid', borderColor: color.action},
   cellOn: {backgroundColor: color.sky, borderStyle: 'solid', borderColor: color.action},
   badge: {position: 'absolute', right: -7, top: -7, width: 22, height: 22, borderRadius: 11, backgroundColor: color.action, alignItems: 'center', justifyContent: 'center'},
   inputWrap: {gap: 6},

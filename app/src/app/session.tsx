@@ -14,6 +14,7 @@ export type Session = {
   startToday: () => Promise<TodayContent | null | undefined>;
   syncError: Message | null;
   applyStep: (step: StepName, streak: number) => void; // 서버가 기록을 인정한 뒤 화면 상태에 반영
+  applyAnswer: (choice: 'A' | 'B') => void; // 서버가 답을 저장한 뒤 화면 상태(answered_choice)에 반영
   setConsented: (v: boolean) => void; // 서버가 동의/철회를 인정한 뒤 반영(철회면 오늘 고른 답도 비움)
   clear: () => void; // 삭제 후 화면 상태를 비운다
   resetRole: () => void; // 첫 화면(역할 선택)으로 돌아간다
