@@ -1,0 +1,2 @@
+# Play 에 올린 production 출시 기록(한 줄에 하나): versionCode versionName 날짜 커밋
+# scripts/build-production.sh 가 새 versionCode 가 여기 가장 큰 번호보다 큰지 확인한다. 올린 뒤 한 줄 추가해 커밋
