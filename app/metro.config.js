@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const { bundleAppEnv, devMenuRedirect } = require('./metroDevMenu');
 
 /**
- * Metro configuration
+ * Metro configuration(개발 서버·직접 번들 기본값)
  * https://reactnative.dev/docs/metro
+ * 출시 번들 규칙(개발자 메뉴·config.local 제외)은 Gradle 만 쓰는 metro.release.config.js 에 있다(재검토 R1:
+ * 개발 서버가 release 뒤 남은·지워진 env.generated 에 흔들려 config.local 이 빠지지 않게).
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
@@ -22,18 +23,5 @@ try {
 } catch {
   // node_modules 가 없으면 기본 설정
 }
-
-// 출시 번들에서 개발 전용 코드(개발자 메뉴·config.local)를 뺀다(metroDevMenu.js). 환경은 Metro 가 시작할 때 env.generated.ts 에서 한 번 읽는다
-const BUNDLE = bundleAppEnv(__dirname);
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  const r = context.resolveRequest(context, moduleName, platform);
-  if (r && r.type === 'sourceFile') {
-    const stub = devMenuRedirect(r.filePath, BUNDLE, __dirname);
-    if (stub) {
-      return { ...r, filePath: stub };
-    }
-  }
-  return r;
-};
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

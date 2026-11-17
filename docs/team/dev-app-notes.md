@@ -315,3 +315,9 @@
 - M2: 보관 칸에 saved_at, 7일 지나면 버림. 로그아웃·계정 지우기·처음으로 때 `devGate.clearDevSessions`(메뉴 구현이 등록, production 대역은 무동작). 연결 전 익명 세션은 버리지 않고 비어 있는 어르신 칸에 보관. "보관 세션 모두 지우기" 버튼. 암호화 저장(EncryptedSharedPreferences)은 `androidx.security:security-crypto` 새 의존성이 필요해 보류 — 리드 결정 필요.
 - M3: "테스트 가족 정리" — 만든 기록(`dev_menu_test_family_v1`)이 있을 때만, 어르신(익명)→테스트 자녀 순서로 기존 `delete_my_account`. 소셜(실제) 자녀 계정은 지우지 않는다. 테스트 계정은 테스트 도메인 이메일만.
 - L1: production 버전 줄은 Pressable 이 아닌 글자/View. L3: ARCHITECTURE 금지 목록에 `src/dev` 예외 1줄. L4: production 차단(env mock)·4초 창·setSession 오류·already_has_profile·redeem_failed·정리 분기·로그아웃 정리 테스트, `_removeSession` 존재 단위 테스트.
+
+### 개발자 메뉴 재검토 반영(R1·R2·R3) · 11-18
+- R2: 테스트 가족 표시에 만들 때의 어르신·자녀 user id 와 "자녀가 테스트 도메인 이메일인지"를 기록하고 7일 만료. 정리는 칸에서 꺼낸 세션의 user id 가 기록과 같고(자녀는 이메일도 테스트 도메인) whoAmI 역할이 맞을 때만 계정 지우기. 다른 사람 세션이면 건드리지 않음. 정리 전 지금 세션을 보관했다가 지운 신원이 아니면 되돌림. `DevAuth.currentUser()`.
+- R1: 출시 판정을 Gradle 전용 `metro.release.config.js`(react { bundleConfig })로 분리. 개발 서버 `metro.config.js` 는 대역 없음(config.local·메뉴 유지). release 설정은 env.generated 가 없거나 BUILD_TYPE≠release 면 번들 실패. RELEASE.md 에 규칙 추가.
+- R3: `check:dev-menu` 는 앱 소스를 임시 폴더로 복사(node_modules 링크)해 release 설정으로 번들 — 작업 트리 파일을 바꾸지 않는다.
+- 낮음: 어르신 칸이 차 있으면 지금 익명 세션은 `dev_menu_session_anon_v1` 칸에 보관(덮지 않음).

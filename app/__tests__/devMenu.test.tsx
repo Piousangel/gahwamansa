@@ -11,7 +11,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 
 declare const __dirname: string;
 const path: {join(...p: string[]): string} = require('path');
-const {bundleAppEnv, devMenuRedirect} = require('../metroDevMenu');
+const {bundleAppEnv, devMenuRedirect, releaseBundleEnv} = require('../metroDevMenu');
 
 describe('진입 관문', () => {
   test('production 은 어떤 경우에도 불가, staging 은 가능, local 은 개발 빌드에서만', () => {
@@ -45,6 +45,26 @@ describe('진입 관문', () => {
       </DevMenuContext.Provider>,
     );
     expect(screen.getByText('버전 1.0.0').props.onPress).toBeUndefined();
+  });
+});
+
+describe('R1: 출시 판정은 Gradle 전용 Metro 설정에서만', () => {
+  test('개발 서버 설정(metro.config.js)은 대역을 걸지 않고, release 설정(metro.release.config.js)만 건다', () => {
+    const fs = require('fs');
+    const dev: string = fs.readFileSync(path.join(__dirname, '../metro.config.js'), 'utf8');
+    const rel: string = fs.readFileSync(path.join(__dirname, '../metro.release.config.js'), 'utf8');
+    expect(dev).not.toMatch(/devMenuRedirect|metroDevMenu/);
+    expect(rel).toMatch(/releaseBundleEnv/);
+    const gradle: string = fs.readFileSync(path.join(__dirname, '../android/app/build.gradle'), 'utf8');
+    expect(gradle).toMatch(/bundleConfig\s*=\s*file\("\.\.\/\.\.\/metro\.release\.config\.js"\)/);
+  });
+  test('release 설정은 env.generated.ts 가 없거나 release 값이 아니면 번들을 멈춘다(fail-closed)', () => {
+    const missing = () => {
+      throw new Error('ENOENT');
+    };
+    expect(() => releaseBundleEnv('/x', missing)).toThrow(/env\.generated/);
+    expect(() => releaseBundleEnv('/x', () => 'export default {\n  "APP_ENV": "staging",\n  "BUILD_TYPE": "debug"\n};')).toThrow(/release/);
+    expect(releaseBundleEnv('/x', () => 'export default {\n  "APP_ENV": "production",\n  "BUILD_TYPE": "release"\n};')).toEqual({appEnv: 'production', buildType: 'release'});
   });
 });
 
@@ -119,8 +139,21 @@ function fakeAuth(initial: {access_token: string; refresh_token: string} | null)
       session = {access_token: 'child-a', refresh_token: 'child-r'};
       return {error: null};
     },
+    async currentUser() {
+      return session ? USERS[session.access_token] ?? {id: `u-${session.access_token}`, email: null} : null;
+    },
   };
 }
+const USERS: Record<string, {id: string; email: string | null}> = {
+  'child-a': {id: 'u-child', email: 'kid@example.test'},
+  'c-a': {id: 'u-child', email: 'kid@example.test'},
+  'p-a': {id: 'u-parent', email: null},
+  'parent-a': {id: 'u-parent', email: null},
+  'social-a': {id: 'u-social', email: 'me@gmail.com'},
+  'anon2-a': {id: 'u-anon2', email: null},
+};
+const MARK = (o: object) => JSON.stringify({parentUserId: 'u-parent', childUserId: 'u-child', childIsTest: true, at: Date.now(), ...o});
+const SLOT = (t: string) => JSON.stringify({access_token: t, refresh_token: `${t}-r`, saved_at: Date.now()});
 
 describe('역할별 세션 보관·전환', () => {
   test('지금 세션을 그 역할 칸에 두고, 다른 역할 칸의 세션으로 바꾼다(없으면 빈 상태)', async () => {
@@ -235,7 +268,7 @@ describe('테스트 가족: 테스트 도메인·분기·정리(M3)', () => {
     const now = Date.now();
     await store.setItem('dev_menu_session_parent_v1', JSON.stringify({access_token: 'p-a', refresh_token: 'p-r', saved_at: now}));
     await store.setItem('dev_menu_session_child_v1', JSON.stringify({access_token: 'c-a', refresh_token: 'c-r', saved_at: now}));
-    await store.setItem('dev_menu_test_family_v1', JSON.stringify({childIsTest: true}));
+    await store.setItem('dev_menu_test_family_v1', MARK({}));
     const api = createFakeApi();
     jest.spyOn(api, 'whoAmI').mockImplementation(async () => (auth.current?.access_token === 'p-a' ? 'parent' : 'child'));
     const seen: string[] = [];
@@ -252,12 +285,77 @@ describe('테스트 가족: 테스트 도메인·분기·정리(M3)', () => {
     const auth = fakeAuth(null);
     const store = memoryStore();
     await store.setItem('dev_menu_session_parent_v1', JSON.stringify({access_token: 'p-a', refresh_token: 'p-r', saved_at: Date.now()}));
-    await store.setItem('dev_menu_test_family_v1', JSON.stringify({childIsTest: false}));
+    await store.setItem('dev_menu_test_family_v1', MARK({childIsTest: false}));
     const api = createFakeApi();
     jest.spyOn(api, 'whoAmI').mockResolvedValue('parent');
     const del = jest.spyOn(api, 'deleteMyAccount').mockResolvedValue({scope: 'parent'});
     expect(await cleanupTestFamily({api, auth, store})).toEqual({ok: true, parent: true, child: false});
     expect(del).toHaveBeenCalledTimes(1);
+  });
+
+  test('R2: 칸이 바뀌어 다른 사람 세션이 들어 있으면(만들 때 user id 와 다름) 지우지 않는다', async () => {
+    const auth = fakeAuth(null);
+    const store = memoryStore();
+    await store.setItem('dev_menu_session_parent_v1', SLOT('anon2-a')); // 실제로 연결한 다른 익명 어르신
+    await store.setItem('dev_menu_session_child_v1', SLOT('social-a')); // 본인 소셜 계정
+    await store.setItem('dev_menu_test_family_v1', MARK({}));
+    const api = createFakeApi();
+    jest.spyOn(api, 'whoAmI').mockImplementation(async () => (auth.current?.access_token === 'anon2-a' ? 'parent' : 'child'));
+    const del = jest.spyOn(api, 'deleteMyAccount');
+    expect(await cleanupTestFamily({api, auth, store})).toEqual({ok: true, parent: false, child: false});
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  test('R2: user id 가 같아도 자녀 이메일이 테스트 도메인이 아니면 지우지 않는다', async () => {
+    const auth = fakeAuth(null);
+    const store = memoryStore();
+    await store.setItem('dev_menu_session_child_v1', SLOT('social-a'));
+    await store.setItem('dev_menu_test_family_v1', MARK({childUserId: 'u-social'}));
+    const api = createFakeApi();
+    jest.spyOn(api, 'whoAmI').mockResolvedValue('child');
+    const del = jest.spyOn(api, 'deleteMyAccount');
+    expect(await cleanupTestFamily({api, auth, store})).toMatchObject({ok: true, child: false});
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  test('R2: 정리 표시도 7일 지나면 쓰지 않는다', async () => {
+    const store = memoryStore();
+    await store.setItem('dev_menu_test_family_v1', MARK({at: Date.now() - SLOT_KEEP_MS - 1}));
+    expect(await cleanupTestFamily({api: createFakeApi(), auth: fakeAuth(null), store})).toEqual({ok: false, reason: 'nothing_to_clean'});
+    expect(await store.getItem('dev_menu_test_family_v1')).toBeNull();
+  });
+
+  test('R2: 정리 전에 지금 세션을 먼저 보관한다(버리지 않음)', async () => {
+    const auth = fakeAuth({access_token: 'social-a', refresh_token: 'social-r'});
+    const store = memoryStore();
+    await store.setItem('dev_menu_test_family_v1', MARK({}));
+    const api = createFakeApi();
+    jest.spyOn(api, 'whoAmI').mockResolvedValue('child');
+    await cleanupTestFamily({api, auth, store});
+    // 정리가 끝나면 칸은 비워지지만, 지금 세션(소셜)은 지워지지 않고 다시 이 기기에 둔다
+    expect(auth.current?.access_token).toBe('social-a');
+  });
+
+  test('R2: 만들 때 어르신·자녀 user id 와 자녀 이메일을 기록한다', async () => {
+    const auth = fakeAuth(null);
+    const store = memoryStore();
+    const api = createFakeApi();
+    const redeem = api.redeemInviteCode.bind(api);
+    jest.spyOn(api, 'redeemInviteCode').mockImplementation(async c => {
+      await auth.setSession({access_token: 'parent-a', refresh_token: 'parent-r'}); // redeem 이 익명 로그인
+      return redeem(c);
+    });
+    await createTestFamily({api, auth, store, creds: {email: 'kid@example.test', password: 'p'}});
+    expect(JSON.parse((await store.getItem('dev_menu_test_family_v1'))!)).toMatchObject({parentUserId: 'u-parent', childUserId: 'u-child', childIsTest: true});
+  });
+
+  test('낮음: 어르신 칸이 차 있으면 지금 익명 세션은 따로 둔 칸(anon)에 보관한다', async () => {
+    const auth = fakeAuth({access_token: 'anon2-a', refresh_token: 'anon2-r'});
+    const store = memoryStore();
+    await store.setItem('dev_menu_session_parent_v1', SLOT('p-a'));
+    await createSessionSlots(auth, store).switchTo('none', 'child');
+    expect(await store.getItem('dev_menu_session_parent_v1')).toContain('p-a');
+    expect(await store.getItem('dev_menu_session_anon_v1')).toContain('anon2-a');
   });
 });
 

@@ -18,7 +18,9 @@ export type AuthLike = {
 export const SLOT_KEEP_MS = 7 * 86400e3;
 export const slotKey = (r: DevRole) => `dev_menu_session_${r}_v1`;
 export const TEST_FAMILY_KEY = 'dev_menu_test_family_v1';
-export const ALL_DEV_KEYS = [slotKey('parent'), slotKey('child'), TEST_FAMILY_KEY];
+// 어르신 칸이 이미 차 있을 때 지금 익명 세션(연결 전)을 버리지 않고 두는 칸(재검토 낮음)
+export const ANON_KEY = 'dev_menu_session_anon_v1';
+export const ALL_DEV_KEYS = [slotKey('parent'), slotKey('child'), ANON_KEY, TEST_FAMILY_KEY];
 
 function parse(raw: string | null, now: number): Tokens | null {
   if (!raw) {
@@ -35,19 +37,22 @@ function parse(raw: string | null, now: number): Tokens | null {
 
 export function createSessionSlots(auth: AuthLike, store: KeyValueStore, now: () => number = () => Date.now()) {
   const read = async (role: DevRole) => parse(await store.getItem(slotKey(role)), now());
-  const saveCurrent = async (role: DevRole) => {
+  const saveTo = async (key: string) => {
     const {data} = await auth.getSession();
     const s = data.session;
     if (s) {
-      await store.setItem(slotKey(role), JSON.stringify({access_token: s.access_token, refresh_token: s.refresh_token, saved_at: now()}));
+      await store.setItem(key, JSON.stringify({access_token: s.access_token, refresh_token: s.refresh_token, saved_at: now()}));
     }
   };
+  const saveCurrent = (role: DevRole) => saveTo(slotKey(role));
   // 역할을 모르는 지금 세션(연결 전 익명)은 버리지 않고 어르신 칸이 비어 있을 때 그 칸에 둔다(M2: 익명은 다시 로그인할 수 없다)
   const keepCurrent = async (who: DevRole | 'none') => {
     if (who !== 'none') {
       await saveCurrent(who);
     } else if (!(await read('parent'))) {
       await saveCurrent('parent');
+    } else {
+      await saveTo(ANON_KEY); // 어르신 칸이 차 있으면 덮지 않고 따로 둔다
     }
   };
   return {

@@ -33,7 +33,8 @@ react {
     // bundleCommand = "ram-bundle"
     //
     //   The path to the CLI configuration file. Default is empty.
-    // bundleConfig = file(../rn-cli.config.js)
+    // 출시 번들 전용 Metro 설정(개발자 메뉴·config.local 제외, env.generated 없으면 멈춤). 개발 서버는 metro.config.js(재검토 R1)
+    bundleConfig = file("../../metro.release.config.js")
     //
     //   The name of the generated asset file containing your JS bundle
     // bundleAssetName = "MyApplication.android.bundle"
