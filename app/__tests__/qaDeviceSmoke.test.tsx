@@ -30,7 +30,7 @@ test('B2: 코스 홈 배너 "번호 쓰기" → 번호 화면 → 이전은 코�
   await press('번호 쓰기');
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   await press('이전 화면으로 가기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(screen.queryByText('이 휴대폰은 누구 거예요?')).toBeNull();
 });
 
@@ -46,7 +46,7 @@ test('B3: 미연결 코스 홈에도 설정이 보이고 눌린다(번호를 받
 
 test('B3: 연결된 코스 홈에도 설정이 보이고 눌린다', async () => {
   render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await press('설정');
   await waitFor(() => screen.getByText('가족에게 답 보여 주기'));
 });
@@ -82,7 +82,7 @@ test('B4: 사진 단계는 사진 높이를 화면 높이의 28% 이하로 줄�
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
   const w = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).maxWidth;
@@ -97,12 +97,12 @@ test('단계 화면: 제목 줄에 "n / 3", 한 덩어리로 "사진 보기, 3�
   expect(screen.getByText('1 / 3')).toBeTruthy();
   expect(screen.getByRole('header', {name: '사진 보기, 3단계 중 1단계'})).toBeTruthy();
   await press('오늘 코스로 돌아가기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });
 
 test('P3: 하단 큰 버튼은 지금 단계 이름(0/3 사진 보기 → 1/3 둘 중 고르기)', async () => {
   render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '사진 보기'})).toBeTruthy();
   expect(screen.queryByRole('button', {name: '이어서 하기'})).toBeNull();
   screen.unmount();
@@ -127,10 +127,10 @@ test('a11y R9: 선택 카드는 라디오(checked), 묶음은 radiogroup', async
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await press('사진 보기');
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await press('둘 중 고르기');
   await waitFor(() => screen.getByTestId('choice-group'));
   expect(screen.getByTestId('choice-group').props.accessibilityRole).toBe('radiogroup');

@@ -25,14 +25,14 @@ function captureBack() {
   };
 }
 const CONNECT = '가족에게 받은 번호를 써 주세요';
-const HOME = '오늘의 코스';
+const HOME = 'date-line'; // 코스 홈(시안 P3 v4: 제목 대신 날짜 줄)
 const ROLE = '이 휴대폰은 누구 거예요?';
 
 async function previewHome() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText(HOME));
+  await waitFor(() => screen.getByTestId(HOME));
 }
 
 test('코스 홈 → 번호 쓰기 → 코스 보기: 새로 쌓지 않고 그 코스 홈으로(뒤로 두 번이면 첫 화면)', async () => {
@@ -41,7 +41,7 @@ test('코스 홈 → 번호 쓰기 → 코스 보기: 새로 쌓지 않고 그 �
   await press('번호 쓰기');
   await waitFor(() => screen.getByText(CONNECT));
   await press('코스 보기');
-  await waitFor(() => screen.getByText(HOME));
+  await waitFor(() => screen.getByTestId(HOME));
   await back(); // [번호, 코스 홈] → 번호
   await waitFor(() => screen.getByText(CONNECT));
   await back(); // 번호(처음) → 역할 선택
@@ -56,10 +56,10 @@ test('코스 홈 → 번호 쓰기 → 번호 성공 → 동의 → 코스 홈: 
   await enterCode('123456');
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
-  await waitFor(() => screen.getByText(HOME));
+  await waitFor(() => screen.getByTestId(HOME));
   expect(screen.queryByText('번호를 받으면 그때부터 답이 저장돼요')).toBeNull();
   await back();
-  await waitFor(() => expect(screen.queryByText(HOME)).toBeNull());
+  await waitFor(() => expect(screen.queryByTestId(HOME)).toBeNull());
   expect(screen.queryByText('고른 답을 가족과 나눠요')).toBeNull();
   expect(screen.getByText(CONNECT)).toBeTruthy(); // 스택: [번호, 코스 홈]
 });
@@ -72,7 +72,7 @@ test('설정 → 번호 쓰기 → 코스 보기는 코스 홈으로(설정·번
   await press('번호 쓰기');
   await waitFor(() => screen.getByText(CONNECT));
   await press('코스 보기');
-  await waitFor(() => screen.getByText(HOME));
+  await waitFor(() => screen.getByTestId(HOME));
   await back();
   await waitFor(() => screen.getByText(CONNECT)); // 처음 번호 화면
   await back();

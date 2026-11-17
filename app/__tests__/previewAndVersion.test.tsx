@@ -33,7 +33,8 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  expect(screen.queryByText(/도장을 찍었어요/)).toBeNull(); // 미연결 열람은 기록하지 않으므로 도장 말 없음
+  // 미연결은 서버 기록 없이 도장만 기기에 찍힌다(리드 결정, P7 11-7 #19)
+  await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고른 답이 가족에게 보여요/));
   expect(save).not.toHaveBeenCalled();
   expect(rec).not.toHaveBeenCalled();
 });
@@ -86,8 +87,7 @@ test('설정 입구는 분명한 버튼이다(높이 64 이상)', async () => {
 test('완료 화면에 연속 일수가 없다', async () => {
   const api = createFakeApi({consented: true, completedSteps: ['photo', 'question', 'hangul'], streak: 5});
   await toHomeConsented(api);
-  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  expect(screen.getByText('도장을 찍었어요. 내일 또 만나요')).toBeTruthy();
+  await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')); // P3 v4 완료 줄(11절)
   expect(screen.queryByText(/연속/)).toBeNull();
 });
 
@@ -140,6 +140,9 @@ test('코스 홈에서 나중 동의가 서버 오류면 그 오류 문구를 �
   const api = createFakeApi();
   jest.spyOn(api, 'giveConsent').mockRejectedValueOnce(new Error('boom'));
   await toHome(api, false);
+  // P3 v4: 거부 띠의 '다시 정하기' → 설정의 다시 보여 주기
+  await press('다시 정하기');
+  await press('다시 보여 주기');
   await press('좋아요');
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
 });

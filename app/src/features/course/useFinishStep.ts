@@ -3,13 +3,14 @@ import {useSession} from '../../app/session';
 import {copy, offlineMessage, Message} from '../../copy/copy';
 import {isOffline, StepName} from '../types';
 import {track} from './track';
+import {localStamps} from '../../lib/localStamps';
 
 export const errorMessage = (e: unknown): Message => (isOffline(e) ? offlineMessage : copy.errors.server);
 
 // 단계 완료: 서버가 기록을 인정해야 완료 표시한다. 실패하면 false 와 오류 문구를 돌려주고 진행하지 않는다.
 // 소요 시간은 화면에 들어온 시각부터 잰 초(0~7200).
 export function useFinishStep() {
-  const {api, applyStep, content} = useSession();
+  const {api, applyStep, content, done} = useSession();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
@@ -20,7 +21,11 @@ export function useFinishStep() {
       return false;
     }
     if (content && !content.linked) {
-      // 미연결 열람: 서버에 기록하지 않고 화면에서만 다음 단계로
+      // 미연결 열람: 서버에 기록하지 않고 화면에서만 다음 단계로. 오늘 코스를 다 마치면 도장은 기기에 찍는다
+      // (리드 결정: 날짜만 기기 로컬, 연결 뒤에는 서버 값만). 기다린 뒤 진행해야 P7·코스 홈이 오늘 도장을 읽는다
+      if (new Set([...done, step]).size === 3) {
+        await localStamps().addToday();
+      }
       applyStep(step, 0);
       return true;
     }

@@ -6,12 +6,12 @@ async function runCourse() {
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('오늘은 넘어갈게요');
@@ -39,7 +39,7 @@ test('설정에서 다시 동의하면 그 뒤 답이 저장된다', async () =>
   await press('좋아요');
   await waitFor(() => screen.getByRole('button', {name: '그만 보여 주기'}));
   await press('돌아가기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await runCourse();
   expect(save).toHaveBeenCalledTimes(1);
 });
@@ -58,7 +58,7 @@ test('설정에서 동의 철회는 확인 후에만 호출되고 이후 저장�
   await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요')); // 11-8 settings.share.stopped 대체
   await waitFor(() => screen.getByRole('button', {name: '다시 보여 주기'}));
   await press('돌아가기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await runCourse();
   expect(save).not.toHaveBeenCalled();
 });

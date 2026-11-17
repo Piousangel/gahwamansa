@@ -16,7 +16,7 @@ import {CourseDone} from '../features/course/CourseDone';
 export type ParentParams = {
   // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
   Connect: {from?: 'course'; prefill?: Prefill} | undefined; Consent: undefined; CourseHome: undefined;
-  PhotoStep: undefined; QuestionStep: undefined; KeyboardStep: undefined; CourseDone: undefined;
+  PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
   Settings: undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };
 const Stack = createNativeStackNavigator<ParentParams>();

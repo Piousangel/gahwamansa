@@ -44,13 +44,21 @@ export const typeScale = {
   child: {childTitle: 30, childBody: 18, childMin: 16, min: 16},
 } as const;
 
-// 기존 이름 유지 + v3 값
+// v3 값. 본문 20, 큰 본문 22(시안 P3 v4 토큰 정리: 예전 body 22 이름은 폐기하고 typeScale 과 같은 이름으로)
 export const fontSize = {
-  display: 36, title: 32, titleSm: 28, bubble: 24, body: 22, bodyMin: 20, hand: 32,
+  display: 36, title: 32, titleSm: 28, bubble: 24, bodyLg: 22, body: 20, hand: 32,
   buttonPrimary: 32, buttonSecondary: 26, childBody: 18, childMin: 16,
 } as const;
 
 export const lineHeight = {title: 1.3, bubble: 1.35, bodyElder: 1.5, bodyChild: 1.5, hand: 1.15, button: 1.2} as const;
+
+/** 줄 높이 표(원본 design-system/tokens-v3.json lineHeightTable, 시안 P3 v4 리듬 규칙 D):
+ *  20→30, 22→32, 24→34, 28→38, 32→44, 36→48 = 글자 + 10(32 이상은 + 12).
+ *  36 초과(자녀 C4 고른 답 72 등)는 max(글자 + 12, 글자 × 1.3) — 줄 높이가 글꼴 기본보다 작으면 Android 가 윗획을 자른다.
+ *  여러 줄 글은 이 값, 한 줄 라벨(행 제목·상태·칩)은 labelLineHeight = 글자 + 8. */
+export const lineHeightFor = (size: number): number =>
+  size > 36 ? Math.max(size + 12, Math.round(size * 1.3)) : size + (size >= 32 ? 12 : 10);
+export const labelLineHeight = (size: number): number => size + 8;
 
 /** 글자 확대 상한. 리드 결정(2026-11-17): 본문은 2.0(어르신이 키운 크기를 막지 않음, 본문은 스크롤),
  *  하단 고정 버튼·큰 제목(28 이상)·번호 칸만 1.5(고정 영역이 화면을 덮지 않게). */

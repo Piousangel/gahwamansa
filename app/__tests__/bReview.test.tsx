@@ -89,7 +89,7 @@ test('코스 홈: 서버 오류는 인터넷 끊김이 아니라 서버 오류 �
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
   expect(screen.queryByText('인터넷이 잠깐 끊겼어요')).toBeNull();
   await press('다시 하기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(screen.queryByText('잠깐 문제가 생겼어요')).toBeNull();
 });
 

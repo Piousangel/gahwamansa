@@ -10,7 +10,7 @@ import {enterCode, press, toHome, toHomeConsented, pressCourseNext} from '../tes
 test('서버가 이미 동의한 상태면 동의 화면을 건너뛴다', async () => {
   render(<AppRoot api={createFakeApi({consented: true})} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });
 
 test('동의 저장이 실패하면 오류 문구를 보여 주고 다시 누를 수 있다', async () => {
@@ -22,7 +22,7 @@ test('동의 저장이 실패하면 오류 문구를 보여 주고 다시 누를
   await press('좋아요');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('좋아요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });
 
 test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () => {
@@ -30,9 +30,11 @@ test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () =
   const give = jest.spyOn(api, 'giveConsent');
   await toHome(api, false);
   expect(give).not.toHaveBeenCalled();
+  // P3 v4: 거부 한 줄 띠 '다시 정하기' → 설정 '다시 보여 주기' → 좋아요
+  await press('다시 정하기');
+  await press('다시 보여 주기');
   await press('좋아요');
   expect(give).toHaveBeenCalledTimes(1);
-  await waitFor(() => expect(screen.queryByRole('button', {name: '좋아요'})).toBeNull());
 });
 
 test('기록이 실패하면 완료 처리하지 않고 다시 하기를 안내한다', async () => {
@@ -64,7 +66,7 @@ async function toQuestion(api: ReturnType<typeof createFakeApi>) {
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
@@ -105,7 +107,7 @@ test('already_linked 버튼은 코스로 이동한다', async () => {
   await enterCode('444444', false);
   await waitFor(() => screen.getByText('이미 연결돼 있어요'));
   await press('사진 보기'); // errors.already_linked.button
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });
 
 test('복원: 연결된 기기는 코스 홈으로 시작하고 완료 단계는 서버 기준', async () => {
@@ -128,7 +130,7 @@ test('포그라운드로 돌아오면 서버에서 다시 불러온다', async (
   const api = createFakeApi({linked: true, consented: true});
   const spy = jest.spyOn(api, 'getTodayContent');
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   const before = spy.mock.calls.length;
   await act(async () => {
     handler('active');

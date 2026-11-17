@@ -33,7 +33,10 @@ type Phase = 'writing' | 'sheet' | 'matched';
 // - 시스템 자판 그대로. 입력칸은 비제어(onChangeText 로 읽기만, value 재주입 금지: 삼성 키보드 한글 조합 깨짐 방지).
 // - 판정은 keyboardMatch(NFC·공백 제거). 맞은 음절 칸만 앞에서부터 채우고 틀림 표시는 없다.
 // - 입력 글자는 이 화면 안에서만 쓰고 서버·이벤트로 보내지 않는다(단계 완료만 기록).
-export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
+// review: 다 마친 뒤 보기 전용(동결 P5_P6_review). '오늘의 낱말이에요' + 낱말 칸만, 입력칸·기록 없음, 하단 '돌아가기'.
+// 어르신이 친 글자는 저장하지 않으므로 보여 주지 않는다(정책).
+export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
+  const review = !!route.params?.review;
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
   const {content, done} = useSession();
@@ -83,6 +86,37 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   }
   const word = photo.keyword;
   const cells = syllables(word);
+  if (review) {
+    const hasImage = !photo.image_url.startsWith('pending://') && !imageFailed;
+    return (
+      <Screen
+        top={
+          <>
+            <BackBar course onBack={toCourseHome} />
+            <StepHeader name={copy.course.step.hangul} n={3} review />
+          </>
+        }
+        bottom={<BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
+        {/* 시안 P5_P6_review: 그림·캡션·제목·칸이 한 흰 카드 안(반경 22, 패딩 16/18, 묶음 gap 12, 낱말 묶음 안 8) */}
+        <View testID="kb-review-card" style={styles.reviewCard}>
+          {hasImage ? (
+            <View style={styles.figure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={styles.reviewThumb}>
+                <Image source={{uri: photo.image_url}} style={styles.reviewThumbImg} onError={() => setImageFailed(true)} />
+              </View>
+              <Text20 style={styles.figcaption}>{appCopy.ai_photo_label}</Text20>
+            </View>
+          ) : null}
+          <View style={styles.reviewWord}>
+            <Text20 size={22} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
+              {copy.review.word}
+            </Text20>
+            <ReviewCells cells={cells} label={copy.review.word_a11y.split('{낱말}').join(word)} scale={Math.min(fontScale, FONT_SCALE_MAX)} />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
   const filled = phase === 'matched' ? cells.length : filledCount(text, word);
   const hasText = normalizeWord(text).length > 0;
   const skipStrong = reader || attempts >= 2 || lateSkip;
@@ -241,6 +275,26 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
 
 // 낱말 카드: 음절 칸. 맞게 쓴 칸만 하늘색 + 확인 표시. 다른 칸은 빈 점선 칸 그대로(틀림 표시 없음).
 // 화면 읽기는 카드 한 덩어리로("쓸 낱말, 나무, 두 글자 …"). 칸 변화는 읽지 않는다(소음).
+// 보기 전용 낱말 칸(시안 P5_P6_review): 실선 칸, 칸 사이 10. 좁으면 한 줄을 지키며 줄어들고(flex 0 1 64),
+// 글자를 키우면 칸·글자도 커진다(150% 보드: 칸 96·글자 60, 상한 1.5). 진행 화면 칸과 달리 자판과 맞출 필요가 없다.
+function ReviewCells({cells, label, scale}: {cells: string[]; label: string; scale: number}) {
+  const side = Math.round(64 * scale);
+  return (
+    <View style={styles.reviewCells} accessible accessibilityRole="image" accessibilityLabel={label}>
+      {cells.map((ch, i) => (
+        <View
+          key={`${ch}-${i}`}
+          testID={`kb-review-cell-${i}`}
+          style={[styles.cell, styles.cellPlain, styles.reviewCell, {flexBasis: side, maxWidth: side}]}>
+          <Text20 size={40} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.title}>
+            {ch}
+          </Text20>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[]; filled: number; big: boolean; idPrefix?: string}) {
   const word = cells.join('');
   const count = k.count_words[cells.length - 1] ?? String(cells.length);
@@ -290,6 +344,13 @@ const styles = StyleSheet.create({
   figcaption: {color: color.ink, fontSize: 20},
   cells: {flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center'},
   cell: {borderRadius: 14, borderWidth: 3, borderStyle: 'dashed', borderColor: color.line, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
+  cellPlain: {borderStyle: 'solid', borderColor: color.action},
+  reviewCard: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 18, gap: 12, alignItems: 'center'},
+  reviewThumb: {width: 140, backgroundColor: color.card, padding: 6, boxShadow: shadow.soft, transform: [{rotate: '-2deg'}]},
+  reviewThumbImg: {width: 128, height: 100, backgroundColor: color.paperSoft},
+  reviewWord: {gap: 8, alignItems: 'center', alignSelf: 'stretch'},
+  reviewCell: {flexGrow: 0, flexShrink: 1, aspectRatio: 1},
+  reviewCells: {flexDirection: 'row', gap: 10, justifyContent: 'center', alignSelf: 'stretch'},
   cellOn: {backgroundColor: color.sky, borderStyle: 'solid', borderColor: color.action},
   badge: {position: 'absolute', right: -7, top: -7, width: 22, height: 22, borderRadius: 11, backgroundColor: color.action, alignItems: 'center', justifyContent: 'center'},
   inputWrap: {gap: 6},

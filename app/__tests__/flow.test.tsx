@@ -9,7 +9,7 @@ test('Connect -> Consent -> CourseHome 이동', async () => {
   await enterCode('123456');
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });
 
 test('틀린 번호는 어르신 문장으로 안내한다', async () => {
@@ -22,12 +22,12 @@ async function doAllSteps() {
   await pressCourseNext();
   await waitFor(() => screen.getByText('마을 입구 나무'));
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
   await act(async () => {
@@ -37,7 +37,7 @@ async function doAllSteps() {
   await press('마치기');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요')); // P7
   await press('알겠어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 }
 
 test('동의하면 답변이 저장되고 3단계 완료 처리가 호출된다', async () => {

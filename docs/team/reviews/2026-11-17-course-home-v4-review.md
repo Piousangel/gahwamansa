@@ -132,3 +132,77 @@
 3. M1 체크·› 아이콘 + 높이 테스트
 4. M7-1·2 테스트 보강
 5. (후속) M2 P5·P6 보기 전용, M4 동의 거부 띠, M5 기기 도장, M6 토큰 원본 이관과 72 확인
+
+---
+
+## 재검토 (95d11cd main merge · a137e2f · e8649d1)
+
+### 검증 실행
+| 항목 | 결과 |
+|---|---|
+| `npx tsc --noEmit` (e8649d1 분리 worktree) | 통과(exit 0) |
+| `npx jest --testPathIgnorePatterns __integration__ --maxWorkers=2` | 60 suites / 528 tests 통과 |
+| `git merge-tree` main ↔ 브랜치 | 충돌 없음 |
+| `git merge-tree` 브랜치 ↔ `child-ease-joy` | **충돌 3파일**: `app/src/app/ParentStack.tsx`(이쪽은 `review` 파라미터, 저쪽은 `Connect.prefill`), `app/src/copy/copy.ko.json`·`docs/team/copy.ko.json`(이쪽 `review.*` 키, 저쪽 `first.code_found`·`connect_confirm`·`safe`·`legal`). 양쪽을 다 살리면 되는 기계적 충돌이다. 나중에 합치는 쪽이 원본 copy를 고친 뒤 sync한다 |
+| 통합 테스트·기기 200% 실측 | 실행 안 함 |
+
+### 이전 지적 해결 여부
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| H1 미연결 완료 문구 | 해결 | `done_unlinked`·`done_unlinked_sub`(11-7 #18), P7 `unlinked_body`(#19). 테스트도 두 줄 기준으로 바뀜 |
+| H2 미연결 띠 | 해결 | 날짜 다음, 본문 안, 띠 전체 Pressable(role button·라벨 = 띠 문장), 흰 면·3px·반경 18·12/16·wrap·flexBasis 200, 최소 높이 64. 남은 차이는 낮음 R5 |
+| H3 상단 고정 | 해결 | `Screen top` 없음. 날짜 Header는 `maxFontSizeMultiplier=FONT_SCALE_MAX` |
+| M1 체크·› | 해결 | `icon-check` 20 + 라벨 + `icon-chevron-right` 22. 줄 높이가 같다는 테스트도 추가됨 |
+| M2 세 행 › | 해결 | 세 단계 보기 전용(Question·Keyboard `review`) |
+| M3 스티치 간격 | 해결 | 스티치 위아래 8 + 본문 gap 16 = 24 |
+| M4 동의 거부 띠 | 해결 | `declined_banner` + '다시 정하기'(→ 설정). ③ 참고 |
+| M5 기기 도장 | 해결 | ② 참고 |
+| M6 토큰 원본·36 초과 | 해결 | `tokens-v3.json lineHeightTable` 추가, designSystem.test 동기 검사, 36 초과는 `max(+12, ×1.3)` → 72는 94(이전과 같음, 잘림 위험 없어짐) |
+| M7 테스트 | 대부분 해결 | 보기 전용에서 recordSessionStep·logEvent·startToday·getTodayContent·saveAnswer 호출 수가 변하지 않는지 확인함. 상단 '‹ 오늘 코스' 복귀도 확인. 하드웨어 뒤로가기(BackHandler) 직접 테스트는 없음(같은 `onBack`을 쓰므로 낮음) |
+
+### 요청 확인 ① 공용·app/ 변경
+- `ParentStack.tsx:16`: 세 단계에 `{review?: boolean} | undefined`. 진행 경로(`navigate(current.route)`)는 파라미터 없이 그대로라 영향이 없다.
+- `session.tsx`·`AppRoot.tsx:103` `applyAnswer`: `saveAnswer` 성공 뒤에만 `answered_choice`를 바꾼다(`QuestionStep.tsx:41`). `consent_required`로 실패하거나 미연결·거부면 바꾸지 않으므로 보기 전용에서 '고른 답'이 생기지 않는다(11-3 "거부·철회 날은 줄을 뺌"과 맞음). 철회 때 비우는 일은 기존 `setConsented(false)`가 맡는다.
+- `StepRow.tsx`: 상태 묶음 View(row, center, gap 6). 바닥선 정렬 행 안에서 이 묶음의 기준선은 첫 자식인 체크 svg의 아래 끝이 된다(Yoga). 시안 CSS도 inline-flex 안 svg 아래 끝이 기준선이라 결과가 같다. 기기에서 한 번 눈으로 확인한다(낮음).
+- `tokens.ts`·`tokens-v3.json`: 문제 없음.
+
+### 요청 확인 ② `lib/localStamps`
+- 주입식(`createLocalStamps(store, now)`)이고 React·RN을 모른다(lib 규칙 OK). 기본 저장소는 AsyncStorage이고, 없거나 실패하면 메모리로 바꾼다. 손상 값·저장 오류는 빈 목록이 되어 화면을 막지 않는다. 날짜 문자열만 저장해 답·낱말이 없다(결정과 맞음).
+- 7일 정리: 오늘 − 6일 ~ 오늘만 남기고, 미래 날짜·형식 오류는 버린다. 읽을 때 정리하고 줄었으면 다시 저장한다. 테스트 5건.
+- 기록 시점: 미연결로 세 번째 단계를 마칠 때 `addToday()`를 **기다린 뒤** `applyStep`한다(`useFinishStep.ts:26-29`). 그래서 P7·P3가 오늘 도장을 바로 읽는다.
+- 삭제 시점과 읽는 경로: 로컬 값을 읽는 곳은 `useWeekStamps` 하나뿐이고, 쓰는 곳은 CourseHome·CourseDone 둘뿐이다. 둘 다 `content.linked`가 정해진 뒤에만 동작한다(`linked === undefined`면 대기). 연결 흐름은 Connect → (reset) Consent(마운트 때 `sync()`) → `replace('CourseHome')`이라, CourseHome이 다시 마운트될 때는 `linked=true`다. 그러면 `clear()` 뒤 서버 값만 읽는다. **연결 직후 코스 홈보다 먼저 로컬 값을 읽는 경로는 없다.** P2·P13·P8은 로컬을 읽지 않는다.
+- 낮음:
+  - (a) `defaultStore.run`: 네이티브 `removeItem`이 실패하면 메모리로 바꿔 메모리에서만 지운다. 네이티브에 남은 값은 다음 실행에서 미연결로 돌아갈 때 보일 수 있다. 연결된 동안은 로드마다 다시 `clear()`하고 7일 정리도 있어 영향은 작다.
+  - (b) 설정 '모두 지우기'(`DeleteAccountScreen` `clear()`)와 `resetRole`이 로컬 목록을 지우지 않는다. 연결 때 이미 지워지므로 실제로 남는 경우는 드물지만, '모두 지우기'라는 약속과 맞추려면 `localStamps().clear()`를 함께 부르기를 권한다.
+
+### 요청 확인 ③ 코스 홈의 바로 동의 상자 제거
+- 정책과 맞다. DECISIONS "동의 거부 어르신": 코스는 그대로, 답만 저장하지 않음. P2 확정 문구 "마음이 바뀌면 설정에서 다시 골라요"(copy 2절). 6절 `course.declined_banner` + 링크 "다시 정하기". 설정의 다시 동의는 `resume` → 확인(`resume_confirm`) → `giveConsent` 두 단계라서, 예전 코스 홈 한 번 누름 동의보다 무엇에 동의하는지 보여 주는 쪽이 낫다.
+- talkback: talkback-spec P3 표에는 동의 거부 띠의 읽는 순서가 없다. 코드는 날짜 → 설정 → 띠 글 → '다시 정하기' 순으로 미연결 띠와 같은 자리에 있다. 디자인 리드가 talkback-spec에 "동의 거부 줄: 날짜 다음, 글 → 다시 정하기, 버튼" 한 줄을 추가하기를 권한다(문서, 낮음).
+- 낮음: '다시 정하기'가 설정 화면 맨 위로 간다. 어르신이 '가족에게 답 보여 주기' 줄을 찾아야 한다. 뒤에 그 줄로 스크롤·포커스를 옮기는 것을 검토한다.
+
+### 요청 확인 ④ P6 보기 전용 음절 칸(시안 P5_P6_review 대조)
+- 칸 자체는 일치한다: 흰 면, 3px 실선 `#744821`, 64×64, 반경 14, 글자 40(`cellPlain`).
+- 다른 점(중간 N2):
+  - 시안은 그림(140×100, 흰 테두리 6) → 'AI가 만든 그림' → '오늘의 낱말이에요' → 칸이 **한 흰 카드 안**(반경 22, 패딩 16/18, gap 12)에 있고, 낱말 묶음 안쪽 gap은 8이다. 코드(`KeyboardStep.tsx:100-114`)는 카드 안에 그림·캡션만 있고 제목·칸은 카드 밖에 있다. 썸네일은 진행 화면 크기(86×75)다.
+  - 칸 사이: 시안 10, 코드 12(`styles.cells`).
+  - 줄어듦: 시안 칸은 `flex: 0 1 64px`(좁으면 줄어 한 줄 유지), 코드는 고정 폭 + `flexWrap`(긴 낱말은 줄바꿈).
+  - 글자 확대: 시안 150% 보드는 칸 96·글자 60으로 커진다. 코드는 칸 글자 `maxFontSizeMultiplier=1`, 칸 64 고정이다. 진행 화면의 입력 이유(자판과 맞춤)와 달리 보기 전용은 키워도 된다.
+- 읽기: 칸 묶음 라벨 "오늘의 낱말, {낱말}"(11-7 #17b) 맞음. 제목 줄은 읽기에서 빼 중복이 없다.
+
+### 새로 찾은 것
+- **N1(중간) 보기 전용 하단 '돌아가기'가 보조 버튼이다. 시안은 주 버튼이다.** P4_zoom_review B2, P5_P6_review 두 보드 모두 '돌아가기'를 갈색 채움(주, 72)으로 그린다. 코드: `PhotoStep.tsx:48`, `QuestionStep.tsx` review dock, `KeyboardStep.tsx` review dock이 모두 `variant="secondary"`다. 화면에 행동이 하나뿐이니 주 버튼이 맞다. 1차 리뷰에서 놓친 부분이다. 세 곳 모두 `variant` 한 줄이면 고쳐진다.
+- N2(중간) P6 보기 전용 배치: 위 ④.
+- N3(낮음) P5 보기 전용과 시안의 차이:
+  - 질문 글자: 코드 32, 시안 28/36.
+  - 선택 칸 최소 높이: 시안 100, 코드는 없음.
+  - 고른 칸 오른쪽 체크 아이콘: 시안에 있고 코드에는 없음.
+  - '고른 답' 이름표 색: 시안 `#14532D`(doneInk), 코드 `actionPressed`.
+  - 위치: `QuestionStep.tsx` `ReviewChoice`·`styles`.
+- R5(낮음) 미연결 띠:
+  - `alignItems:'center'`. 시안은 baseline(글 첫 줄과 '번호 쓰기' 바닥선)이다. '›'를 아이콘으로 바꾸면서 center로 둔 것 같다. 글이 두 줄 이상이면 링크가 글 가운데 높이에 온다.
+  - 날짜 줄 → 띠 간격: 시안 24(본문 gap), 코드 16(`headGroup gap`).
+
+### 판정: **합치기 가능**
+- 높음 0건이다. 이전 높음 3건과 중간 M1~M7은 해결됐다.
+- N1(보기 전용 '돌아가기' 주 버튼)은 세 줄짜리 수정이고 시안 1:1 원칙에 해당하니, **합치기 전에 고치기를 권한다.** N2·N3·R5와 localStamps 낮음 (a)·(b)는 후속 PR로 넘겨도 된다.
+- `child-ease-joy`와는 3파일 충돌이 있다. 나중에 합치는 쪽이 양쪽 키를 모두 살려 해결하고, copy는 원본에서 sync한다.

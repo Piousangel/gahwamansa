@@ -122,7 +122,7 @@ test('코스 진행 중 이전은 확인 없이 코스 홈으로', async () => {
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await act(async () => fireEvent.press(screen.getByLabelText('오늘 코스로 돌아가기')));
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
 });
 
@@ -137,5 +137,5 @@ test('설정의 이전은 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press('설정');
   await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로 가기'))));
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 });

@@ -3,7 +3,7 @@ import React from 'react';
 import {Dimensions, KeyboardAvoidingView, Platform, StyleSheet, Text} from 'react-native';
 import {render, screen} from '@testing-library/react-native';
 import v3 from '../../design-system/tokens-v3.json';
-import {color, fontSize, layout, lineHeight, radius, size, space, touch, typeScale, FONT_SCALE_MAX, FONT_SCALE_MAX_BODY, MIN_BODY_FONT, MIN_TOUCH} from '../src/ui/tokens';
+import {color, fontSize, labelLineHeight, layout, lineHeight, lineHeightFor, radius, size, space, touch, typeScale, FONT_SCALE_MAX, FONT_SCALE_MAX_BODY, MIN_BODY_FONT, MIN_TOUCH} from '../src/ui/tokens';
 import {keepAll, keepAllChildren, WORD_JOINER} from '../src/ui/koreanText';
 import {BigButton} from '../src/ui/BigButton';
 import {SelectCard} from '../src/ui/SelectCard';
@@ -30,6 +30,15 @@ describe('tokens = tokens-v3.json', () => {
     expect(typeScale.elder).toEqual(v3.typeScale.elder);
     expect(typeScale.child).toEqual(v3.typeScale.child);
     expect(lineHeight).toEqual(omit(v3.lineHeight, 'rule'));
+    // 줄 높이 표: 원본(tokens-v3.json lineHeightTable)과 앱 사본이 같다(ARCHITECTURE §6)
+    const table = v3.lineHeightTable as Record<string, number | string>;
+    for (const [k, v] of Object.entries(table)) {
+      if (/^\d+$/.test(k)) {
+        expect(lineHeightFor(Number(k))).toBe(v);
+      }
+    }
+    expect(labelLineHeight(20)).toBe(20 + (table.labelExtra as number));
+    expect(lineHeightFor(72)).toBe(94); // 큰 글자는 윗획이 잘리지 않게 여유(리뷰 M6)
     expect(space).toMatchObject(omit(v3.space, 'note'));
     expect(radius).toMatchObject(omit(v3.radius, 'note'));
     expect(touch).toEqual(omit(v3.touch, 'rule'));
@@ -41,7 +50,7 @@ describe('tokens = tokens-v3.json', () => {
     expect(MIN_BODY_FONT).toBe(20);
     expect(MIN_TOUCH).toBe(64);
     expect(size.buttonPrimary).toBe(72);
-    expect(fontSize.bodyMin).toBe(20);
+    expect(fontSize.body).toBe(20);
   });
 });
 

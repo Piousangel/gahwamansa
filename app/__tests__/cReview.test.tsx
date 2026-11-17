@@ -24,7 +24,7 @@ test('real 시작(역할 지정 parent): 연결된 기기는 whoAmI 로 코스 �
   const api = createFakeApi({linked: true, consented: true});
   const who = jest.spyOn(api, 'whoAmI');
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(who).toHaveBeenCalled();
 });
 

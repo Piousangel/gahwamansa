@@ -231,7 +231,7 @@ test('오프라인: 시작 대기가 끝나고 오프라인 화면이 바로 보
 
 test('세션 복원이 끝나면 대기 화면이 걷히고 실제 화면(어르신 코스 홈)', async () => {
   render(<AppRoot api={createFakeApi({who: 'parent', linked: true, consented: true})} restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await waitFor(() => expect(screen.queryByTestId('splash-hold')).toBeNull());
 });
 
