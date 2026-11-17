@@ -13,7 +13,7 @@ import {CourseDone} from '../features/course/CourseDone';
 
 export type ParentParams = {
   Connect: {from?: 'course'} | undefined; Consent: undefined; CourseHome: undefined;
-  PhotoStep: undefined; QuestionStep: undefined; KeyboardStep: undefined; CourseDone: undefined;
+  PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
   Settings: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };
 const Stack = createNativeStackNavigator<ParentParams>();

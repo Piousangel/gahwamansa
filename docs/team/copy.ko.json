@@ -343,8 +343,15 @@
     "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
     "stamps_a11y_none": "이번 주 도장",
     "step_a11y": "{단계}, {전체}단계 중 {n}단계",
-    "_status": "stamps_a11y·stamps_a11y_none·step_a11y 는 임시(talkback-spec 형식, 라이터 확정 필요)",
-    "continue": "이어서 하기"
+    "_status": "copy-v3 11절(11-7 #18 포함)·6절 확정",
+    "continue": "이어서 하기",
+    "done_today": "오늘 코스는 여기까지예요. 내일 또 만나요",
+    "review_link": "오늘 코스 다시 보기",
+    "step_review_a11y": "{단계}, 다시 보는 중",
+    "done_unlinked": "오늘 코스를 마쳤어요",
+    "done_unlinked_sub": "번호를 받으면 그때부터 고른 답이 가족에게 보여요",
+    "declined_banner": "고른 답은 저장되지 않아요",
+    "declined_link": "다시 정하기"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -374,7 +381,8 @@
     "title": "오늘 코스를 마쳤어요",
     "body": "도장을 찍었어요. 내일 또 만나요",
     "first_stamp": "오늘 첫 도장을 찍었어요",
-    "button": "알겠어요"
+    "button": "알겠어요",
+    "unlinked_body": "도장을 찍었어요. 번호를 받으면 그때부터 고른 답이 가족에게 보여요"
   },
   "question": {
     "need_choice": "하나를 골라 주세요",
@@ -499,5 +507,12 @@
       "사진 속 낱말을 자판으로 써요",
       "고른 답으로 자녀가 취향을 알아 가요"
     ]
+  },
+  "review": {
+    "back": "돌아가기",
+    "chosen": "고른 답",
+    "chosen_a11y": "고른 답, {값}",
+    "word": "오늘의 낱말이에요",
+    "word_a11y": "오늘의 낱말, {낱말}"
   }
 }

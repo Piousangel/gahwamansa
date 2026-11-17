@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -11,7 +11,7 @@ import {copy} from '../../copy/copy';
 import {StampRow} from './StampRow';
 import {kstWeekdayIndex, stampsFromDates} from './stamps';
 import {Sun} from '../../ui/assets/sun';
-import type {WeekStamps} from '../types';
+import {useWeekStamps} from './useWeekStamps';
 
 const d = copy.done;
 
@@ -21,29 +21,17 @@ const d = copy.done;
 export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'CourseDone'>) {
   const {api, content} = useSession();
   const linked = !!content?.linked;
-  // undefined = 받는 중(문구를 바꾸지 않게 기다림), null = 못 받음·미연결
-  const [week, setWeek] = useState<WeekStamps | null | undefined>(linked ? undefined : null);
-  useEffect(() => {
-    if (!linked) {
-      return;
-    }
-    let alive = true;
-    api
-      .getWeekStamps()
-      .then(w => alive && setWeek(w))
-      .catch(() => alive && setWeek(null));
-    return () => {
-      alive = false;
-    };
-  }, [api, linked]);
+  // 이번 주 도장: 연결 = 서버, 미연결 = 기기 로컬(리드 결정). undefined = 받는 중(문구를 바꾸지 않게 기다림), null = 못 받음
+  const week = useWeekStamps(api, content ? content.linked : undefined, 'done');
   const toHome = () => navigation.popTo('CourseHome');
   useBackAction(toHome);
 
   const todayIdx = kstWeekdayIndex();
   const days = week ? stampsFromDates(week.weekStart, week.doneDates) : null;
   const firstStamp = !!days && days[todayIdx] && days.filter(Boolean).length === 1;
-  // 미연결 열람은 기록하지 않으므로 "도장을 찍었어요"를 말하지 않는다
-  const body = !linked || week === undefined ? null : firstStamp ? d.first_stamp : d.body.replace('. ', '.\n');
+  // 미연결(11-7 #19): 도장은 기기에 찍히고, 가족에게는 번호를 받은 뒤부터 보인다는 것을 말한다
+  const body =
+    week === undefined ? null : !linked ? d.unlinked_body.replace('. ', '.\n') : firstStamp ? d.first_stamp : d.body.replace('. ', '.\n');
 
   return (
     <Screen bottom={<BigButton label={d.button} onPress={toHome} />}>

@@ -7,7 +7,7 @@ async function donePhoto() {
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
 }
 
 test('사진 화면은 오늘 콘텐츠(2일차)의 설명을 보여 준다', async () => {
@@ -51,7 +51,7 @@ test('자판으로 쓰기 화면은 오늘의 단어(keyword)를 음절 칸으�
   await waitFor(() => screen.getByText('라디오 듣기'));
   fireEvent.press(screen.getByText('라디오 듣기'));
   await press('정했어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText(/^쓸 낱말, 라디오, 세 글자/)); // P6: 음절 칸 카드 한 덩어리 라벨
 });

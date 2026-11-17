@@ -33,12 +33,19 @@ export async function toHome(api: Api, accept = true) {
     await waitFor(() => screen.getByText('고른 답은 가족에게 안 보여요'));
     await press('알겠어요');
   }
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(courseHomeShown);
 }
 
 // 서버가 이미 동의한 상태: 동의 화면을 건너뛰고 코스 홈으로 간다.
 export async function toHomeConsented(api: Api) {
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(courseHomeShown);
+}
+
+// 코스 홈이 보이는지: 코스가 있으면 날짜 줄(시안 P3 v4, 제목 없음), 빈·오류 상태면 '오늘의 코스' 제목
+export function courseHomeShown() {
+  if (!screen.queryByTestId('date-line')) {
+    screen.getByText('오늘의 코스');
+  }
 }
