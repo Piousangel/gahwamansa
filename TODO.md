@@ -225,3 +225,8 @@
 | 3 | **Google Cloud OAuth 클라이언트**(Android: 패키지명+SHA-1, Web: Supabase용) | Client ID만 팀에 알려 주면 됨(비밀 아님), Secret은 Supabase에 직접 |
 | 4 | Supabase 대시보드 → Authentication → Providers에서 Kakao·Google 켜기 | 팀이 칸별로 안내 |
 | 5 | 카카오 일반 사용자 공개 조건(비즈 앱 전환·검수) 확인 | 미확인 |
+
+## 27. 앱 서명 키 지문 (공개 값)
+- 디버그 키(개발 테스트용, 공용 android 키): SHA1 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25 / 카카오 키 해시 Xo8WBi6jzSxKDVR4drqm84yr9iU=
+- 출시 키(release.keystore, 사용자 보관, git 제외): 지문은 사용자가 keytool -list로 확인해 기록 예정
+- [ ] release.keystore 파일과 비밀번호 백업(사용자)
