@@ -17,6 +17,8 @@ export type ChildParent = {
   latest: LatestAnswer | null;
   // 고른 답에 맞춘 첫마디 한 문장(기능 회의 B3, 서버 0027 child_summary parents[].latest.starter). 없으면 null → 줄 숨김
   starter: string | null;
+  // 이 어르신이 가족에 연결된 날(KST). ASSUMED(서버 요청): child_summary parents[].connected_date — 없으면 null(C4 이름 고르기 시트 날짜 줄 생략)
+  connectedDate?: string | null;
 };
 export type ChildSummary = {
   parentTitle: string; // 가족 기본 호칭(어르신이 아직 없을 때·한 명일 때 화면 제목)

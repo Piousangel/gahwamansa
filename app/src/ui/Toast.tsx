@@ -5,6 +5,7 @@ import {FONT_SCALE_MAX, color, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {announce} from './a11y';
+import {ToastPlacementContext, toastBottom, type ToastPlacement} from './toastPlacement';
 import {fadeMs, useReduceMotion} from './motion';
 
 /** 자녀 토스트 유지 시간(README §13: 6초, 최소 5초). 오류는 자동으로 사라지지 않는다. */
@@ -32,6 +33,7 @@ type Shown = ToastOptions & {id: number};
 
 /**
  * 자녀 화면 루트에 한 번 둔다. bottomOffset = 탭 바 높이(탭 위에 띄움).
+ * 자리(UX U2): 지금 화면의 하단 고정 위 12 → 없으면 탭 막대 위 12 → 없으면 안전 영역 + 24. 시트·대화상자가 열려 있으면 숨긴다(toastPlacement).
  * 접근성(TalkBack R11): 나타날 때 한 번만 읽는다(오류도 polite). 아이콘은 장식.
  */
 export function ToastProvider({children, bottomOffset = 0}: {children: React.ReactNode; bottomOffset?: number}) {
@@ -40,6 +42,16 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
   const reduce = useReduceMotion();
   const opacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  // 지금 보이는 화면의 dock 높이(마지막으로 알린 화면), 열린 시트·대화상자 수
+  const [dock, setDock] = useState<{id: object; h: number} | null>(null);
+  const [modals, setModals] = useState(0);
+  const placement = useMemo<ToastPlacement>(
+    () => ({
+      reportDock: (id, h) => setDock(cur => (h === null ? (cur && cur.id === id ? null : cur) : cur && cur.id === id && cur.h === h ? cur : {id, h})),
+      modal: open => setModals(n => Math.max(0, n + (open ? 1 : -1))),
+    }),
+    [],
+  );
 
   // 리뷰 L9: 사라지는 타이머를 담아 두고 언마운트·새 토스트 때 정리
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,9 +104,12 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
 
   return (
     <Ctx.Provider value={api}>
-      {children}
-      {toast ? (
-        <View pointerEvents="box-none" style={[styles.layer, {bottom: bottomOffset + Math.max(16, insets.bottom)}]}>
+      <ToastPlacementContext.Provider value={placement}>{children}</ToastPlacementContext.Provider>
+      {toast && modals === 0 ? (
+        <View
+          testID="toast-layer"
+          pointerEvents="box-none"
+          style={[styles.layer, {bottom: toastBottom({dock: dock?.h ?? 0, tabOffset: bottomOffset, insetBottom: insets.bottom})}]}>
           <Animated.View
             testID="toast"
             style={[styles.toast, error ? styles.errorBox : styles.infoBox, {opacity}]}>

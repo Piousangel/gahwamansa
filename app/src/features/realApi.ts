@@ -308,6 +308,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
           ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
           : null,
         starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
+        connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // ASSUMED(서버 요청, dev-app-notes)
       }));
       const first = parents[0];
       return {

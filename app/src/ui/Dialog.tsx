@@ -5,6 +5,7 @@ import {Text20} from './Text20';
 import {BigButton} from './BigButton';
 import {Icon} from './assets/icons';
 import {useModalFocus} from './a11y';
+import {useToastModalGuard} from './toastPlacement';
 import {useFadeIn} from './useFadeIn';
 
 export type DialogAction = {
@@ -47,6 +48,7 @@ type Props = {
 export function Dialog({visible, title, body, children, actions, warningLabel, onBack, returnFocusRef, error, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
+  useToastModalGuard(visible); // 열려 있는 동안 토스트를 띄우지 않는다(UX U2)
   const {opacity, start} = useFadeIn(visible);
 
   // 리뷰 M1: 이중 요청 방지. 한 번 실행하면 호출부가 다시 그려 줄 때(로딩 표시·오류 등 actions 새로 받음)까지 무시

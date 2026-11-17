@@ -74,6 +74,7 @@ export type FakeParent = {
   latest?: LatestAnswer | null;
   history?: HistoryItem[];
   starter?: string | null;
+  connectedDate?: string | null;
 };
 const todayKst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -121,6 +122,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
           connected: p.connected ?? true,
           latest: (p.shared ?? true) ? (p.latest ?? null) : null,
           starter: (p.shared ?? true) && p.latest ? (p.starter ?? null) : null,
+          connectedDate: p.connectedDate ?? null,
         }))
       : [single()];
   let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
