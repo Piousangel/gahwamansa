@@ -324,3 +324,4 @@
 - 의존성: Google 공식 com.android.installreferrer:installreferrer:2.2 + 자체 Kotlin 모듈(서드파티 npm 미사용). 첫 실행 1회 읽고 기기 저장
 - App Links host는 env APP_LINK_HOST, 없으면 비활성. staging은 별도 서브도메인
 - 카톡 인앱 intent·Play referrer 보존은 실기기·Play 내부 테스트 트랙 확인 전까지 미확정 → 홍보·스토어 문구에 "자동 채움" 금지. 실패 시 번호 손 입력 + 6자리 자동 확인만
+- 11-17 디자인 동결 추가: P7_motion(도장·체크 모션·소리 명세), P5_P6_review(보기 전용). P15_history는 라이터 대기 2건(#16·#17) 확정 후 동결
