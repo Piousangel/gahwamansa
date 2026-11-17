@@ -46,16 +46,16 @@ const scene = (x, y, wd, h, small) => {
 };
 
 // 3D 심볼 본문(64 상자). small: 사진을 키우고 인장을 살짝 줄여 48dp에서도 사진이 보이게
-const body3d = (small) => {
-  const P = small ? { x: 24, y: 0, w: 37, h: 43 } : { x: 26, y: 1, w: 34, h: 41 };
-  const win = small ? { x: 27.5, y: 3.5, w: 30, h: 29 } : { x: 29, y: 4, w: 28, h: 27 };
-  const S = small ? { x: 4, y: 21, w: 39, r: 13 } : { x: 4, y: 19, w: 41, r: 14 };
-  const pol = `<g transform="rotate(11 ${P.x + P.w / 2} ${P.y + P.h / 2})">
+const body3d = (small, compact = false) => {
+  const P = compact ? { x: 21, y: 2, w: 37, h: 43 } : small ? { x: 24, y: 0, w: 37, h: 43 } : { x: 26, y: 1, w: 34, h: 41 };
+  const win = compact ? { x: 24.5, y: 5.5, w: 30, h: 29 } : small ? { x: 27.5, y: 3.5, w: 30, h: 29 } : { x: 29, y: 4, w: 28, h: 27 };
+  const S = compact ? { x: 6, y: 20, w: 39, r: 13 } : small ? { x: 4, y: 21, w: 39, r: 13 } : { x: 4, y: 19, w: 41, r: 14 };
+  const pol = `<g transform="rotate(${compact ? 7 : 11} ${P.x + P.w / 2} ${P.y + P.h / 2})">
     <rect x="${P.x}" y="${P.y + 2.2}" width="${P.w}" height="${P.h}" rx="2.6" fill="#D2BFA8"/>
     <rect x="${P.x}" y="${P.y}" width="${P.w}" height="${P.h}" rx="2.6" fill="url(#card)"/>
     <rect x="${P.x + .6}" y="${P.y + .6}" width="${P.w - 1.2}" height="${P.h - 1.2}" rx="2.2" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/>
     ${scene(win.x, win.y, win.w, win.h, small)}</g>`;
-  const seal = `<g transform="rotate(-6 ${S.x + S.w / 2} ${S.y + S.w / 2})">
+  const seal = `<g transform="rotate(${compact ? -4 : -6} ${S.x + S.w / 2} ${S.y + S.w / 2})">
     <rect x="${S.x + 3}" y="${S.y + 2}" width="${S.w}" height="${S.w}" rx="${S.r}" fill="#3A1A10" opacity=".38" filter="url(#cast)"/>
     <rect x="${S.x}" y="${S.y + 3.2}" width="${S.w}" height="${S.w}" rx="${S.r}" fill="${BRAND.sealDeep}"/>
     <rect x="${S.x}" y="${S.y}" width="${S.w}" height="${S.w}" rx="${S.r}" fill="url(#seal)"/>
@@ -83,6 +83,7 @@ const SYM = {
   '3d': [DEFS3D(false), body3d(false)], small: [DEFS3D(true), body3d(true)], flat: ['', bodyFlat()], mono: ['', bodyMono()],
 };
 w(`${B}/symbol-3d.svg`, svg('0 0 64 64', 64, SYM['3d'][1], '가화만사성 심볼 3D 상세판(96px 이상)', SYM['3d'][0]));
+w(`${B}/symbol-3d-small-compact.svg`, svg('0 0 64 64', 64, body3d(true, true), '가화만사성 심볼 3D 단순판 · 런처 꽉 채움용(겹침 큼)', DEFS3D(true)));
 w(`${B}/symbol-3d-small.svg`, svg('0 0 64 64', 64, SYM.small[1], '가화만사성 심볼 3D 단순판(런처 48dp·72px 이하)', SYM.small[0]));
 w(`${B}/symbol-flat.svg`, svg('0 0 64 64', 64, SYM.flat[1], '가화만사성 심볼 평면판(앱 안)'));
 w(`${B}/symbol-mono.svg`, svg('0 0 64 64', 64, SYM.mono[1], '가화만사성 심볼 단색'));

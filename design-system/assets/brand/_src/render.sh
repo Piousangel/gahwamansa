@@ -10,6 +10,16 @@ png() { # src.svg out.png px
   "$CH" --headless --hide-scrollbars --allow-file-access-from-files --default-background-color=00000000 \
     --force-device-scale-factor=1 --window-size="$3,$3" --screenshot="$2" "file://$TMP/p.html" >/dev/null 2>&1
 }
+# 앱 안 심볼(D안 3D, JS 대기 화면·첫 화면 이동·워드마크 옆). "sh render.sh app" 이면 이것만 렌더
+# 164dp: 네이티브 스플래시(splash_icon, 288 캔버스에 심볼 64상자를 164dp)와 같은 크기 → 전환 때 그림·크기가 바뀌지 않게
+app_pngs() {
+  for s in 1 2 3; do
+    sfx=$([ $s = 1 ] && echo "" || echo "@${s}x")
+    png $B/symbol-3d.svg $B/png/symbol-3d-164$sfx.png $((164 * s))
+    png $B/symbol-3d.svg $B/png/symbol-3d-40$sfx.png $((40 * s))
+  done
+}
+if [ "$1" = app ]; then app_pngs; rm -rf "$TMP"; echo rendered app; exit 0; fi
 for d in mdpi:1 hdpi:1.5 xhdpi:2 xxhdpi:3 xxxhdpi:4; do
   n=${d%%:*}; f=${d##*:}
   px() { echo "$1 * $f" | bc | cut -d. -f1; }
@@ -28,5 +38,6 @@ png $B/symbol-flat.svg $B/png/symbol-flat-40.png 40
 png $B/symbol-flat.svg $B/png/symbol-flat-40@2x.png 80
 png $B/symbol-flat.svg $B/png/symbol-flat-40@3x.png 120
 png $B/symbol-3d.svg $B/png/symbol-3d-512.png 512
+app_pngs
 rm -rf "$TMP"
 echo rendered
