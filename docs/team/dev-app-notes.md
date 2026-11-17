@@ -189,3 +189,25 @@
 ## 첫 화면 두 버튼 D2-C (2026-11-17)
 - RoleChoiceButton(첫 화면 전용, 토큰 예외는 이 컴포넌트에만): 부모님 accentSun·자녀 sky 면, 갈색(ink) 테두리 3 + 아래 7, 반경 24, 최소 88, 패딩 12/12/12/16, 제목 26 굵게 inkTitle(26 상한), 둘째 줄 20 ink, 오른쪽 icon-chevron-right 26. 눌림: 면 actionSoft, 아래 두께 3, translateY 4. 손 떼면 바로 이동. 질문 28 ink + 아래 10, 버튼 사이 14. TwoLineButton 삭제. 150/200% 규칙(상한 해제·소개 숨김·전체 스크롤) 유지.
 - 차이: 시안의 › 선 굵기 3.4 → 디자인 시스템 아이콘(2.5) 사용. 굵게 하려면 아이콘 원본 변형 필요(디자이너 확인).
+
+## 2026-11-17 보안 검토 후속 · 스플래시 · 지난 답 버그
+### 탈퇴 시 인증 계정 삭제 (검토 #1) — 방식 비교와 선택
+- (A) **채택**: `delete_my_account()`(security definer) 끝에서 `delete from auth.users where id = auth.uid()` — 마이그레이션 0017.
+  - 앱 데이터 삭제와 같은 트랜잭션: 둘 중 하나만 되는 반쪽 상태가 없다. 서비스 키·Edge Function 불필요. 호출자 본인만 지움(인자 없음).
+  - auth.identities·sessions·refresh_tokens 는 auth 스키마의 cascade 로 함께 삭제. public 쪽 FK(families.created_by, invite_codes.used_by)는 0008 에서 on delete set null 처리됨.
+  - 확인 필요(미확인): 호스팅 프로젝트에서 함수 소유자(postgres)가 auth.users 를 지울 권한 — 원격 반영 때 확인.
+- (B) 보류: Edge Function + service_role `auth.admin.deleteUser`. 공식 API지만 배포·시크릿 관리가 늘고, 앱→RPC→함수 두 번 호출 사이 실패 시 반쪽 상태.
+- 앱: 서버가 인증 계정을 지우므로 `signOut({scope:'local'})`. 소셜 SDK 정리는 `app_metadata.providers` 배열 기준(검토 #5), 카카오 unlink 실패해도 다음 정리 계속.
+### 고아 익명 정리·어르신 기기 차단 (검토 #4)
+- RPC `discard_anonymous_session()`: 익명 + 프로필 없음일 때만 그 인증 계정 삭제. 앱은 소셜 토큰을 받은 **뒤**(취소 시 세션 유지) 호출 → 로컬 로그아웃 → ID 토큰 교환.
+- `signInWithSocial` 이 API 단에서도 익명+parent 프로필이면 `ServerError(reason 'parent_device')`, SDK 호출 없음.
+### TODO(설계만)
+- 카카오 서버 unlink: 기기 토큰이 없으면 앱 unlink 가 실패한다. 서버에서 Admin 키로 `POST /v1/user/unlink`(target_id_type=user_id, target_id=identities.provider_id)를 탈퇴 RPC 뒤 비동기로(Edge Function + 시크릿). **Admin 키는 앱에 넣지 않는다.** 실패 시 재시도 큐.
+- 자녀 로그아웃 버튼: 자녀 설정(C7) 화면이 생길 때. 로그아웃 = providers 별 SDK signOut + supabase signOut(global).
+### 스플래시 SPL_A
+- androidx core-splashscreen **1.2.0** 고정. Theme.App.Starting(paper, splash_symbol 벡터 288/128), MainActivity installSplashScreen + keepOnScreen(SplashModule.hide 또는 3초).
+- JS: 루트 onLayout 에서 hide 1회. 복원 대기 = 심볼만(2초 넘으면 "잠시만요"). 첫 화면: 가운데 128 → 워드마크 옆 40 이동 450ms(동작 줄이기 300ms 페이드, 스크린리더 즉시), 목표 못 받으면 1초 안전장치. 실행당 한 번.
+- 런처 아이콘: 적응형(paper 바탕 + 심볼 60/108dp, monochrome 포함) + 레거시 PNG 5밀도(같은 구성 렌더). 디자이너 세부 명세가 없어 크기는 가정값 — 디자이너 확인 필요.
+- 미확인: 실기기 Android 12+ 아이콘 실제 크기·compat 모습, 심볼 이동 위치 정합(edge-to-edge 기준).
+### 지난 답 탭 버그(PM 감사 C5)
+- 원인: ChildReport 가 데이터를 조회하지 않고 빈 문구를 고정 출력. 요약 조회를 `useChildSummary` 로 분리해 앨범·지난 답이 함께 쓰고, 지난 답은 최근 답 1개(날짜·질문·고른 답)·빈·나누지 않음·로딩·오류 상태를 보여 준다. 여러 개 목록은 범위 결정(감사 질문 5)과 목록 RPC 가 필요.

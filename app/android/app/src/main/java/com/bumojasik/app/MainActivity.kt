@@ -1,6 +1,10 @@
 package com.bumojasik.app
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.bumojasik.app.splash.SplashState
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -23,6 +27,12 @@ class MainActivity : ReactActivity() {
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    // 시스템 스플래시(SPL_A): super.onCreate 전에 설치. JS 첫 화면이 그려질 때까지(SplashModule.hide) 유지하고,
+    // 무슨 일이 있어도 3초가 지나면 걷는다(안전장치). 바탕·심볼이 JS 대기 화면과 같아 바뀌는 순간이 보이지 않는다.
+    val splash = installSplashScreen()
+    SplashState.ready.set(false)
+    splash.setKeepOnScreenCondition { !SplashState.ready.get() }
+    Handler(Looper.getMainLooper()).postDelayed({ SplashState.ready.set(true) }, SplashState.SAFETY_MS)
     supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
     super.onCreate(savedInstanceState)
   }

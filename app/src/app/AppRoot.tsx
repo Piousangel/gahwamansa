@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {AppState} from 'react-native';
+import {AppState, StatusBar, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {initialWindowMetrics, SafeAreaProvider} from 'react-native-safe-area-context';
 import type {Api, StepName, TodayContent} from '../features/types';
@@ -12,6 +12,10 @@ import {Screen} from '../ui/Screen';
 import {Text20} from '../ui/Text20';
 import {appCopy, offlineMessage, Message} from '../copy/copy';
 import {errorMessage} from '../features/course/useFinishStep';
+import {useMotionMode} from '../features/link/useReduceMotion';
+import {color} from '../ui/tokens';
+import {finishFlight, flightPending, hideNativeSplash, useSplashLanded, useSplashTarget} from './splash';
+import {SplashHold, SplashOverlay} from './SplashOverlay';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -120,6 +124,25 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
     [api, content, syncError, sync],
   );
 
+  // 스플래시 이어가기: 대기 화면은 심볼만(2초가 넘으면 "잠시만요"), 첫 화면이 정해지면 심볼을 넘긴다(실행당 한 번)
+  const win = useWindowDimensions();
+  const waiting = start === 'loading' || who === 'loading';
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!waiting) {
+      return;
+    }
+    const t = setTimeout(() => setSlow(true), 2000);
+    return () => clearTimeout(t);
+  }, [waiting]);
+  const motion = useMotionMode();
+  const target = useSplashTarget();
+  const landed = useSplashLanded();
+  const [flying] = useState(flightPending);
+  const showFlight = flying && !landed && !waiting && start !== 'offline';
+  // 첫 화면(역할 선택)으로 갈 때만 자리 이동, 바로 홈으로 가면 페이드(목표 없음 → 동작 줄이기와 같은 300ms)
+  const flightMode = who === null ? motion : motion === null ? null : motion === 'none' ? 'none' : 'reduce';
+
   let body: React.ReactNode;
   if (start === 'offline') {
     body = (
@@ -141,11 +164,18 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
     );
   } else if (who === 'child') {
     body = <ChildStack initialRouteName={role === 'child' ? 'Tabs' : 'Gate'} />;
-  } else if (start === 'loading' || who === 'loading') {
+  } else if (waiting) {
     body = (
-      <Screen>
-        <Text20>{appCopy.loading}</Text20>
-      </Screen>
+      <SplashHold
+        win={win}
+        slowText={
+          slow ? (
+            <Text20 accessibilityLiveRegion="polite" maxFontSizeMultiplier={2} style={styles.slow}>
+              {appCopy.loading}
+            </Text20>
+          ) : null
+        }
+      />
     );
   } else if (who === null) {
     body = (
@@ -162,9 +192,19 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SessionContext.Provider value={value}>
-        <NavigationContainer>{body}</NavigationContainer>
-      </SessionContext.Provider>
+      {/* 종이색 배경 위라 시계·배터리 아이콘을 어둡게(앱 전체 라이트) */}
+      <StatusBar barStyle="dark-content" />
+      <View testID="app-root" style={styles.root} onLayout={hideNativeSplash}>
+        <SessionContext.Provider value={value}>
+          <NavigationContainer>{body}</NavigationContainer>
+        </SessionContext.Provider>
+        {showFlight ? <SplashOverlay win={win} target={who === null ? target : null} mode={flightMode} onDone={finishFlight} /> : null}
+      </View>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {flex: 1, backgroundColor: color.paper},
+  slow: {color: color.inkSub, textAlign: 'center'},
+});

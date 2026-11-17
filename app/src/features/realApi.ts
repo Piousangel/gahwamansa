@@ -53,29 +53,55 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async deleteMyAccount() {
       const {data, error} = await sb.rpc('delete_my_account');
       if (error) fail('delete_my_account', error);
-      // 서버는 앱 데이터만 지운다. 인증 계정은 남으므로 이 기기의 세션을 끊는다(실패해도 데이터는 이미 지워짐).
-      // 소셜로 로그인한 자녀면 SDK 세션도 정리하고, 카카오는 연결 끊기(unlink)까지(카카오 정책상 탈퇴 시 권장).
+      // 서버가 앱 데이터와 함께 본인 인증 계정(소셜 식별 정보 포함)까지 지웠다(0017). 이 기기의 정리만 남는다.
+      // 소셜 SDK 세션: 연결된 방법 전체(providers, 자동 합쳐진 경우 포함)를 정리하고, 카카오는 연결 끊기(unlink, 기기 토큰 기준).
+      // 기기 토큰이 없으면 unlink 는 조용히 실패한다 → 서버(Admin 키) unlink 는 설계만(TODO). 실패해도 다음 정리는 계속.
       try {
         const {data: s} = await sb.auth.getSession();
-        const provider = s.session?.user.app_metadata?.provider;
-        if (provider === 'kakao' || provider === 'google') {
-          const auth = socialAuth();
-          if (provider === 'kakao') {
-            await auth.unlinkKakao();
-          }
-          await auth.signOut(provider);
+        const meta = s.session?.user.app_metadata ?? {};
+        const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+        const auth = socialAuth();
+        if (list.includes('kakao')) {
+          await auth.unlinkKakao().catch(() => {});
+          await auth.signOut('kakao');
+        }
+        if (list.includes('google')) {
+          await auth.signOut('google');
         }
       } catch {
         // 무시(데이터는 이미 지워짐)
       }
       try {
-        await sb.auth.signOut();
+        await sb.auth.signOut({scope: 'local'}); // 인증 계정이 이미 없으므로 서버 호출 없이 이 기기 세션만 지운다
       } catch {
         // 무시
       }
       return {scope: data.scope};
     },
     async signInWithSocial(provider) {
+      // 어르신 기기 차단을 API 에서도(보안 검토 #4): 익명 세션이 연결된 어르신이면 SDK 를 부르지 않는다.
+      const {data: cur, error: se} = await sb.auth.getSession();
+      if (se) throw new OfflineError(`세션 확인: ${se.message}`);
+      const anon = cur.session?.user.is_anonymous ? cur.session.user : null;
+      if (anon) {
+        const {data: p, error: pe} = await sb.from('profiles').select('id').eq('user_id', anon.id).eq('role', 'parent').maybeSingle();
+        if (pe) fail('프로필 조회', pe);
+        if (p) {
+          throw new ServerError('social_login', 'parent_device', 'SOCIAL');
+        }
+      }
+      // 소셜 토큰을 받은 뒤에만: 프로필 없는 익명 세션(미연결 열람)은 서버에서 정리하고 이 기기 세션도 지운 다음 교환한다
+      // (교환하면 익명 세션이 덮어써져 고아 익명 사용자가 서버에 남기 때문). 정리 실패는 로그인을 막지 않는다.
+      const dropAnon = async () => {
+        if (!anon) {
+          return;
+        }
+        await sb.rpc('discard_anonymous_session').then(
+          () => undefined,
+          () => undefined,
+        );
+        await sb.auth.signOut({scope: 'local'}).catch(() => undefined);
+      };
       if (provider === 'kakao') {
         // nonce: 카카오에는 원문의 SHA-256 hex, Supabase 에는 원문(서버가 sha256(원문) 과 토큰 nonce 를 비교)
         let raw: string;
@@ -88,6 +114,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
         if (r === 'cancelled') {
           return 'cancelled';
         }
+        await dropAnon();
         const {error} = await sb.auth.signInWithIdToken({provider: 'kakao', token: r.idToken, nonce: raw});
         if (error) fail('kakao_id_token', error);
         return 'ok';
@@ -97,6 +124,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       if (r === 'cancelled') {
         return 'cancelled';
       }
+      await dropAnon();
       const {error} = await sb.auth.signInWithIdToken({provider: 'google', token: r.idToken});
       if (error) fail('google_id_token', error);
       return 'ok';

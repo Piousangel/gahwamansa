@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 런처 아이콘 앞 레이어: symbol-sun-polaroid.svg 와 같은 경로. 108dp 캔버스, 심볼 60dp 가운데
+     (적응형 아이콘 안전 영역 지름 66dp 안: 기울인 틀의 반대각선 34.2/64 x 60 = 32dp). 디자이너 세부 명세 없음 → 가정값 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <group android:translateX="24" android:translateY="24" android:scaleX="0.9375" android:scaleY="0.9375">
+    <group android:pivotX="32" android:pivotY="32" android:rotation="-5">
+      <path android:fillColor="#FFFFFF" android:strokeColor="#4E2F14" android:strokeWidth="3.5" android:strokeLineJoin="round"
+          android:pathData="M14,5 L50,5 A3,3 0 0 1 53,8 L53,56 A3,3 0 0 1 50,59 L14,59 A3,3 0 0 1 11,56 L11,8 A3,3 0 0 1 14,5 Z" />
+      <path android:fillColor="#F1E4D4"
+          android:pathData="M16,9 L48,9 A1,1 0 0 1 49,10 L49,39 A1,1 0 0 1 48,40 L16,40 A1,1 0 0 1 15,39 L15,10 A1,1 0 0 1 16,9 Z" />
+      <path android:strokeColor="#F59E0B" android:strokeWidth="3.6" android:strokeLineCap="round"
+          android:pathData="M44.50,24.50L47.00,24.50M40.84,33.34L41.90,34.40M32.00,37.00L32.00,39.50M23.16,33.34L22.10,34.40M19.50,24.50L17.00,24.50M23.16,15.66L22.10,14.60M32.00,12.00L32.00,9.50M40.84,15.66L41.90,14.60" />
+      <path android:fillColor="#FFC93C" android:strokeColor="#4E2F14" android:strokeWidth="3"
+          android:pathData="M23.5,24.5 A8.5,8.5 0 1 0 40.5,24.5 A8.5,8.5 0 1 0 23.5,24.5 Z" />
+    </group>
+  </group>
+</vector>

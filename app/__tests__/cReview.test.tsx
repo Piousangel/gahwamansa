@@ -146,7 +146,7 @@ test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
   await press('이전 화면으로 가기'); // 이메일 단계의 이전 = 로그인 방법(소셜) 화면
-  await waitFor(() => screen.getByRole('button', {name: '카카오로 시작하기'}));
+  await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
   await press('이전 화면으로 가기'); // 그 이전 = 역할 선택
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });

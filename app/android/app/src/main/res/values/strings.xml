@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">가화만사성</string>
-    <!-- 카카오 네이티브 앱 키(공개 값, app/src/lib/socialConfig.ts 와 같아야 함) -->
-    <string name="kakao_scheme" translatable="false">kakao1cd831e4a2589fb6a4f756a6553c0681</string>
 </resources>

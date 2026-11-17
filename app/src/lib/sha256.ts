@@ -1,5 +1,5 @@
 /* eslint-disable no-bitwise */
-// SHA-256(UTF-8 문자열 → 소문자 hex). 카카오 OIDC nonce 해시용. 외부 의존성 없이 구현(js-sha256 최신판이 오늘 배포돼 공급망 위험을 피함).
+// SHA-256(UTF-8 문자열 → 소문자 hex). 정상 문자열 전용: 짝 없는 서로게이트는 표준(U+FFFD)과 다르게 인코딩된다(nonce 는 hex 라 해당 없음). 카카오 OIDC nonce 해시용. 외부 의존성 없이 구현(js-sha256 최신판이 오늘 배포돼 공급망 위험을 피함).
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01,
   0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,

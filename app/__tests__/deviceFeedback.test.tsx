@@ -106,7 +106,7 @@ test('하드웨어 뒤로가기도 이전 바와 같다(자녀 이메일 -> 로�
   const back = captureBack();
   await toEmail();
   await back();
-  await waitFor(() => screen.getByRole('button', {name: '카카오로 시작하기'}));
+  await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
   await back();
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });

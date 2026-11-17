@@ -5,7 +5,7 @@ import type {ImageSourcePropType} from 'react-native';
 export type AssetName =
   | 'sun-happy' | 'sun-glad' | 'sun-worried' | 'sun-stamp'
   | 'icon-speaker' | 'icon-check' | 'icon-back' | 'icon-home' | 'icon-report'
-  | 'icon-cheer' | 'photo-day1' | 'writing-guide' | 'intro-photo' | 'intro-photo-back-left' | 'intro-photo-back-right';
+  | 'icon-cheer' | 'photo-day1' | 'writing-guide' | 'intro-photo' | 'intro-photo-back-left' | 'intro-photo-back-right' | 'google-g';
 
 export const assetRegistry: Record<AssetName, ImageSourcePropType | null> = {
   'sun-happy': null, 'sun-glad': null, 'sun-worried': null, 'sun-stamp': null,
@@ -16,4 +16,7 @@ export const assetRegistry: Record<AssetName, ImageSourcePropType | null> = {
   // 첫 화면 뒤 2장(day-02·day-09 를 360px 로 줄인 사본, 각 약 33·39KB)
   'intro-photo-back-left': require('./intro-photo-back-left.jpg'),
   'intro-photo-back-right': require('./intro-photo-back-right.jpg'),
+  // 구글 공식 G(google-g-light-square.svg 에서 G 영역만, 모양·색 그대로 크롬으로 래스터화 24dp @1x/2x/3x).
+  // react-native-svg 가 원본의 conic-gradient(foreignObject)를 그리지 못해 PNG 로 둔다.
+  'google-g': require('./google-g.png'),
 };

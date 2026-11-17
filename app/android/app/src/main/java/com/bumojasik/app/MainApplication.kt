@@ -6,6 +6,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.bumojasik.app.splash.SplashPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -14,8 +15,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // 스플래시를 JS 첫 화면이 그려진 뒤 걷기 위한 작은 모듈(자동 연결 대상 아님)
+          add(SplashPackage())
         },
     )
   }

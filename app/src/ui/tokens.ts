@@ -28,7 +28,7 @@ export const color = {
 
 // 외부 브랜드 색(카카오·구글 로그인 버튼 가이드). 우리 토큰이 아니라 각 회사 가이드 값을 그대로 쓴다.
 export const brand = {
-  kakaoYellow: '#FEE500', kakaoLabel: '#191919', // 카카오 로그인 버튼(시안 C0)
+  kakaoYellow: '#FEE500', kakaoLabel: 'rgba(0,0,0,0.85)', // 카카오 디자인 가이드: 컨테이너 #FEE500, 레이블 #000 85%
   googleSurface: '#FFFFFF', googleBorder: '#747775', googleLabel: '#1F1F1F', // 구글 로그인 버튼(라이트)
 } as const;
 

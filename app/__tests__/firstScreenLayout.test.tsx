@@ -1,3 +1,4 @@
+import {finishFlight} from '../src/app/splash';
 import React from 'react';
 import {AccessibilityInfo, Animated, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
@@ -7,7 +8,10 @@ import {stackLayout, PHOTO_RATIO} from '../src/features/link/polaroidLayout';
 import {color} from '../src/ui/tokens';
 import {resetFirstScreenMotion} from '../src/features/link/RoleSelect';
 
-beforeEach(() => resetFirstScreenMotion());
+beforeEach(() => {
+  resetFirstScreenMotion();
+  finishFlight(); // 스플래시 심볼 이동은 끝난 상태로(이동은 splash.test)
+});
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({

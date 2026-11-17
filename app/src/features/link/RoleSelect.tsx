@@ -11,6 +11,7 @@ import {stackLayout} from './polaroidLayout';
 import {PolaroidStack} from './PolaroidStack';
 import {MotionMode, useMotionMode} from './useReduceMotion';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {flightPending, setSplashTarget, useSplashLanded} from '../../app/splash';
 
 const f = copy.first;
 const ICONS: IconName[] = ['icon-photo', 'icon-pencil', 'icon-family'];
@@ -35,17 +36,25 @@ export const keepTail = (t: string) => {
 // 동작 줄이기면 300ms 페이드만, 스크린리더가 켜져 있거나 두 번째부터는 끝 상태로 바로.
 // 첫 화면 모션은 앱 실행당 한 번만. 다른 화면에 갔다가 돌아오면 끝 상태로 보여 준다.
 let firstScreenPlayed = false;
-let loggedOnce = false;
 export const resetFirstScreenMotion = () => {
   firstScreenPlayed = false;
 };
 
 export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => void}) {
-  const {width: winW, height: winH, fontScale} = useWindowDimensions();
+  const {height: winH, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
   const showIntro = fontScale < 1.5; // 150% 이상이면 소개(제목·항목)도 숨겨 버튼을 지킨다
   const replay = useRef(firstScreenPlayed).current;
+  // 스플래시 심볼이 날아와 앉을 자리: 도착 전에는 진짜 심볼을 숨기고, 워드마크 줄은 위로 떠오르지 않는다(위치가 어긋나지 않게)
+  const fromSplash = useRef(flightPending()).current;
+  const landed = useSplashLanded();
+  const symbolRef = useRef<React.ComponentRef<typeof View>>(null);
+  const onSymbolLayout = () => {
+    if (fromSplash) {
+      symbolRef.current?.measureInWindow((x, y, w) => w > 0 && setSplashTarget({x, y, size: w}));
+    }
+  };
   const detected = useMotionMode();
   const reduce: MotionMode | null = replay ? 'none' : detected;
   // 큰 글씨에서 하단 영역(질문+버튼)이 화면에 다 안 들어가면 고정을 풀고 화면 전체를 스크롤한다
@@ -64,13 +73,6 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
   const lay = showPhoto && area ? stackLayout(area.w, area.h) : null;
   const measured = area !== null || fullScroll; // 모션은 영역을 잰 뒤 시작(px 위치 계산 때문)
   const mode: MotionMode | null = measured ? reduce : null;
-  // 실기기 확인용(릴리스 포함, 실행당 한 번). 리드가 logcat 확인 후 제거 지시 예정
-  useEffect(() => {
-    if (!loggedOnce && area && mode !== null) {
-      loggedOnce = true;
-      console.log('[first-screen] area', Math.round(area.w), Math.round(area.h), 'front', lay ? lay.photoW : 'hidden', 'mode', mode, 'variant', lay ? `${lay.rotL}/${lay.spread}/${lay.single ? 'single' : 'stack'}` : '-', 'win', winW, winH, 'fontScale', fontScale);
-    }
-  }, [area, mode, lay, winW, winH, fontScale]);
 
   // 등장 모션 값(0→1). 심볼 1개 + 항목 3줄 + 아이콘 원 3개
   const symbol = useRef(new Animated.Value(0)).current;
@@ -101,6 +103,8 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
   }, [mode, symbol, items, circles]);
   const still = mode !== 'full';
   const rise = (v: Animated.Value, from: number) => (still ? 0 : v.interpolate({inputRange: [0, 1], outputRange: [from, 0]}));
+  const brandRise = fromSplash ? 0 : rise(symbol, 8);
+  const brandOpacity = fromSplash ? 1 : symbol;
 
   const ask = (
     <>
@@ -113,8 +117,10 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
     </>
   );
   const brand = (
-    <Animated.View style={[styles.brand, {opacity: symbol, transform: [{translateY: rise(symbol, 8)}]}]}>
-      <BrandSymbol size={40} />
+    <Animated.View style={[styles.brand, {opacity: brandOpacity, transform: [{translateY: brandRise}]}]}>
+      <View testID="brand-symbol-seat" ref={symbolRef} collapsable={false} onLayout={onSymbolLayout} style={fromSplash && !landed ? styles.seatHidden : null}>
+        <BrandSymbol size={40} />
+      </View>
       <Text20 size={28} weight="bold" style={styles.wordmark}>{f.wordmark}</Text20>
     </Animated.View>
   );
@@ -172,6 +178,7 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 }
 
 const styles = StyleSheet.create({
+  seatHidden: {opacity: 0},
   head: {gap: 10},
   question: {color: color.ink, marginBottom: 10},
   choices: {gap: 14},

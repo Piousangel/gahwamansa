@@ -1,3 +1,4 @@
+import {finishFlight} from '../src/app/splash';
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
@@ -19,6 +20,8 @@ async function measure(w = 342, h = 360) {
     fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: w, height: h}}});
   });
 }
+
+beforeEach(() => finishFlight()); // 스플래시 심볼 이동은 끝난 상태로(이동은 splash.test)
 
 test('첫 화면: 심볼·워드마크·소개·사진 묶음·질문·두 버튼(둘째 줄 포함), 해님 인사 없음', async () => {
   render(<AppRoot api={createFakeApi()} />);

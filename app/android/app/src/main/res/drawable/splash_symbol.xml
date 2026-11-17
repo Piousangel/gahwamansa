@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 스플래시 심볼: design-system/assets/symbol-sun-polaroid.svg 를 같은 경로로 옮긴 벡터(래스터 아님).
+     캔버스 288dp(아이콘 배경 없음), 심볼 128dp 가운데(지름 192dp 안전 원 안). docs/design/v3/splash/NOTES-splash.md -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+  <group android:translateX="80" android:translateY="80" android:scaleX="2" android:scaleY="2">
+    <group android:pivotX="32" android:pivotY="32" android:rotation="-5">
+      <path android:fillColor="#FFFFFF" android:strokeColor="#4E2F14" android:strokeWidth="3.5" android:strokeLineJoin="round"
+          android:pathData="M14,5 L50,5 A3,3 0 0 1 53,8 L53,56 A3,3 0 0 1 50,59 L14,59 A3,3 0 0 1 11,56 L11,8 A3,3 0 0 1 14,5 Z" />
+      <path android:fillColor="#F1E4D4"
+          android:pathData="M16,9 L48,9 A1,1 0 0 1 49,10 L49,39 A1,1 0 0 1 48,40 L16,40 A1,1 0 0 1 15,39 L15,10 A1,1 0 0 1 16,9 Z" />
+      <path android:strokeColor="#F59E0B" android:strokeWidth="3.6" android:strokeLineCap="round"
+          android:pathData="M44.50,24.50L47.00,24.50M40.84,33.34L41.90,34.40M32.00,37.00L32.00,39.50M23.16,33.34L22.10,34.40M19.50,24.50L17.00,24.50M23.16,15.66L22.10,14.60M32.00,12.00L32.00,9.50M40.84,15.66L41.90,14.60" />
+      <path android:fillColor="#FFC93C" android:strokeColor="#4E2F14" android:strokeWidth="3"
+          android:pathData="M23.5,24.5 A8.5,8.5 0 1 0 40.5,24.5 A8.5,8.5 0 1 0 23.5,24.5 Z" />
+    </group>
+  </group>
+</vector>

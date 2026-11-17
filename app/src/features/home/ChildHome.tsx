@@ -1,57 +1,13 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {AppState} from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
-import {useSession} from '../../app/session';
+import React from 'react';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {appCopy, copy, Message} from '../../copy/copy';
-import {errorMessage} from '../course/useFinishStep';
-import type {ChildSummary} from '../types';
+import {appCopy, copy} from '../../copy/copy';
+import {useChildSummary} from './useChildSummary';
 import {formatAnswerDate} from './formatDate';
 
-
-
 export function ChildHome() {
-  const {api} = useSession();
-  const [info, setInfo] = useState<ChildSummary | null>(null);
-  const [error, setError] = useState<Message | null>(null);
-  const [loading, setLoading] = useState(true);
-  const seq = useRef(0);
-
-  // 조회 실패는 '아직 안 했어요'가 아니라 오류 상태로 따로 보여 준다.
-  const load = useCallback(() => {
-    const mine = ++seq.current;
-    setLoading(true);
-    api
-      .fetchChildSummary()
-      .then(r => {
-        if (mine === seq.current) {
-          setInfo(r);
-          setError(null);
-        }
-      })
-      .catch(e => {
-        if (mine === seq.current) {
-          setError(errorMessage(e));
-        }
-      })
-      .finally(() => {
-        if (mine === seq.current) {
-          setLoading(false);
-        }
-      });
-  }, [api]);
-
-  useFocusEffect(load);
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', s => {
-      if (s === 'active') {
-        load();
-      }
-    });
-    return () => sub.remove();
-  }, [load]);
+  const {info, error, loading, load} = useChildSummary();
 
   // 받은 답이 없을 때만 오류 화면. 이미 받은 답이 있으면 그대로 두고 오류 줄만 덧붙인다.
   if (error && !info) {

@@ -1,3 +1,4 @@
+import {finishFlight} from '../src/app/splash';
 import React from 'react';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
@@ -9,7 +10,10 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({width: 360, height: 780, scale: 3, fontScale: 1}),
 }));
-beforeEach(() => resetFirstScreenMotion());
+beforeEach(() => {
+  resetFirstScreenMotion();
+  finishFlight(); // 스플래시 심볼 이동은 끝난 상태로(이동은 splash.test)
+});
 
 test('S25 실측 영역(328 x 140·150·160dp): 묶음이 보이고(숨김 아님) 전체가 영역 안', () => {
   for (const h of [140, 150, 160]) {

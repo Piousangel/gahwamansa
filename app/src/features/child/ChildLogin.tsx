@@ -125,7 +125,7 @@ export function ChildLogin() {
         navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
       }
     } catch (e) {
-      setNote(isOffline(e) ? offlineMessage.title : t.failed.title);
+      setNote(hasReason(e, 'parent_device') ? t.blocked_parent_device.title : isOffline(e) ? offlineMessage.title : t.failed.title);
     } finally {
       setBusy(false);
     }

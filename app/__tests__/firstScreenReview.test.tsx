@@ -1,3 +1,4 @@
+import {finishFlight} from '../src/app/splash';
 import React from 'react';
 import {AccessibilityInfo, Animated, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
@@ -12,7 +13,10 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({width: 360, height: 780, scale: 3, fontScale: mockFontScale}),
 }));
-beforeEach(() => resetFirstScreenMotion());
+beforeEach(() => {
+  resetFirstScreenMotion();
+  finishFlight(); // 스플래시 심볼 이동은 끝난 상태로(이동은 splash.test)
+});
 afterEach(() => {
   mockFontScale = 1;
   jest.restoreAllMocks();
