@@ -50,7 +50,7 @@ function findImage(node) {
 mkdirSync(join(root, 'content/photos-raw'), {recursive: true});
 for (const p of targets) {
   const text = base.replace('{SUBJECT}', p.subject);
-  const body = {model, input: [{type: 'text', text}], response_format: {aspect_ratio: aspect, image_size: size}};
+  const body = {model, input: [{type: 'text', text}], response_format: {type: 'image', aspect_ratio: aspect, image_size: size}};
   if (flag('--dry-run')) {
     console.log(`[dry-run] day ${p.day} ${model} ${aspect} ${size}\n${text}\n`);
     continue;
