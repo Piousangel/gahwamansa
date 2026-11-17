@@ -291,3 +291,8 @@
 - 빌드2 상위: 자녀도 같은 질문 답하기, 형제 초대, 응원 답장 1탭, 시즌 콘텐츠, 부모님께 질문 고르기
 - 기각: 주간 요약·위젯, "전화했어요", 낱말 결과 공개, 연간 회고, 앱 안 글자 크기 전환 등(감시·평가·보관 충돌)
 - 완료 문구 "잘하셨어요"는 칭찬 금지 위반 → 수정
+
+## 2026-11-17 오디오 의존성·정책 (리드 결정, 공용 줄 스파이크 docs/team/dev-audio-spike.md)
+- 승인(정확한 버전 고정): TTS @mhpdev/react-native-speech@1.4.4, 효과음·BGM react-native-sound@0.13.0, 무음 감지 react-native-volume-manager@2.2.0. 제외: react-native-tts(멈춤·새 아키텍처 미지원), expo-*(expo 의존·배포 2주 미만), audio-api(무거움)
+- 정책: TTS 중 BGM 10% 덕킹, 무음·진동·상태 불명이면 BGM·효과음 끔, 읽어 주기는 사용자가 직접 누른 소리라 무음에서도 허용, TalkBack 켜짐·백그라운드·이어폰 빠짐이면 BGM 정지
+- 공용 컴포넌트 표준: SunBubble·Dialog(어르신)·BottomSheet·Toast(자녀)·Banner·Photo(app/src/ui)
