@@ -3,7 +3,8 @@ import {OfflineError, ServerError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import type {
-  Api, ChildState, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
+  Api, ChildParent, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
+  SendCheerResult, StepName, TodayContent,
 } from './types';
 
 export interface RealApi extends Api {
@@ -265,18 +266,78 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async fetchChildSummary(): Promise<ChildSummary> {
       const {data, error} = await sb.rpc('child_summary');
       if (error) fail('child_summary', error);
-      const first = (data.parents ?? [])[0];
-      const l = first?.latest;
+      const family: string = data.parent_title ?? '부모님';
+      // parent_id·title·connected 는 0019·0021 가정 계약. 옛 서버(필드 없음)면 순번·가족 호칭·연결됨으로 채운다
+      const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>, i: number) => ({
+        parentId: p.parent_id ?? `parent-${i + 1}`,
+        title: p.title ?? family,
+        shared: !!p.shared,
+        connected: p.connected ?? true,
+        latest: p.latest
+          ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
+          : null,
+      }));
+      const first = parents[0];
       return {
-        parentTitle: data.parent_title ?? '부모님',
-        shared: first ? !!first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
-        latest: l ? {prompt: l.prompt ?? null, choiceLabel: l.choice_label, answeredDate: l.answered_date} : null,
+        parentTitle: family,
+        shared: first ? first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
+        latest: first?.latest ?? null,
+        parents,
       };
     },
-    async setParentTitle(title) {
-      const {data, error} = await sb.rpc('set_parent_title', {p_title: title});
+    async setParentTitle(title, parentId) {
+      // p_parent_id 는 0019 가정 계약. 지금 서버(가족 단위)와 호환되게 줄 때만 보낸다
+      const args = parentId ? {p_title: title, p_parent_id: parentId} : {p_title: title};
+      const {data, error} = await sb.rpc('set_parent_title', args);
       if (error) fail('set_parent_title', error);
       return data.ok ? {ok: true} : {ok: false, reason: 'invalid_title'};
+    },
+    // TODO(서버 0021): child_answer_history() 반환 형태를 dev-server-notes.md 와 맞춘다(가정: dev-app-child-contract.md §2)
+    async fetchAnswerHistory(): Promise<ParentHistory[]> {
+      const {data, error} = await sb.rpc('child_answer_history');
+      if (error) fail('child_answer_history', error);
+      return (data?.parents ?? []).map((p: Record<string, any>) => ({
+        parentId: p.parent_id,
+        title: p.title ?? '부모님',
+        shared: !!p.shared,
+        items: (p.answers ?? []).map((a: Record<string, any>) => ({
+          answeredDate: a.answered_date,
+          optionA: a.option_a,
+          optionB: a.option_b,
+          choiceLabel: a.choice_label,
+        })),
+      }));
+    },
+    // TODO(서버 0020): send_cheer 반환 형태를 dev-server-notes.md 와 맞춘다(가정: dev-app-child-contract.md §3)
+    async sendCheer(key): Promise<SendCheerResult> {
+      const {data, error} = await sb.rpc('send_cheer', {p_message_key: key});
+      if (error) fail('send_cheer', error);
+      return data.ok ? {ok: true, sentTo: Number(data.sent_to ?? 1)} : {ok: false, reason: data.reason};
+    },
+    async getLoginMethod(): Promise<LoginMethod | null> {
+      const {data, error} = await sb.auth.getSession();
+      if (error) fail('세션 확인', error);
+      const p = data.session?.user.app_metadata?.provider;
+      return p === 'kakao' || p === 'google' || p === 'email' ? p : null;
+    },
+    async signOut() {
+      // 소셜 SDK 세션 정리(실패해도 계속) → 이 기기 세션만 지운다(다른 기기 로그인은 그대로)
+      try {
+        const {data} = await sb.auth.getSession();
+        const meta = data.session?.user.app_metadata ?? {};
+        const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+        const auth = socialAuth();
+        if (list.includes('kakao')) {
+          await auth.signOut('kakao');
+        }
+        if (list.includes('google')) {
+          await auth.signOut('google');
+        }
+      } catch {
+        // 무시
+      }
+      const {error} = await sb.auth.signOut({scope: 'local'});
+      if (error) fail('로그아웃', error);
     },
     async withdrawConsent() {
       const {error} = await sb.rpc('withdraw_consent');

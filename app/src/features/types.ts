@@ -5,11 +5,31 @@ export type CreateFamilyResult = {family_id: string; profile_id: string};
 export type RedeemResult =
   | {ok: true; family_id: string; profile_id: string}
   | {ok: false; reason: FailReason; retry_after_sec?: number};
-export type ChildSummary = {
-  parentTitle: string;
-  shared: boolean; // 어르신이 답을 나누는 중인가
-  latest: {prompt: string | null; choiceLabel: string; answeredDate: string} | null; // YYYY-MM-DD(KST)
+export type LatestAnswer = {prompt: string | null; choiceLabel: string; answeredDate: string}; // YYYY-MM-DD(KST)
+// 가족의 어르신 한 명(0019 어르신 구분 + 0021 끊김, 가정 계약: docs/team/dev-app-child-contract.md)
+export type ChildParent = {
+  parentId: string;
+  title: string; // 이 어르신의 호칭(닫힌 목록)
+  shared: boolean; // 답을 나누는 중인가
+  connected: boolean; // false = 연결이 풀림(어르신 폰 교체·삭제 등). 응원을 보낼 수 없다
+  latest: LatestAnswer | null;
 };
+export type ChildSummary = {
+  parentTitle: string; // 가족 기본 호칭(어르신이 아직 없을 때·한 명일 때 화면 제목)
+  shared: boolean; // 첫 어르신(옛 계약 호환)
+  latest: LatestAnswer | null; // 첫 어르신(옛 계약 호환)
+  parents: ChildParent[]; // 연결된 적 있는 어르신 전부(만든 순서). 연결 전이면 빈 배열
+};
+// 지난 답(C5): 어르신별 최근 30일(session_date 기준), 최신순, 어르신당 최대 30개
+export type HistoryItem = {answeredDate: string; optionA: string; optionB: string; choiceLabel: string};
+export type ParentHistory = {parentId: string; title: string; shared: boolean; items: HistoryItem[]};
+// 응원(0020 send_cheer): 서버가 키 화이트리스트·하루 한도를 지킨다
+export const CHILD_CHEER_KEYS = ['love_you', 'warm_day', 'always_thanks', 'peaceful_day'] as const;
+export type CheerKey = (typeof CHILD_CHEER_KEYS)[number];
+export type SendCheerResult =
+  | {ok: true; sentTo: number} // 받은 어르신 수(연결된 어르신 전부에게 간다)
+  | {ok: false; reason: 'daily_limit' | 'not_connected' | 'invalid_key'};
+export type LoginMethod = 'kakao' | 'google' | 'email';
 export const PARENT_TITLES = ['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님'] as const;
 // 자녀 앱의 현재 단계(로그인 뒤). 번호 1개만 다룬다(빌드 1).
 export type ChildState =
@@ -81,6 +101,15 @@ export interface Api {
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
   // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
   fetchChildSummary(): Promise<ChildSummary>;
-  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>;
+  // parentId 가 없으면 가족 기본 호칭(연결 전·어르신 한 명), 있으면 그 어르신의 호칭(0019 가정)
+  setParentTitle(title: string, parentId?: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>;
+  // C5 지난 답: child_answer_history()(0021 가정)
+  fetchAnswerHistory(): Promise<ParentHistory[]>;
+  // 응원 보내기: send_cheer(p_message_key)(0020 가정). 연결된 어르신 전부에게 보낸다
+  sendCheer(key: CheerKey): Promise<SendCheerResult>;
+  // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
+  getLoginMethod(): Promise<LoginMethod | null>;
+  // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
+  signOut(): Promise<void>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
 }
