@@ -319,3 +319,13 @@
 - 기존 문구 정리(11-5) 채택: errors.invalid·connect.success·settings.ai_notice 교체, 요일별 push[] 7문장 폐기, talkback-spec R11 "칭찬 문장"→"완료 문장". 적용은 앱 줄 병합 후 리드 일괄
 - 약관 한 줄 동의 방식(연결/로그인 시 동의) 유효성은 변호사 질문 목록에 추가
 - 11-17 디자인 동결: P3(코스 홈 v4)·P1군(P1_connect_v4·P1c_confirm·FS_link·web/C_page) — 이후 변경은 리드 승인
+
+## 2026-11-17 설치 경로·앱 링크 스파이크: 조건부 가능 — docs/team/spikes/2026-11-17-install-referrer-applinks.md(spike 브랜치)
+- 의존성: Google 공식 com.android.installreferrer:installreferrer:2.2 + 자체 Kotlin 모듈(서드파티 npm 미사용). 첫 실행 1회 읽고 기기 저장
+- App Links host는 env APP_LINK_HOST, 없으면 비활성. staging은 별도 서브도메인
+- 카톡 인앱 intent·Play referrer 보존은 실기기·Play 내부 테스트 트랙 확인 전까지 미확정 → 홍보·스토어 문구에 "자동 채움" 금지. 실패 시 번호 손 입력 + 6자리 자동 확인만
+- 11-17 디자인 동결 추가: P7_motion(도장·체크 모션·소리 명세), P5_P6_review(보기 전용). P15_history는 라이터 대기 2건(#16·#17) 확정 후 동결
+- 11-17 미연결 완료: 도장은 기기에서 찍힘(P7도 도장), 문구는 11-7 19번 "도장을 찍었어요. 번호를 받으면 그때부터 고른 답이 가족에게 보여요"(11-3 해당 행 대체). P15 동결
+- 11-17 미연결 도장 출처: 기기 로컬에 이번 주 완료 날짜만(7일 정리, 답·낱말 미저장). 연결 후 서버 값만 쓰고 로컬은 삭제(서버 이관 없음)
+- 11-17 P16 연결 끊기: 빌드 1은 별도 '연결만 끊기' RPC를 만들지 않음. 두 갈래(답 보여 주기만 그만하기=withdraw_consent 연결 유지 / 모두 지우고 연결 끊기=P9 삭제)로 충분 — 어르신에게 선택지 셋은 과함. 빌드 2에서 사용 데이터 보고 재검토
+- 11-17 P16 가족 목록: 서버 0030 parent_family_list(어르신 본인, 연결한 날짜·순번만, 자녀 개인정보 없음) 추가. 푸시는 0031~
