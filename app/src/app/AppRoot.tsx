@@ -17,6 +17,7 @@ import {color} from '../ui/tokens';
 import {finishFlight, flightPending, hideNativeSplash, kickBoot, useBootActive, useBootLoading, useSplashLanded, useSplashTarget} from './splash';
 import {SplashHold, SplashOverlay} from './SplashOverlay';
 import {localStamps} from '../lib/localStamps';
+import {startInviteSources, subscribeInvite, type InviteBanner} from '../lib/linkSources';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -140,6 +141,14 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   const waiting = start !== 'offline' && (start === 'loading' || who === 'loading'); // 오프라인 화면은 대기가 아님
   useBootLoading(waiting);
   useLayoutEffect(kickBoot, []);
+  // 카톡 초대 링크·설치 경로 번호(ease-and-joy A②): 앱 수명에 한 번 시작, 첫 화면 띠·번호 화면 미리 채움에 쓴다.
+  // 링크가 설치 경로보다 우선(linkSources.applyInvite). 연결은 사람이 확인 화면에서 누른다(자동 연결 금지)
+  const [invite, setInvite] = useState<InviteBanner>({visible: false, code: null, source: null});
+  useEffect(() => {
+    startInviteSources().catch(() => {});
+    return subscribeInvite(setInvite);
+  }, []);
+  const prefill = invite.visible && invite.code && invite.source ? {code: invite.code, source: invite.source} : undefined;
   const boot = useBootActive();
   const hold = boot || waiting;
   const [slow, setSlow] = useState(false);
@@ -185,6 +194,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   } else if (who === null) {
     body = (
       <RoleSelect
+        codeFound={invite.visible}
         onChoose={r => {
           setStart('Connect');
           setWho(r);
@@ -192,7 +202,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       />
     );
   } else {
-    body = <ParentStack initialRouteName={start} />;
+    body = <ParentStack initialRouteName={start} prefill={start === 'Connect' ? prefill : undefined} />;
   }
 
   return (

@@ -11,7 +11,7 @@ import {press} from '../testUtils/flow';
 async function loginAsChild(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기');
+  await press('이메일로 시작하기');
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));

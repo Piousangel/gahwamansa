@@ -8,7 +8,8 @@
 // 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md
 import {sha256Hex} from '../sha256';
 
-export type InviteSource = 'app_link' | 'install_referrer';
+// 서버 0029 log_event source 값과 같은 글자(app_link·referrer)
+export type InviteSource = 'app_link' | 'referrer';
 export type PendingInvite = {code: string; source: InviteSource};
 
 // Play 클릭이 이보다 오래면 채우지 않는다(번호 최대 유효 기간 = 초대 번호 7일, 서버 0018)
@@ -118,13 +119,13 @@ export function applyInvite(
   const handled = initialLinkId
     ? [...s.handled, {h: initialLinkId, exp: nowSec + INVITE_KEEP_SEC}].slice(-HANDLED_MAX)
     : s.handled;
-  const from = invite.source === 'install_referrer' && clickTs && clickTs > 0 ? clickTs : nowSec;
+  const from = invite.source === 'referrer' && clickTs && clickTs > 0 ? clickTs : nowSec;
   const expiresAt = from + INVITE_KEEP_SEC;
   const cur = s.pending;
   // 이미 링크로 받은 번호가 있으면 설치 경로 번호(더 오래된 클릭)로 덮지 않는다. 새 링크는 덮는다(사용자가 방금 누름)
   const keep =
     expiresAt <= nowSec ||
-    (cur && cur.source === 'app_link' && invite.source === 'install_referrer') ||
+    (cur && cur.source === 'app_link' && invite.source === 'referrer') ||
     (cur && cur.code === invite.code && cur.source === invite.source);
   if (keep && handled === s.handled) {
     return s;
@@ -137,9 +138,12 @@ export function consumeInviteStore(store: InviteStore): InviteStore {
   return store.pending ? {...store, pending: null} : store;
 }
 
-export function familyCodeBanner(store: InviteStore, nowSec: number): {visible: boolean; code: string | null} {
+export function familyCodeBanner(
+  store: InviteStore,
+  nowSec: number,
+): {visible: boolean; code: string | null; source: InviteSource | null} {
   const p = store.pending;
-  return p && p.expiresAt > nowSec ? {visible: true, code: p.code} : {visible: false, code: null};
+  return p && p.expiresAt > nowSec ? {visible: true, code: p.code, source: p.source} : {visible: false, code: null, source: null};
 }
 
 export function serializeInviteStore(store: InviteStore): string {
@@ -165,11 +169,13 @@ export function parseInviteStore(raw: string | null | undefined, nowSec: number)
   if (p && typeof p === 'object') {
     const q = p as Record<string, unknown>;
     const code = normalizeInviteCode(q.code);
-    const okSource = q.source === 'app_link' || q.source === 'install_referrer';
-    if (!code || !okSource || typeof q.expiresAt !== 'number') {
+    // 옛 저장값(install_referrer)은 referrer 로 읽는다
+    const source: InviteSource | null =
+      q.source === 'app_link' ? 'app_link' : q.source === 'referrer' || q.source === 'install_referrer' ? 'referrer' : null;
+    if (!code || !source || typeof q.expiresAt !== 'number') {
       return EMPTY_INVITE_STORE;
     }
-    pending = {code, source: q.source as InviteSource, expiresAt: q.expiresAt};
+    pending = {code, source, expiresAt: q.expiresAt};
   }
   const handled = Array.isArray(h)
     ? h
@@ -183,10 +189,10 @@ export function parseInviteStore(raw: string | null | undefined, nowSec: number)
   return prune({v: 1, pending, handled}, nowSec);
 }
 
-// 분석 이벤트: 번호 값은 절대 넣지 않는다. 출처만
+// 분석 이벤트(서버 0029 code_prefilled{source}): 번호 값은 절대 넣지 않는다. 출처만
 export function inviteAnalyticsEvent(invite: PendingInvite): {
-  name: 'invite_code_prefilled';
+  name: 'code_prefilled';
   params: {source: InviteSource};
 } {
-  return {name: 'invite_code_prefilled', params: {source: invite.source}};
+  return {name: 'code_prefilled', params: {source: invite.source}};
 }

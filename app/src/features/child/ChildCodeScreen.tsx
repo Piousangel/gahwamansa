@@ -5,6 +5,7 @@ import {BackBar} from '../../app/BackBar';
 import {copy, withTitle} from '../../copy/copy';
 import {CodeShow} from '../link/CodeShow';
 import {buildShareMessage, formatExpiry} from '../../lib/childFormat';
+import {appShareLink} from '../../lib/env';
 
 // C2: 번호가 만들어졌어요(큰 숫자) + 보내기 + 연결 기다리기
 // 대기 화면에서 "번호 다시 보기"로 왔으면 돌아가고(goBack), 처음 만든 뒤면 대기 화면으로 바꾼다(replace).
@@ -18,7 +19,7 @@ export function ChildCodeScreen({navigation, route}: NativeStackScreenProps<Chil
       code={code}
       title={t.title}
       lines={renewed ? [withTitle(t.use_on, title), t.valid, t.old_invalid] : [withTitle(t.use_on, title), t.valid]}
-      shareMessage={buildShareMessage(t.share, code, expiresAt ? formatExpiry(expiresAt) : null)}
+      shareMessage={buildShareMessage(t.share, copy.safe.money, code, expiresAt ? formatExpiry(expiresAt) : null, appShareLink(code))}
       sendLabel={t.send}
       primaryLabel={t.wait}
       onPrimary={() => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('Wait'))}

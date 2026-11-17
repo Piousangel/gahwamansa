@@ -626,7 +626,9 @@
     "select": 24,
     "sheet": 28,
     "button": 36,
-    "note": "버튼 반경 36은 높이가 커져도 그대로(알약)"
+    "keypadKey": 14,
+    "codeCell": 12,
+    "note": "버튼 반경 36은 높이가 커져도 그대로(알약). keypadKey·codeCell 은 P1 번호 키패드(동결 시안 P1_connect_v4: 키 테두리 2, 칸 아래 선 3)"
   },
   "shadow": {
     "soft": {

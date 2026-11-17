@@ -38,7 +38,7 @@ test('자녀 로그인 첫 화면: 카카오(공식 가이드) → 구글(공식
   expect([gs.paddingLeft, gs.paddingRight]).toEqual([12, 12]);
   expect(gs.minHeight).toBeGreaterThanOrEqual(56);
   expect(within(google).getByTestId('google-g', {includeHiddenElements: true})).toBeTruthy();
-  expect(screen.getByRole('button', {name: '이메일로 받기'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: '이메일로 시작하기'})).toBeTruthy();
 });
 
 test('카카오 로그인 성공 → 가족 만들기(호칭) 화면', async () => {
@@ -79,7 +79,7 @@ test('그 밖의 실패는 "로그인이 안 됐어요"', async () => {
 
 test('이메일로 받기 → 기존 이메일 인증번호 화면, 이전은 로그인 방법 화면', async () => {
   await openChildLogin(createFakeApi());
-  await press('이메일로 받기');
+  await press('이메일로 시작하기');
   await waitFor(() => screen.getByText('이메일로 시작해요'));
   await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로 가기')));
   await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));

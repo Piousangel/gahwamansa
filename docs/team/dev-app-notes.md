@@ -272,3 +272,30 @@
 - M3 응원: 어르신별 try/catch, 결과 정리는 cheerLogic.summarizeCheer(순수, 테스트), "다시 하기"는 이번에 받은 분을 건너뜀. partial·daily_limit 문구는 임시(라이터 확인, impl-drift #11).
 - L1(리드): 다시 불러오기 실패 시 이전 값 지움 → 오류 상태. L2 shared:false면 답 무시. L3 parent_id 없으면 ''. L4(리드): 다른 어르신이 쓰는 호칭은 저장 비활성(서버 set_parent_title_for 중복 거부는 리드가 서버 줄에 요청). L5(리드): 오프라인 로그아웃은 auth._removeSession(비공개 API, supabase-js 올릴 때 확인)으로 이 기기 세션 정리. L6 번호+기한·최근 답 카드 한 덩어리 읽기.
 - **정리 계획 12 대상(ARCHITECTURE §2 위반, 자녀 줄이 새로 만든 것)**: features→app — `features/home/ChildHome.tsx`(ChildStack 타입·session·splash), `features/home/ChildReport.tsx`(ChildStack), `features/child/ChildSettings.tsx`(ChildStack·session·BackBar), `features/child/ChildAppInfo.tsx`(BackBar), `features/child/ChildWaitScreen.tsx`(ChildStack·session·splash, 기존 파일). shared→app — `shared/useChildData.ts`(session). 이동 대상: ChildParams → navigation/types.ts, session·splash → state/, BackBar → ui/. ASSUMED(0027) starter 는 types.ts·realApi.ts 에 있음 → contracts 생기면 옮김.
+
+### 연결 쉽게(ease-and-joy A·E) 앱 1차 · P1 v4·P1c 동결 시안 반영 (11-17)
+- P1 v4: "다음" 제거, 6번째 숫자 뒤 300ms 자동 확인(peek_invite_code), 맞지 않으면 숫자 유지 + 칸 아래 한 줄. 키패드 글자 키 26·숫자 34, 링크 가운데·간격 24, 약관 한 줄(링크 주소 미정이라 글자만, TODO ⑥a).
+- P1c: 상태 머신 `features/link/connectMachine.ts`(idle→peeking→confirm→redeeming→ok / failed: expired·used·locked·busy·already_linked·not_parent_device·offline·server, 순수 함수 테스트) + `useConnectFlow`(순번으로 늦은 응답 버림). 자동 연결 금지. 밖에서 들어온 번호는 `Connect` 파라미터 `prefill`(App Links·Install Referrer 연결은 다음 작업, 새 의존성 필요 여부 확인).
+- 첫 화면 띠(FS_link): `RoleSelect codeFound` prop만. 번호 출처가 생기면 AppRoot 가 넘긴다.
+- 문구: copy-v3 11절이 시안보다 우선(시안 "은행 번호"→"통장 번호", P1c 제목·호칭 줄·맞지 않음 줄은 11절). `connect.auto_hint`·`connect_confirm.busy`·`first.code_found` 추가.
+- 공유 메시지: 11-1 #5 6줄. 링크는 `https://{APP_LINK_HOST}/c#번호`(리드 결정 N1, 도메인 원본은 env APP_LINK_HOST 하나. 없으면 링크 줄 생략 + 설치 안내를 스토어 문장으로).
+- 퍼널 이벤트: 0029 반영으로 `link_opened{source}`·`referrer_found`·`code_prefilled{source}`(source = app_link·referrer)를 보낸다. `redeem_ok`는 기존 `parent_code_redeemed`.
+- 테스트 헬퍼: `testUtils/flow.enterCode`는 자동 확인 후 P1c [이 번호로 연결하기]까지 누른다(가짜 타이머 테스트도 동작). `keyboardStep.test` 계측 검사는 연결 이벤트가 앞에 생겨 `course_*`만 골라 보도록 한 줄 바꿈(P6 줄 확인 필요).
+- 남은 일: /c 웹 안내 페이지(web/C_page, site/), App Links·Install Referrer, P1c 시안의 보조 "처음으로" 링크(지금은 패널 버튼 하나).
+
+### 연결 쉽게 리뷰 반영(2026-11-17-connect-ease-review)
+- H1 6자리 뒤 같은 번호 edit 무시(리듀서·훅), M1 연결 중 이전·다른 번호 쓰기·하드웨어 뒤로 막음, M2 Screen key 로 상태별 재마운트(제목 포커스 R2)·칸 아래 줄은 고정 live region 하나·맞지 않음 때 칸 묶음 포커스, M3 `api/contract/invite.ts` parsePeekResult(계약 밖이면 서버 오류, 호칭 없으면 번호만), M4 키 반경 14·테두리 2, 칸 68·반경 12·아래 선 3, 맞지 않음 경고 아이콘, FS_link 봉투 아이콘(icon-mail).
+- 낮음: prefill 6자리 검사, (SHARE_LINK_BASE 는 N1 결정으로 폐지), enterCode 확인 버튼 없으면 실패(실패 테스트는 enterCode(code, false)), keyboardStep 은 parent_code_redeemed 만 빼고 전 이벤트 개수·순서 검사, 무의미 단언 제거, TITLE NBSP 이스케이프, locked retryAfterSec 제거.
+- 남김: L5(칸 묶음 accessible 로 칸별 라벨 없어짐 → talkback-spec 표 수정은 디자인·QA 판단), L9 리드 일괄 반영 목록 조정(이 브랜치가 11-5 중 errors.invalid·connect.success·offline.body·ai_notice·login·cheer·name_taken·first.intro[1]·course.step.hangul 을 이미 반영, push[] 폐기만 남음), P1c 실패 시안의 버튼 2개, 키·칸 모양 토큰화(14·12 리드 결정).
+
+### P16 연결된 가족(시안 parent/P16_family, 문구 11-8, 서버 0030)
+- `features/family/ParentFamilyScreen`(설정 → "연결된 가족" 행). 계약 `api/contract/family.ts` parseParentFamily(확정 계약, ASSUMED 없음), realApi `parentFamilyList`.
+- 행: "가족 휴대폰 / {월}월 {일}일에 연결했어요"(자녀 이름 없음), 요약 "가족 {n}명과 연결돼 있어요", 빈 상태 → 번호 쓰기(P1).
+- 그만두기 시트 두 갈래: 그만 보여 주기 = withdraw_consent 바로 실행 + 배너(settings.stopped 11-8 대체문), 모두 지우기 = P9 두 단계 확인으로 이동. 이미 보여 주지 않는 중이면 첫 갈래 숨김. 실패는 시트 안 오류 줄.
+- 판단 필요: 어르신 화면에 BottomSheet(U0 원칙은 어르신=대화상자)를 썼다 — 동결 시안이 갈래별 보조 글 있는 시트라서. 시트 닫기(X) 읽기 이름은 "그만둘래요"(11-8에 닫기 문구 없음).
+
+### 재검토 반영(N1~N5, M4 토큰) · 초대 링크 연결
+- N1: SHARE_LINK_BASE 폐지 → `appShareLink` 가 APP_LINK_HOST 로 `https://{host}/c#번호`. N2: linkSources 출처 `install_referrer`→`referrer`, 이벤트 `invite_code_prefilled`→`code_prefilled`(0029 계약), 옛 저장값은 referrer 로 읽음.
+- linkSources 연결: AppRoot 가 `startInviteSources`·`subscribeInvite` → 첫 화면 띠(codeFound) → 부모님 고르면 Connect `prefill`(링크가 referrer 보다 우선, applyInvite). 연결 성공·쓸 수 없는 번호·다른 번호 쓰기 때 `consumeInvite`. 퍼널 link_opened{source}·referrer_found·code_prefilled{source}.
+- N3 시트 닫기 "닫기"(family.stop_sheet.close), N4 갈래 하나일 때 `hint_one`(라이터 확인 _status), N5 목록 간격 8·행 80·아이콘 원 48·그만두기 행 구분선+X 아이콘+화살표·갈래 테두리 2·화살표, 그만둘래요는 밑줄 보조 링크.
+- M4: radius.keypadKey 14·codeCell 12 를 tokens-v3.json(원본)·tokens.ts(사본)에 추가(designSystem 동기 테스트).

@@ -19,6 +19,7 @@ import {color, radius} from '../../ui/tokens';
 import {useBootLoading} from '../../app/splash';
 import {childErrorMessage} from '../../shared/childError';
 import {buildShareMessage, codeA11y, formatExpiry} from '../../lib/childFormat';
+import {appShareLink} from '../../lib/env';
 import {useNotifyPermission} from './useNotifyPermission';
 import {useChildWaitState} from './useChildWaitState';
 
@@ -60,7 +61,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const send = () => {
     if (code) {
-      Share.share({message: buildShareMessage(copy.code.share, code.code, formatExpiry(code.expiresAt))}).catch(() => {});
+      Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))}).catch(() => {});
     }
   };
   const copyCode = () => {

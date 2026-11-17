@@ -72,7 +72,7 @@ export const space = {
   s4: 4, s8: 8, s12: 12, s16: 16, s20: 20, s24: 24, s28: 28, s56: 56,
 } as const;
 
-export const radius = {chip: 12, childCard: 16, input: 16, card: 22, select: 24, sheet: 28, button: 36} as const;
+export const radius = {chip: 12, childCard: 16, input: 16, card: 22, select: 24, sheet: 28, button: 36, keypadKey: 14, codeCell: 12} as const;
 
 export const touch = {
   elderMin: 64, buttonPrimary: 72, buttonSecondary: 64, codeBox: 68, selectCard: 132, iconButton: 64, link: 64,
