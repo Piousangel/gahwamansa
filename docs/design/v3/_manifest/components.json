@@ -1,0 +1,167 @@
+{
+ "generated": "2026-11-17",
+ "components": [
+  {
+   "file": "components/button/CMP_button_states.dc.html",
+   "id": "CMP_button",
+   "title": "큰 버튼 · 모든 상태",
+   "w": 1400,
+   "h": 2055,
+   "kind": "sheet",
+   "description": "큰 버튼 주·보조·위험 외곽선, 모든 상태와 확대 150%"
+  },
+  {
+   "file": "components/select-card/CMP_selectcard_states.dc.html",
+   "id": "CMP_selectcard",
+   "title": "선택 카드 A/B · 모든 상태",
+   "w": 1400,
+   "h": 3517,
+   "kind": "sheet",
+   "description": "A/B 선택 카드 모든 상태, 조합, 확대 150%"
+  },
+  {
+   "file": "components/code-input/CMP_codeinput_states.dc.html",
+   "id": "CMP_codeinput",
+   "title": "번호 입력 6칸 · 모든 상태",
+   "w": 1400,
+   "h": 1893,
+   "kind": "sheet",
+   "description": "번호 입력 6칸과 키패드 모든 상태"
+  },
+  {
+   "file": "components/stamp-row/CMP_stamprow_states.dc.html",
+   "id": "CMP_stamprow",
+   "title": "도장 줄 7칸 · 모든 상태",
+   "w": 1400,
+   "h": 1456,
+   "kind": "sheet",
+   "description": "도장 줄 7칸 상태"
+  },
+  {
+   "file": "components/bubble/CMP_bubble_states.dc.html",
+   "id": "CMP_bubble",
+   "title": "말풍선 · 해님 슬롯 규칙",
+   "w": 1400,
+   "h": 1027,
+   "kind": "sheet",
+   "description": "말풍선과 해님 슬롯 크기·위치 규칙"
+  },
+  {
+   "file": "components/polaroid/CMP_polaroid_states.dc.html",
+   "id": "CMP_polaroid",
+   "title": "폴라로이드 사진 카드 · 모든 상태",
+   "w": 1400,
+   "h": 1457,
+   "kind": "sheet",
+   "description": "폴라로이드 사진 카드, 로딩·실패·확대"
+  },
+  {
+   "file": "components/step-row/CMP_steprow_states.dc.html",
+   "id": "CMP_steprow",
+   "title": "단계 목록 행 · 완료·지금·대기",
+   "w": 1400,
+   "h": 1093,
+   "kind": "sheet",
+   "description": "단계 목록 행 3상태와 확대 150%"
+  },
+  {
+   "file": "components/notice/CMP_notice_states.dc.html",
+   "id": "CMP_notice",
+   "title": "안내·주의·경고 박스",
+   "w": 1400,
+   "h": 1201,
+   "kind": "sheet",
+   "description": "안내 박스, 주의 박스, 위험 경고 박스, 오류 패널"
+  },
+  {
+   "file": "components/input/CMP_input_states.dc.html",
+   "id": "CMP_input",
+   "title": "입력창 · 삭제 확인 입력",
+   "w": 1400,
+   "h": 1835,
+   "kind": "sheet",
+   "description": "입력창과 삭제 확인 입력 상태"
+  },
+  {
+   "file": "components/tabs-topbar/CMP_tabs_topbar.dc.html",
+   "id": "CMP_tabs_topbar",
+   "title": "상단 바 · 하단 탭",
+   "w": 1400,
+   "h": 1160,
+   "kind": "sheet",
+   "description": "상단 바(어르신·자녀)와 하단 탭 2개"
+  },
+  {
+   "file": "components/loading-empty/CMP_loading_empty.dc.html",
+   "id": "CMP_loading_empty",
+   "title": "로딩 · 빈 상태",
+   "w": 1400,
+   "h": 1411,
+   "kind": "sheet",
+   "description": "로딩, 8초 지연, 빈 상태, 확대"
+  },
+  {
+   "file": "components/sheet-dialog/CMP_sheet_dialog.dc.html",
+   "id": "CMP_sheet_dialog",
+   "title": "시트 · 대화상자",
+   "w": 1400,
+   "h": 1693,
+   "kind": "sheet",
+   "description": "시트와 대화상자 상태"
+  },
+  {
+   "file": "components/toast-banner/CMP_toast_banner.dc.html",
+   "id": "CMP_toast_banner",
+   "title": "토스트 · 오류 배너",
+   "w": 1400,
+   "h": 959,
+   "kind": "sheet",
+   "description": "토스트와 오류 배너"
+  },
+  {
+   "file": "components/link/CMP_link_states.dc.html",
+   "id": "CMP_link",
+   "title": "링크 · 최소 터치 영역",
+   "w": 1400,
+   "h": 791,
+   "kind": "sheet",
+   "description": "작은 보조 링크와 터치 영역"
+  },
+  {
+   "file": "components/tokens/CMP_tokens_sheet.dc.html",
+   "id": "CMP_tokens",
+   "title": "토큰 v3 · 색·글자·대비",
+   "w": 1400,
+   "h": 4698,
+   "kind": "sheet",
+   "description": "토큰 v3 시트(색 역할, 대비표, 글자 스케일, 간격, 모션, 한국어 규칙)"
+  },
+  {
+   "file": "components/layout/CMP_screen_frame.dc.html",
+   "id": "CMP_screen_frame",
+   "title": "표준 화면 틀 · 레이아웃 규칙",
+   "w": 1500,
+   "h": 1260,
+   "kind": "sheet",
+   "description": "표준 화면 틀 구조도·F2 도식·규칙"
+  },
+  {
+   "file": "components/layout/CMP_coursehome_standard.dc.html",
+   "id": "CMP_coursehome",
+   "title": "표준 틀 증명 · 코스 홈",
+   "w": 390,
+   "h": 844,
+   "kind": "artboard",
+   "description": "표준 틀로 만든 코스 홈(100%) — F1·F2·F4 해결 증명"
+  },
+  {
+   "file": "components/layout/CMP_coursehome_zoom150.dc.html",
+   "id": "CMP_coursehome_z150",
+   "title": "표준 틀 증명 · 코스 홈 확대150",
+   "w": 390,
+   "h": 844,
+   "kind": "artboard",
+   "description": "표준 틀 코스 홈 글자 150%: 본문만 스크롤, 버튼 고정"
+  }
+ ]
+}

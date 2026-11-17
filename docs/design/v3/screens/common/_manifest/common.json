@@ -1,0 +1,119 @@
+{
+ "owner": "공통",
+ "generated": "2026-11-17",
+ "screens": [
+  {
+   "id": "S1",
+   "file": "S1_error.dc.html",
+   "states": [
+    "어르신 오프라인",
+    "어르신 전역 오류",
+    "자녀 오프라인",
+    "자녀 전역 오류"
+   ],
+   "components": [
+    "button",
+    "notice(대체: 해님·상태 일러스트)",
+    "layout"
+   ],
+   "tempCopy": [
+    "잠깐 문제가 생겼어요(전역 오류 제목, 라이터 확정 필요)"
+   ],
+   "unconfirmed": [
+    "본문 '잠시 뒤에 다시 해 볼까요?'는 errors.busy 본문 재사용"
+   ],
+   "toss": "토스에서는 상단 바 생략(자체 상단 바 없음)"
+  },
+  {
+   "id": "S1",
+   "file": "S1_error_z150.dc.html",
+   "states": [
+    "어르신 오프라인 150%",
+    "자녀 전역 오류 150%"
+   ],
+   "components": [
+    "button",
+    "layout"
+   ],
+   "tempCopy": [],
+   "unconfirmed": []
+  },
+  {
+   "id": "S2",
+   "file": "S2_loading.dc.html",
+   "states": [
+    "어르신 로딩",
+    "어르신 8초 넘음",
+    "자녀 로딩",
+    "어르신 로딩 150%"
+   ],
+   "components": [
+    "loading-empty",
+    "layout"
+   ],
+   "tempCopy": [
+    "조금 더 걸리고 있어요(8초 넘음, 라이터 확정 필요)"
+   ],
+   "unconfirmed": [
+    "막대 깜박임 2.4초 주기"
+   ]
+  },
+  {
+   "id": "S2",
+   "file": "S2_empty.dc.html",
+   "states": [
+    "어르신 빈 상태",
+    "자녀 빈 상태",
+    "어르신 150%",
+    "자녀 150%"
+   ],
+   "components": [
+    "loading-empty",
+    "button",
+    "layout"
+   ],
+   "tempCopy": [],
+   "unconfirmed": [
+    "자녀 카드 소제목은 C4 제목과 함께 확정"
+   ]
+  },
+  {
+   "id": "P14/C",
+   "file": "P14_disconnected.dc.html",
+   "states": [
+    "어르신용",
+    "자녀용",
+    "어르신용 150%",
+    "자녀용 150%"
+   ],
+   "components": [
+    "button",
+    "layout"
+   ],
+   "tempCopy": [
+    "어르신: '코스는 계속 볼 수 있어요'",
+    "어르신: '답은 번호를 받으면 저장돼요'",
+    "어르신 주 버튼 '코스 보기', 보조 '번호 쓰기'",
+    "자녀 버튼 '새 번호 만들기'(유지)",
+    "전부 copy-v3-confirmed.md 확정 전 임시, 라이터 확정 필요"
+   ],
+   "unconfirmed": [
+    "결정 반영: 끊긴 어르신은 코스는 보되 답은 저장 안 함. 코스 중 저장 안 됨 안내는 P4~P6 담당과 조율 필요"
+   ]
+  },
+  {
+   "id": "FLOWS",
+   "file": "flows.dc.html",
+   "states": [
+    "흐름 4개 + 공통 화면"
+   ],
+   "components": [],
+   "tempCopy": [],
+   "unconfirmed": [
+    "parent/child 화면 파일명은 계획 이름이며 담당이 확정하면 맞춤. 하이퍼링크 없음",
+    "P14는 common/P14_disconnected로 표기",
+    "P14는 common/P14_disconnected로 표기"
+   ]
+  }
+ ]
+}

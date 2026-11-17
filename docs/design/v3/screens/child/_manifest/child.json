@@ -1,0 +1,256 @@
+{
+ "owner": "child",
+ "date": "2026-11-17",
+ "screens": [
+  {
+   "id": "C0",
+   "file": "C0_start.dc.html",
+   "states": [
+    "역할 선택(P0)",
+    "카카오 로그인",
+    "로그인 중",
+    "로그인 실패"
+   ],
+   "components": [
+    "큰 버튼",
+    "선택 카드형 링크",
+    "안내 박스(오류)",
+    "상단 바"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C1",
+   "file": "C1_relation.dc.html",
+   "states": [
+    "기본(부모님)",
+    "다른 호칭",
+    "만드는 중",
+    "실패"
+   ],
+   "components": [
+    "큰 버튼",
+    "상단 바",
+    "선택 칩 7개",
+    "안내 박스(오류)"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C2",
+   "file": "C2_code.dc.html",
+   "states": [
+    "기본",
+    "복사됨",
+    "글자 150%"
+   ],
+   "components": [
+    "큰 버튼",
+    "링크",
+    "토스트",
+    "번호 칸(표시용)",
+    "상단 바",
+    "해님"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C2",
+   "file": "C2_codes.dc.html",
+   "states": [
+    "여러 개+만료",
+    "5개 가득(버튼 비활성+이유)",
+    "발급 실패"
+   ],
+   "components": [
+    "큰 버튼",
+    "안내 박스(오류)",
+    "상단 바"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C3",
+   "file": "C3_connect.dc.html",
+   "states": [
+    "연결 대기",
+    "연결됨"
+   ],
+   "components": [
+    "큰 버튼",
+    "링크",
+    "해님",
+    "상단 바"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C4",
+   "file": "C4_home.dc.html",
+   "states": [
+    "기본(11월 16일)",
+    "날짜 어제 이전",
+    "빈",
+    "동의 거부"
+   ],
+   "components": [
+    "큰 버튼",
+    "하단 탭 2개",
+    "상단 바",
+    "폴라로이드형 카드+테이프",
+    "스티치 구분선",
+    "해님"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C4",
+   "file": "C4_home_states.dc.html",
+   "states": [
+    "로딩",
+    "오류",
+    "응원 시트",
+    "보냈어요 토스트",
+    "글자 150%"
+   ],
+   "components": [
+    "큰 버튼",
+    "시트",
+    "토스트",
+    "안내 박스(오류)",
+    "하단 탭 2개"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C5",
+   "file": "C5_report.dc.html",
+   "states": [
+    "기본",
+    "빈",
+    "오류",
+    "로딩"
+   ],
+   "components": [
+    "하단 탭 2개",
+    "상단 바",
+    "안내 박스(오류)",
+    "큰 버튼",
+    "링크형 카드(곧 유료 배지)"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C6",
+   "file": "C6_paid_sheet.dc.html",
+   "states": [
+    "3지선다 고르기 전",
+    "연 선택",
+    "신청 완료"
+   ],
+   "components": [
+    "시트",
+    "큰 버튼(비활성+이유)",
+    "선택 행"
+   ],
+   "tempCopy": [],
+   "unverified": "가격은 [가격] 자리표시. '소식 받기'는 관심 표시만(푸시 동의 미포함, 사용자 결정 확정)",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C7",
+   "file": "C7_settings.dc.html",
+   "states": [
+    "기본",
+    "부르는 이름 시트",
+    "바꿨어요 토스트"
+   ],
+   "components": [
+    "상단 바",
+    "시트",
+    "선택 칩",
+    "토스트",
+    "큰 버튼"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C8",
+   "file": "C8_delete_child.dc.html",
+   "states": [
+    "기본",
+    "지우는 중",
+    "실패"
+   ],
+   "components": [
+    "상단 바",
+    "안내 박스(위험)",
+    "큰 버튼(주+위험 외곽선)",
+    "안내 박스(오류)"
+   ],
+   "tempCopy": [],
+   "unverified": "자녀가 남는 경우(내 계정만)와 마지막 자녀 두 변형. 정책 문구는 가정",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C8",
+   "file": "C8_delete_family.dc.html",
+   "states": [
+    "입력 전",
+    "입력 맞음",
+    "사전 조회 실패·입력 전(가장 강한 경고+입력칸 유지)",
+    "사전 조회 실패·입력 완료"
+   ],
+   "components": [
+    "상단 바",
+    "안내 박스(위험)",
+    "입력창",
+    "큰 버튼(주+위험 외곽선, 비활성+이유)"
+   ],
+   "tempCopy": [],
+   "unverified": "자녀가 남는 경우(내 계정만)와 마지막 자녀 두 변형. 정책 문구는 가정",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  },
+  {
+   "id": "C9",
+   "file": "C9_done.dc.html",
+   "states": [
+    "child",
+    "family"
+   ],
+   "components": [
+    "큰 버튼",
+    "해님",
+    "상단 바"
+   ],
+   "tempCopy": [],
+   "unverified": "",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+  }
+ ],
+ "links": "C0→C1→C2→C3→C4⇄C5→C6, C4/C5→C7→C8→C9→C0. 부모님 트랙 파일로는 링크 없음(href=#).",
+ "tossNote": "토스에서는 상단 바 생략: 상단 바를 그리는 화면(C0 로그인·C1~C9)은 토스 내비게이션 바(56px)가 대신한다. 별도 변형 아트보드는 만들지 않음.",
+ "serviceName": "가화만사성",
+ "tabs": [
+  "앨범",
+  "지난 답"
+ ]
+}
