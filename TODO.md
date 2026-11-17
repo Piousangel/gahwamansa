@@ -216,3 +216,12 @@
 - [x] Email OTP 길이 6, 만료 600초 — 사용자 변경 완료(11-17)
 - [ ] 익명 로그인 켜짐, 익명 IP당 시간당 한도(테스터 동시 가입 시 상향 검토)
 - [ ] 노출된 secret 키 교체(대시보드 API Keys)
+
+## 26. 소셜 로그인 준비 (2026-11-17 결정, 사용자 계정 작업)
+| 순서 | 할 일 | 비고 |
+|---|---|---|
+| 1 | **출시용 앱 서명 키 만들기** — 팀이 명령을 드리면 터미널 앱에서 실행, 비밀번호는 본인만 입력·보관 | 구글 로그인 등록에 지문(SHA-1)이 필요해서 먼저 |
+| 2 | **카카오 개발자 앱 등록**(developers.kakao.com) → 앱 이름 가화만사성, 플랫폼 Android(패키지명·키 해시), 카카오 로그인 켜기, OpenID Connect 켜기, 동의 항목(닉네임·이메일) | 단계별 화면 안내는 팀이 제공. REST 키·Client Secret은 Supabase 대시보드에 본인이 직접 입력(채팅 금지) |
+| 3 | **Google Cloud OAuth 클라이언트**(Android: 패키지명+SHA-1, Web: Supabase용) | Client ID만 팀에 알려 주면 됨(비밀 아님), Secret은 Supabase에 직접 |
+| 4 | Supabase 대시보드 → Authentication → Providers에서 Kakao·Google 켜기 | 팀이 칸별로 안내 |
+| 5 | 카카오 일반 사용자 공개 조건(비즈 앱 전환·검수) 확인 | 미확인 |
