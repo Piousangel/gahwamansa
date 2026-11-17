@@ -74,6 +74,27 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * 버전 규칙(docs/team/RELEASE.md):
+ * - versionName = app/package.json 의 version(한 곳에서만 바꾼다)
+ * - versionCode = git 커밋 수(git rev-list --count HEAD). 출시는 main 에서만 빌드하므로 계속 커진다.
+ *   -PversionCode=<숫자> 로 덮을 수 있다(git 이 없는 곳, 핫픽스 재빌드 등)
+ */
+def appVersionName = new groovy.json.JsonSlurper().parse(file("../../package.json")).version
+def gitOutput = { List<String> cmd ->
+    try {
+        def p = cmd.execute(null, rootDir)
+        def out = p.text.trim()
+        return p.waitFor() == 0 ? out : ""
+    } catch (Exception ignored) {
+        return ""
+    }
+}
+def appVersionCode = project.hasProperty("versionCode")
+        ? project.property("versionCode").toString().toInteger()
+        : (gitOutput(["git", "rev-list", "--count", "HEAD"]) ?: "1").toInteger()
+def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -84,8 +105,8 @@ android {
         applicationId "com.bumojasik.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         // 카카오 네이티브 앱 키(공개 값)는 src/lib/socialConfig.ts 한 곳에만 둔다. 웹 로그인 복귀 scheme(kakao{키})은 여기서 만든다
         def socialConfig = file("../../src/lib/socialConfig.ts").text
         def kakaoKey = (socialConfig =~ /KAKAO_NATIVE_APP_KEY = '([0-9a-f]{32})'/)[0][1]
