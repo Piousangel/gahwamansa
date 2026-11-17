@@ -148,7 +148,26 @@ test('자녀 홈: child_summary 로 동의한 어르신의 최근 답을 본다(
   expect(sum.shared).toBe(true);
   expect(sum.latest?.choiceLabel).toBe(state.optionB);
   expect(sum.latest?.answeredDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  expect(Object.keys(sum).sort()).toEqual(['latest', 'parentTitle', 'shared']);
+  expect(Object.keys(sum).sort()).toEqual(['latest', 'parentTitle', 'parents', 'shared']);
+  // 어르신별(0019·0021·0027): 단계·연속일·참여 여부 키가 없다
+  expect(sum.parents).toHaveLength(1);
+  expect(Object.keys(sum.parents[0]).sort()).toEqual(['connected', 'latest', 'parentId', 'shared', 'starter', 'title']);
+  expect(sum.parents[0]).toMatchObject({connected: true, shared: true});
+  expect(sum.parents[0].parentId).toMatch(/^[0-9a-f-]{36}$/);
+});
+
+test('자녀 지난 답(0021)·응원(0020)·어르신별 호칭(0019): 서버 계약 그대로', async () => {
+  const [h] = await child.fetchAnswerHistory();
+  expect(h.shared).toBe(true);
+  expect(h.items[0]).toMatchObject({choiceLabel: state.optionB});
+  expect(h.items[0].answeredDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(h.items[0].promptShort).toMatch(/ 중$/);
+  const pid = h.parentId;
+  expect(await child.sendCheer(pid, 'love_you')).toMatchObject({ok: true});
+  expect(await child.sendCheer(pid, 'stay_healthy' as never)).toEqual({ok: false, reason: 'invalid_key'});
+  expect(await child.setParentTitleFor(pid, '사장님')).toEqual({ok: false, reason: 'invalid_title'});
+  expect(await child.setParentTitleFor(pid, '엄마')).toEqual({ok: true});
+  expect((await child.fetchChildSummary()).parents[0].title).toBe('엄마');
 });
 
 test('자녀는 answers·daily_sessions 를 직접 읽을 수 없다', async () => {

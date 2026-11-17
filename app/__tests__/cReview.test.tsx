@@ -33,14 +33,14 @@ test('대기 <-> 번호 다시 보기 왕복해도 대기 화면은 하나, 폴�
   const api = createFakeApi({who: 'child', childFamily: true});
   const get = jest.spyOn(api, 'getChildState');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
+  await waitFor(() => screen.getByText('연결 기다리는 중'));
   for (let i = 0; i < 2; i++) {
-    await press('번호 다시 보기');
-    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
-    await press('연결 기다리기');
-    await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
+    await press('설정'); // 대기 화면 위로 쌓였다 돌아오기
+    await waitFor(() => screen.getByText('부르는 이름'));
+    await press('이전 화면으로 가기');
+    await waitFor(() => screen.getByText('연결 기다리는 중'));
   }
-  expect(screen.queryAllByText('연결을 기다리고 있어요', {includeHiddenElements: true})).toHaveLength(1);
+  expect(screen.queryAllByText('연결 기다리는 중', {includeHiddenElements: true})).toHaveLength(1);
   const before = get.mock.calls.length;
   for (let i = 0; i < 2; i++) {
     await act(async () => {
@@ -55,7 +55,7 @@ test('연결되면 폴링을 멈춘다', async () => {
   const api = createFakeApi({who: 'child', childFamily: true});
   const get = jest.spyOn(api, 'getChildState');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
+  await waitFor(() => screen.getByText('연결 기다리는 중'));
   await api.redeemInviteCode('123456');
   await act(async () => {
     jest.advanceTimersByTime(15000);
@@ -68,7 +68,7 @@ test('연결되면 폴링을 멈춘다', async () => {
   expect(get.mock.calls.length).toBe(n);
 });
 
-test('대기 화면: 상태를 불러오기 전에는 번호 다시 보기를 누를 수 없고, 새 번호를 만들지 않는다', async () => {
+test('대기 화면: 상태를 불러오기 전에는 번호 보내기를 누를 수 없고, 새 번호를 만들지 않는다', async () => {
   const api = createFakeApi({who: 'child', childFamily: true});
   let release: () => void = () => {};
   const real = api.getChildState.bind(api);
@@ -83,8 +83,8 @@ test('대기 화면: 상태를 불러오기 전에는 번호 다시 보기를 �
   });
   const issue = jest.spyOn(api, 'issueInviteCode');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByText('연결을 기다리고 있어요'));
-  expect(screen.getByRole('button', {name: '번호 다시 보기'})).toBeDisabled();
+  await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}));
+  expect(screen.getByRole('button', {name: '번호 보내기'})).toBeDisabled();
   await act(async () => release());
   expect(issue).not.toHaveBeenCalled();
 });

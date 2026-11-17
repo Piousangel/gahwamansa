@@ -44,7 +44,7 @@ export function RelationScreen() {
       // 살아 있는 가입 번호가 있으면 다시 쓴다(새로 받으면 이미 보낸 번호가 무효가 된다, 서버 0018). 호칭은 위에서 갱신됨
       const s = await api.getChildState();
       const code = s.kind === 'family' && s.code ? s.code.code : await api.issueInviteCode();
-      navigation.replace('Code', {code, title, renewed: s.kind === 'family' && !s.code && s.hadExpired});
+      navigation.replace('Code', {code, title, renewed: s.kind === 'family' && !s.code && s.hadExpired, expiresAt: s.kind === 'family' && s.code ? s.code.expiresAt : undefined});
     } catch (e) {
       setFailed(isOffline(e) ? offlineMessage.title : t.failed);
     } finally {
