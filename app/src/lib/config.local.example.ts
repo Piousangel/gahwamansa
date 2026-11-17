@@ -7,8 +7,9 @@
 // SUPABASE_KEY: `npx supabase status -o env` 의 PUBLISHABLE_KEY (또는 ANON_KEY)
 import type {AppEnv} from './env';
 
+// 기본은 fake: 복사만 하고 값을 안 채워도 원격(빌드 값)에 조용히 붙지 않게. 아래 두 값을 채운 뒤 'real' 로 바꾼다
 const local: Partial<AppEnv> = {
-  API_MODE: 'real',
+  API_MODE: 'fake',
   SUPABASE_URL: '',
   SUPABASE_KEY: '',
 };

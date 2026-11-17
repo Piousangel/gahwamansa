@@ -1,10 +1,13 @@
 /* 자녀 흐름 통합 테스트(로컬 Supabase + Mailpit).
  * 메일 인증번호 시나리오는 로컬 메일 템플릿에 6자리 번호({{ .Token }})가 있어야 통과한다. */
-import {loadConfig} from '../src/lib/config';
+import {loadLocalConfig} from '../src/lib/config';
+
+declare const process: {env: Record<string, string | undefined>};
 import {createSupabase} from '../src/lib/supabase';
 import {createRealApi} from '../src/features/realApi';
 
-const {SUPABASE_URL, SUPABASE_KEY} = loadConfig();
+// 로컬 Supabase 만(config.local.ts). 원격 주소면 여기서 바로 실패한다
+const {SUPABASE_URL, SUPABASE_KEY} = loadLocalConfig(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const MAILPIT = 'http://127.0.0.1:54324';
 const rid = () => `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
