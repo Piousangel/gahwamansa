@@ -28,3 +28,24 @@
 ## 기타
 - jest.setup 가상 모듈은 단위 테스트를 맥 상태와 무관하게 만드는 용도로 적절. resolveAppEnv 는 appEnv.test.ts 가 직접 인자로 검증하므로 실제 동작을 가리지 않음
 - 테스트·타입체크는 이 리뷰에서 돌리지 않음(정적 검토)
+
+## 재검토 (2026-11-17, 커밋 6a0123a·c318e07·5e6a42d·67431af)
+- 판정: **합치기 가능**. 조건: main 을 합친 뒤 `npm test` 재확인(아래 splash 실패는 main 쪽에서 이미 고쳐진 것)
+- 실행 결과(worktree 67431af): `tsc --noEmit` 통과. `jest`(단위) 39개 묶음 중 실패 1개 = splash 런처 아이콘 비교. 이 브랜치가 갈라진 시점 28e2956 의 앱 리소스가 브랜드 원본과 달라서 생긴 기존 실패이고, main(2b78ca2)에서 이미 고쳐졌다(main 체크아웃에서 splash 19/19 통과). 통합 테스트 설정으로 돌리면 2개 묶음이 의도대로 "config.local.ts(로컬 Supabase)만 써요" 에러로 멈춤
+
+| 지적 | 결과 | 근거 |
+|---|---|---|
+| H1 | 해결 | 통합 테스트 → `loadLocalConfig()`(config.ts:38): env.generated·getAppEnv 를 거치지 않고, config.local.ts 가 없거나 주소가 로컬이 아니면 멈춤. env.generated=staging 이 남은 지금 worktree 에서 실제로 실패하는 것을 확인 |
+| M1 | 해결 | release 번들 뒤 `cleanGeneratedAppEnv`(finalizedBy, 실패해도 실행)로 생성 파일 삭제, release preBuild 는 파일을 쓰지 않음. 디버그는 "마지막으로 빌드한 디버그 flavor" 규칙을 RELEASE.md 에 명시 |
+| M2 | 완화 | 두 키가 같으면 빌드 경고 + "키를 나누기 전엔 한 폰에 같이 설치 금지" 안내. 근본 해결은 사용자 콘솔 작업(6절 1~3) |
+| M3 | 해결 | RELEASE.md 6절 체크리스트(카카오 키·키 해시, 구글 Android 클라이언트 2개·웹 클라이언트, keytool 명령) |
+| M4 | 해결 | production db-push 는 main·클린 트리·origin/main 과 같은 커밋이어야 진행(fetch 실패 시 set -e 로 중단). origin 이 없으면 경고만 |
+| M5 | 해결 | git 실패 시 Gradle 에러. build-production 은 비-main 이면 `BUMOJASIK_VERSION_CODE` 필수, `release-versions.txt` 최대값보다 큰 번호만 허용, 끝에 기록 명령 출력 |
+| L1 | 해결 | `sb_publishable_` 형식만, URL=`https://<ref>.supabase.co` 일치 |
+| L2 | 해결 | release + 예시 값이면 실패(`-PallowPlaceholderEnv` 로만 허용) |
+| L3·L4·L5·L6 | 해결 | `grep … \|\| true`, umask 077 + "데이터는 Pro 백업/PITR" 명시, 키스토어 저장소 밖 예시, example 기본 `fake` |
+
+### 새로 본 것(모두 낮음, 합치기를 막지 않음)
+- N1 build.gradle:289 — `cleanGeneratedAppEnv` 하나를 두 release 번들이 함께 finalizedBy. Gradle 은 공유 finalizer 를 finalize 대상 작업이 모두 끝난 뒤 한 번 실행하므로 `assembleRelease`(두 flavor)도 정상일 것으로 보지만 빌드로 확인하지 않음 → 다음 빌드 때 `./gradlew assembleRelease` 후 `ls app/src/lib/env.generated.ts`(없어야 정상)로 한 번 확인
+- N2 release-versions.txt 기록은 손으로 남김(스크립트가 명령만 출력). 빠뜨리면 번호 검사가 무력해짐 → RELEASE.md 8-5 를 Play 업로드 체크리스트에 넣어 둘 것
+- N3 config.ts:20 — 로컬 주소 허용이 10.0.0.0/8 전체. supabase.co 는 거부되므로 실질 위험은 없음
