@@ -7,7 +7,7 @@ const w = (p, s) => { mkdirSync(p.replace(/\/[^/]+$/, ''), { recursive: true });
 
 // ── 색 ── (평면판은 앱 토큰 + 새 브랜드 토큰 2개만)
 const T = { paper: '#F6F3EE', card: '#FFFFFF', inkTitle: '#4E2F14', sky: '#CFE6F7', sun: '#FFC93C', doneSoft: '#CDEBDD' };
-const BRAND = { seal: '#EE6A44', sealDeep: '#C44F2E', sealGlyph: '#FFFAF3', iconBg: '#FBF6EE', stagingNavy: '#1F2A5C' };
+const BRAND = { seal: '#EE6A44', sealDeep: '#C44F2E', sealGlyph: '#FFFAF3', iconBg: '#FBF6EE', stagingNavy: '#2E4699', iconBgTop: '#6A4424', iconBgBottom: '#4E2F14' };
 
 // ── 家 획 ──
 const GLYPH = ['M50 5 L53 15', 'M18 19 L15 32', 'M18 20 L82 20 Q85 21 81 31', 'M30 39 L70 39', 'M50 39 Q43 50 24 58',
@@ -74,13 +74,18 @@ const bodyFlat = () => `<g transform="translate(4 4.6) scale(0.86)">
     ${glyph(8.3, 25.3, 30.4, BRAND.sealGlyph, 11)}</g></g>`;
 
 // 단색(테마 아이콘): 인장 실루엣에서 家를 뚫고, 사진은 테두리만
-const bodyMono = (c = '#000') => `<defs><mask id="mk"><rect x="-10" y="-10" width="90" height="90" fill="#fff"/>${glyph(8.3, 25.3, 30.4, '#000', 12)}</mask></defs>
-  <g transform="translate(4 4.6) scale(0.86)"><g transform="rotate(11 42.5 21.5)" fill="none" stroke="${c}" stroke-width="3.4" stroke-linejoin="round"><rect x="25.7" y="1.7" width="33.6" height="39.6" rx="2.6"/><circle cx="46.7" cy="12.8" r="4.4" fill="${c}" stroke="none"/></g>
+const bodyMono = (c = '#000') => `<defs><mask id="mk"><rect x="-10" y="-10" width="90" height="90" fill="#fff"/>${glyph(8.3, 25.3, 30.4, '#000', 10)}</mask><mask id="mp"><rect x="-10" y="-10" width="90" height="90" fill="#fff"/><rect x="1" y="18" width="45" height="45" rx="15" transform="rotate(-6 23.5 40.5)" fill="#000"/></mask></defs>
+  <g transform="translate(4 4.6) scale(0.86)"><g mask="url(#mp)"><g transform="rotate(11 42.5 21.5)" fill="none" stroke="${c}" stroke-width="3.4" stroke-linejoin="round"><rect x="25.7" y="1.7" width="33.6" height="39.6" rx="2.6"/><circle cx="46.7" cy="12.8" r="4.4" fill="${c}" stroke="none"/></g></g>
   <g transform="rotate(-6 23.5 40.5)"><rect x="1.5" y="18.5" width="44" height="44" rx="15" fill="#fff" opacity="0"/><rect x="4" y="21" width="39" height="39" rx="13" fill="${c}" mask="url(#mk)"/></g></g>`;
+
+// 단색 · 런처용(compact 배치: 사진 +7°, 인장 -4°, 겹침 큼)
+const bodyMonoCompact = (c = '#000') => `<defs><mask id="mk"><rect x="-10" y="-10" width="90" height="90" fill="#fff"/>${glyph(10.29, 24.29, 30.42, '#000', 10)}</mask><mask id="mp"><rect x="-10" y="-10" width="90" height="90" fill="#fff"/><rect x="3" y="17" width="45" height="45" rx="15" transform="rotate(-4 25.5 39.5)" fill="#000"/></mask></defs>
+  <g transform="translate(4 4.6) scale(0.86)"><g mask="url(#mp)"><g transform="rotate(7 39.5 23.5)" fill="none" stroke="${c}" stroke-width="3.4" stroke-linejoin="round"><rect x="22.7" y="3.7" width="33.6" height="39.6" rx="2.6"/><circle cx="43.7" cy="15.4" r="4.6" fill="${c}" stroke="none"/></g></g>
+  <g transform="rotate(-4 25.5 39.5)"><rect x="6" y="20" width="39" height="39" rx="13" fill="${c}" mask="url(#mk)"/></g></g>`;
 
 const svg = (vb, size, inner, title, defs = '') => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${size}" height="${size}" role="img"><title>${title}</title>${defs ? `<defs>${defs}</defs>` : ''}${inner}</svg>\n`;
 const SYM = {
-  '3d': [DEFS3D(false), body3d(false)], small: [DEFS3D(true), body3d(true)], flat: ['', bodyFlat()], mono: ['', bodyMono()],
+  '3d': [DEFS3D(false), body3d(false)], small: [DEFS3D(true), body3d(true)], flat: ['', bodyFlat()], mono: ['', bodyMono()], compact: [DEFS3D(true), body3d(true, true)],
 };
 w(`${B}/symbol-3d.svg`, svg('0 0 64 64', 64, SYM['3d'][1], '가화만사성 심볼 3D 상세판(96px 이상)', SYM['3d'][0]));
 w(`${B}/symbol-3d-small-compact.svg`, svg('0 0 64 64', 64, body3d(true, true), '가화만사성 심볼 3D 단순판 · 런처 꽉 채움용(겹침 큼)', DEFS3D(true)));
@@ -90,17 +95,19 @@ w(`${B}/symbol-mono.svg`, svg('0 0 64 64', 64, SYM.mono[1], '가화만사성 심
 
 // ── Android 적응형 아이콘(108dp 캔버스). 심볼 64상자를 60dp로 놓으면 내용이 안전 원(지름 66) 안에 든다 ──
 const place = (k, x, y, s) => `<g transform="translate(${x} ${y}) scale(${s / 64})">${SYM[k][1]}</g>`;
-const SYM_DP = 56, OFF = (108 - SYM_DP) / 2;
+const SYM_DP = 64, OFF = (108 - SYM_DP) / 2; // 확정: 꽉 채움 전경(compact) 64dp, 바깥 반경 실측 ≤ 33dp
 // 배지 T(스테이징): 남색 원 + 흰 T(사각 두 개). 안전 원 안 오른쪽 위
 const badgeT = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r + 1.4}" fill="#fff"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${BRAND.stagingNavy}"/>
   <rect x="${cx - r * .5}" y="${cy - r * .52}" width="${r}" height="${r * .26}" rx="${r * .06}" fill="#fff"/><rect x="${cx - r * .13}" y="${cy - r * .52}" width="${r * .26}" height="${r * 1.06}" rx="${r * .06}" fill="#fff"/>`;
-const navyBand = `<rect x="0" y="76" width="108" height="32" fill="${BRAND.stagingNavy}"/>`;
+// 갈색 바탕과 구분되게 밝은 남색 + 위쪽 크림 선
+const navyBand = `<rect x="0" y="78" width="108" height="30" fill="${BRAND.stagingNavy}"/><rect x="0" y="76.6" width="108" height="1.8" fill="#FFF1E4"/>`;
+const brownBg = `<linearGradient id="bgg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${BRAND.iconBgTop}"/><stop offset="1" stop-color="${BRAND.iconBgBottom}"/></linearGradient>`;
 const AD = {
-  fg: [SYM.small[0], place('small', OFF, OFF - 1, SYM_DP)],
-  bg: ['', `<rect width="108" height="108" fill="${BRAND.iconBg}"/>`],
-  mono: ['', `<g>${bodyMono().replace('<defs>', '<defs>').replace(/<g transform="translate\(4 4.6\) scale\(0.86\)">/, `<g transform="translate(${OFF} ${OFF - 1}) scale(${SYM_DP / 64}) translate(4 4.6) scale(0.86)">`)}</g>`],
-  'fg-staging': [SYM.small[0], place('small', OFF, OFF - 4, SYM_DP) + badgeT(69, 37, 8)],
-  'bg-staging': ['', `<rect width="108" height="108" fill="${BRAND.iconBg}"/>${navyBand}`],
+  fg: [SYM.compact[0], place('compact', OFF, OFF - 0.5, SYM_DP)],
+  bg: [brownBg, `<rect width="108" height="108" fill="url(#bgg)"/>`],
+  mono: ['', `<g>${bodyMonoCompact().replace(/<g transform="translate\(4 4.6\) scale\(0.86\)">/, `<g transform="translate(${OFF} ${OFF - 0.5}) scale(${SYM_DP / 64}) translate(4 4.6) scale(0.86)">`)}</g>`],
+  'fg-staging': [SYM.compact[0], place('compact', 25, 20, 58) + badgeT(70, 37, 8)],
+  'bg-staging': [brownBg, `<rect width="108" height="108" fill="url(#bgg)"/>${navyBand}`],
 };
 const A = `${B}/android`;
 const names = { fg: 'ic_launcher_foreground', bg: 'ic_launcher_background', mono: 'ic_launcher_monochrome' };
@@ -113,7 +120,7 @@ const legacy = (shape, staging) => {
   const s = staging ? 'fg-staging' : 'fg', bgk = staging ? 'bg-staging' : 'bg';
   const clip = shape === 'round' ? `<clipPath id="lc"><circle cx="54" cy="54" r="54"/></clipPath>` : shape === 'square' ? `<clipPath id="lc"><rect width="108" height="108" rx="20"/></clipPath>` : `<clipPath id="lc"><rect width="108" height="108"/></clipPath>`;
   // 레거시 아이콘은 마스크가 없어 72dp 보이는 영역 기준으로 확대: 108→ 보이는 72를 꽉 채우게 1.5배 중심 확대
-  return svg('18 18 72 72', 72, `<g clip-path="url(#lc2)">${AD[bgk][1]}${AD[s][1]}</g>`, `레거시 런처 ${shape}${staging ? ' 스테이징' : ''}`, AD[s][0] + clip.replace('id="lc"', 'id="lc2"').replace(/cx="54" cy="54" r="54"/, 'cx="54" cy="54" r="36"').replace('<rect width="108" height="108" rx="20"/>', '<rect x="18" y="18" width="72" height="72" rx="15"/>').replace('<rect width="108" height="108"/>', '<rect x="18" y="18" width="72" height="72"/>'));
+  return svg('18 18 72 72', 72, `<g clip-path="url(#lc2)">${AD[bgk][1]}${AD[s][1]}</g>`, `레거시 런처 ${shape}${staging ? ' 스테이징' : ''}`, AD[s][0] + AD[bgk][0] + clip.replace('id="lc"', 'id="lc2"').replace(/cx="54" cy="54" r="54"/, 'cx="54" cy="54" r="36"').replace('<rect width="108" height="108" rx="20"/>', '<rect x="18" y="18" width="72" height="72" rx="15"/>').replace('<rect width="108" height="108"/>', '<rect x="18" y="18" width="72" height="72"/>'));
 };
 w(`${A}/src/ic_launcher.svg`, legacy('square', false));
 w(`${A}/src/ic_launcher_round.svg`, legacy('round', false));

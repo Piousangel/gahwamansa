@@ -5,19 +5,24 @@
 | 용도 | 파일 |
 |---|---|
 | 3D 상세판(96px 이상: 스플래시·스토어·소개) | `symbol-3d.svg`, `png/symbol-3d-512.png` |
-| 3D 단순판(72px 이하, 런처 전용. 사진을 키우고 하늘을 푸르게 해 48dp에서도 사진으로 읽히게) | `symbol-3d-small.svg` |
+| 3D 단순판(72px 이하. 사진을 키우고 하늘을 푸르게 해 48dp에서도 사진으로 읽히게) | `symbol-3d-small.svg` |
+| 3D 단순판 꽉 채움(런처 전경 전용. 사진 +7°·인장 -4°로 겹침을 키워 64dp까지 확대) | `symbol-3d-small-compact.svg` |
 | 평면판(앱 안. 그라디언트·필터 없음, react-native-svg `SvgXml` 그대로 사용 가능) | `symbol-flat.svg`, `png/symbol-flat-40(@2x·@3x).png` |
 | 단색(테마 아이콘) | `symbol-mono.svg` |
-| Android 적응형 아이콘(108dp 캔버스, 전경은 지름 66dp 안전 원 안) | `android/res/mipmap-*/ic_launcher_{foreground,background,monochrome}.png`, `mipmap-anydpi-v26/*.xml` |
+| Android 적응형 아이콘(108dp 캔버스. 배경 = 짙은 갈색 그라디언트 #6A4424→#4E2F14, 전경 = compact 64dp, 바깥 반경 실측 33dp 이하라 안전 원 66dp 안) | `android/res/mipmap-*/ic_launcher_{foreground,background,monochrome}.png`, `mipmap-anydpi-v26/*.xml` |
 | 레거시 런처 48dp(mdpi 48 · hdpi 72 · xhdpi 96 · xxhdpi 144 · xxxhdpi 192px) | `android/res/mipmap-*/ic_launcher(_round).png` |
 | 스플래시(Android 12: 288dp 캔버스, 내용은 지름 192dp 원 안, 배경 없음) | `android/res/drawable-*/splash_icon.png` |
 | Play 스토어 512×512(불투명 정사각, 모서리는 Play가 깎음) | `play-store-512.png` |
-| 스테이징(배지 "T" + 아래 남색 띠 #1F2A5C, 앱 이름 "테스트 가화만사성") | `android/staging/res/…`(구조 동일. 스테이징 빌드의 `src/staging/res`에 복사) |
+| 스테이징(배지 "T"(흰 테두리) + 아래 남색 띠 #2E4699와 그 위 크림 선 1.8dp. 갈색 바탕과 구분되게 남색을 밝힘. 앱 이름 "테스트 가화만사성") | `android/staging/res/…`(구조 동일. 스테이징 빌드의 `src/staging/res`에 복사) |
 | 원본 SVG·생성기 | `android/src`, `android/staging/src`, `_src/gen.mjs`(SVG) → `_src/render.sh`(PNG, 헤드리스 크롬) |
 
 ## 색
-- 새 브랜드 토큰 제안: `brandSeal #EE6A44`(인장), `brandSealDeep #C44F2E`(두께·그림자), `brandSealGlyph #FFFAF3`(家), `iconBg #FBF6EE`(런처 바탕), `stagingNavy #1F2A5C`
+- 새 브랜드 토큰 제안: `brandSeal #EE6A44`(인장), `brandSealDeep #C44F2E`(두께·그림자), `brandSealGlyph #FFFAF3`(家), `iconBgTop #6A4424`·`iconBgBottom #4E2F14`(런처 바탕 그라디언트, 2026-11-17 확정 ③), `stagingNavy #2E4699`
 - 평면판의 나머지 색은 기존 토큰(card·inkTitle·sky·sun·doneSoft)만 사용
+
+## 런처 바탕을 갈색으로 정한 이유
+- 밝은·어두운 홈 모두에서 꽉 찬 타일로 보이고(크림은 밝은 홈에서 '흰 동그라미'), 살구 인장·흰 사진과의 대비가 가장 큼. 비교: `launcher-bg-compare.png`
+- 마스크 모양(원·스쿼클·둥근 사각)은 런처·제조사가 정한다. 우리가 정하는 건 배경 레이어와 전경 배치뿐
 
 ## 여백·최소 크기
 - 사방 여백은 심볼 크기의 1/4 이상. 다른 그림·글자를 그 안에 넣지 않는다
