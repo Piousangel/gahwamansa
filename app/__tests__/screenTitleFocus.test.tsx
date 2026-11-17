@@ -81,7 +81,7 @@ test('단계 화면(P4)은 단계 제목 줄(step-header)에 포커스', async (
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
   await waitFor(() => expect(focus.mock.calls.some(c => target(c).props.testID === 'step-header')).toBe(true), {timeout: 2000});

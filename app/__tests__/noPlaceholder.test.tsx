@@ -58,7 +58,7 @@ test('코스 단계(사진 준비 중·한글)에도 개발용 자리표시가 �
   await waitFor(() => screen.getByText('사진을 준비하고 있어요'));
   noDevBox();
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));

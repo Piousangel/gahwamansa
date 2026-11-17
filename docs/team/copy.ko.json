@@ -343,8 +343,12 @@
     "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
     "stamps_a11y_none": "이번 주 도장",
     "step_a11y": "{단계}, {전체}단계 중 {n}단계",
-    "_status": "stamps_a11y·stamps_a11y_none·step_a11y 는 임시(talkback-spec 형식, 라이터 확정 필요)",
-    "continue": "이어서 하기"
+    "_status": "done_preview 는 시안 P3 v4 문구(라이터 확인 전). 나머지는 copy-v3 11절 확정",
+    "continue": "이어서 하기",
+    "done_today": "오늘 코스는 여기까지예요. 내일 또 만나요",
+    "done_preview": "오늘 코스를 다 봤어요",
+    "review_link": "오늘 코스 다시 보기",
+    "step_review_a11y": "{단계}, 다시 보는 중"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -499,5 +503,8 @@
       "사진 속 낱말을 자판으로 써요",
       "고른 답으로 자녀가 취향을 알아 가요"
     ]
+  },
+  "review": {
+    "back": "돌아가기"
   }
 }

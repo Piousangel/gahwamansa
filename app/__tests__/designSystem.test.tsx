@@ -41,7 +41,7 @@ describe('tokens = tokens-v3.json', () => {
     expect(MIN_BODY_FONT).toBe(20);
     expect(MIN_TOUCH).toBe(64);
     expect(size.buttonPrimary).toBe(72);
-    expect(fontSize.bodyMin).toBe(20);
+    expect(fontSize.body).toBe(20);
   });
 });
 

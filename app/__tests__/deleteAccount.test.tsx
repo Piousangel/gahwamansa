@@ -23,7 +23,7 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   expect(del).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('모두 지웠어요'));
   // 스택 초기화: 이전 화면이 남아 있지 않다
-  expect(screen.queryByText('오늘의 코스')).toBeNull();
+  expect(screen.queryByTestId('date-line')).toBeNull();
   await press('처음으로');
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });

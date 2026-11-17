@@ -4,6 +4,7 @@ import {render, screen, waitFor} from '@testing-library/react-native';
 import {press, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
+import {kstDateLine} from '../src/features/course/stamps';
 
 // P8 응원 도착(시안 P8_cheer, copy 5·6절). 앱을 열면 코스 홈 위 대화상자, "알겠어요"로만 닫힘(읽음 처리).
 // 서버 계약(0020)은 가정: getUnreadCheers / markCheersRead.
@@ -12,7 +13,7 @@ async function home(opts: FakeOptions) {
   const mark = jest.spyOn(api, 'markCheersRead');
   const get = jest.spyOn(api, 'getMyCheers');
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   return {api, mark, get};
 }
 
@@ -88,7 +89,7 @@ test('알겠어요로 닫히면 포커스를 코스 홈 제목으로 돌려준�
   send.mockClear();
   await press('알겠어요');
   const toTitle = () =>
-    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '오늘의 코스');
+    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === kstDateLine()); // 코스 홈 제목 = 날짜 줄(P3 v4)
   await waitFor(() => expect(toTitle()).toBe(true));
   send.mockRestore();
 });
@@ -97,7 +98,7 @@ test('코스 홈 진입은 start_today(0024)를 한 번 부른다', async () => 
   const api = createFakeApi({linked: true, consented: true});
   const start = jest.spyOn(api, 'startToday');
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => screen.getByTestId('date-line'));
   expect(start).toHaveBeenCalledTimes(1);
 });
 

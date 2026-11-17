@@ -86,8 +86,7 @@ test('설정 입구는 분명한 버튼이다(높이 64 이상)', async () => {
 test('완료 화면에 연속 일수가 없다', async () => {
   const api = createFakeApi({consented: true, completedSteps: ['photo', 'question', 'hangul'], streak: 5});
   await toHomeConsented(api);
-  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  expect(screen.getByText('도장을 찍었어요. 내일 또 만나요')).toBeTruthy();
+  await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')); // P3 v4 완료 줄(11절)
   expect(screen.queryByText(/연속/)).toBeNull();
 });
 

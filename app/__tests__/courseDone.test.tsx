@@ -50,7 +50,7 @@ test('도장을 못 받아 오면 도장 줄만 숨기고 완료 문구는 그�
 test('알겠어요 → 코스 홈(다 마친 상태)', async () => {
   await finishCourse();
   await press('알겠어요');
-  await waitFor(() => screen.getByText('오늘의 코스'));
-  expect(screen.getByText('오늘 코스를 마쳤어요')).toBeTruthy(); // 코스 홈의 완료 줄
-  expect(screen.queryByTestId('screen-dock')).toBeNull(); // 다 마쳐서 다음 단계 버튼 없음
+  await waitFor(() => screen.getByTestId('date-line'));
+  expect(screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')).toBeTruthy(); // 코스 홈의 완료 줄(P3 v4)
+  expect(screen.getByRole('button', {name: '오늘 코스 다시 보기'})).toBeTruthy(); // 다 마치면 하단은 다시 보기(P3 v4)
 });

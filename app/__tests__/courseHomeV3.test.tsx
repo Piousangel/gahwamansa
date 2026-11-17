@@ -31,14 +31,14 @@ test('미연결 안내는 얇은 띠 한 줄 + 작은 링크(터치 48 이상), 
   expect(screen.getAllByTestId('big-button')).toHaveLength(1); // 지금 할 단계로 가는 주 버튼
 });
 
-test('"오늘의 코스" 아래 "오늘 코스예요" 중복 없음, 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버 호출 없음)', async () => {
+test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버 호출 없음)', async () => {
   const api = createFakeApi();
   const week = jest.spyOn(api, 'getWeekStamps');
   render(<AppRoot api={api} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
-  expect(screen.queryByText('오늘 코스예요')).toBeNull();
+  expect(screen.getByText('오늘 코스예요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
   expect(screen.getByTestId('date-line')).toBeTruthy();
   expect(screen.queryByText('이번 주 도장')).toBeNull();
   expect(week).not.toHaveBeenCalled();

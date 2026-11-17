@@ -14,7 +14,9 @@ import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
-export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
+// review: 코스를 다 마친 뒤 '오늘 코스 다시 보기'(시안 P3 v4 B, 기능 회의 B2). 보기 전용 — 기록 호출 없음, 하단은 '돌아가기'.
+export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
+  const review = !!route.params?.review;
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
@@ -38,11 +40,17 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
       top={
         <>
           <BackBar course onBack={toCourseHome} />
-          <StepHeader name={copy.course.step.photo} n={1} />
+          <StepHeader name={copy.course.step.photo} n={1} review={review} />
         </>
       }
       bottom={
-        error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
+        review ? (
+          <BigButton variant="secondary" label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />
+        ) : error ? (
+          <StepError error={error} onRetry={go} />
+        ) : (
+          <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
+        )
       }>
       <View testID="photo-polaroid" style={[styles.polaroid, {maxWidth: frameW}]}>
         {photo.image_url.startsWith('pending://') || imageFailed ? (
