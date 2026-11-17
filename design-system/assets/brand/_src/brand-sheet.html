@@ -1,0 +1,54 @@
+<!doctype html><meta charset="utf-8"><title>가화만사성 브랜드 시트</title>
+<style>
+body{margin:0;padding:28px;width:1144px;background:#F6F3EE;font-family:'Apple SD Gothic Neo',sans-serif;color:#4E2F14}
+h1{font-size:24px;margin:0}h2{font-size:15px;margin:0 0 10px}p.s{margin:4px 0 18px;color:#7A5A3E;font-size:13px}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}.w2{grid-column:span 2}
+.c{background:#fff;border-radius:16px;padding:14px}.cap{font-size:11px;color:#7A5A3E;margin-top:6px;line-height:1.45}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.home{border-radius:12px;padding:14px;display:flex;gap:16px;align-items:flex-start}.home div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px}
+.dark{background:#2F3B4A;color:#E6ECF2}.light{background:#E9E3DA;color:#4E2F14}
+.mask{position:relative;width:72px;height:72px;overflow:hidden}.mask img{position:absolute;left:-18px;top:-18px;width:108px;height:108px}
+.checker{background:conic-gradient(#ddd 25%,#fff 0 50%,#ddd 0 75%,#fff 0) 0 0/12px 12px}
+.phone{width:96px;height:180px;border-radius:18px;background:#F6F3EE;border:1px solid #E6DCD0;display:flex;align-items:center;justify-content:center}
+.dont{position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#F6F3EE;border-radius:10px}.x{position:absolute;right:-4px;top:-6px;color:#B91C1C;font-weight:800;font-size:18px}
+</style>
+<h1>가화만사성 브랜드 심볼 · 사용 시트</h1>
+<p class="s">살구 인장 '家'(직접 설계한 획) + 뒤 빛바랜 사진. 3D는 런처·스플래시·스토어, 앱 안은 평면판. 아래 런처 그림은 실제 렌더된 PNG.</p>
+<div class="g">
+  <div class="c"><h2>3D 상세판</h2><img src="../symbol-3d.svg" width="150"><div class="cap">96px 이상: 스플래시·스토어·소개<br>symbol-3d.svg</div></div>
+  <div class="c"><h2>3D 단순판</h2><img src="../symbol-3d-small.svg" width="150"><div class="cap">72px 이하: 런처 아이콘 전용<br>symbol-3d-small.svg</div></div>
+  <div class="c"><h2>평면판(앱 안)</h2><img src="../symbol-flat.svg" width="150"><div class="cap">워드마크 옆 40dp·앱 화면<br>symbol-flat.svg</div></div>
+  <div class="c"><h2>단색(테마 아이콘)</h2><div class="checker" style="display:inline-block;border-radius:8px"><img src="../symbol-mono.svg" width="150"></div><div class="cap">Android 13 테마 아이콘<br>symbol-mono.svg</div></div>
+</div>
+<div class="g">
+  <div class="c w2"><h2>런처 48dp (mipmap PNG를 48px로 표시)</h2>
+    <div class="row"><div class="home dark">
+      <div><img src="../android/res/mipmap-xxxhdpi/ic_launcher_round.png" width="48">가화만사성</div>
+      <div><img src="../android/res/mipmap-xxxhdpi/ic_launcher.png" width="48">가화만사성</div>
+      <div><img src="../android/staging/res/mipmap-xxxhdpi/ic_launcher_round.png" width="48">테스트 가화만사성</div>
+      <div><img src="../android/staging/res/mipmap-xxxhdpi/ic_launcher.png" width="48">테스트…</div></div>
+    <div class="home light">
+      <div><img src="../android/res/mipmap-xxxhdpi/ic_launcher_round.png" width="48">가화만사성</div>
+      <div><img src="../android/res/mipmap-xxxhdpi/ic_launcher.png" width="48">가화만사성</div>
+      <div><img src="../android/staging/res/mipmap-xxxhdpi/ic_launcher.png" width="48">테스트…</div></div></div>
+    <div class="cap">오른쪽 둘 = 스테이징(배지 T + 아래 남색 띠, 앱 이름 "테스트 가화만사성")</div></div>
+  <div class="c w2"><h2>적응형 아이콘 마스크 (배경+전경 PNG 겹침, 보이는 72dp)</h2>
+    <div class="row">
+      <div class="mask" style="border-radius:50%"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_background.png"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_foreground.png"></div>
+      <div class="mask" style="border-radius:22px"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_background.png"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_foreground.png"></div>
+      <div class="mask" style="border-radius:50% 50% 50% 12px"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_background.png"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_foreground.png"></div>
+      <div class="mask" style="border-radius:50%;background:#DCE6D0"><img src="../android/res/mipmap-xxxhdpi/ic_launcher_monochrome.png" style="filter:brightness(0) saturate(100%) invert(26%) sepia(20%) saturate(800%) hue-rotate(60deg)"></div>
+      <div class="mask" style="border-radius:22px"><img src="../android/staging/res/mipmap-xxxhdpi/ic_launcher_background.png"><img src="../android/staging/res/mipmap-xxxhdpi/ic_launcher_foreground.png"></div>
+    </div><div class="cap">원형 · 둥근사각 · 물방울 · 테마(단색, 기기 색으로 칠함) · 스테이징. 전경은 지름 66dp 안전 원 안</div></div>
+</div>
+<div class="g">
+  <div class="c"><h2>스플래시 (Android 12)</h2><div class="row"><div class="phone"><img src="../android/res/drawable-xxxhdpi/splash_icon.png" width="80"></div><div class="phone" style="background:#2A211B"><img src="../android/res/drawable-xxxhdpi/splash_icon.png" width="80"></div></div><div class="cap">288dp 캔버스, 내용은 지름 192dp 원 안. 배경색은 종이색(다크 모드는 #2A211B)</div></div>
+  <div class="c"><h2>첫 화면 워드마크</h2><div class="row" style="background:#F6F3EE;padding:14px;border-radius:12px"><img src="../png/symbol-flat-40@3x.png" width="40"><div><b style="font-size:22px">가화만사성</b><div style="font-size:12px;color:#7A5A3E">하루 한 장, 우리 집 앨범</div></div></div><div class="cap">평면판 40dp + 이름(글자 크기 22 이상). 심볼과 이름 사이 12dp</div></div>
+  <div class="c"><h2>여백 · 최소 크기</h2><div style="position:relative;width:120px;height:120px;background:repeating-linear-gradient(45deg,#FFE3D6 0 4px,#fff 4px 8px);border-radius:8px"><img src="../symbol-flat.svg" width="80" style="position:absolute;left:20px;top:20px;background:#F6F3EE"></div><div class="cap">사방 여백 = 심볼 크기의 1/4 이상. 최소 24dp(평면판), 3D는 런처 외 48dp 미만 금지</div></div>
+  <div class="c"><h2>금지</h2><div class="row">
+    <div class="dont"><img src="../symbol-flat.svg" width="52" style="transform:scaleX(1.35)"><span class="x">✕</span></div>
+    <div class="dont"><img src="../symbol-flat.svg" width="52" style="filter:hue-rotate(160deg)"><span class="x">✕</span></div>
+    <div class="dont"><img src="../symbol-flat.svg" width="52" style="transform:rotate(25deg)"><span class="x">✕</span></div>
+    <div class="dont" style="background:#EE6A44"><img src="../symbol-flat.svg" width="52"><span class="x">✕</span></div></div>
+    <div class="cap">늘리기 · 색 바꾸기 · 기울기 바꾸기 · 살구색 바탕 위에 두기. 家 획 수정·서체 글자로 대체도 금지</div></div>
+</div>
