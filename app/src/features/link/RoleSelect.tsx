@@ -14,7 +14,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {flightPending, setSplashTarget, useSplashLanded} from '../../app/splash';
 
 const f = copy.first;
-const ICONS: IconName[] = ['icon-photo', 'icon-pencil', 'icon-family'];
+// 소개 순서 = 코스 순서(사진 → 고르기 → 자판). copy 11절 WR-01
+const ICONS: IconName[] = ['icon-photo', 'icon-family', 'icon-pencil'];
 // 아이콘 원(장식, 색만으로 정보를 전하지 않음): 사진 노랑, 연필 하늘(한글 쓰기 단계와 같은 색), 가족 복숭아
 const CIRCLE = [color.accentSun, color.sky, color.accentPeach];
 const STD = Easing.bezier(0.4, 0, 0.2, 1);

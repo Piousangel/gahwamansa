@@ -140,7 +140,7 @@ test('a11y R9: 선택 카드는 라디오(checked), 묶음은 radiogroup', async
 test('a11y: 이번 주 도장은 개수가 아니라 찍은 요일을 읽는다(빈 날·개수 미언급)', () => {
   render(<StampRow days={[true, true, false, true, false, false, false]} todayIdx={4} />);
   const row = screen.getByLabelText(/이번 주 도장/);
-  expect(row.props.accessibilityLabel).toBe('이번 주 도장, 월 화 목 찍었어요');
+  expect(row.props.accessibilityLabel).toBe('이번 주 도장, 월요일, 화요일, 목요일에 찍었어요');
   expect(row.props.accessibilityLabel).not.toMatch(/[0-9]|개/);
   screen.unmount();
   render(<StampRow days={[false, false, false, false, false, false, false]} todayIdx={0} />);

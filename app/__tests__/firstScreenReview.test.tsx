@@ -87,12 +87,12 @@ test('스크린리더가 켜져 있으면 모션 없이 끝 상태로 바로', a
   expect(timing).not.toHaveBeenCalled();
 });
 
-test('소개 아이콘 24, 사진 묶음 화면 읽기 "옛날 사진 앨범, AI가 만든 그림"(눈에 보이는 표시는 없음)', async () => {
+test('소개 아이콘 24, 사진 묶음 화면 읽기 "옛날 사진 예시, AI가 만든 그림"(눈에 보이는 표시는 없음)', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await measure();
   const icon = screen.getByTestId('icon-photo', {includeHiddenElements: true});
   expect(icon.props.width ?? icon.props.style?.width).toBeDefined();
-  expect(screen.getByLabelText('옛날 사진 앨범, AI가 만든 그림')).toBeTruthy();
+  expect(screen.getByLabelText('옛날 사진 예시, AI가 만든 그림')).toBeTruthy();
   expect(screen.queryByText(/AI/, {includeHiddenElements: true})).toBeNull();
 });
 

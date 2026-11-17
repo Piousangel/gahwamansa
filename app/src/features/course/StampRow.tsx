@@ -21,8 +21,9 @@ export function StampRow({days, todayIdx, appearIdx, fadeMs = 400, hideIdx, cell
   hideIdx?: number;
   cellRef?: React.Ref<React.ComponentRef<typeof View>>;
 }) {
-  const stamped = c.weekdays.filter((_, i) => days[i]);
-  const label = stamped.length ? c.stamps_a11y.split('{요일}').join(stamped.join(' ')) : c.stamps_a11y_none;
+  // 읽기는 요일 전체 이름을 쉼표로(copy 11-2 #13: 한 글자 '일'·'수'는 숫자로 들림)
+  const stamped = c.weekdays_a11y.filter((_, i) => days[i]);
+  const label = stamped.length ? c.stamps_a11y.split('{요일}').join(stamped.join(', ')) : c.stamps_a11y_none;
   return (
     <View style={styles.card} accessible accessibilityLabel={label}>
       <Text20 size={24} weight="bold">{c.stamps_label}</Text20>
