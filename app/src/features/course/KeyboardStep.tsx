@@ -187,7 +187,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       ) : (
         <SkipLink label={k.skip} disabled={busy} onPress={complete} />
       )}
-      {open ? null : <ToCourseHomeLink onPress={toCourseHome} />}
+      {open ? null : <ToCourseHomeLink onPress={toCourseHome} disabled={busy} />}
     </>
   );
 

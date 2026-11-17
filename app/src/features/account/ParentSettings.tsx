@@ -68,8 +68,13 @@ export function ParentSettings() {
             sub={consented ? t.shared_now : t.not_shared_now}
             accessibilityLabel={`${t.share_row}, ${consented ? t.shared_now : t.not_shared_now}`}
             accessibilityHint=""
+            noChevron
             onPress={() => setConfirm(confirm !== 'none' ? 'none' : consented ? 'stop' : 'resume')}
           />
+          {/* 보여 주지 않는 중이면 '다시 보여 주기'를 행 아래에 분명히(띠 '다시 정하기'로 온 사람이 찾게, 리뷰 L4) */}
+          {!consented && confirm === 'none' ? (
+            <BigButton variant="secondary" label={t.resume} onPress={() => setConfirm('resume')} />
+          ) : null}
           {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
           {confirm === 'stop' ? (
             <View style={styles.confirm}>
@@ -105,6 +110,7 @@ export function ParentSettings() {
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
+      {/* TODO(dev-menu 합칠 때): 버전 줄은 SettingsRow 로 이 아래에, devGate 허용(staging·개발)일 때만 onPress=versionTap, production 은 누르지 않는 글 행 */}
       <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
       {linked ? (
         <SettingsRow

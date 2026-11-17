@@ -36,12 +36,11 @@ test('어르신 번호 화면: 본문 스크롤 없이 6칸·키 4줄이 남은 
   }
 });
 
-test('작은 화면: 보조 문구 → 제목 크기 → 링크를 위 줄로 → 그래도 모자라면 키 64 + 스크롤(잘리지 않음)', async () => {
+test('작은 화면: 제목 크기 → 링크를 위 줄로 → 그래도 모자라면 키 64 + 스크롤(잘리지 않음), 안심 줄은 끝까지 남는다(U4)', async () => {
   await openConnect();
   expect(screen.getByTestId('connect-safe')).toBeTruthy();
   await layout(4 * 60 + 104);
   expect(screen.getByTestId('connect-safe')).toBeTruthy(); // UX U4: 안심 줄은 줄어들어도 남는다
-  await layout(4 * 60 + 104);
   const {StyleSheet} = require('react-native');
   expect(StyleSheet.flatten(screen.getByRole('header').props.style).fontSize).toBe(22);
   await layout(4 * 60 + 104);
@@ -50,6 +49,7 @@ test('작은 화면: 보조 문구 → 제목 크기 → 링크를 위 줄로 �
   await layout(4 * 60 + 104);
   expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 마지막 수단
   expect(screen.getByLabelText('숫자 0')).toBeTruthy();
+  expect(screen.getByTestId('connect-safe')).toBeTruthy();
 });
 
 test('키패드가 들어가면 4줄 모두 영역 안(키 x4 + 88 <= 영역)', async () => {
@@ -78,8 +78,8 @@ test('링크 두 개는 하단 영역에서 한 줄에 나란히', async () => {
 // (+ 안심 줄 30 + gap 16) + 아래 8, 하단 = 위 6 + 링크 줄 64(3단계에서는 위 줄로) + 약관 줄 34 + max(28, 16 + inset)
 const keypadArea = (H: number, insetTop: number, insetBottom: number, lv: number) => {
   const top = Math.max(insetTop, 24) + 64;
-  const body = 4 + (lv >= 2 ? 58 : 68) + 16 + (lv >= 1 ? 0 : 46) + 8;
-  const dock = 6 + (lv >= 3 ? 0 : 64) + 34 + Math.max(28, 16 + insetBottom);
+  const body = 4 + (lv >= 1 ? 58 : 68) + 16 + 46 + 8; // 안심 줄 30 + gap 16 은 늘 있다(U4)
+  const dock = 6 + (lv >= 2 ? 0 : 64) + 34 + Math.max(28, 16 + insetBottom);
   return H - top - body - dock;
 };
 // 칸 68 + 칸 아래 안내 한 줄(BELOW_LINE_H) + 키 4줄
@@ -87,14 +87,15 @@ const allFour = (area: number) => {
   const k = keypadKeyHeight(area - BELOW_LINE_H);
   return k !== null && 4 * k + 104 + BELOW_LINE_H <= area && k >= 64;
 };
-const firstFit = (H: number, it: number, ib: number) => [0, 1, 2, 3].find(lv => allFour(keypadArea(H, it, ib, lv)));
+// 0 그대로, 1 제목 22, 2 링크 위 줄. 셋 다 안 되면 3단계(스크롤)
+const firstFit = (H: number, it: number, ib: number) => [0, 1, 2].find(lv => allFour(keypadArea(H, it, ib, lv)));
 
-test('갤럭시 S25(780dp, 상단 24·하단 48): 1단계(보조 문구 숨김) 안에서 4줄 모두 들어간다', () => {
-  expect(firstFit(780, 24, 48)).toBeLessThanOrEqual(1);
+test('갤럭시 S25(780dp, 상단 24·하단 48): 안심 줄을 둔 채 2단계(링크 위 줄)에서 4줄 모두 들어간다', () => {
+  expect(firstFit(780, 24, 48)).toBe(2);
 });
 
-test('360x640dp 제스처 내비게이션(하단 16): 3단계까지 줄이면 4줄 모두 들어간다', () => {
-  expect(firstFit(640, 24, 16)).toBeDefined();
+test('360x640dp 제스처 내비게이션(하단 16): 안심 줄 유지(U4)로 100%에서도 3단계(스크롤) — 디자인 확인 항목', () => {
+  expect(firstFit(640, 24, 16)).toBeUndefined();
 });
 
 test('360x640dp 3버튼 내비게이션(하단 48): 64 키로는 안 들어가 4단계(스크롤)로 잘리지 않게 한다', () => {

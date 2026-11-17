@@ -4,6 +4,7 @@ import {act, fireEvent, render, renderHook, screen, waitFor, within} from '@test
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {StampRow} from '../src/features/course/StampRow';
+import {ToCourseHomeLink} from '../src/features/course/ToCourseHomeLink';
 import {useAfterTransition} from '../src/features/course/useAfterTransition';
 import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
@@ -51,10 +52,11 @@ describe('P7 후속: 단계 체크 시작은 전환이 끝난 뒤(transitionEnd 
       emit: (name: string, data?: {closing?: boolean}) => (listeners[name] ?? []).forEach(cb => cb({data})),
     };
   }
-  test('대기 중인 일은 다른 화면이 닫히며 이 화면이 드러난 전환 끝(closing=false)에 한 번 실행', () => {
+  test('가려져(blur) 있는 동안 맡긴 일은 위 화면이 닫히는 전환 끝(closing=false)에 한 번 실행', () => {
     const nav = fakeNav();
     const run = jest.fn();
     const {result} = renderHook(() => useAfterTransition(nav as never));
+    act(() => nav.emit('blur'));
     act(() => result.current(run));
     expect(run).not.toHaveBeenCalled();
     act(() => nav.emit('transitionEnd', {closing: true})); // 이 화면이 닫히는 전환: 무시
@@ -64,17 +66,49 @@ describe('P7 후속: 단계 체크 시작은 전환이 끝난 뒤(transitionEnd 
     act(() => nav.emit('transitionEnd', {closing: false}));
     expect(run).toHaveBeenCalledTimes(1);
   });
-  test('전환 이벤트가 오지 않으면(전환 없음·테스트) 포커스 뒤 600ms 에 실행', () => {
+  test('전환 이벤트가 오지 않으면 focus 뒤 600ms 에 실행', () => {
     jest.useFakeTimers();
     const nav = fakeNav();
     const run = jest.fn();
     const {result} = renderHook(() => useAfterTransition(nav as never));
+    act(() => nav.emit('blur'));
     act(() => result.current(run));
     act(() => nav.emit('focus'));
     act(() => jest.advanceTimersByTime(599));
     expect(run).not.toHaveBeenCalled();
     act(() => jest.advanceTimersByTime(1));
     expect(run).toHaveBeenCalledTimes(1);
+  });
+  test('focus 가 지나간 뒤(돌아오는 전환 중)에 맡겨도 전환 끝·폴백에 실행된다(영영 안 되는 빈틈 없음)', () => {
+    jest.useFakeTimers();
+    const nav = fakeNav();
+    const run = jest.fn();
+    const {result} = renderHook(() => useAfterTransition(nav as never));
+    act(() => nav.emit('blur'));
+    act(() => nav.emit('focus')); // 기록 반영보다 popTo 의 focus 가 먼저 온 경우
+    act(() => result.current(run));
+    expect(run).not.toHaveBeenCalled(); // isFocused() 였다면 여기서 바로 돌았다(리뷰 M1)
+    act(() => jest.advanceTimersByTime(600));
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+  test('가려진 적이 없으면(이미 보이는 화면) 바로 실행', () => {
+    const nav = fakeNav();
+    const run = jest.fn();
+    const {result} = renderHook(() => useAfterTransition(nav as never));
+    act(() => result.current(run));
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('단계 체크 시점: 실제 흐름(리뷰 M1 증명)', () => {
+  test('사진 보기를 마치고 코스 홈으로 돌아온 직후에는 체크 모션이 없고, 전환이 끝난 뒤(폴백 600ms) 시작', async () => {
+    await toHomeConsented(createFakeApi({linked: true, consented: true}));
+    await pressCourseNext();
+    await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
+    await press('다 봤어요');
+    await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+    expect(screen.queryByTestId('step-check-anim', {includeHiddenElements: true})).toBeNull(); // 전환 중: 아직 없음
+    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}), {timeout: 3000});
   });
 });
 
@@ -172,7 +206,7 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
     for (const h of ['가족', '알림과 소리', '앱']) {
       expect(screen.getByRole('header', {name: h})).toBeTruthy();
     }
-    const order = ['가족에게 답 보여 주기, 보여 주는 중이에요', '연결된 가족', '도장 소리', '앱 정보', '모두 지우기'];
+    const order = ['가족에게 답 보여 주기, 보여 주는 중이에요', '연결된 가족', '도장 소리', '앱 정보, 앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요', '모두 지우기'];
     const labels = screen.UNSAFE_root
       .findAll(n => typeof n.props?.accessibilityLabel === 'string' && order.includes(n.props.accessibilityLabel) && n.props.accessibilityRole)
       .map(n => n.props.accessibilityLabel);
@@ -187,5 +221,28 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
     await press('설정');
     await press('가족에게 답 보여 주기, 보여 주는 중이에요');
     await waitFor(() => screen.getByText('가족에게 그만 보여 줄까요?'));
+  });
+});
+
+describe('리뷰 낮음 반영', () => {
+  test("U13 '오늘 코스로': 읽기 '오늘 코스로 돌아가기'(라이터 11-9), 저장 중에는 누를 수 없음, 100%만(115%면 숨김)", () => {
+    const onPress = jest.fn();
+    const {rerender} = render(<ToCourseHomeLink onPress={onPress} disabled />);
+    const link = screen.getByRole('button', {name: '오늘 코스로 돌아가기'});
+    expect(link.props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(link);
+    expect(onPress).not.toHaveBeenCalled();
+    mockFontScale = 1.15;
+    rerender(<ToCourseHomeLink onPress={onPress} />);
+    expect(screen.queryByTestId('to-course-home')).toBeNull();
+  });
+  test("설정: 보여 주기 행은 '›' 없음(같은 화면 확인), 보여 주지 않는 중이면 행 아래 '다시 보여 주기' 버튼", async () => {
+    render(<AppRoot api={createFakeApi({linked: true, consented: false})} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    await press('설정');
+    const row = await waitFor(() => screen.getByTestId('settings-row-share'));
+    expect(within(row).queryByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeNull();
+    await press('다시 보여 주기');
+    await waitFor(() => screen.getByText('오늘부터 고른 답이 가족에게 보여요'));
   });
 });

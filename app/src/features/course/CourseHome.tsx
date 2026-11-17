@@ -55,13 +55,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     prevDone.current = done;
     if (prev && done.length > prev.length) {
       const step = done.find(x => !prev.includes(x)) ?? null;
-      if (navigation.isFocused()) {
-        setJustDone(step);
-      } else {
-        afterTransition(() => setJustDone(step));
-      }
+      // 가려져 있거나 돌아오는 전환 중이면 전환이 끝난 뒤, 이미 보이면 바로(useAfterTransition 이 판단)
+      afterTransition(() => setJustDone(step));
     }
-  }, [done, content, navigation, afterTransition]);
+  }, [done, content, afterTransition]);
   // 아직 아무것도 못 받았는데 실패: 오류만 보여 준다(오프라인/서버 오류 문구가 다름)
   if (content === undefined && syncError) {
     return (

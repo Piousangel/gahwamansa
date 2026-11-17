@@ -69,7 +69,7 @@ test('자동 확인이 틀리면 칸을 비우고 오류', async () => {
 test('이전 바 라벨, 코스 중에는 "오늘 코스로 돌아가기"', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('오늘 코스로 돌아가기'));
+  await waitFor(() => screen.getAllByLabelText('오늘 코스로 돌아가기')[0]); // 상단 바(첫째)·하단 '오늘 코스로'(U13)
   expect(screen.getByText('‹ 오늘 코스')).toBeTruthy();
 });
 

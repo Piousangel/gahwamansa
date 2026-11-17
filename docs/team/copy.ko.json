@@ -288,8 +288,7 @@
     "group_family": "가족",
     "group_sound": "알림과 소리",
     "group_app": "앱",
-    "share_scope": "가족에게는 고른 답과 날짜만 보여요",
-    "_status": "group_* 는 시안 P13_more v2 구역 제목(라이터 확인 전)"
+    "share_scope": "가족에게는 고른 답과 날짜만 보여요"
   },
   "delete": {
     "parent": {
@@ -354,7 +353,7 @@
     "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
     "stamps_a11y_none": "이번 주 도장",
     "step_a11y": "{단계}, {전체}단계 중 {n}단계",
-    "_status": "copy-v3 11절(11-7 #18 포함)·6절 확정 / to_home 은 UX U13 초안(라이터 확인 전)",
+    "_status": "copy-v3 11절(11-7 #18 포함)·6절 확정",
     "continue": "이어서 하기",
     "done_today": "오늘 코스는 여기까지예요. 내일 또 만나요",
     "review_link": "오늘 코스 다시 보기",
@@ -398,8 +397,7 @@
     "skip_hint": "화면을 누르면 바로 넘어가요",
     "stamped": "도장을 찍었어요",
     "next_photo": "내일 새 사진이 와요",
-    "next_photo_time": "내일 {시각}에 새 사진이 와요",
-    "_status": "next_photo·next_photo_time 은 UX U5 초안(라이터 확인 전)"
+    "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요"
   },
   "question": {
     "need_choice": "하나를 골라 주세요",

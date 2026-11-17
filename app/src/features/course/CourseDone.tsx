@@ -73,7 +73,8 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     const t = setTimeout(() => setGaveUp(true), WEEK_WAIT_MS);
     return () => clearTimeout(t);
   }, [fetched]);
-  const week = fetched === undefined && gaveUp ? null : fetched;
+  // 포기한 뒤 늦게 온 결과는 이 화면에서 무시(도장 줄이 뒤늦게 생겨 본문이 움직이거나 문구가 바뀌지 않게)
+  const week = gaveUp ? null : fetched;
   const mode = useMotionMode();
   const toHome = () => navigation.popTo('CourseHome');
   useBackAction(toHome);
@@ -199,7 +200,8 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const days = week ? stampsFromDates(week.weekStart, week.doneDates) : null;
   const firstStamp = !!days && days[todayIdx] && days.filter(Boolean).length === 1;
   // 미연결(11-7 #19): 도장은 기기에 찍히고, 가족에게는 번호를 받은 뒤부터 보인다는 것을 말한다
-  // 연결(UX U5): 둘째 줄 '내일 새 사진이 와요'(알림 시각이 생기면 next_photo_time). 미연결(11-7 #19)은 그대로
+  // 연결(UX U5, 라이터 11-9): 알림 켜짐이면 '내일 {시각}에 새 사진을 알려 드려요', 꺼짐·알림 기능 없음이면 '내일 새 사진이 와요'.
+  // TODO(푸시 0032~): 알림 상태·시각이 생기면 next_photo_time 으로. 지금은 알림 기능이 없어 항상 next_photo. 미연결(11-7 #19)은 그대로
   const body =
     week === undefined
       ? null

@@ -1,46 +1,59 @@
 import {useCallback, useEffect, useRef} from 'react';
 
 type Nav = {
-  addListener(name: 'transitionEnd' | 'focus', cb: (e: {data?: {closing?: boolean}}) => void): () => void;
+  addListener(name: 'transitionEnd' | 'focus' | 'blur', cb: (e: {data?: {closing?: boolean}}) => void): () => void;
 };
 /** 전환 이벤트가 오지 않을 때(전환 애니메이션 없음·테스트) 포커스 뒤 기다리는 시간 */
 export const AFTER_FOCUS_FALLBACK_MS = 600;
 
-// 화면이 다시 드러나는 전환이 끝난 뒤 한 번 실행할 일을 맡긴다(리뷰 M1 후속).
-// native-stack 의 transitionEnd(closing=false) = 위 화면이 닫히고 이 화면이 다 보인 순간.
-// 그 이벤트가 오지 않는 경우를 위해 focus 뒤 600ms 에도 실행한다(둘 중 먼저, 한 번만).
+// 화면이 '다 보이는' 때 일을 실행한다(리뷰 M1 두 번째 지적 반영).
+// - 다른 화면이 위에 쌓이면(blur) '가려짐'. 위 화면이 닫히는 전환이 끝나면(transitionEnd closing=false) 다시 '보임'.
+//   transitionEnd 가 오지 않는 경우를 위해 focus 뒤 600ms 에도 '보임'으로 본다(둘 중 먼저).
+// - 가려져 있거나 전환 중에 맡긴 일은 '보임'이 되는 순간 한 번 실행. 이미 보이면 바로 실행.
+// - focus 가 지나간 뒤에 맡겨도 폴백 타이머가 이미 돌고 있어 영영 실행되지 않는 빈틈이 없다.
+//   (기록 반영 → popTo 순서상 맡기는 시점이 focus 직후일 수 있다: isFocused() 로 판단하면 전환 중에 시작돼 버림)
 export function useAfterTransition(navigation: Nav) {
+  const covered = useRef(false);
   const pending = useRef<(() => void) | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const run = useCallback(() => {
+  const reveal = useCallback(() => {
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
     }
+    covered.current = false;
     const f = pending.current;
     pending.current = null;
     f?.();
   }, []);
   useEffect(() => {
+    const offBlur = navigation.addListener('blur', () => {
+      covered.current = true;
+    });
     const offEnd = navigation.addListener('transitionEnd', e => {
-      if (!e.data?.closing && pending.current) {
-        run();
+      if (!e.data?.closing && covered.current) {
+        reveal();
       }
     });
     const offFocus = navigation.addListener('focus', () => {
-      if (pending.current && !timer.current) {
-        timer.current = setTimeout(run, AFTER_FOCUS_FALLBACK_MS);
+      if (covered.current && !timer.current) {
+        timer.current = setTimeout(reveal, AFTER_FOCUS_FALLBACK_MS);
       }
     });
     return () => {
+      offBlur();
       offEnd();
       offFocus();
       if (timer.current) {
         clearTimeout(timer.current);
       }
     };
-  }, [navigation, run]);
+  }, [navigation, reveal]);
   return useCallback((f: () => void) => {
-    pending.current = f;
+    if (covered.current) {
+      pending.current = f;
+    } else {
+      f();
+    }
   }, []);
 }

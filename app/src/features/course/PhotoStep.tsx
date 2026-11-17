@@ -52,7 +52,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         ) : (
           <>
             <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
-            <ToCourseHomeLink onPress={toCourseHome} />
+            <ToCourseHomeLink onPress={toCourseHome} disabled={busy} />
           </>
         )
       }>
