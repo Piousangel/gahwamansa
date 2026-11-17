@@ -19,10 +19,18 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-const measure = (w: number, h: number) =>
-  act(async () => {
+const measure = async (w: number, h: number) => {
+  await act(async () => {
     fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: w, height: h}}});
   });
+  // 묶음이 네이티브에 붙고 배치되면 onLayout 이 온다(모션은 그 뒤 시작)
+  await act(async () => {
+    const stack = screen.queryByTestId('polaroid-stack', {includeHiddenElements: true});
+    if (stack) {
+      fireEvent(stack, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 200, height: 140}}});
+    }
+  });
+};
 
 test('계산: 3장 묶음(앞 1장 + 뒤 2장 부채꼴) 전체가 S25 영역(150·160·175dp) 안', () => {
   for (const h of [150, 160, 175]) {

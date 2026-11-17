@@ -17,10 +17,18 @@ afterEach(() => {
   mockFontScale = 1;
   jest.restoreAllMocks();
 });
-const measure = (w = 312, h = 170) =>
-  act(async () => {
+const measure = async (w = 312, h = 170) => {
+  await act(async () => {
     fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: w, height: h}}});
   });
+  // 묶음이 네이티브에 붙고 배치되면 onLayout 이 온다(모션은 그 뒤 시작)
+  await act(async () => {
+    const stack = screen.queryByTestId('polaroid-stack', {includeHiddenElements: true});
+    if (stack) {
+      fireEvent(stack, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 200, height: 140}}});
+    }
+  });
+};
 const rad = (d: number) => (d * Math.PI) / 180;
 
 test('리뷰 공식: 묶음 높이 = 높이 cos9 + 폭 sin9 + 높이 x 0.05 + 테이프 12 <= 영역 - 8', () => {

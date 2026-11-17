@@ -9,7 +9,9 @@
     "no_code_link": "번호가 없어요",
     "no_code_help": "번호는 가족이 앱에서 만들어 줘요",
     "success": "연결됐어요! 이제 함께해요",
-    "view_course": "코스 보기"
+    "view_course": "코스 보기",
+    "code_a11y": "연결 번호 6자리 중 {n}번째 칸",
+    "need_six": "번호 6개를 모두 써 주세요"
   },
   "consent": {
     "title": "고른 답을 가족과 나눠요",
@@ -139,7 +141,8 @@
     "question_hint": "정답은 없어요. 마음 가는 쪽을 눌러 주세요",
     "hangul_hint": "틀려도 괜찮아요. 천천히 따라 써 봐요",
     "loading": "잠시만요",
-    "ai_photo_label": "AI가 만든 그림"
+    "ai_photo_label": "AI가 만든 그림",
+    "not_real_place": "실제 장소가 아니에요"
   },
   "brand": {
     "name": "가화만사성",
@@ -170,7 +173,9 @@
     "resume_yes": "좋아요",
     "delete_row": "모두 지우기",
     "delete_hint": "고른 답과 도장이 지워지고 연결도 끊겨요",
-    "back": "돌아가기"
+    "back": "돌아가기",
+    "app_info": "앱 정보",
+    "ai_notice": "오늘의 사진은 AI로 만든 그림이에요"
   },
   "delete": {
     "parent": {
@@ -220,7 +225,21 @@
       "hangul": "다 썼어요"
     },
     "disconnected_banner": "번호를 받으면 그때부터 답이 저장돼요",
-    "write_code": "번호 쓰기"
+    "write_code": "번호 쓰기",
+    "left_two": "둘 남았어요",
+    "left_one": "하나 남았어요",
+    "weekdays": [
+      "월",
+      "화",
+      "수",
+      "목",
+      "금",
+      "토",
+      "일"
+    ],
+    "stamps_a11y": "이번 주 도장 {n}개",
+    "_status": "stamps_a11y 는 임시(라이터 확정 필요)",
+    "continue": "이어서 하기"
   },
   "done": {
     "title": "오늘 코스를 마쳤어요",
@@ -243,13 +262,6 @@
         "그때까지 코스는 볼 수 있어요"
       ]
     }
-  },
-  "role": {
-    "title": "어떻게 쓰실 거예요?",
-    "child": "자녀예요",
-    "child_sub": "부모님과 연결할 번호를 만들어요",
-    "parent": "받은 번호가 있어요",
-    "parent_sub": "가족에게 받은 번호를 써요"
   },
   "login": {
     "title": "이메일로 시작해요",
@@ -274,8 +286,15 @@
       "body": "잠시 뒤에 다시 해 볼까요?",
       "button": "다시 하기"
     },
-    "parent_device": "이 폰은 부모님 폰으로 쓰고 있어요",
-    "back": "처음으로"
+    "back": "처음으로",
+    "code_label": "인증번호 6자리",
+    "code_auto_hint": "6자리를 다 쓰면 바로 확인해요",
+    "checking": "인증번호를 확인하고 있어요",
+    "blocked_parent_device": {
+      "title": "이 폰은 부모님 휴대폰으로 쓰고 있어요",
+      "body": "자녀 로그인은 자녀 휴대폰에서 해 주세요",
+      "button": "알겠어요"
+    }
   },
   "relation": {
     "title": "부모님을 어떻게 부르세요?",
@@ -291,7 +310,8 @@
     "use_on": "{호칭} 폰에서 이 번호를 써 주세요",
     "send": "번호 보내기",
     "wait": "연결 기다리기",
-    "share_message": "가화만사성에서 같이 쓸 번호예요. 앱을 열고 번호 6개를 써 주세요. {번호} (7일 동안 쓸 수 있어요)"
+    "share_message": "가화만사성에서 같이 쓸 번호예요. 앱을 열고 번호 6개를 써 주세요. {번호} (7일 동안 쓸 수 있어요)",
+    "show_a11y": "연결 번호 {앞}, {뒤}"
   },
   "connect_wait": {
     "title": "연결을 기다리고 있어요",
@@ -306,5 +326,27 @@
       "보여 주시면 앨범에서 볼 수 있어요"
     ],
     "button": "앨범으로"
+  },
+  "nav": {
+    "back": "‹ 이전",
+    "back_a11y": "이전 화면으로 가기",
+    "back_course": "‹ 오늘 코스",
+    "back_course_a11y": "오늘 코스로 돌아가기"
+  },
+  "first": {
+    "_status": "copy-v3-confirmed 8·9절. polaroid_a11y 는 리뷰 권고(눈에 보이는 AI 표시는 없음, 사용자 결정). 라이터 확정 전",
+    "wordmark": "가화만사성",
+    "polaroid_a11y": "옛날 사진 앨범, AI가 만든 그림",
+    "question": "이 휴대폰은 누구 거예요?",
+    "parent": "부모님 휴대폰이에요",
+    "parent_sub": "가족에게 받은 번호를 써요",
+    "child": "자녀 휴대폰이에요",
+    "child_sub": "부모님께 보낼 번호를 만들어요",
+    "intro_title": "하루 한 장, 우리 집 앨범",
+    "intro": [
+      "옛날 사진 보며 추억을 떠올려요",
+      "사진 속 낱말을 따라 써요",
+      "고른 답으로 자녀가 취향을 알아 가요"
+    ]
   }
 }

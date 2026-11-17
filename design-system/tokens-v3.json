@@ -130,6 +130,14 @@
     "blush": {
       "value": "#FF9E7A",
       "role": "해님 볼"
+    },
+    "accentSun": {
+      "value": "#FFE29A",
+      "role": "첫 화면 소개 아이콘 원(사진). 장식, 정보 전달 안 함. inkTitle 대비 9.54"
+    },
+    "accentPeach": {
+      "value": "#FFD6C2",
+      "role": "첫 화면 소개 아이콘 원(가족). 장식, 정보 전달 안 함. inkTitle 대비 8.99"
     }
   },
   "colorRules": [

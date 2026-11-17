@@ -35,6 +35,7 @@ export const keepTail = (t: string) => {
 // 동작 줄이기면 300ms 페이드만, 스크린리더가 켜져 있거나 두 번째부터는 끝 상태로 바로.
 // 첫 화면 모션은 앱 실행당 한 번만. 다른 화면에 갔다가 돌아오면 끝 상태로 보여 준다.
 let firstScreenPlayed = false;
+let loggedOnce = false;
 export const resetFirstScreenMotion = () => {
   firstScreenPlayed = false;
 };
@@ -58,15 +59,18 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
   const [area, setArea] = useState<{w: number; h: number} | null>(null);
   const onArea = (e: LayoutChangeEvent) => {
     const {width, height} = e.nativeEvent.layout;
-    if (__DEV__) {
-      // 실기기 확인용(개발 빌드만): 남은 영역과 계산된 묶음 크기
-      console.log('[first-screen] area', Math.round(width), Math.round(height), 'stack', stackLayout(width, height), 'win', winW, winH, 'fontScale', fontScale);
-    }
     setArea(a => (a && a.w === width && a.h === height ? a : {w: width, h: height}));
   };
   const lay = showPhoto && area ? stackLayout(area.w, area.h) : null;
   const measured = area !== null || fullScroll; // 모션은 영역을 잰 뒤 시작(px 위치 계산 때문)
   const mode: MotionMode | null = measured ? reduce : null;
+  // 실기기 확인용(릴리스 포함, 실행당 한 번). 리드가 logcat 확인 후 제거 지시 예정
+  useEffect(() => {
+    if (!loggedOnce && area && mode !== null) {
+      loggedOnce = true;
+      console.log('[first-screen] area', Math.round(area.w), Math.round(area.h), 'front', lay ? lay.photoW : 'hidden', 'mode', mode, 'variant', lay ? `${lay.rotL}/${lay.spread}/${lay.single ? 'single' : 'stack'}` : '-', 'win', winW, winH, 'fontScale', fontScale);
+    }
+  }, [area, mode, lay, winW, winH, fontScale]);
 
   // 등장 모션 값(0→1). 심볼 1개 + 항목 3줄 + 아이콘 원 3개
   const symbol = useRef(new Animated.Value(0)).current;
@@ -130,6 +134,8 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
           {ask}
         </View>
       }>
+      {/* 워드마크~소개는 한 덩어리(시안 FS_D: 제목 위 10, 줄 간격 6). 남는 높이는 사진 영역으로 */}
+      <View style={styles.head}>
       {brand}
       {showIntro ? (
         <View accessible accessibilityLabel={[f.intro_title, ...f.intro].join('. ')} style={styles.intro}>
@@ -151,6 +157,7 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
           ))}
         </View>
       ) : null}
+      </View>
       <View testID="polaroid-area" style={styles.area} onLayout={onArea}>
         {/* 사진 묶음은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}
         <View testID="polaroid-pinned" style={styles.pinned} pointerEvents="none">
@@ -162,9 +169,10 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 }
 
 const styles = StyleSheet.create({
-  brand: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16}, // 위 여백 확대(QA 첫 화면 #10)
+  head: {gap: 10},
+  brand: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4},
   wordmark: {color: color.inkTitle},
-  intro: {gap: 6, marginTop: 10},
+  intro: {gap: 6},
   item: {flexDirection: 'row', alignItems: 'center', gap: 10},
   circle: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center'},
   itemText: {flexShrink: 1},
