@@ -40,7 +40,7 @@ test('작은 화면: 보조 문구 → 제목 크기 → 링크를 위 줄로 �
   await openConnect();
   expect(screen.getByTestId('connect-safe')).toBeTruthy();
   await layout(4 * 60 + 104);
-  expect(screen.queryByTestId('connect-safe')).toBeNull(); // 1단계: 안심 줄 숨김(칸 아래 안내는 남음)
+  expect(screen.getByTestId('connect-safe')).toBeTruthy(); // UX U4: 안심 줄은 줄어들어도 남는다
   await layout(4 * 60 + 104);
   const {StyleSheet} = require('react-native');
   expect(StyleSheet.flatten(screen.getByRole('header').props.style).fontSize).toBe(22);

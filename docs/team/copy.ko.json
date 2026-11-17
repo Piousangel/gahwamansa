@@ -284,7 +284,12 @@
     "ai_notice": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
     "family_row": "연결된 가족",
     "sfx": "도장 소리",
-    "sfx_sub": "도장을 찍을 때 짧은 소리"
+    "sfx_sub": "도장을 찍을 때 짧은 소리",
+    "group_family": "가족",
+    "group_sound": "알림과 소리",
+    "group_app": "앱",
+    "share_scope": "가족에게는 고른 답과 날짜만 보여요",
+    "_status": "group_* 는 시안 P13_more v2 구역 제목(라이터 확인 전)"
   },
   "delete": {
     "parent": {
@@ -349,7 +354,7 @@
     "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
     "stamps_a11y_none": "이번 주 도장",
     "step_a11y": "{단계}, {전체}단계 중 {n}단계",
-    "_status": "copy-v3 11절(11-7 #18 포함)·6절 확정",
+    "_status": "copy-v3 11절(11-7 #18 포함)·6절 확정 / to_home 은 UX U13 초안(라이터 확인 전)",
     "continue": "이어서 하기",
     "done_today": "오늘 코스는 여기까지예요. 내일 또 만나요",
     "review_link": "오늘 코스 다시 보기",
@@ -357,7 +362,8 @@
     "done_unlinked": "오늘 코스를 마쳤어요",
     "done_unlinked_sub": "번호를 받으면 그때부터 고른 답이 가족에게 보여요",
     "declined_banner": "고른 답은 저장되지 않아요",
-    "declined_link": "다시 정하기"
+    "declined_link": "다시 정하기",
+    "to_home": "오늘 코스로"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -389,7 +395,11 @@
     "first_stamp": "오늘 첫 도장을 찍었어요",
     "button": "알겠어요",
     "unlinked_body": "도장을 찍었어요. 번호를 받으면 그때부터 고른 답이 가족에게 보여요",
-    "skip_hint": "화면을 누르면 바로 넘어가요"
+    "skip_hint": "화면을 누르면 바로 넘어가요",
+    "stamped": "도장을 찍었어요",
+    "next_photo": "내일 새 사진이 와요",
+    "next_photo_time": "내일 {시각}에 새 사진이 와요",
+    "_status": "next_photo·next_photo_time 은 UX U5 초안(라이터 확인 전)"
   },
   "question": {
     "need_choice": "하나를 골라 주세요",

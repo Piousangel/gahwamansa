@@ -22,6 +22,14 @@ class HapticModule(private val context: ReactApplicationContext) : ReactContextB
     }
   }
 
+  // 번호 키패드 키 누름(UX U9): KEYBOARD_TAP. 시스템 '터치 진동' 설정을 따른다
+  @ReactMethod
+  fun keyTap() {
+    UiThreadUtil.runOnUiThread {
+      context.currentActivity?.window?.decorView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+    }
+  }
+
   companion object {
     const val NAME = "HapticModule"
   }

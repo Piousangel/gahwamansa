@@ -179,11 +179,9 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       <Text20 size={level >= 2 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
         {TITLE}
       </Text20>
-      {help ? (
-        <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20>
-      ) : level >= 1 ? null : (
-        <Text20 testID="connect-safe">{copy.safe.money}</Text20>
-      )}
+      {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
+      {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4). 모자라면 뒤 단계(제목 줄임·링크 위로·스크롤)로 */}
+      <Text20 testID="connect-safe">{copy.safe.money}</Text20>
       <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
         {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
         <View style={overflow ? null : styles.pinned}>

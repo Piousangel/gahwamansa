@@ -13,6 +13,7 @@ import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
+import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep} from './useFinishStep';
 
@@ -87,13 +88,16 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         error ? (
           <StepError error={error} onRetry={confirm} />
         ) : (
-          <BigButton
-            label={copy.course.next.question}
-            disabled={!choice}
-            disabledReason={copy.question.need_choice}
-            loading={saving}
-            onPress={confirm}
-          />
+          <>
+            <BigButton
+              label={copy.course.next.question}
+              disabled={!choice}
+              disabledReason={copy.question.need_choice}
+              loading={saving}
+              onPress={confirm}
+            />
+            <ToCourseHomeLink onPress={toCourseHome} />
+          </>
         )
       }>
       <Text20 size={32} weight="bold">{q.prompt ?? appCopy.question_title}</Text20>

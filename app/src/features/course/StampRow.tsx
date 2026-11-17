@@ -40,7 +40,12 @@ export function StampRow({days, todayIdx, appearIdx, fadeMs = 400, hideIdx, cell
             ) : on ? (
               <SunStamp testID={`stamp-on-${i}`} variant={i} size={40} />
             ) : (
-              <View style={[styles.empty, i === todayIdx ? styles.today : null]} />
+              // UX U6: 지난 빈 날은 원 없이 요일 글자만(채워야 할 칸으로 읽히지 않게), 오늘 굵은 점선, 이후 연한 점선
+              i < todayIdx ? (
+                <View testID={`stamp-past-${i}`} style={styles.past} />
+              ) : (
+                <View testID={`stamp-empty-${i}`} style={[styles.empty, i === todayIdx ? styles.today : styles.future]} />
+              )
             )}
             <Text20 style={[styles.day, i === todayIdx ? styles.dayToday : null]}>{c.weekdays[i]}</Text20>
           </View>
@@ -72,6 +77,8 @@ const styles = StyleSheet.create({
   hidden: {opacity: 0},
   empty: {width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderStyle: 'dashed', borderColor: color.line, marginVertical: 2},
   today: {borderWidth: 3, borderColor: color.action},
+  future: {borderColor: color.lineSoft},
+  past: {width: 36, height: 36, marginVertical: 2},
   day: {color: color.inkSub, fontWeight: 'bold'},
   dayToday: {color: color.ink, textDecorationLine: 'underline'},
 });

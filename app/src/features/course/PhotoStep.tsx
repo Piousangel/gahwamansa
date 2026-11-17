@@ -12,6 +12,7 @@ import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
+import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 
 // review: 코스를 다 마친 뒤 '오늘 코스 다시 보기'(시안 P3 v4 B, 기능 회의 B2). 보기 전용 — 기록 호출 없음, 하단은 '돌아가기'.
@@ -49,7 +50,10 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         ) : error ? (
           <StepError error={error} onRetry={go} />
         ) : (
-          <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
+          <>
+            <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
+            <ToCourseHomeLink onPress={toCourseHome} />
+          </>
         )
       }>
       <View testID="photo-polaroid" style={[styles.polaroid, {maxWidth: frameW}]}>
