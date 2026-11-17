@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0029) · 2026-11-17
+# 서버 계약 노트 (0019~0030) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -75,6 +75,15 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - redeem과 **같은 시도 한도**(기기 10분 5회 실패, 전역 300회)를 공유한다 — peek 실패도 redeem 한도에 들어간다. 꺼진·상한 찬 심사 번호는 invalid.
 - 재연결 번호면 그 어르신 호칭, 가입 번호면 가족 호칭. 성공해도 [연결하기]에서 redeem을 따로 불러야 한다(자동 연결 금지).
 
+### parent_family_list() → jsonb  (0030, P16 연결된 가족)
+```json
+{ "title": "엄마", "family": [ { "seq": 1, "connected_at": "timestamptz", "connected_date": "2026-11-12" } ] }
+```
+- 어르신 본인만(자녀는 `parent_required`, anon 불가). 같은 가족 자녀 계정마다 순번·연결 시각·KST 날짜만 — **자녀 이름·이메일·id 없음**.
+- `connected_at` = 그 자녀와 내가 같은 가족에 함께 있게 된 시각(먼저 있던 자녀는 내가 연결된 시각). 순서는 연결 시각순.
+- `title` = 가족이 나를 부르는 호칭(어르신별, 없으면 가족 호칭). 연결 전 기기는 `{title:null, family:[]}`, 심사 가족은 `family:[]`.
+- 연결 끊기 RPC는 없다(P16 시트 두 갈래: `withdraw_consent` 또는 P9 `delete_my_account`).
+
 ### get_my_cheers() → jsonb  (0020, P8)
 ```json
 { "unread_count": 2, "cheers": [ { "id": "uuid", "message_key": "warm_day", "sent_at": "timestamptz" } ] }
@@ -103,7 +112,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
-- `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 단위(0030~)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
+- `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 단위(0031~)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
 - `daily_sessions.photo_id·question_id·word_id`(0028): 그날 받은 콘텐츠. start_today·record_session_step이 채움, 이전 행은 null.
 - `purge_expired_data(p_now default now())`(0023): 답·코스 기록 session_date < 오늘-30, 응원 31일, 초대 번호 사용·만료 후 30일, 입력 시도 30일. pg_cron `purge-expired-data` 매일 00:10 KST. 원격 반영 시 pg_cron 확장 켜짐 확인.
 - 심사 접근(0025): `admin_create_review_family(uuid[], p_max_uses=5)` → 심사 가족(is_review)+만료 없는 재사용 번호, **기본 꺼짐**. `admin_set_review_code(family, true|false)`로 심사 제출 때만 켜고, 끝나면 `admin_cleanup_review_family(family)`(심사 어르신 프로필·익명 계정 삭제 + 번호 끔). 연결 수가 max_uses에 닿거나 꺼져 있으면 redeem은 일반 `invalid`. 운영: `node supabase/ops/create-review-access.mjs create|enable|disable|cleanup …` — 번호는 출력만, Play 콘솔에만 적는다.
