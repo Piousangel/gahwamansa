@@ -37,6 +37,8 @@ export type FakeOptions = {
   latest?: ChildSummary['latest']; // 자녀에게 보일 최근 답(미지정이면 저장한 답에서 만든다)
   who?: 'parent' | 'child' | 'none'; // 시작 시 이 기기의 상태(복원)
   childFamily?: boolean; // 자녀가 이미 가족을 만들었는가(번호 123456 발급된 상태)
+  childCodeExpired?: boolean; // 가족은 있는데 보낸 번호가 만료됨(살아 있는 번호 없음)
+  childCodeNever?: boolean; // 가족은 있는데 번호를 받은 적 없음
   childLinked?: boolean; // 어르신이 이미 연결됐는가
   weekDone?: number[]; // 이번 주(월=0) 이미 마친 요일(오늘 완료는 따로 더함)
   socialResult?: 'ok' | 'cancelled' | 'offline' | 'fail'; // signInWithSocial 결과(기본 ok)
@@ -57,6 +59,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   const baseStreak = opts.streak ?? 0;
   let childFamily = opts.childFamily ?? opts.childLinked ?? false;
   let childLinked = opts.childLinked ?? false;
+  // 자녀 가족의 가입 번호: 'live' 살아 있음 / 'expired' 지난 번호만 / null 아직 없음
+  let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
   return {
     async signInWithSocial() {
@@ -91,7 +95,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         kind: 'family',
         parentTitle,
         linked: childLinked,
-        code: childLinked ? null : {code: '123456', expiresAt: '2099-01-01T00:00:00Z'},
+        code: !childLinked && childCode === 'live' ? {code: '123456', expiresAt: '2099-01-01T00:00:00Z'} : null,
+        hadExpired: !childLinked && childCode === 'expired',
       };
     },
     async whoAmI() {
@@ -102,6 +107,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return {family_id: 'fam-1', profile_id: 'child-1'};
     },
     async issueInviteCode() {
+      childCode = 'live'; // 새 번호를 받으면 이전 번호는 무효(서버 0018)
       return '123456'; // 어르신 쪽 fake redeem 이 받는 번호와 같게
     },
     async redeemInviteCode(code): Promise<RedeemResult> {

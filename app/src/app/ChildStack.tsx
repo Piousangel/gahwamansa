@@ -17,7 +17,7 @@ export type ChildParams = {
   Gate: undefined;
   Login: undefined;
   Relation: undefined;
-  Code: {code: string; title: string};
+  Code: {code: string; title: string; renewed?: boolean}; // renewed: 지난 번호가 만료돼 새로 받음
   Wait: undefined;
   Tabs: undefined;
   DeleteAccount: undefined;

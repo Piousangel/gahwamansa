@@ -14,7 +14,13 @@ export const PARENT_TITLES = ['엄마', '아빠', '어머니', '아버지', '할
 // 자녀 앱의 현재 단계(로그인 뒤). 번호 1개만 다룬다(빌드 1).
 export type ChildState =
   | {kind: 'no_family'}
-  | {kind: 'family'; parentTitle: string; linked: boolean; code: {code: string; expiresAt: string} | null};
+  | {
+      kind: 'family';
+      parentTitle: string;
+      linked: boolean;
+      code: {code: string; expiresAt: string} | null; // 살아 있는 가입 번호(가족당 1개, 0018)
+      hadExpired: boolean; // 살아 있는 번호가 없고, 쓰지 않은 지난 번호가 있다(만료·무효화) → "새 번호 받기"
+    };
 export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
 export type DeleteScope = 'parent' | 'child' | 'family';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)

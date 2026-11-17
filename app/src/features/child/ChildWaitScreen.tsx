@@ -86,7 +86,10 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
     }
     try {
       const code = state.code?.code ?? (await api.issueInviteCode()); // 쓸 수 있는 번호가 없을 때만 새로 만든다
-      navigation.navigate('Code', {code, title});
+      navigation.navigate('Code', {code, title, renewed: !state.code && state.hadExpired});
+      if (!state.code) {
+        check(); // 새 번호를 받았으니 대기 화면 상태도 맞춘다
+      }
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -120,12 +123,18 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
     <Screen
       bottom={
         <>
-          <BigButton label={w.show_code} disabled={!state} onPress={showCode} />
+          {/* 번호가 살아 있으면 "번호 다시 보기", 만료됐을 때만 "새 번호 받기"(받으면 이미 보낸 번호는 무효), 받은 적 없으면 "번호 받기" */}
+          <BigButton
+            label={!state || state.code ? w.show_code : state.hadExpired ? w.new_code : w.get_code}
+            disabled={!state}
+            onPress={showCode}
+          />
           <BigButton variant="secondary" label={w.send} disabled={!state?.code} onPress={send} />
         </>
       }>
       <Text20 size={28} weight="bold">{w.title}</Text20>
       {state ? <Text20>{withTitle(w.body, title)}</Text20> : <Text20>{appCopy.loading}</Text20>}
+      {state && !state.code && state.hadExpired ? <Text20 weight="bold">{w.expired}</Text20> : null}
       {error ? (
         <>
           <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20>

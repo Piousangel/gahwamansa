@@ -57,11 +57,11 @@ select is((public.redeem_invite_code('822222')) ->> 'ok', 'true', '재연결 코
 reset role;
 select is((select count(*)::int from public.invite_codes where code = '833333' and expires_at < now()), 1, '같은 어르신의 다른 미사용 재연결 코드는 만료된다');
 
--- 7~8. 활성 가입 코드가 5개여도 새로 발급하면 가장 오래된 코드를 교체하고 오류가 없다
+-- 7~8. 가입 번호를 여러 번 새로 받아도 막히지 않고, 살아 있는 것은 1개다(0018, 이전에는 5개 상한 교체)
 select pg_temp.act_as('82000000-0000-0000-0000-0000000000c1', false);
 select lives_ok($$ do $b$ begin for i in 1..6 loop perform public.issue_invite_code(); end loop; end $b$ $$, '코드를 6번 발급해도 막히지 않는다');
 reset role;
-select is((select count(*)::int from public.invite_codes where family_id = '8f200000-0000-0000-0000-000000000001' and used_at is null), 5, '활성 코드는 5개로 유지된다');
+select is((select count(*)::int from public.invite_codes where family_id = '8f200000-0000-0000-0000-000000000001' and used_at is null and expires_at > now()), 1, '살아 있는 가입 번호는 1개로 유지된다');
 
 -- 9~10. 콘텐츠 번호에 구멍(1,2,5)이 있어도 존재하는 날 중에서 고른다(시작 2일 후 -> 세 번째 = 5일)
 select pg_temp.act_as('83000000-0000-0000-0000-0000000000a1', true);

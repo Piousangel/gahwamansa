@@ -158,6 +158,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       }
       const linked = (data.parents ?? []).length > 0;
       let code: {code: string; expiresAt: string} | null = null;
+      let hadExpired = false;
       if (!linked) {
         // 아직 쓰지 않은 가입 번호(재연결 번호 제외) 중 가장 늦게 끝나는 것 1개
         const {data: row, error: ce} = await sb
@@ -171,8 +172,18 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
           .maybeSingle();
         if (ce) fail('invite_codes', ce);
         code = row ? {code: row.code, expiresAt: row.expires_at} : null;
+        if (!code) {
+          // 살아 있는 번호가 없으면: 쓰지 않은 지난 가입 번호(만료·새 번호로 무효화)가 있었는지
+          const {count, error: pe} = await sb
+            .from('invite_codes')
+            .select('id', {count: 'exact', head: true})
+            .is('used_at', null)
+            .is('target_profile_id', null);
+          if (pe) fail('invite_codes', pe);
+          hadExpired = (count ?? 0) > 0;
+        }
       }
-      return {kind: 'family', parentTitle: data.parent_title ?? '부모님', linked, code};
+      return {kind: 'family', parentTitle: data.parent_title ?? '부모님', linked, code, hadExpired};
     },
     async whoAmI() {
       const {data, error} = await sb.auth.getSession();

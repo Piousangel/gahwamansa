@@ -47,17 +47,17 @@ insert into public.profiles (id, user_id, family_id, role)
   select '1d000000-0000-0000-0000-0000000000a1', null, family_id, 'parent' from public.profiles where user_id = 'd0000000-0000-0000-0000-0000000000c1';
 select pg_temp.act_as('d0000000-0000-0000-0000-0000000000c1', false);
 select lives_ok($$ select public.issue_invite_code('1d000000-0000-0000-0000-0000000000a1') $$, '우리 가족 어르신은 재연결 대상으로 지정할 수 있다');
--- 11. 만료된 미사용 코드는 발급 시 정리된다
+-- 11. 만료된 지 하루가 지난 미사용 코드는 발급 시 정리된다(0018: 하루 동안은 'expired' 안내용으로 남김)
 reset role;
 insert into public.invite_codes (code, family_id, created_by, expires_at)
-  select '999999', family_id, id, now() - interval '1 day' from public.profiles where user_id = 'd0000000-0000-0000-0000-0000000000c1';
+  select '999999', family_id, id, now() - interval '2 days' from public.profiles where user_id = 'd0000000-0000-0000-0000-0000000000c1';
 select pg_temp.act_as('d0000000-0000-0000-0000-0000000000c1', false);
 select public.issue_invite_code();
 select is((select count(*)::int from public.invite_codes where code = '999999'), 0, '만료된 코드는 정리된다');
--- 12~13. 활성 코드는 가족당 5개까지, 모두 서로 다르다
+-- 12~13. 0018: 살아 있는 가입 번호는 가족당 1개(새로 받으면 이전 번호 만료), 여러 번 받아도 막히지 않는다
 do $$ begin for i in 1..2 loop perform public.issue_invite_code(); end loop; end $$;
-select is((select count(distinct code)::int from public.invite_codes where used_at is null), 5, '활성 코드 5개는 모두 다르다');
-select lives_ok($$ select public.issue_invite_code() $$, '활성 코드가 5개여도 새로 발급하면 가장 오래된 코드를 교체한다(too_many_codes 없음)');
+select is((select count(*)::int from public.invite_codes where used_at is null and target_profile_id is null and expires_at > now()), 1, '살아 있는 가입 번호는 1개다');
+select lives_ok($$ select public.issue_invite_code() $$, '여러 번 새로 받아도 막히지 않는다(too_many_codes 없음)');
 -- 14. 로그인 전(anon)은 함수를 실행할 수 없다
 reset role;
 set local role anon;

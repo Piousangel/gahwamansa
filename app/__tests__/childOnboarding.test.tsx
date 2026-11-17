@@ -172,7 +172,7 @@ test('realApi: 자녀 상태 — 가족 없음 / 대기(번호) / 연결됨', as
   await expect(mk({data: null, error: {code: 'P0001', message: 'child_required'}}).getChildState()).resolves.toEqual({kind: 'no_family'});
   await expect(
     mk({data: {parent_title: '엄마', parents: []}, error: null}, {code: '123456', expires_at: '2026-11-24T00:00:00Z'}).getChildState(),
-  ).resolves.toEqual({kind: 'family', parentTitle: '엄마', linked: false, code: {code: '123456', expiresAt: '2026-11-24T00:00:00Z'}});
+  ).resolves.toEqual({kind: 'family', parentTitle: '엄마', linked: false, code: {code: '123456', expiresAt: '2026-11-24T00:00:00Z'}, hadExpired: false});
   await expect(
     mk({data: {parent_title: '엄마', parents: [{shared: false, latest: null}]}, error: null}).getChildState(),
   ).resolves.toMatchObject({kind: 'family', linked: true});
