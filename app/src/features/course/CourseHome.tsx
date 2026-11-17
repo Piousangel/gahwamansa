@@ -10,6 +10,10 @@ import {StepRow} from '../../ui/StepRow';
 import {color, radius} from '../../ui/tokens';
 import {appCopy, CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
+import {StampRow} from './StampRow';
+import {kstDateLine, kstWeekdayIndex, weekStamps} from './stamps';
+import {Stitch} from '../../ui/assets/album';
+import {TextLink} from '../link/TextLink';
 import {errorMessage} from './useFinishStep';
 import type {StepName} from '../types';
 
@@ -64,14 +68,24 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const dock = current ? (
     <BigButton label={c.step[current.step]} onPress={() => navigation.navigate(current.route)} />
   ) : undefined;
-  return (
-    <Screen top={<Title />} bottom={dock}>
+  const todayIdx = kstWeekdayIndex();
+  const stamps = weekStamps(todayIdx, content.streak, all);
+  // 미연결 열람: 상단 얇은 띠 한 줄 + 작은 링크(오늘 할 일보다 가볍게, 주 버튼은 아래 하나뿐)
+  const top = (
+    <>
       {preview ? (
-        <View style={styles.notice}>
-          <Text20 weight="bold">{c.disconnected_banner}</Text20>
-          <BigButton variant="secondary" label={c.write_code} onPress={() => navigation.popTo('Connect')} />
+        <View style={styles.strip}>
+          <Text20 style={styles.stripText}>{c.disconnected_banner}</Text20>
+          <TextLink label={c.write_code} onPress={() => navigation.popTo('Connect')} />
         </View>
       ) : null}
+      <Title />
+      <Text20 testID="date-line" style={styles.date}>{kstDateLine()}</Text20>
+      <Stitch width="100%" />
+    </>
+  );
+  return (
+    <Screen top={top} bottom={dock}>
       {syncError ? (
         <View style={styles.notice}>
           <Text20 size={24} weight="bold" accessibilityLiveRegion="polite">{syncError.title}</Text20>
@@ -83,9 +97,12 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           <Text20 size={24} weight="bold">{copy.done.title}</Text20>
           <Text20>{copy.done.body}</Text20>
         </>
-      ) : done.length === 0 ? (
-        <Text20 size={24}>{c.greeting}</Text20>
+      ) : done.length === 1 ? (
+        <Text20 size={24}>{c.left_two}</Text20>
+      ) : done.length === 2 ? (
+        <Text20 size={24}>{c.left_one}</Text20>
       ) : null}
+      <StampRow days={stamps} todayIdx={todayIdx} />
       {!consented && !preview ? (
         <View style={styles.notice}>
           <Text20>{copy.consent.title}</Text20>
@@ -116,7 +133,11 @@ function Title() {
 }
 
 const styles = StyleSheet.create({
-  title: {paddingBottom: 8},
+  title: {paddingBottom: 4},
+  date: {color: color.handwrite},
+  // 얇은 띠: 옅은 면, 테두리 없음, 한 줄 + 오른쪽 링크
+  strip: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.noticeSoft, borderRadius: radius.chip, paddingHorizontal: 12, marginBottom: 8},
+  stripText: {flex: 1, fontSize: 20},
   steps: {gap: 12},
   notice: {backgroundColor: color.noticeSoft, borderRadius: radius.card, borderWidth: 4, borderColor: color.action, paddingVertical: 14, paddingHorizontal: 16, gap: 12},
 });

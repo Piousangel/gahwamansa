@@ -8,18 +8,20 @@ type Props = {
   onDigit: (d: string) => void;
   onDelete: () => void;
   onClear: () => void;
+  /** 칸·키 높이(기본 size.codeBox). 화면이 남은 높이에 맞춰 64~68 로 정한다. */
+  keyHeight?: number;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
 // 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34("모두 지움" 20, "지움" 24).
-function Key({label, a11y, onPress, textSize = 34}: {label: string; a11y: string; onPress: () => void; textSize?: number}) {
+function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={a11y}
       onPress={onPress}
-      style={({pressed}) => [styles.key, pressed ? styles.keyPressed : null]}>
+      style={({pressed}) => [styles.key, h ? {minHeight: h} : null, pressed ? styles.keyPressed : null]}>
       <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.keyText, {fontSize: textSize}]}>
         {label}
       </Text>
@@ -27,12 +29,12 @@ function Key({label, a11y, onPress, textSize = 34}: {label: string; a11y: string
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight}: Props) {
   return (
     <View>
       <View style={styles.cells} accessibilityLabel={`입력한 번호 ${formatCode(value)}`}>
         {Array.from({length: CODE_LENGTH}).map((_, i) => (
-          <View key={i} testID={`code-cell-${i}`} style={[styles.cell, i === Math.min(value.length, CODE_LENGTH - 1) && value.length < CODE_LENGTH ? styles.cellNow : null]}>
+          <View key={i} testID={`code-cell-${i}`} style={[styles.cell, keyHeight ? {minHeight: keyHeight} : null, i === Math.min(value.length, CODE_LENGTH - 1) && value.length < CODE_LENGTH ? styles.cellNow : null]}>
             <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.cellText}>{value[i] ?? ''}</Text>
           </View>
         ))}
@@ -40,14 +42,14 @@ export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
       {ROWS.map(r => (
         <View key={r[0]} style={styles.row}>
           {r.map(d => (
-            <Key key={d} label={d} a11y={`숫자 ${d}`} onPress={() => onDigit(d)} />
+            <Key key={d} h={keyHeight} label={d} a11y={`숫자 ${d}`} onPress={() => onDigit(d)} />
           ))}
         </View>
       ))}
       <View style={styles.row}>
-        <Key label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={20} />
-        <Key label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
-        <Key label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={24} />
+        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={20} />
+        <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
+        <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={24} />
       </View>
     </View>
   );

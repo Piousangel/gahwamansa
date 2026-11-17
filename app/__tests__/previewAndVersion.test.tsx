@@ -21,15 +21,15 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   await previewHome(api);
   expect(screen.queryByRole('button', {name: '설정'})).toBeNull();
   expect(screen.queryByRole('button', {name: '좋아요'})).toBeNull();
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
-  await press(/둘 중 고르기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
-  await press(/글씨 쓰기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('다 썼어요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
@@ -62,11 +62,11 @@ test('앱은 동의로 알고 있으나 서버가 거부하면(consent_required)
   await toHomeConsented(api);
   await api.withdrawConsent(); // 다른 경로로 서버 동의가 풀린 상황
   const save = jest.spyOn(api, 'saveAnswer');
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
-  await press(/둘 중 고르기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
@@ -110,7 +110,7 @@ test('포그라운드 재조회 실패는 알리고 다시 할 수 있다(코스
   jest.spyOn(api, 'getTodayContent').mockRejectedValueOnce(new Error('boom'));
   await fire();
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
-  expect(screen.getByRole('button', {name: /사진 보기/})).toBeTruthy();
+  expect(screen.getByRole('button', {name: '이어서 하기'})).toBeTruthy();
   await press('다시 하기');
   await waitFor(() => expect(screen.queryByText('잠깐 문제가 생겼어요')).toBeNull());
 });

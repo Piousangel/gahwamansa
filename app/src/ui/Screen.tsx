@@ -12,11 +12,13 @@ type Props = {
   scrollEnabled?: boolean;
   /** 하단 고정 영역 최대 높이 비율(기본 40%). 첫 화면처럼 버튼이 주인공인 화면만 늘린다. */
   dockMaxRatio?: number;
+  /** 본문이 남은 높이를 꽉 채운다(스크롤 없는 한 화면 구성, 예: 첫 화면). */
+  fill?: boolean;
 };
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   const topPad = Math.max(insets.top, space.xl);
@@ -28,9 +30,9 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
       <ScrollView
         testID="screen-body"
         style={styles.body}
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={fill ? false : scrollEnabled}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.bodyPad, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
+        contentContainerStyle={[styles.bodyPad, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
         {children}
       </ScrollView>
       {bottom ? (
@@ -51,6 +53,7 @@ const styles = StyleSheet.create({
   bg: {flex: 1, backgroundColor: color.paper},
   top: {paddingHorizontal: layout.bodyPadding.x},
   body: {flex: 1, minHeight: 0},
+  fill: {flexGrow: 1},
   bodyPad: {
     paddingTop: layout.bodyPadding.top,
     paddingHorizontal: layout.bodyPadding.x,

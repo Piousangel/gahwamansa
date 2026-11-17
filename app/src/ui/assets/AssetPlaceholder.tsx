@@ -11,7 +11,7 @@ export function AssetPlaceholder({name, width, height, label}: Props) {
     return <Image source={source} style={{width, height}} />;
   }
   return (
-    <View style={[styles.box, {width, height}]}>
+    <View testID="asset-placeholder" style={[styles.box, {width, height}]}>
       <Text style={styles.text}>{label ?? `[아이콘: ${name}]`}</Text>
     </View>
   );

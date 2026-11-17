@@ -38,7 +38,7 @@ test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () =
 test('기록이 실패하면 완료 처리하지 않고 다시 하기를 안내한다', async () => {
   const api = createFakeApi({failRecord: 1, consented: true});
   await toHomeConsented(api);
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
@@ -51,7 +51,7 @@ test('소요 시간은 0~7200초 숫자로 보낸다', async () => {
   const api = createFakeApi({consented: true});
   const rec = jest.spyOn(api, 'recordSessionStep');
   await toHomeConsented(api);
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   const d = rec.mock.calls[0][1];
@@ -61,11 +61,11 @@ test('소요 시간은 0~7200초 숫자로 보낸다', async () => {
 
 async function toQuestion(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press(/둘 중 고르기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
 }
@@ -105,7 +105,7 @@ test('already_linked 버튼은 코스로 이동한다', async () => {
   render(<AppRoot api={createFakeApi({consented: true, linked: true})} role="parent" />);
   await enterCode('444444');
   await waitFor(() => screen.getByText('이미 연결돼 있어요'));
-  await press('사진 보기');
+  await press('이어서 하기');
   await waitFor(() => screen.getByText('오늘의 코스'));
 });
 
@@ -117,7 +117,7 @@ test('복원: 연결된 기기는 코스 홈으로 시작하고 완료 단계는
 
 test('복원: 연결 안 된 기기는 Connect 로 시작', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" restore />);
-  await waitFor(() => screen.getByText('안녕하세요, 해님이에요'));
+  await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
 test('포그라운드로 돌아오면 서버에서 다시 불러온다', async () => {

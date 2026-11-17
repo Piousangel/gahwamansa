@@ -5,7 +5,6 @@ import {Screen} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
@@ -32,7 +31,6 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
       }>
       <Text20 size={36} weight="bold">{content.photo.keyword}</Text20>
       <Text20 size={22}>{appCopy.hangul_hint}</Text20>
-      <AssetPlaceholder name="writing-guide" width={300} height={200} />
     </Screen>
   );
 }

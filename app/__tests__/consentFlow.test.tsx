@@ -3,16 +3,16 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {press, toHome, toHomeConsented} from '../testUtils/flow';
 
 async function runCourse() {
-  await press(/사진 보기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press(/둘 중 고르기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press(/글씨 쓰기/);
+  await press('이어서 하기');
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('다 썼어요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));

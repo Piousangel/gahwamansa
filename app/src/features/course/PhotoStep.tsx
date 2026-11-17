@@ -7,7 +7,7 @@ import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, shadow} from '../../ui/tokens';
-import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
+import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
@@ -37,7 +37,11 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
       }>
       <View style={styles.polaroid}>
         {photo.image_url.startsWith('pending://') || imageFailed ? (
-          <AssetPlaceholder name="photo-day1" width={272} height={236} label={imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder} />
+          // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
+          <View style={[styles.photo, styles.pending]}>
+            <Icon name="icon-photo" size={40} color={color.inkSub} />
+            <Text20 style={styles.pendingText}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text20>
+          </View>
         ) : (
           <Image source={{uri: photo.image_url}} style={styles.photo} accessibilityLabel={photo.caption} onError={() => setImageFailed(true)} />
         )}
@@ -58,4 +62,6 @@ const styles = StyleSheet.create({
   photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft, borderRadius: 2},
   caption: {textAlign: 'center'},
   sub: {color: color.inkSub},
+  pending: {alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12},
+  pendingText: {textAlign: 'center', color: color.inkSub},
 });
