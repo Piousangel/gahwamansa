@@ -57,22 +57,22 @@ flag, religious symbol, celebrity, deformed, blurry subject, oversaturated, HDR,
 | 일차 (원본) | 장면 | 영어 프롬프트 (SUBJECT, LIGHT, SEASON) | 한글 캡션 | 따라 쓰기 단어와 사진 일치 확인 항목 |
 |---|---|---|---|---|
 | 1 (1) | 마을 입구 큰 느티나무와 아래 돌 의자 | a huge old zelkova tree at a village entrance with a flat stone bench beneath it, dirt path, soft morning light, early autumn | 마을 입구 나무 | **나무**: 나무가 화면 한복판 큰 비중, 줄기와 잎이 선명. 돌 의자는 보조. 간판·표지석 글자 없음 |
-| 2 (7) | 마당 감나무에 주홍빛 감이 가득 | a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn | 감 익는 마당 | **감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격 |
-| 3 (8) | 한옥 지붕 위로 뜬 커다란 보름달 | a large full moon rising over a traditional Korean tiled roof with curved eaves, bright blue-gray dusk sky, soft glow | 한가위 보름달 | **달**: 둥근 보름달이 지붕 위에서 눈에 띄게 큼(화면 폭 1/5 이상). 달 표면 얼굴 모양·글자 없음. 지붕 선 좌우 대칭 점검 |
-| 4 (9) | 장독대에 줄지어 선 항아리들, 아침 이슬 | rows of brown earthenware jars on a raised stone platform in a yard, dew drops, morning mist, clear sunrise light, early summer | 장독대 아침 | **항아리**: 항아리가 5~8개 보이고 뚜껑이 닫혀 있다. 모양·크기가 서로 다르되 녹지 않을 것. 독 위 글자 금지 |
-| 5 (3) | 안방 선반 위 라디오, 오후 햇살 | a small vintage transistor radio on a wooden shelf in a plain Korean room, paper-lattice window, warm afternoon sunlight, no visible dial numbers or brand | 라디오가 있던 방 | **라디오**: 라디오가 선반 위 주인공이고 안테나·스피커 격자가 보인다. 눈금 숫자·상표 글자 금지, 현대 TV·콘센트 없음 |
-| 6 (5) | 처마 아래 걸린 우산과 떨어지는 빗방울 | an old paper-and-bamboo style umbrella hanging under the eaves of a thatched farmhouse, raindrops falling from the roof edge, soft gray rainy light, early summer | 비 오는 날 처마 | **우산**: 우산(살과 손잡이)이 화면 안에 크게, 접히거나 걸린 모양 분명. 비닐·로고 우산 금지, 빗방울 선이 글자처럼 보이지 않게 |
-| 7 (10) | 툇마루 앞 댓돌에 놓인 고무신 한 켤레 | a single pair of rubber shoes on a stone step in front of a wooden porch of a Korean house, gentle midday light, spring | 툇마루 고무신 | **고무신**: 한 켤레(좌우 한 쌍)가 선명. 앞코 모양 대칭, 상표·바닥 무늬 글자 금지. 개수가 3개 이상이면 재생성 |
-| 8 (13) | 명절 상 위 접시에 담긴 송편 | a ceramic plate of half-moon rice cakes (songpyeon) with pine needles on a low wooden table, warm indoor light, Chuseok morning | 송편 빚는 날 | **송편**: 반달 모양 떡이 접시 위에 6개 안팎, 솔잎 자국. 손·얼굴 없음. 만두·경단으로 보이면 불합격 |
-| 9 (16) | 소풍 날 풀밭 보자기 위 도시락 | a cloth wrapping square spread on grass with an aluminum lunchbox and rice balls, green meadow, bright spring picnic light | 소풍 도시락 | **도시락**: 도시락통(뚜껑 열려 음식이 보임)이 보자기 위 중앙. 브랜드·캐릭터 그림 금지 |
-| 10 (18) | 여름 저녁 마당 평상 위 수박 한 통 | a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional | 여름 저녁 평상 | **평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지 |
-| 11 (11) | 교실 나무 책상 위 연필과 공책 | a wooden school desk with a pencil and an open plain notebook, soft window light, no writing on the page, spring morning classroom | 공책과 연필 | **연필**: 연필 1~2자루가 선명히 길게 보임(깎은 심). 공책 속 글씨·표지 글자 없음(백지). 손가락 나오면 불합격 |
-| 12 (15) | 우물가 두레박과 돌로 쌓은 우물 | a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer | 우물가 한낮 | **두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검) |
-| 13 (23) | 시골 부엌 아궁이와 벽에 걸린 바가지 | a traditional Korean farmhouse kitchen with a clay stove (agungi), iron pot, gourd ladles hanging on the wall, soft smoke, warm dim light, winter morning | 시골집 부엌 | **부엌**: 아궁이·솥·바가지가 한 화면에서 부엌임을 알 수 있게. 불은 작고 조용히, 검댕·위험 느낌 없음 |
-| 14 (27) | 가을 산길에 수북한 빨간 단풍잎 | a mountain path covered with red maple leaves, a few leaves in sharp focus in the foreground, soft light through trees, autumn | 단풍 든 산길 | **단풍잎**: 앞쪽에 단풍잎 모양(손바닥형 5갈래)이 크게 선명. 잎 모양 대칭 확인. 사람·표지판 없음 |
+| 2 (3) | 안방 선반 위 라디오, 오후 햇살 | a small vintage transistor radio on a wooden shelf in a plain Korean room, paper-lattice window, warm afternoon sunlight, no visible dial numbers or brand | 라디오가 있던 방 | **라디오**: 라디오가 선반 위 주인공이고 안테나·스피커 격자가 보인다. 눈금 숫자·상표 글자 금지, 현대 TV·콘센트 없음 |
+| 3 (23) | 시골 부엌 아궁이와 벽에 걸린 바가지 | a traditional Korean farmhouse kitchen with a clay stove (agungi), iron pot, gourd ladles hanging on the wall, soft smoke, warm dim light, winter morning | 시골집 부엌 | **부엌**: 아궁이·솥·바가지가 한 화면에서 부엌임을 알 수 있게. 불은 작고 조용히, 검댕·위험 느낌 없음 |
+| 4 (7) | 마당 감나무에 주홍빛 감이 가득 | a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn | 감 익는 마당 | **감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격 |
+| 5 (27) | 가을 산길에 수북한 빨간 단풍잎 | a mountain path covered with red maple leaves, a few leaves in sharp focus in the foreground, soft light through trees, autumn | 단풍 든 산길 | **단풍잎**: 앞쪽에 단풍잎 모양(손바닥형 5갈래)이 크게 선명. 잎 모양 대칭 확인. 사람·표지판 없음 |
+| 6 (13) | 명절 상 위 접시에 담긴 송편 | a ceramic plate of half-moon rice cakes (songpyeon) with pine needles on a low wooden table, warm indoor light, Chuseok morning | 송편 빚는 날 | **송편**: 반달 모양 떡이 접시 위에 6개 안팎, 솔잎 자국. 손·얼굴 없음. 만두·경단으로 보이면 불합격 |
+| 7 (8) | 한옥 지붕 위로 뜬 커다란 보름달 | a large full moon rising over a traditional Korean tiled roof with curved eaves, bright blue-gray dusk sky, soft glow | 한가위 보름달 | **달**: 둥근 보름달이 지붕 위에서 눈에 띄게 큼(화면 폭 1/5 이상). 달 표면 얼굴 모양·글자 없음. 지붕 선 좌우 대칭 점검 |
+| 8 (11) | 교실 나무 책상 위 연필과 공책 | a wooden school desk with a pencil and an open plain notebook, soft window light, no writing on the page, spring morning classroom | 공책과 연필 | **연필**: 연필 1~2자루가 선명히 길게 보임(깎은 심). 공책 속 글씨·표지 글자 없음(백지). 손가락 나오면 불합격 |
+| 9 (10) | 툇마루 앞 댓돌에 놓인 고무신 한 켤레 | a single pair of rubber shoes on a stone step in front of a wooden porch of a Korean house, gentle midday light, spring | 툇마루 고무신 | **고무신**: 한 켤레(좌우 한 쌍)가 선명. 앞코 모양 대칭, 상표·바닥 무늬 글자 금지. 개수가 3개 이상이면 재생성 |
+| 10 (16) | 소풍 날 풀밭 보자기 위 도시락 | a cloth wrapping square spread on grass with an aluminum lunchbox and rice balls, green meadow, bright spring picnic light | 소풍 도시락 | **도시락**: 도시락통(뚜껑 열려 음식이 보임)이 보자기 위 중앙. 브랜드·캐릭터 그림 금지 |
+| 11 (5) | 처마 아래 걸린 우산과 떨어지는 빗방울 | an old paper-and-bamboo style umbrella hanging under the eaves of a thatched farmhouse, raindrops falling from the roof edge, soft gray rainy light, early summer | 비 오는 날 처마 | **우산**: 우산(살과 손잡이)이 화면 안에 크게, 접히거나 걸린 모양 분명. 비닐·로고 우산 금지, 빗방울 선이 글자처럼 보이지 않게 |
+| 12 (9) | 장독대에 줄지어 선 항아리들, 아침 이슬 | rows of brown earthenware jars on a raised stone platform in a yard, dew drops, morning mist, clear sunrise light, early summer | 장독대 아침 | **항아리**: 항아리가 5~8개 보이고 뚜껑이 닫혀 있다. 모양·크기가 서로 다르되 녹지 않을 것. 독 위 글자 금지 |
+| 13 (15) | 우물가 두레박과 돌로 쌓은 우물 | a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer | 우물가 한낮 | **두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검) |
+| 14 (18) | 여름 저녁 마당 평상 위 수박 한 통 | a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional | 여름 저녁 평상 | **평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지 |
 
 - 인물을 넣어야 하면 뼈대의 "no people"를 `one small distant figure seen from behind`로 바꾸되 14장 중 1~2장 이내로 제한한다.
-- 5·13번은 실내라 필름 톤이 어두워지기 쉽다. 밝기를 올려 폴라로이드 안에서 사물이 보이게 한다.
+- 2·3번(재배치 전 5·13번)은 실내라 필름 톤이 어두워지기 쉽다. 밝기를 올려 폴라로이드 안에서 사물이 보이게 한다.
 
 ## 4. 검수 체크리스트 (한 항목이라도 불합격이면 재생성)
 | # | 항목 | 합격 | 불합격 예 |
@@ -89,6 +89,11 @@ flag, religious symbol, celebrity, deformed, blurry subject, oversaturated, HDR,
 | 10 | 해상도·화질 | 가로 1200px 이상으로 만든 원본, 확대해도 입자 이외 뭉개짐 없음 | 흐릿한 주 피사체 |
 | 11 | 앨범 일관성 | 14장을 나란히 놓았을 때 색 온도·밝기·입자가 비슷 | 한 장만 쨍한 채도, 한 장만 흑백 |
 | 12 | 저작권 | 특정 작품·사진을 그대로 닮지 않음, 상표 없음 | 알려진 사진 구도 모방 |
+| 13 | 성 역할 중립 | 집안일·농사·일터 장면에 "이건 여자 일, 이건 남자 일"을 정하는 인물 배치가 없음(인물이 있다면 성별이 드러나지 않는 뒷모습·실루엣) | 부엌에 앞치마 여성만, 지게에 남성만 |
+| 14 | 종교·의례 중립 | 명절은 음식·모임·놀이로만. 제사·차례 의례, 종교 시설·도구가 없음 | 제사상 위패·절하는 모습, 교회·절·성당, 염주·십자가 |
+| 15 | 직업·계층 중립 | 특정 직업군·빈부를 가르는 소품·배경이 주인공이 아님 | 판잣집·누더기 강조, 부잣집 과시, 공장·광산 작업 장면 |
+| 16 | 계절 단서 기록 | prompts.json `tags.season`·`season_cue`가 사진과 일치. 계절 무관(any) 칸은 잎·눈·과일 등 계절 단서가 화면에 없음 | any 칸인데 단풍·눈이 보임 |
+- 13~16은 개인화 회의(docs/team/board/2026-11-17-personalization/SUMMARY.md) 빌드 1 #2·#3. 콘텐츠를 성별·종교·직업으로 나누지 않는 대신, 어느 분이 보셔도 불편하지 않게 하는 규칙이다.
 
 ### 재생성 규칙과 상한(제안)
 1. 불합격 원인을 하나 골라 프롬프트에서 그 부분만 바꾼다(전부 바꾸지 않는다).
@@ -161,3 +166,33 @@ writer.md 표의 남은 장면을 그대로 두고 필요 시 순서만 조정�
 5. WebP 변환·용량 점검 후 Storage 업로드와 image_url 교체(개발 담당과 협의).
 6. 앱 안 "AI가 만든 그림" 표기 여부 결정.
 7. 가능하면 어르신 1~2분께 14장을 보여 드려 "무슨 사진 같으세요?"를 물어, 단어가 사진에서 바로 떠오르는지 확인(시험 결과는 이 문서에 없음).
+
+## 9. 계절 점검과 14칸 재배치 (2026-11-17, 개인화 회의 빌드 1 #3)
+- 전제: 커서(0024)는 처음 연결한 날 **1번 칸부터** 하루 1칸씩 가고 14칸이 끝나면 처음으로 돈다. 그래서 n번 칸은 시작 월과 상관없이 n일째(그리고 n+14일째)에 나온다. 아래 표의 날짜는 시작 월이 14일 안에 바뀌는 효과를 무시한 근사다.
+- 계절: 봄 3~5월, 여름 6~8월, 가을 9~11월, 겨울 12~2월. "정반대"는 여름↔겨울, 봄↔가을. 태그는 scripts/photos/prompts.json `tags`.
+- 14칸 계절 분포: 가을 5 · 여름 4 · 봄 3 · 겨울 1 · 무관 1. 글(캡션·질문)에 계절이 박힌 칸(`season_cue=text`)은 사진을 다시 만들어도 계절이 안 바뀐다: 감·단풍·송편·한가위·여름 평상.
+
+### 재배치 전(옛 순서)
+| 시작 월 | 정반대 계절 칸이 나오는 날 | 첫 7일 안 | 다른 계절 칸(14칸 중) |
+|---|---|---|---|
+| 9~11월 | 7, 9, 11 | 1 | 8 |
+| 12~2월 | 4, 6, 10, 12 | 2 | 12 |
+| 3~5월 | 1, 2, 3, 8, 14 | 3 | 10 |
+| 6~8월 | 13 | 0 | 9 |
+
+### 재배치 후(지금 시드)
+새 순서(재배치 전 번호): 1 나무(1) · 2 라디오(5) · 3 부엌(13) · 4 감(2) · 5 단풍(14) · 6 송편(8) · 7 보름달(3) · 8 연필(11) · 9 고무신(7) · 10 소풍(9) · 11 처마 우산(6) · 12 장독대(4) · 13 우물(12) · 14 여름 평상(10)
+| 시작 월 | 정반대 계절 칸이 나오는 날 | 첫 7일 안 | 다른 계절 칸(14칸 중) |
+|---|---|---|---|
+| 9~11월 | 8, 9, 10 | **0** | 8 |
+| 12~2월 | 11, 12, 13, 14 | **0** | 12 |
+| 3~5월 | 1, 4, 5, 6, 7 | 5(나빠짐) | 10 |
+| 6~8월 | 3 | 1 | 9 |
+
+### 판단과 남은 일
+- 출시·테스트 기간(11월~2월) 시작자는 첫 7일 동안 정반대 계절 칸을 보지 않는다. 첫날은 작성자가 고른 여는 장면(마을 입구 나무)을 유지했다.
+- **3~5월 시작자는 오히려 나빠진다**(가을 칸이 첫 주에 몰림). 순서를 바꾸는 것만으로는 14칸이 2주마다 한 바퀴 도는 구조를 못 고친다. 3월 전에 할 일:
+  1. 30일 확장(15~30)은 계절 무관 장면을 50% 이상으로(§7 제안 16개에 태그를 붙여 고름).
+  2. `season_cue=image`인 칸(나무·부엌·연필·고무신·소풍·처마·장독대·우물)은 사진만 계절 무관으로 다시 만들 수 있다(글 변경 없음, image_url은 게시 후에도 교체 가능). 생성 비용이 들어 사용자 승인 대상.
+  3. 근본 해결은 빌드 2 시즌 풀(상시 풀=계절 무관, 시즌 풀=날짜 구간 서빙).
+- 원격 상태: production은 아직 만들지 않아 게시 전이다. staging에 옛 순서의 시드가 이미 들어가 있으면 새 시드는 같은 day_index를 건너뛰고 WARNING만 낸다(0024). staging 콘텐츠를 맞추려면 사용자가 staging 콘텐츠·테스트 기록을 비우고 시드·사진 업로드를 다시 해야 한다(원격 작업이라 팀은 하지 않음).

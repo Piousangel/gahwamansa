@@ -13,7 +13,7 @@ export const assetRegistry: Record<AssetName, ImageSourcePropType | null> = {
   'icon-report': null, 'icon-cheer': null, 'photo-day1': null, 'writing-guide': null,
   // 첫 화면 소개 사진(번들): content/photos/day-01.jpg 를 480px 로 줄인 사본(약 86KB). 네트워크 없이 바로 보인다
   'intro-photo': require('./intro-photo.jpg'),
-  // 첫 화면 뒤 2장(day-02·day-09 를 360px 로 줄인 사본, 각 약 33·39KB)
+  // 첫 화면 뒤 2장(재배치 전 day-02·day-09, 지금 원본 이름 day-04·day-10 을 360px 로 줄인 사본, 각 약 33·39KB)
   'intro-photo-back-left': require('./intro-photo-back-left.jpg'),
   'intro-photo-back-right': require('./intro-photo-back-right.jpg'),
   // 구글 공식 G(google-g-light-square.svg 에서 G 영역만, 모양·색 그대로 크롬으로 래스터화 24dp @1x/2x/3x).

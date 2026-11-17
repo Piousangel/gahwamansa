@@ -7,111 +7,210 @@
    "scene": "마을 입구 큰 느티나무와 아래 돌 의자",
    "subject": "a huge old zelkova tree at a village entrance with a flat stone bench beneath it, dirt path, soft morning light, early autumn",
    "caption": "마을 입구 나무",
-   "check": "**나무**: 나무가 화면 한복판 큰 비중, 줄기와 잎이 선명. 돌 의자는 보조. 간판·표지석 글자 없음"
+   "check": "**나무**: 나무가 화면 한복판 큰 비중, 줄기와 잎이 선명. 돌 의자는 보조. 간판·표지석 글자 없음",
+   "tags": {
+    "season": "autumn",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
   },
   {
    "day": 2,
-   "orig": 7,
-   "scene": "마당 감나무에 주홍빛 감이 가득",
-   "subject": "a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn",
-   "caption": "감 익는 마당",
-   "check": "**감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격"
-  },
-  {
-   "day": 3,
-   "orig": 8,
-   "scene": "한옥 지붕 위로 뜬 커다란 보름달",
-   "subject": "a large full moon rising over a traditional Korean tiled roof with curved eaves, bright blue-gray dusk sky, soft glow",
-   "caption": "한가위 보름달",
-   "check": "**달**: 둥근 보름달이 지붕 위에서 눈에 띄게 큼(화면 폭 1/5 이상). 달 표면 얼굴 모양·글자 없음. 지붕 선 좌우 대칭 점검"
-  },
-  {
-   "day": 4,
-   "orig": 9,
-   "scene": "장독대에 줄지어 선 항아리들, 아침 이슬",
-   "subject": "rows of brown earthenware jars on a raised stone platform in a yard, dew drops, morning mist, clear sunrise light, early summer",
-   "caption": "장독대 아침",
-   "check": "**항아리**: 항아리가 5~8개 보이고 뚜껑이 닫혀 있다. 모양·크기가 서로 다르되 녹지 않을 것. 독 위 글자 금지"
-  },
-  {
-   "day": 5,
    "orig": 3,
    "scene": "안방 선반 위 라디오, 오후 햇살",
    "subject": "a small vintage transistor radio on a wooden shelf in a plain Korean room, paper-lattice window, warm afternoon sunlight, no visible dial numbers or brand",
    "caption": "라디오가 있던 방",
-   "check": "**라디오**: 라디오가 선반 위 주인공이고 안테나·스피커 격자가 보인다. 눈금 숫자·상표 글자 금지, 현대 TV·콘센트 없음"
+   "check": "**라디오**: 라디오가 선반 위 주인공이고 안테나·스피커 격자가 보인다. 눈금 숫자·상표 글자 금지, 현대 TV·콘센트 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   }
   },
   {
-   "day": 6,
-   "orig": 5,
-   "scene": "처마 아래 걸린 우산과 떨어지는 빗방울",
-   "subject": "an old paper-and-bamboo style umbrella hanging under the eaves of a thatched farmhouse, raindrops falling from the roof edge, soft gray rainy light, early summer",
-   "caption": "비 오는 날 처마",
-   "check": "**우산**: 우산(살과 손잡이)이 화면 안에 크게, 접히거나 걸린 모양 분명. 비닐·로고 우산 금지, 빗방울 선이 글자처럼 보이지 않게"
-  },
-  {
-   "day": 7,
-   "orig": 10,
-   "scene": "툇마루 앞 댓돌에 놓인 고무신 한 켤레",
-   "subject": "a single pair of rubber shoes on a stone step in front of a wooden porch of a Korean house, gentle midday light, spring",
-   "caption": "툇마루 고무신",
-   "check": "**고무신**: 한 켤레(좌우 한 쌍)가 선명. 앞코 모양 대칭, 상표·바닥 무늬 글자 금지. 개수가 3개 이상이면 재생성"
-  },
-  {
-   "day": 8,
-   "orig": 13,
-   "scene": "명절 상 위 접시에 담긴 송편",
-   "subject": "a ceramic plate of half-moon rice cakes (songpyeon) with pine needles on a low wooden table, warm indoor light, Chuseok morning",
-   "caption": "송편 빚는 날",
-   "check": "**송편**: 반달 모양 떡이 접시 위에 6개 안팎, 솔잎 자국. 손·얼굴 없음. 만두·경단으로 보이면 불합격"
-  },
-  {
-   "day": 9,
-   "orig": 16,
-   "scene": "소풍 날 풀밭 보자기 위 도시락",
-   "subject": "a cloth wrapping square spread on grass with an aluminum lunchbox and rice balls, green meadow, bright spring picnic light",
-   "caption": "소풍 도시락",
-   "check": "**도시락**: 도시락통(뚜껑 열려 음식이 보임)이 보자기 위 중앙. 브랜드·캐릭터 그림 금지"
-  },
-  {
-   "day": 10,
-   "orig": 18,
-   "scene": "여름 저녁 마당 평상 위 수박 한 통",
-   "subject": "a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional",
-   "caption": "여름 저녁 평상",
-   "check": "**평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지"
-  },
-  {
-   "day": 11,
-   "orig": 11,
-   "scene": "교실 나무 책상 위 연필과 공책",
-   "subject": "a wooden school desk with a pencil and an open plain notebook, soft window light, no writing on the page, spring morning classroom",
-   "caption": "공책과 연필",
-   "check": "**연필**: 연필 1~2자루가 선명히 길게 보임(깎은 심). 공책 속 글씨·표지 글자 없음(백지). 손가락 나오면 불합격"
-  },
-  {
-   "day": 12,
-   "orig": 15,
-   "scene": "우물가 두레박과 돌로 쌓은 우물",
-   "subject": "a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer",
-   "caption": "우물가 한낮",
-   "check": "**두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검)"
-  },
-  {
-   "day": 13,
+   "day": 3,
    "orig": 23,
    "scene": "시골 부엌 아궁이와 벽에 걸린 바가지",
    "subject": "a traditional Korean farmhouse kitchen with a clay stove (agungi), iron pot with lid, gourd ladles hanging on the wall, only a tiny calm ember glow inside the stove opening, no flames, no smoke, soft dim morning light from a small window, winter morning",
    "caption": "시골집 부엌",
-   "check": "**부엌**: 아궁이·솥·바가지가 한 화면에서 부엌임을 알 수 있게. 불은 작고 조용히, 검댕·위험 느낌 없음"
+   "check": "**부엌**: 아궁이·솥·바가지가 한 화면에서 부엌임을 알 수 있게. 불은 작고 조용히, 검댕·위험 느낌 없음",
+   "tags": {
+    "season": "winter",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
   },
   {
-   "day": 14,
+   "day": 4,
+   "orig": 7,
+   "scene": "마당 감나무에 주홍빛 감이 가득",
+   "subject": "a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn",
+   "caption": "감 익는 마당",
+   "check": "**감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격",
+   "tags": {
+    "season": "autumn",
+    "season_cue": "text",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
+  },
+  {
+   "day": 5,
    "orig": 27,
    "scene": "가을 산길에 수북한 빨간 단풍잎",
    "subject": "a mountain path covered with red maple leaves, a few leaves in sharp focus in the foreground, soft light through trees, autumn",
    "caption": "단풍 든 산길",
-   "check": "**단풍잎**: 앞쪽에 단풍잎 모양(손바닥형 5갈래)이 크게 선명. 잎 모양 대칭 확인. 사람·표지판 없음"
+   "check": "**단풍잎**: 앞쪽에 단풍잎 모양(손바닥형 5갈래)이 크게 선명. 잎 모양 대칭 확인. 사람·표지판 없음",
+   "tags": {
+    "season": "autumn",
+    "season_cue": "text",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   }
+  },
+  {
+   "day": 6,
+   "orig": 13,
+   "scene": "명절 상 위 접시에 담긴 송편",
+   "subject": "a ceramic plate of half-moon rice cakes (songpyeon) with pine needles on a low wooden table, warm indoor light, Chuseok morning",
+   "caption": "송편 빚는 날",
+   "check": "**송편**: 반달 모양 떡이 접시 위에 6개 안팎, 솔잎 자국. 손·얼굴 없음. 만두·경단으로 보이면 불합격",
+   "tags": {
+    "season": "autumn",
+    "season_cue": "text",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   }
+  },
+  {
+   "day": 7,
+   "orig": 8,
+   "scene": "한옥 지붕 위로 뜬 커다란 보름달",
+   "subject": "a large full moon rising over a traditional Korean tiled roof with curved eaves, bright blue-gray dusk sky, soft glow",
+   "caption": "한가위 보름달",
+   "check": "**달**: 둥근 보름달이 지붕 위에서 눈에 띄게 큼(화면 폭 1/5 이상). 달 표면 얼굴 모양·글자 없음. 지붕 선 좌우 대칭 점검",
+   "tags": {
+    "season": "autumn",
+    "season_cue": "text",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
+  },
+  {
+   "day": 8,
+   "orig": 11,
+   "scene": "교실 나무 책상 위 연필과 공책",
+   "subject": "a wooden school desk with a pencil and an open plain notebook, soft window light, no writing on the page, spring morning classroom",
+   "caption": "공책과 연필",
+   "check": "**연필**: 연필 1~2자루가 선명히 길게 보임(깎은 심). 공책 속 글씨·표지 글자 없음(백지). 손가락 나오면 불합격",
+   "tags": {
+    "season": "spring",
+    "season_cue": "image",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   }
+  },
+  {
+   "day": 9,
+   "orig": 10,
+   "scene": "툇마루 앞 댓돌에 놓인 고무신 한 켤레",
+   "subject": "a single pair of rubber shoes on a stone step in front of a wooden porch of a Korean house, gentle midday light, spring",
+   "caption": "툇마루 고무신",
+   "check": "**고무신**: 한 켤레(좌우 한 쌍)가 선명. 앞코 모양 대칭, 상표·바닥 무늬 글자 금지. 개수가 3개 이상이면 재생성",
+   "tags": {
+    "season": "spring",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   }
+  },
+  {
+   "day": 10,
+   "orig": 16,
+   "scene": "소풍 날 풀밭 보자기 위 도시락",
+   "subject": "a cloth wrapping square spread on grass with an aluminum lunchbox and rice balls, green meadow, bright spring picnic light",
+   "caption": "소풍 도시락",
+   "check": "**도시락**: 도시락통(뚜껑 열려 음식이 보임)이 보자기 위 중앙. 브랜드·캐릭터 그림 금지",
+   "tags": {
+    "season": "spring",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
+  },
+  {
+   "day": 11,
+   "orig": 5,
+   "scene": "처마 아래 걸린 우산과 떨어지는 빗방울",
+   "subject": "an old paper-and-bamboo style umbrella hanging under the eaves of a thatched farmhouse, raindrops falling from the roof edge, soft gray rainy light, early summer",
+   "caption": "비 오는 날 처마",
+   "check": "**우산**: 우산(살과 손잡이)이 화면 안에 크게, 접히거나 걸린 모양 분명. 비닐·로고 우산 금지, 빗방울 선이 글자처럼 보이지 않게",
+   "tags": {
+    "season": "summer",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
+  },
+  {
+   "day": 12,
+   "orig": 9,
+   "scene": "장독대에 줄지어 선 항아리들, 아침 이슬",
+   "subject": "rows of brown earthenware jars on a raised stone platform in a yard, dew drops, morning mist, clear sunrise light, early summer",
+   "caption": "장독대 아침",
+   "check": "**항아리**: 항아리가 5~8개 보이고 뚜껑이 닫혀 있다. 모양·크기가 서로 다르되 녹지 않을 것. 독 위 글자 금지",
+   "tags": {
+    "season": "summer",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
+  },
+  {
+   "day": 13,
+   "orig": 15,
+   "scene": "우물가 두레박과 돌로 쌓은 우물",
+   "subject": "a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer",
+   "caption": "우물가 한낮",
+   "check": "**두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검)",
+   "tags": {
+    "season": "summer",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   }
+  },
+  {
+   "day": 14,
+   "orig": 18,
+   "scene": "여름 저녁 마당 평상 위 수박 한 통",
+   "subject": "a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional",
+   "caption": "여름 저녁 평상",
+   "check": "**평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지",
+   "tags": {
+    "season": "summer",
+    "season_cue": "text",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   }
   }
- ]
+ ],
+ "tags_note": "tags: season(spring|summer|autumn|winter|any), season_cue(text=캡션·질문에 계절이 박힘 / image=사진에만 / none), place(country|city|any), era(7080=1970~80년대), city_variant_ok(같은 낱말로 도시판 사진을 만들 수 있음). 개인화 회의 2026-11-17 빌드 1 #1. 2026-11-17 계절 점검으로 14칸 재배치(orig=writer.md 원본 일차)"
 }

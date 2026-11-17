@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0030) · 2026-11-17
+# 서버 계약 노트 (0019~0031) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -112,7 +112,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
-- `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 단위(0031~)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
+- `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 단위(0032~)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
 - `daily_sessions.photo_id·question_id·word_id`(0028): 그날 받은 콘텐츠. start_today·record_session_step이 채움, 이전 행은 null.
 - `purge_expired_data(p_now default now())`(0023): 답·코스 기록 session_date < 오늘-30, 응원 31일, 초대 번호 사용·만료 후 30일, 입력 시도 30일. pg_cron `purge-expired-data` 매일 00:10 KST. 원격 반영 시 pg_cron 확장 켜짐 확인.
 - 심사 접근(0025): `admin_create_review_family(uuid[], p_max_uses=5)` → 심사 가족(is_review)+만료 없는 재사용 번호, **기본 꺼짐**. `admin_set_review_code(family, true|false)`로 심사 제출 때만 켜고, 끝나면 `admin_cleanup_review_family(family)`(심사 어르신 프로필·익명 계정 삭제 + 번호 끔). 연결 수가 max_uses에 닿거나 꺼져 있으면 redeem은 일반 `invalid`. 운영: `node supabase/ops/create-review-access.mjs create|enable|disable|cleanup …` — 번호는 출력만, Play 콘솔에만 적는다.
@@ -127,6 +127,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 운영 규칙: 새 콘텐츠는 **끝에만** 추가(앞에 끼우면 이미 지나간 어르신은 다음 바퀴에 본다). 게시된 문항·사진 문구·day_index는 트리거로 수정 금지(`content_immutable`), 고칠 땐 새 행 + 옛 행 `retired_at`(되돌리기 불가). `image_url`은 저장 위치라 변경 허용. **삭제도 금지**(리뷰 M2, before delete 트리거): 지우고 같은 day_index로 다시 넣어 뜻을 바꾸는 우회 차단. 예외는 트랜잭션 한정 `set_config('bumo.allow_content_delete','on',true)`(pgTAP 픽스처·운영자 명시)뿐이고, 파기 배치는 콘텐츠를 지우지 않는다. 시드는 이미 있는 day_index를 건너뛰고 문구가 DB와 다르면 WARNING.
 - 충돌 확인: streak(0005)·my_week_stamps(0016)는 daily_sessions만 봄. 31일 파기(0023)는 커서와 무관(답 존재로 '본 날'을 판정하지 않음). 0019 어르신별 구분과 같은 프로필 단위. `daily_sessions.day_index`에 그날 연 번호 기록.
 ### 기타
+- 콘텐츠 선택 규칙(개인화 회의 11-17): `content_next_day`·`get_today_content`·`preview_content` 등 콘텐츠를 고르는 함수는 `parent_title`·호칭·답 등 개인 속성을 읽지 않는다. 빌드 2에서도 입력은 날짜와 어르신 본인의 `photo_pref`만(ARCHITECTURE §4). 시드 태그(season·place·era·city_ok)는 지금 주석·prompts.json에만 있고 서버는 쓰지 않는다.
 - 연결 끊김 = 어르신 프로필의 user_id가 null(기기 삭제·재설치 후 재연결 전).
 - 0018 무효화 예외: 재사용 번호(reusable)는 새 번호 발급·연결 성공 때 만료되지 않고 사용 처리도 안 된다(심사 가족 전용, 트리거로 강제).
 - 하루 응원 한도 2·이벤트 호출 상한 200·이벤트 보관 14개월·심사 번호 상한 5는 가정 — 정책 검토 대상.
@@ -135,3 +136,28 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ## 6. 로컬 적용 기록(리뷰 M3 관련)
 - 리뷰 반영(11-17)은 아직 원격에 없는 0021·0022·0023·0024·0025·0027 파일을 **직접 고쳤다**. 로컬 DB에는 같은 변경분을 파일에서 잘라 만든 델타로 적용했고(데이터 삭제 없음), `migration repair`로 0021~0027 이력 행을 현재 파일 이름으로 다시 기록했다.
 - 따라서 로컬 346→372건 통과는 "지금 DB 상태" 기준이다. 0001→끝 순차 재생 검증은 합칠 때 리드가 `db reset` 후 `test db`로 확인한다(M3).
+
+## 7. SECURITY DEFINER 실행 권한 표 (0031, advisors 경고 정리)
+- anon이 실행할 수 있는 public definer 함수: **0개**(0031에서 helper 4개 회수, pgTAP `security_hardening`이 회귀 감시).
+- 서비스 역할 전용(authenticated·anon 불가): `purge_expired_data`, `content_next_day`, `advance_content_cursor`, `admin_create_review_family`, `admin_set_review_code`, `admin_cleanup_review_family`.
+- authenticated 실행 가능 30개 — advisors `authenticated_security_definer_function_executable` 경고는 **설계상 의도**(바꾸지 않음). 공통: `search_path=''`, 함수 안에서 역할·본인·가족을 검사.
+
+| 함수 | 부르는 쪽 | 의도·안에서 하는 검사 |
+|---|---|---|
+| my_profile_id · my_family_id · my_role · my_consented | RLS 정책 식(authenticated) | 정책이 쿼리 역할 권한으로 부르므로 authenticated 필수. 자기 것만 돌려줌 |
+| create_family | 자녀 가입 직후 | 익명 아님·프로필 없음 |
+| issue_invite_code | 자녀 | child 역할, 같은 가족 대상만 |
+| redeem_invite_code · peek_invite_code | 어르신 기기 | 익명만, 잠금·시도 한도 |
+| discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
+| record_session_step · start_today · get_today_content · my_day_index · save_answer · my_week_stamps · parent_history | 어르신 | parent 역할·본인 행만, save_answer는 동의 확인 |
+| give_consent · withdraw_consent | 어르신 | parent 역할·본인, 이력 기록 |
+| get_my_cheers · mark_cheers_read | 어르신 | 받는 본인 것만 |
+| parent_family_list | 어르신 | 본인 가족, 개인정보 없음 |
+| preview_content | 연결 전 기기 | 프로필 있으면 거부 |
+| child_summary · child_answer_history | 자녀 | child 역할·같은 가족·동의한 어르신만 |
+| set_parent_title · set_parent_title_for | 자녀 | 닫힌 목록·같은 가족·중복 검사 |
+| send_cheer | 자녀 | 키 화이트리스트·같은 가족·연결 확인·하루 한도 |
+| delete_my_account · delete_scope_preview | 모두 | 본인(마지막 자녀면 가족) |
+| log_event | 모두(설치 직후 익명 포함) | 이름·속성 화이트리스트, 기기 상한 |
+
+- 콘솔 경고 2건(익명 로그인 허용·유출 비밀번호 보호)은 DB가 아니라 Auth 설정이라 `docs/team/RELEASE.md` §9 사용자 체크리스트에 적었다.
