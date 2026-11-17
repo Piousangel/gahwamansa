@@ -38,15 +38,21 @@
 ### 마이그레이션 대장 (staging은 군 승인 때마다, prod은 사용자가 묶음으로)
 | 번호(가정) | 내용 | 상태 | staging | prod 묶음 |
 |---|---|---|---|---|
-| 0018 | revoke_codes(남은 가입 번호 무효화) | 작성 완료, 로컬 적용·pgTAP 대기 | 11/19 | P1 |
-| 0019 | 어르신 구분·session_date 기준·동의 이력 | 예정 | 11/20 | P1 |
-| 0020 | send_cheer(키 화이트리스트·하루 한도)·응원 읽기/읽음 | 예정 | 11/21 | P1 |
-| 0021 | child_summary 끊김·child_answer_history(30일, 어르신별) | 예정 | 11/22 | P1 |
-| 0022 | events | 예정 | 11/20 | P1 |
-| 0023 | 31일 지난 답 파기 일 배치 | 예정 | 11/24 | P1 |
-| 0024~0025 | 푸시 토큰 RPC·발송 스케줄 | 예정 | 11/26 | P1 |
+| 0018 | revoke_codes(남은 가입 번호 무효화) | 로컬 적용·pgTAP 통과 | 11/19 | P1 |
+| 0019 | 어르신 구분(parent_id·어르신별 호칭)·session_date 기준·동의 이력(consent_events) | 로컬 적용·pgTAP 통과 | 11/20 | P1 |
+| 0020 | send_cheer(키 4개·하루 2개)·get_my_cheers·mark_cheers_read | 로컬 적용·pgTAP 통과 | 11/21 | P1 |
+| 0021 | child_summary connected·child_answer_history(30일, 어르신별 30개) | 로컬 적용·pgTAP 통과 | 11/22 | P1 |
+| 0022 | events·log_event(이름·속성 화이트리스트) | 로컬 적용·pgTAP 통과 | 11/20 | P1 |
+| 0023 | 보관 기간 파기(답·코스 31일, 응원 31일, 번호·시도 30일) + pg_cron 일 배치 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0024 | 어르신별 콘텐츠 커서·start_today·게시 콘텐츠 수정 금지·day_index 상한 제거 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0025 | 심사용 가족·만료 없는 재사용 가입 번호 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0026 | 가족 전체 삭제 시 어르신 익명 인증 계정 삭제 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0027 | 첫마디 한 줄: content_questions.starter_a/b + child_summary latest.starter(고른 쪽) | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0028 | daily_sessions 콘텐츠 id·parent_history·peek_invite_code·연결 성공 알림 큐·get_today_content answered_label·호칭 중복 방지 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0029~0030 | 푸시 토큰 RPC·발송 스케줄(notification_queue 소비, 번호는 작성 시점의 다음 연속 번호) | 예정 | 11/26 | P1 |
 | 이후 | 테스트 중 수정분 | — | 수시 | P2 12/09·P3 12/16(평일) |
-- prod 반영 P1 = 비공개 업로드 직전 1회(0001~0025 + 시드·사진), 이후 P2·P3 묶음. 실행은 사용자(09 §5), 팀은 직전 dry-run 출력·백업 덤프 확인.
+- prod 반영 P1 = 비공개 업로드 직전 1회(0001~0030 + 시드·사진, 푸시 포함), 이후 P2·P3 묶음. 실행은 사용자(09 §5), 팀은 직전 dry-run 출력·백업 덤프 확인.
+- 번호 규칙(ARCHITECTURE.md): 빈칸 예약 없이 연속 번호. 0024~0026은 원래 0026~0028로 썼다가 연속 번호로 당김(11-17).
 
 ## 3. 시간표 (처리량 16~24h/일 가정, 팀 주말 작업 / 사용자·실기기는 평일 월·수·금)
 | 기간 | 어르신 줄 | 자녀 줄 | 인프라·공통 줄 |

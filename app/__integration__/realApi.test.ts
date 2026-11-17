@@ -1,7 +1,7 @@
 /* 로컬 Supabase 통합 테스트(14일분 콘텐츠 시드가 들어 있다고 가정). 실행 전 로컬 스택이 켜져 있어야 한다(켜고 끄는 건 이 테스트가 하지 않음).
  * 선택: SUPABASE_SERVICE_ROLE_KEY 환경변수가 있으면 끝에 이번 실행이 만든 데이터를 정리한다. */
 import {createClient, SupabaseClient} from '@supabase/supabase-js';
-import {loadConfig} from '../src/lib/config';
+import {loadLocalConfig} from '../src/lib/config';
 import {createSupabase} from '../src/lib/supabase';
 import {createRealApi} from '../src/features/realApi';
 
@@ -12,7 +12,8 @@ const randomUUID = () =>
     return (c === 'x' ? r : 8 + (r % 4)).toString(16);
   });
 
-const {SUPABASE_URL, SUPABASE_KEY} = loadConfig();
+// 로컬 Supabase 만(config.local.ts). 원격 주소(특히 service role 키와 함께)면 여기서 바로 실패한다
+const {SUPABASE_URL, SUPABASE_KEY} = loadLocalConfig(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const run = randomUUID().slice(0, 8);
 const email = `it-${run}@example.test`;
 const password = `Pw-${randomUUID()}`;

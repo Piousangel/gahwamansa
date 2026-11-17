@@ -1,9 +1,11 @@
 {
   "name": "bumo-jasik-app",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "android": "react-native run-android",
+    "android": "react-native run-android --mode stagingDebug --appId com.bumojasik.app.staging",
+    "android:staging": "react-native run-android --mode stagingDebug --appId com.bumojasik.app.staging",
+    "android:production": "react-native run-android --mode productionDebug --appId com.bumojasik.app",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
