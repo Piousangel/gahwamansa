@@ -230,3 +230,12 @@
 - 디버그 키(개발 테스트용, 공용 android 키): SHA1 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25 / 카카오 키 해시 Xo8WBi6jzSxKDVR4drqm84yr9iU=
 - 출시 키(release.keystore, 사용자 보관, git 제외): SHA1 40:B2:89:EE:1C:E2:B3:C2:C1:33:CD:56:FF:94:14:99:15:93:66:CE / SHA256 74:4B:1D:40:84:C9:82:A4:23:CF:E7:03:B4:9A:D3:ED:60:C9:B7:C4:9E:76:3B:1C:89:9E:9F:7A:4C:30:F7:F1
 - [ ] release.keystore 파일과 비밀번호 백업(사용자)
+
+## 28. 카카오 개발자 앱 (2026-11-17 등록, 공개 값만)
+- 앱 ID 1653853 "가화만사성"(회사명 행복가게, 라이프스타일), 네이티브 앱 키 1cd831e4a2589fb6a4f756a6553c0681(앱에 들어가는 값)
+- Android 패키지 com.bumojasik.app, 키 해시 출시용·개발용 2개 등록, 카카오 로그인 ON, OpenID Connect ON
+- 동의항목: 닉네임 선택 동의(목적 "자녀 회원의 앱 내 이름 표시"), 이메일은 권한 없음(비즈 앱 아님) — 결정대로
+- Supabase Kakao provider: Client ID 칸에 "REST API 키,네이티브 앱 키"(네이티브 SDK ID 토큰의 aud가 네이티브 앱 키라 둘 다 허용, 실기기 로그인으로 확인 필요), Allow users without an email ON
+- [ ] 클라이언트 시크릿: 사용자가 카카오에서 생성해 Supabase에 직접 입력 후 Save
+- [ ] 웹훅(연결 해제/계정 상태 변경): 카카오가 권고. 탈퇴 연동은 빌드 2 검토
+- 주의: 크롬 비밀번호 자동완성이 Supabase 칸에 이메일·비밀번호를 채움 → 저장 전 반드시 지울 것
