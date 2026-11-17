@@ -318,3 +318,4 @@
 - cheer.partial: 어르신 두 분에게 보낼 때 한 분만 성공한 경우. relation.name_taken 범위: 같은 가족 안 어르신끼리만(자녀·형제 간 제한 아님)
 - 기존 문구 정리(11-5) 채택: errors.invalid·connect.success·settings.ai_notice 교체, 요일별 push[] 7문장 폐기, talkback-spec R11 "칭찬 문장"→"완료 문장". 적용은 앱 줄 병합 후 리드 일괄
 - 약관 한 줄 동의 방식(연결/로그인 시 동의) 유효성은 변호사 질문 목록에 추가
+- 11-17 디자인 동결: P3(코스 홈 v4)·P1군(P1_connect_v4·P1c_confirm·FS_link·web/C_page) — 이후 변경은 리드 승인
