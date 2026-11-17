@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, within} from '@testing-library/react-native';
+import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 
@@ -47,12 +47,12 @@ test('글자 130%: 사진을 먼저 숨기고 소개 3줄은 유지', async () =
   }
 });
 
-test('글자 150%: 소개 항목도 숨기고 제목·질문·버튼은 남긴다', async () => {
+test('글자 150%: 소개(제목·항목)를 숨기고 질문·버튼은 남긴다', async () => {
   mockFontScale = 1.5;
   render(<AppRoot api={createFakeApi()} />);
   await measure(328, 400);
   expect(screen.queryByText(INTRO[0], {includeHiddenElements: true})).toBeNull();
-  expect(screen.getByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeTruthy();
+  expect(screen.queryByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeNull();
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
 });
 
@@ -67,17 +67,12 @@ test('셋째 항목은 두 줄이 되어도 확정 문구(주어 "자녀가")를
   expect(third.props.numberOfLines).toBeUndefined();
 });
 
-test('AI 표기는 폴라로이드 틀 밖 아래 보조 글자, 틀 반경 3 이하·사진 반경 0', async () => {
+test('폴라로이드 틀 반경 3 이하·사진 반경 0', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await measure(328, 400);
-  const frame = screen.getByLabelText('옛날 사진 예시, AI가 만든 그림');
   const {StyleSheet} = require('react-native');
-  expect(StyleSheet.flatten(frame.props.style).borderRadius).toBeLessThanOrEqual(3);
+  expect(StyleSheet.flatten(screen.getByTestId('intro-front-frame').props.style).borderRadius).toBeLessThanOrEqual(3);
   expect(StyleSheet.flatten(screen.getByTestId('intro-photo').props.style).borderRadius ?? 0).toBe(0);
-  const ai = screen.getByTestId('intro-ai-label');
-  // 틀 안에 있지 않다
-  expect(within(frame).queryByText('AI가 만든 그림', {includeHiddenElements: true})).toBeNull();
-  expect(ai).toBeTruthy();
 });
 
 test('하단 고정 영역 아래 여백은 16 + inset 이상', async () => {

@@ -1,44 +1,58 @@
-// 첫 화면 폴라로이드 사진 크기(실기기 3차):
-// 사진 높이 = 남은 영역 높이 - (틀 위 여백 + 틀 안 캡션 줄 + 틀 밖 AI 표기 줄 + 위아래 여백 8 + 기울기 여유), 폭은 비율.
-// 폭은 영역 폭의 50% 이하. 최소 폭 72로도 안 들어가면 숨긴다(잘리는 것보다 낫다). 숨김은 이 경우와 글자 배율 1.3 이상뿐.
+// 첫 화면 "앨범 펼침"(FS_D) 사진 묶음 크기 계산. 앞 사진 1장 + 뒤 2장 부채꼴(±31% 옆으로, -9°/+8°).
+// 영역(onLayout 으로 잰 실제 남은 공간) 안에 묶음 전체(기울기·테이프 포함)가 들어가는 가장 큰 크기를 찾는다.
+// 앞 틀 폭은 영역 폭의 44% 이하. 앞 사진 폭이 72 미만이 되면 숨긴다(잘리는 것보다 낫다).
 export const PHOTO_RATIO = 1152 / 928; // 원본 사진(가로형) 비율
-export const TILT_DEG = 2; // 폴라로이드 기울기(절댓값)
 export const PAD = 8; // 틀 안쪽 여백(위·좌·우)
-export const DEFAULT_PHOTO_W = 140; // 측정 전 기본
+export const BAND = 30; // 틀 아래 흰 띠(캡션 없음)
+export const FRONT_DEG = 2;
+export const BACK_LEFT_DEG = 9;
+export const BACK_RIGHT_DEG = 8;
+export const BACK_DX = 0.31; // 뒤 사진이 옆으로 나가는 정도(틀 폭 비율)
+export const BACK_DY = 0.05; // 뒤 사진이 아래로 내려앉는 정도(틀 높이 비율)
+const TAPE_OVER = 12; // 테이프가 틀 위로 나오는 높이
+const MARGIN = 8; // 묶음 위아래 여유 합
 const MIN_PHOTO_W = 72;
-const TILT = Math.sin((TILT_DEG * Math.PI) / 180); // 기울인 틀의 세로 여유(폭 x sin)
 
-const line = (fontScale: number) => Math.ceil(20 * 1.5 * fontScale);
-// 사진을 뺀 세로 크기: 틀 위 여백 + 캡션 줄(+위아래 4) + AI 표기 줄(+위 4) + 영역 위아래 여백 합 8
-const chromeH = (fontScale: number) => PAD + (line(fontScale) + 8) + (line(fontScale) + 4) + 8;
+const rad = (d: number) => (d * Math.PI) / 180;
+const bbox = (w: number, h: number, deg: number) => ({
+  w: w * Math.cos(rad(deg)) + h * Math.sin(rad(deg)),
+  h: w * Math.sin(rad(deg)) + h * Math.cos(rad(deg)),
+});
 
-export type PhotoSize = {w: number; h: number};
+export type StackLayout = {
+  photoW: number;
+  photoH: number;
+  frameW: number;
+  frameH: number;
+  dx: number;
+  dy: number;
+  totalW: number;
+  totalH: number;
+};
 
-// 폴라로이드 전체(기울기 여유 포함) 세로 크기
-export const polaroidTotalH = (p: PhotoSize, fontScale: number) => p.h + chromeH(fontScale) + Math.ceil((p.w + 2 * PAD) * TILT);
-
-export function photoSize(areaW: number, areaH: number, fontScale: number): PhotoSize | null {
-  if (!(areaW > 0) || !(areaH > 0)) {
-    return {w: DEFAULT_PHOTO_W, h: Math.floor(DEFAULT_PHOTO_W / PHOTO_RATIO)}; // 측정 전
-  }
-  // h + chrome + (w + 2PAD) * TILT <= areaH, w = h * R
-  const h = Math.floor((areaH - chromeH(fontScale) - 2 * PAD * TILT) / (1 + PHOTO_RATIO * TILT));
-  let w = Math.floor(Math.min(areaW * 0.5, h * PHOTO_RATIO));
-  if (w < MIN_PHOTO_W) {
-    return null;
-  }
-  w = Math.max(MIN_PHOTO_W, w);
-  return {w, h: Math.floor(w / PHOTO_RATIO)};
+export function measureStack(photoW: number): StackLayout {
+  const photoH = Math.floor(photoW / PHOTO_RATIO);
+  const frameW = photoW + 2 * PAD;
+  const frameH = PAD + photoH + BAND;
+  const dx = Math.round(frameW * BACK_DX);
+  const dy = Math.round(frameH * BACK_DY);
+  const back = bbox(frameW, frameH, BACK_LEFT_DEG);
+  const front = bbox(frameW, frameH, FRONT_DEG);
+  const totalW = Math.ceil(2 * dx + back.w);
+  // 회전한 뒤의 상자 크기로 잰다(리뷰 공식): 뒤 사진(9°) 상자 높이 + 아래로 내려앉음 5% + 테이프 12 + 여유 8
+  const totalH = Math.ceil(Math.max(front.h, back.h + dy) + TAPE_OVER + MARGIN);
+  return {photoW, photoH, frameW, frameH, dx, dy, totalW, totalH};
 }
 
-// 폴라로이드 캡션(사진 제목): 글자 크기는 사진 폭의 약 12%(12~18). 말줄임하지 않는다 — 한 줄에 다 안 들어가면 숨긴다.
-export const captionFont = (photoW: number) => Math.max(12, Math.min(18, Math.round(photoW * 0.12)));
-// 한 줄 폭 추정: 한글 1em, 그 밖(공백·숫자·영문) 0.5em
-export const captionFits = (text: string, photoW: number) => {
-  const size = captionFont(photoW);
-  let em = 0;
-  for (const ch of text) {
-    em += /[가-힣]/.test(ch) ? 1 : 0.5;
+export function stackLayout(areaW: number, areaH: number): StackLayout | null {
+  if (!(areaW > 0) || !(areaH > 0)) {
+    return null;
   }
-  return em * size <= photoW;
-};
+  for (let w = Math.floor(areaW * 0.44) - 2 * PAD; w >= MIN_PHOTO_W; w--) {
+    const l = measureStack(w);
+    if (l.totalW <= areaW && l.totalH <= areaH) {
+      return l;
+    }
+  }
+  return null;
+}

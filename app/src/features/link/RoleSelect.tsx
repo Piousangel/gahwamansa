@@ -1,108 +1,160 @@
-import React, {useState} from 'react';
-import {Image, LayoutChangeEvent, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {Animated, Easing, LayoutChangeEvent, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {color} from '../../ui/tokens';
-import {assetRegistry} from '../../ui/assets/registry';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {Icon, IconName} from '../../ui/assets/icons';
 import {copy} from '../../copy/copy';
 import {TwoLineButton} from './TwoLineButton';
-import {captionFits, captionFont, PAD, photoSize, TILT_DEG} from './polaroidLayout';
+import {stackLayout} from './polaroidLayout';
+import {PolaroidStack} from './PolaroidStack';
+import {MotionMode, useMotionMode} from './useReduceMotion';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const f = copy.first;
+const ICONS: IconName[] = ['icon-photo', 'icon-pencil', 'icon-family'];
+// 아이콘 원(장식, 색만으로 정보를 전하지 않음): 사진 노랑, 연필 하늘(한글 쓰기 단계와 같은 색), 가족 복숭아
+const CIRCLE = [color.accentSun, color.sky, color.accentPeach];
+const STD = Easing.bezier(0.4, 0, 0.2, 1);
+const POP = Easing.bezier(0.2, 0.8, 0.2, 1);
 
-// 의미 단위 줄바꿈: 마지막 두 어절을 붙여 "가요"만 다음 줄로 넘어가지 않게 한다
+// 의미 단위 줄바꿈: 마지막 세 어절을 붙여 "가요"만 다음 줄로 넘어가지 않게 한다
 // ("고른 답으로 자녀가 / 취향을 알아 가요"). 한 줄에 들어가면 그대로 한 줄.
 export const keepTail = (t: string) => {
   const w = t.split(' ');
-  return w.length < 4 ? t : `${w.slice(0, -3).join(' ')} ${w.slice(-3).join('\u00A0')}`;
+  return w.length < 4 ? t : `${w.slice(0, -3).join(' ')} ${w.slice(-3).join(' ')}`;
 };
 
-// 첫 화면(확정: C 구성 + A 질문). 위 심볼+워드마크+한 줄 설명, 가운데 소개 폴라로이드(번들 사진, "AI가 만든 그림"),
+// 첫 화면(FS_D "앨범 펼침"). 위 심볼+워드마크, 소개(제목 + 색 원 아이콘 항목 3줄), 가운데 사진 3장 묶음(캡션·AI 표시 없음),
 // 아래 고정 영역에 질문과 버튼 2개(첫 화면은 하단 40% 규칙 예외). 해님 말 없음. 이전 바 없음.
-// 본문은 스크롤하지 않는 한 화면: 워드마크→소개(제목+아이콘 항목 3줄)→사진(보조)→질문→버튼 순서로 읽힌다.
-// 사진은 남은 영역(onLayout)과 상한(화면 폭 50%·높이 22%) 안에서 크기를 명시 계산하고, 공간이 모자라면 먼저 숨긴다.
+// 본문은 스크롤하지 않는 한 화면. 사진 묶음은 남은 영역(onLayout, 묶음이 영역을 밀지 않게 띄움) 안에 전체가 들어가게 계산하고,
+// 안 들어가면 숨긴다. 글자 130%면 사진을 숨기고 하단 높이 상한을 없애며, 150%면 소개(제목·항목)도 숨기고,
+// 그래도 하단이 넘치면 고정을 풀고 화면 전체 스크롤.
+// 모션은 영역을 잰 뒤 앱 실행당 한 번(RN Animated, 네이티브 드라이버). 버튼은 처음부터 누를 수 있다.
+// 동작 줄이기면 300ms 페이드만, 스크린리더가 켜져 있거나 두 번째부터는 끝 상태로 바로.
+// 첫 화면 모션은 앱 실행당 한 번만. 다른 화면에 갔다가 돌아오면 끝 상태로 보여 준다.
+let firstScreenPlayed = false;
+export const resetFirstScreenMotion = () => {
+  firstScreenPlayed = false;
+};
+
 export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => void}) {
   const {width: winW, height: winH, fontScale} = useWindowDimensions();
-  // 소개가 사진보다 중요: 130%면 사진을 먼저 숨기고, 150%면 소개 항목도 숨긴다(제목은 남김)
+  const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
-  const showItems = fontScale < 1.5;
-  const [captionOk, setCaptionOk] = useState(true);
+  const showIntro = fontScale < 1.5; // 150% 이상이면 소개(제목·항목)도 숨겨 버튼을 지킨다
+  const replay = useRef(firstScreenPlayed).current;
+  const detected = useMotionMode();
+  const reduce: MotionMode | null = replay ? 'none' : detected;
+  // 큰 글씨에서 하단 영역(질문+버튼)이 화면에 다 안 들어가면 고정을 풀고 화면 전체를 스크롤한다
+  const [fullScroll, setFullScroll] = useState(false);
+  const onDockContent = (e: LayoutChangeEvent) => {
+    const avail = winH - insets.top - insets.bottom - 16 - 12 - 80; // 위 워드마크 줄·여백을 뺀 높이
+    if (e.nativeEvent.layout.height > avail) {
+      setFullScroll(true);
+    }
+  };
   const [area, setArea] = useState<{w: number; h: number} | null>(null);
   const onArea = (e: LayoutChangeEvent) => {
     const {width, height} = e.nativeEvent.layout;
     if (__DEV__) {
-      // 실기기 확인용(개발 빌드만): 남은 영역과 계산된 사진 크기
-      console.log('[first-screen] area', Math.round(width), Math.round(height), 'photo', photoSize(width, height, fontScale), 'win', winW, winH, 'fontScale', fontScale);
+      // 실기기 확인용(개발 빌드만): 남은 영역과 계산된 묶음 크기
+      console.log('[first-screen] area', Math.round(width), Math.round(height), 'stack', stackLayout(width, height), 'win', winW, winH, 'fontScale', fontScale);
     }
     setArea(a => (a && a.w === width && a.h === height ? a : {w: width, h: height}));
   };
-  // 사진은 항상 그린다(숨김은 글자 배율 1.3 이상만). 측정 전에는 기본 크기, 측정되면 실제 남은 영역으로 조정
-  const photo = photoSize(area?.w ?? 0, area?.h ?? 0, fontScale);
-  const items = f.intro;
-  const ICONS: IconName[] = ['icon-photo', 'icon-pencil', 'icon-family'];
+  const lay = showPhoto && area ? stackLayout(area.w, area.h) : null;
+  const measured = area !== null || fullScroll; // 모션은 영역을 잰 뒤 시작(px 위치 계산 때문)
+  const mode: MotionMode | null = measured ? reduce : null;
 
+  // 등장 모션 값(0→1). 심볼 1개 + 항목 3줄 + 아이콘 원 3개
+  const symbol = useRef(new Animated.Value(0)).current;
+  const items = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+  const circles = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+  const started = useRef(false);
+  useEffect(() => {
+    if (mode === null || started.current) {
+      return;
+    }
+    started.current = true;
+    firstScreenPlayed = true;
+    if (mode === 'none') {
+      [symbol, ...items, ...circles].forEach(v => v.setValue(1));
+      return;
+    }
+    const t = (v: Animated.Value, duration: number, delay: number, easing = STD) =>
+      Animated.timing(v, {toValue: 1, duration, delay, easing, useNativeDriver: true});
+    if (mode === 'reduce') {
+      Animated.parallel([symbol, ...items, ...circles].map(v => t(v, 300, 0))).start();
+      return;
+    }
+    Animated.parallel([
+      t(symbol, 450, 0),
+      ...items.map((v, i) => t(v, 300, [150, 270, 390][i])),
+      ...circles.map((v, i) => t(v, 300, [150, 230, 310][i], POP)),
+    ]).start();
+  }, [mode, symbol, items, circles]);
+  const still = mode !== 'full';
+  const rise = (v: Animated.Value, from: number) => (still ? 0 : v.interpolate({inputRange: [0, 1], outputRange: [from, 0]}));
+
+  const ask = (
+    <>
+      <Text20 size={28} weight="bold" accessibilityRole="header">{f.question}</Text20>
+      <TwoLineButton title={f.parent} sub={f.parent_sub} onPress={() => onChoose('parent')} />
+      <TwoLineButton variant="secondary" title={f.child} sub={f.child_sub} onPress={() => onChoose('child')} />
+    </>
+  );
+  const brand = (
+    <Animated.View style={[styles.brand, {opacity: symbol, transform: [{translateY: rise(symbol, 8)}]}]}>
+      <BrandSymbol size={40} />
+      <Text20 size={28} weight="bold" style={styles.wordmark}>{f.wordmark}</Text20>
+    </Animated.View>
+  );
+
+  if (fullScroll) {
+    // 아주 큰 글씨: 하단 고정을 풀고 워드마크 → 질문 → 버튼 순서로 한 번에 스크롤
+    return (
+      <Screen scrollEnabled>
+        {brand}
+        {ask}
+      </Screen>
+    );
+  }
   return (
     <Screen
       fill
-      dockMaxRatio={0.6}
+      dockMaxRatio={fontScale >= 1.3 ? 1 : 0.6}
       bottom={
-        <>
-          <Text20 size={28} weight="bold" accessibilityRole="header">{f.question}</Text20>
-          <TwoLineButton title={f.parent} sub={f.parent_sub} onPress={() => onChoose('parent')} />
-          <TwoLineButton variant="secondary" title={f.child} sub={f.child_sub} onPress={() => onChoose('child')} />
-        </>
+        <View testID="first-dock-content" onLayout={fontScale >= 1.3 ? onDockContent : undefined}>
+          {ask}
+        </View>
       }>
-      <View style={styles.brand}>
-        <BrandSymbol size={40} />
-        <Text20 size={28} weight="bold" style={styles.wordmark}>{f.wordmark}</Text20>
-      </View>
-      <View accessible accessibilityLabel={[f.intro_title, ...f.intro].join('. ')} style={styles.intro}>
-        <Text20 size={24} weight="bold">{f.intro_title}</Text20>
-        {showItems
-          ? items.map((t, i) => (
-              <View key={ICONS[i]} style={styles.item}>
-                <Icon name={ICONS[i]} size={24} color={color.ink} />
-                {/* 항목은 보통 굵기, 두 줄 허용(셋째 줄의 주어 "자녀가"를 빼지 않는다) */}
-                <Text20 style={styles.itemText}>{keepTail(t)}</Text20>
-              </View>
-            ))
-          : null}
-      </View>
+      {brand}
+      {showIntro ? (
+        <View accessible accessibilityLabel={[f.intro_title, ...f.intro].join('. ')} style={styles.intro}>
+          <Text20 size={24} weight="bold">{f.intro_title}</Text20>
+          {f.intro.map((t, i) => (
+            <Animated.View key={ICONS[i]} style={[styles.item, {opacity: items[i], transform: [{translateX: rise(items[i], -8)}]}]}>
+              <Animated.View
+                testID={`intro-icon-circle-${i}`}
+                style={[
+                  styles.circle,
+                  {backgroundColor: CIRCLE[i]},
+                  {opacity: circles[i], transform: [{scale: still ? 1 : circles[i].interpolate({inputRange: [0, 1], outputRange: [0.6, 1]})}]},
+                ]}>
+                <Icon name={ICONS[i]} size={24} color={color.inkTitle} />
+              </Animated.View>
+              {/* 항목은 보통 굵기, 두 줄 허용(셋째 줄의 주어 "자녀가"를 빼지 않는다) */}
+              <Text20 style={styles.itemText}>{keepTail(t)}</Text20>
+            </Animated.View>
+          ))}
+        </View>
+      ) : null}
       <View testID="polaroid-area" style={styles.area} onLayout={onArea}>
-        {/* 사진은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}
+        {/* 사진 묶음은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}
         <View testID="polaroid-pinned" style={styles.pinned} pointerEvents="none">
-        {showPhoto && photo ? (
-          <View
-            style={[styles.polaroid, {width: photo.w + 2 * PAD}]}
-            accessible
-            accessibilityRole="image"
-            accessibilityLabel={f.polaroid_a11y}>
-            <Image
-              testID="intro-photo"
-              source={assetRegistry['intro-photo']!}
-              style={[styles.photo, {width: photo.w, height: photo.h}]}
-              resizeMode="cover"
-            />
-            {/* 캡션은 말줄임 금지: 사진 폭에 맞춘 작은 글자로 한 줄 전체, 안 들어가면(추정 또는 실제 두 줄) 숨김 */}
-            {captionOk && captionFits(f.polaroid_caption, photo.w) ? (
-              <Text
-                importantForAccessibility="no"
-                maxFontSizeMultiplier={1}
-                onTextLayout={e => e.nativeEvent.lines.length > 1 && setCaptionOk(false)}
-                style={[styles.caption, {fontSize: captionFont(photo.w), lineHeight: Math.ceil(captionFont(photo.w) * 1.3)}]}>
-                {f.polaroid_caption}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
-        {showPhoto && photo ? (
-          // AI 표기: 틀 밖 아래 보조 글자(사진 제목과 구분)
-          <Text20 testID="intro-ai-label" importantForAccessibility="no" style={styles.ai}>
-            {f.polaroid_ai}
-          </Text20>
-        ) : null}
+          {lay ? <PolaroidStack lay={lay} mode={mode} /> : null}
         </View>
       </View>
     </Screen>
@@ -112,15 +164,11 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 const styles = StyleSheet.create({
   brand: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16}, // 위 여백 확대(QA 첫 화면 #10)
   wordmark: {color: color.inkTitle},
-  intro: {gap: 6},
-  item: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  intro: {gap: 6, marginTop: 10},
+  item: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  circle: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center'},
   itemText: {flexShrink: 1},
-  // 남은 높이를 차지(사진 크기와 무관하게 재어짐). 사진은 pinned 안 가운데
+  // 남은 높이를 차지(사진 크기와 무관하게 재어짐). 묶음은 pinned 안 가운데
   area: {flex: 1, minHeight: 0},
-  pinned: {position: 'absolute', top: 4, bottom: 4, left: 0, right: 0, alignItems: 'center', justifyContent: 'center'},
-  // 종이 사진 느낌: 틀 반경 3, 사진 반경 0(QA 첫 화면 #4)
-  polaroid: {backgroundColor: color.card, paddingTop: 8, paddingHorizontal: 8, borderRadius: 3, transform: [{rotate: `-${TILT_DEG}deg`}], boxShadow: '0px 4px 10px rgba(92,78,51,0.22)'},
-  photo: {borderRadius: 0, backgroundColor: color.paperSoft},
-  caption: {color: color.handwrite, marginVertical: 4, textAlign: 'center'},
-  ai: {color: color.inkSub, marginTop: 4},
+  pinned: {position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center'},
 });

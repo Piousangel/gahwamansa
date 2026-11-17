@@ -87,6 +87,11 @@ export function ParentSettings() {
         <BigButton variant="danger" label={t.delete_row} onPress={() => navigation.navigate('DeleteAccount')} />
         <Text20 style={styles.sub}>{t.delete_hint}</Text20>
       </View>
+      {/* 앱 정보: AI 그림 고지 1줄 */}
+      <View style={styles.section}>
+        <Text20 weight="bold">{t.app_info}</Text20>
+        <Text20 style={styles.sub}>{t.ai_notice}</Text20>
+      </View>
     </Screen>
   );
 }

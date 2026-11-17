@@ -47,7 +47,8 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
         )}
         <Text20 size={32} style={styles.caption}>{photo.caption}</Text20>
       </View>
-      {showImage ? <Text20 style={styles.sub}>{appCopy.ai_photo_label}</Text20> : null}
+      {/* AI 고지(늘 보이게): 실사풍이라 "실제 장소가 아니에요"를 같이 쓴다 */}
+      {showImage ? <Text20 style={styles.sub}>{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text20> : null}
       <Text20 size={22}>{appCopy.photo_look}</Text20>
       {photo.recall_questions.map(q => (
         <Text20 key={q} size={24} weight="bold">{q}</Text20>
