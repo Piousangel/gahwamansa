@@ -175,3 +175,28 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
     from pg_proc p where p.oid in ('public.delete_my_account()'::regprocedure, 'public.discard_anonymous_session()'::regprocedure);
   ```
   결과는 리드가 staging 반영 기록에 붙인다. 실제 탈퇴 1회(staging 테스트 계정)로 auth 사용자 삭제까지 확인하면 더 확실하다.
+
+## 9. production Auth 설정 체크리스트 (SV-14, 실행은 사용자)
+새 production 프로젝트는 대시보드 설정이 비어 있다(09-environments §3). 아래를 production에서 설정하고, staging 칸은 같은 화면에서 현재 값을 확인해 적는다(다르면 이유를 적거나 맞춘다).
+기준값 = 저장소 `supabase/config.toml`(로컬). 마이그레이션은 Auth 설정을 옮기지 않는다.
+
+| # | 대시보드 위치 | production 값 | 로컬 기준 | staging 확인 | 근거 |
+|---|---|---|---|---|---|
+| 1 | Authentication > Sign In / Providers > Anonymous | **ON** | `enable_anonymous_sign_ins = true` | ☐ | 어르신 연결이 익명 세션 위에서 동작(DECISIONS 11-16) |
+| 2 | Authentication > Rate Limits > Anonymous sign-ins | 시간당 IP당 **30** 이하 | `anonymous_users = 30` | ☐ | advisors 경고 수용 조건(RELEASE §9) |
+| 3 | 같은 곳 > Sign-ups·sign-ins / Token verifications / Token refresh | 5분당 30 / 30 / 150 | `sign_in_sign_ups`·`token_verifications`·`token_refresh` | ☐ | 무차별 대입 완화 |
+| 4 | Providers > Email | ON, **Confirm email OFF**, OTP 길이 **6**, 만료 **600초** | `otp_length = 6`, `otp_expiry = 600`, `enable_confirmations = false` | ☐ | 자녀 이메일 인증번호 로그인(문구 "6자리") |
+| 5 | Email Templates > Magic Link·Confirm signup | 제목 `[가화만사성] 인증번호`, 본문 = `supabase/templates/magic_link.html`·`confirmation.html` 그대로 붙여넣기 | `[auth.email.template.*]` | ☐ | 두 환경 동일 원본 |
+| 6 | Authentication > SMTP | 전용 SMTP(발신 이름 "가화만사성", 서비스·한도는 사용자 결정), 이메일 발송 한도 설정 | `email_sent = 60`(로컬은 SMTP 없음) | ☐(staging=Gmail "[스테이징] 가화만사성") | 기본 메일은 한도가 낮음(09 §3) |
+| 7 | Providers > Kakao | ON, Client ID = **production 네이티브 앱 키**, Secret, **Allow users without an email ON** | — | ☐(staging 키는 staging 전용) | 카카오 이메일 미수집(DECISIONS 11-17), 토큰 aud가 환경을 넘지 않게 |
+| 8 | Providers > Google | ON, Client ID = production **웹** 클라이언트(+Android 클라이언트는 Google Cloud에만), Secret, Skip nonce check **OFF** | — | ☐ | 구글 공개판은 nonce 없음 = 검사 통과(08-social-login) |
+| 9 | 카카오·구글 콘솔 Redirect URI | `https://<prod-ref>.supabase.co/auth/v1/callback` | — | ☐ | 각 프로젝트 자기 ref |
+| 10 | Authentication > URL Configuration | Site URL = 출시 사이트 도메인(앱은 웹 리다이렉트 안 씀), 추가 URL 없음 | `site_url` 로컬값 | ☐ | 이메일 링크가 엉뚱한 곳으로 가지 않게 |
+| 11 | 같은 곳(Advanced) > Manual linking | **OFF** | `enable_manual_linking = false` | ☐ | 계정 자동·수동 합치기 빌드 1 제외(DECISIONS 11-17) |
+| 12 | Sessions / JWT | 만료 3600초, refresh token rotation ON, 재사용 간격 10초 | `jwt_expiry`·`enable_refresh_token_rotation`·`refresh_token_reuse_interval` | ☐ | 기본값 유지 |
+| 13 | Attack Protection > Leaked password protection | **ON** | — | ☐(요금제에 따라 없을 수 있음, 미확인) | advisors 경고, 심사용 자녀 계정은 비밀번호 로그인 |
+| 14 | Providers > Email > Password | 최소 길이 **10** 이상(심사 계정용) | `minimum_password_length = 6` | ☐ | 일반 사용자는 비밀번호 로그인 안 씀 |
+| 15 | Attack Protection > CAPTCHA | **출시 시 OFF**(판단) | 없음 | ☐ | 켜면 익명 로그인·OTP 요청에 앱이 captcha 토큰을 보내야 해 앱 작업 필요. 한도(2·3)로 시작하고 남용 징후(익명 가입 급증) 시 켜는 것을 W3 보안 패스에서 재판단 |
+| 16 | Database > Extensions | **pg_cron ON** | 로컬 기본 | ☐ | 0023 파기 배치(db push 전에 켤 것) |
+
+- 다 끝나면 production에서 Advisors(Security) 실행 → 남는 경고가 1(익명 허용, 의도)·13(요금제상 불가 시)뿐인지 확인.
