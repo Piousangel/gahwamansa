@@ -272,3 +272,13 @@
 - M3 응원: 어르신별 try/catch, 결과 정리는 cheerLogic.summarizeCheer(순수, 테스트), "다시 하기"는 이번에 받은 분을 건너뜀. partial·daily_limit 문구는 임시(라이터 확인, impl-drift #11).
 - L1(리드): 다시 불러오기 실패 시 이전 값 지움 → 오류 상태. L2 shared:false면 답 무시. L3 parent_id 없으면 ''. L4(리드): 다른 어르신이 쓰는 호칭은 저장 비활성(서버 set_parent_title_for 중복 거부는 리드가 서버 줄에 요청). L5(리드): 오프라인 로그아웃은 auth._removeSession(비공개 API, supabase-js 올릴 때 확인)으로 이 기기 세션 정리. L6 번호+기한·최근 답 카드 한 덩어리 읽기.
 - **정리 계획 12 대상(ARCHITECTURE §2 위반, 자녀 줄이 새로 만든 것)**: features→app — `features/home/ChildHome.tsx`(ChildStack 타입·session·splash), `features/home/ChildReport.tsx`(ChildStack), `features/child/ChildSettings.tsx`(ChildStack·session·BackBar), `features/child/ChildAppInfo.tsx`(BackBar), `features/child/ChildWaitScreen.tsx`(ChildStack·session·splash, 기존 파일). shared→app — `shared/useChildData.ts`(session). 이동 대상: ChildParams → navigation/types.ts, session·splash → state/, BackBar → ui/. ASSUMED(0027) starter 는 types.ts·realApi.ts 에 있음 → contracts 생기면 옮김.
+
+### 연결 쉽게(ease-and-joy A·E) 앱 1차 · P1 v4·P1c 동결 시안 반영 (11-17)
+- P1 v4: "다음" 제거, 6번째 숫자 뒤 300ms 자동 확인(peek_invite_code), 맞지 않으면 숫자 유지 + 칸 아래 한 줄. 키패드 글자 키 26·숫자 34, 링크 가운데·간격 24, 약관 한 줄(링크 주소 미정이라 글자만, TODO ⑥a).
+- P1c: 상태 머신 `features/link/connectMachine.ts`(idle→peeking→confirm→redeeming→ok / failed: expired·used·locked·busy·already_linked·not_parent_device·offline·server, 순수 함수 테스트) + `useConnectFlow`(순번으로 늦은 응답 버림). 자동 연결 금지. 밖에서 들어온 번호는 `Connect` 파라미터 `prefill`(App Links·Install Referrer 연결은 다음 작업, 새 의존성 필요 여부 확인).
+- 첫 화면 띠(FS_link): `RoleSelect codeFound` prop만. 번호 출처가 생기면 AppRoot 가 넘긴다.
+- 문구: copy-v3 11절이 시안보다 우선(시안 "은행 번호"→"통장 번호", P1c 제목·호칭 줄·맞지 않음 줄은 11절). `connect.auto_hint`·`connect_confirm.busy`·`first.code_found` 추가.
+- 공유 메시지: 11-1 #5 6줄. 링크는 env `SHARE_LINK_BASE`(app/env/*.env, 없으면 링크 줄 생략 + 설치 안내를 스토어 문장으로).
+- **서버 줄 요청(log_event 화이트리스트)**: `link_opened`, `referrer_found`, `code_prefilled` 추가 필요(속성: 기존 `channel`·`install_source`만, 번호 값 금지). 앱은 `api/contract/events.ts` PENDING_EVENT_NAMES 로 들고 있다가 서버 반영 뒤 EVENT_NAMES 로 옮긴다. `redeem_ok`는 기존 `parent_code_redeemed`로 대신함.
+- 테스트 헬퍼: `testUtils/flow.enterCode`는 자동 확인 후 P1c [이 번호로 연결하기]까지 누른다(가짜 타이머 테스트도 동작). `keyboardStep.test` 계측 검사는 연결 이벤트가 앞에 생겨 `course_*`만 골라 보도록 한 줄 바꿈(P6 줄 확인 필요).
+- 남은 일: /c 웹 안내 페이지(web/C_page, site/), App Links·Install Referrer, P1c 시안의 보조 "처음으로" 링크(지금은 패널 버튼 하나).

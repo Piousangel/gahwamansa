@@ -2,7 +2,7 @@ import React from 'react';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {keypadKeyHeight} from '../src/features/link/keypadFit';
+import {BELOW_LINE_H, keypadKeyHeight} from '../src/features/link/keypadFit';
 import {press} from '../testUtils/flow';
 
 test('계산: 칸 52 + 키 4줄(키 + 6) + 12 = 4 x 키 + 88', () => {
@@ -25,7 +25,7 @@ const layout = async (h: number) =>
 test('어르신 번호 화면: 본문 스크롤 없이 6칸·키 4줄이 남은 높이에 맞춰진다', async () => {
   await openConnect();
   expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(false);
-  await layout(4 * 66 + 88);
+  await layout(4 * 66 + 88 + BELOW_LINE_H); // 칸 아래 안내 한 줄 포함
   const key = screen.getByLabelText('숫자 0');
   const st = typeof key.props.style === 'function' ? key.props.style({pressed: false}) : key.props.style;
   const flat = Array.isArray(st) ? Object.assign({}, ...st.filter(Boolean)) : st;
@@ -38,9 +38,9 @@ test('어르신 번호 화면: 본문 스크롤 없이 6칸·키 4줄이 남은 
 
 test('작은 화면: 보조 문구 → 제목 크기 → 링크를 위 줄로 → 그래도 모자라면 키 64 + 스크롤(잘리지 않음)', async () => {
   await openConnect();
-  expect(screen.getByText('틀려도 괜찮아요')).toBeTruthy();
+  expect(screen.getByTestId('connect-safe')).toBeTruthy();
   await layout(4 * 60 + 88);
-  expect(screen.queryByText('틀려도 괜찮아요')).toBeNull();
+  expect(screen.queryByTestId('connect-safe')).toBeNull(); // 1단계: 안심 줄 숨김(칸 아래 안내는 남음)
   await layout(4 * 60 + 88);
   const {StyleSheet} = require('react-native');
   expect(StyleSheet.flatten(screen.getByRole('header').props.style).fontSize).toBe(22);
@@ -54,12 +54,12 @@ test('작은 화면: 보조 문구 → 제목 크기 → 링크를 위 줄로 �
 
 test('키패드가 들어가면 4줄 모두 영역 안(키 x4 + 88 <= 영역)', async () => {
   await openConnect();
-  const area = 4 * 66 + 88 + 3;
+  const area = 4 * 66 + 88 + BELOW_LINE_H + 3;
   await layout(area);
   const {StyleSheet} = require('react-native');
   const st = screen.getByLabelText('숫자 7').props.style;
   const k = StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight as number;
-  expect(4 * k + 88).toBeLessThanOrEqual(area);
+  expect(4 * k + 88 + BELOW_LINE_H).toBeLessThanOrEqual(area);
   for (const d of ['7', '8', '9', '0']) {
     expect(screen.getByLabelText(`숫자 ${d}`)).toBeTruthy();
   }

@@ -23,8 +23,14 @@ export async function typeCode(code: string) {
   for (const d of code) {
     fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
   }
+  // 자동 확인 300ms 를 지나게 한다(가짜 타이머를 쓰는 테스트면 시계를 돌리고, 아니면 실제로 기다린다)
+  const fake = typeof (setTimeout as unknown as {clock?: unknown}).clock === 'object';
   await act(async () => {
-    await new Promise<void>(r => setTimeout(() => r(), 350));
+    if (fake) {
+      jest.advanceTimersByTime(350);
+    } else {
+      await new Promise<void>(r => setTimeout(() => r(), 350));
+    }
   });
 }
 

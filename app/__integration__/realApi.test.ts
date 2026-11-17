@@ -61,6 +61,12 @@ test('잘못된 코드는 invalid', async () => {
   state.strangerUid = (await strangerClient.auth.getUser()).data.user?.id;
 });
 
+test('P1c: peek_invite_code 는 연결하지 않고 호칭만 준다(0028)', async () => {
+  expect(await parent.peekInviteCode(state.code!)).toEqual({ok: true, parentTitle: expect.any(String)});
+  expect((await parent.peekInviteCode(state.code === '000000' ? '000001' : '000000')).ok).toBe(false);
+  expect(await parent.whoAmI()).toBe('none'); // 아직 연결 안 됨(어르신 프로필 없음)
+});
+
 test('어르신 익명 로그인 -> redeem 성공', async () => {
   const r = await parent.redeemInviteCode(state.code!);
   expect(r).toMatchObject({ok: true, family_id: state.familyId});

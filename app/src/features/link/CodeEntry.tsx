@@ -3,7 +3,7 @@ import {CodeInput} from '../../ui/CodeInput';
 import {clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
 
 // 6자리 번호 쓰기(역할에 묶이지 않음, 큰 키패드). 제출 버튼은 화면의 하단 고정 영역에 둔다.
-export function CodeEntry({value, onChange, keyHeight, groupLabel}: {value: string; onChange: (next: string) => void; keyHeight?: number; groupLabel?: string}) {
+export function CodeEntry({value, onChange, keyHeight, groupLabel, belowCells}: {value: string; onChange: (next: string) => void; keyHeight?: number; groupLabel?: string; belowCells?: React.ReactNode}) {
   return (
     <CodeInput
       value={value}
@@ -12,6 +12,7 @@ export function CodeEntry({value, onChange, keyHeight, groupLabel}: {value: stri
       onClear={() => onChange(clearAll())}
       keyHeight={keyHeight}
       groupLabel={groupLabel}
+      belowCells={belowCells}
     />
   );
 }

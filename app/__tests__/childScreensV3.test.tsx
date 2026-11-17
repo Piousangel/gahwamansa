@@ -38,7 +38,7 @@ describe('C3 연결 대기', () => {
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
     expect(screen.queryByTestId('child-tab-bar')).toBeNull(); // 연결 전 탭 바 숨김
     await press('번호 보내기');
-    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('3. 번호 6개를 써요: 123 456')}));
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('\n123 456\n')}));
     expect(share.mock.calls[0][0]).toMatchObject({message: expect.stringContaining('까지 쓸 수 있어요.')});
   });
 

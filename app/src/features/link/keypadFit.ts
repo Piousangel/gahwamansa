@@ -14,3 +14,6 @@ export function keypadKeyHeight(availH: number): number | null {
   }
   return Math.min(KEY_MAX, k);
 }
+
+// 칸 아래 안내 한 줄(시안 P1_connect_v4: "6자리를 다 쓰면 바로 확인해요" / 확인 중 / 맞지 않음). 줄 높이 30 + 여백 4
+export const BELOW_LINE_H = 34;

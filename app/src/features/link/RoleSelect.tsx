@@ -40,7 +40,8 @@ export const resetFirstScreenMotion = () => {
   firstScreenPlayed = false;
 };
 
-export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => void}) {
+// codeFound: 링크·설치 경로로 번호가 들어왔을 때만 질문 위 띠(시안 FS_link, ease-and-joy A③). 질문은 건너뛰지 않는다(자녀 폰일 수 있음)
+export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | 'child') => void; codeFound?: boolean}) {
   const {height: winH, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
@@ -108,6 +109,12 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 
   const ask = (
     <>
+      {codeFound ? (
+        <View testID="code-found-band" accessibilityRole="text" accessibilityLiveRegion="polite" style={styles.band}>
+          <Icon name="icon-family" size={24} color={color.action} />
+          <Text20 weight="bold" style={styles.bandText}>{f.code_found}</Text20>
+        </View>
+      ) : null}
       <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.question}>{f.question}</Text20>
       {/* D2-C: 두 버튼 동등한 양자택일(부모님 노랑·자녀 하늘), 사이 14 */}
       <View style={styles.choices}>
@@ -181,6 +188,11 @@ const styles = StyleSheet.create({
   seatHidden: {opacity: 0},
   head: {gap: 10},
   question: {color: color.ink, marginBottom: 10},
+  band: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: 16, backgroundColor: color.card, borderWidth: 2, borderColor: color.action,
+  },
+  bandText: {flex: 1, color: color.inkTitle},
   choices: {gap: 14},
   brand: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4},
   wordmark: {color: color.inkTitle},

@@ -129,8 +129,7 @@ test('복원: 로그인돼 있고 연결된 자녀는 바로 앨범', async () =
 test('어르신 번호 화면에서 not_parent_device 면 처음으로 -> 역할 선택', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
-  await typeDigits('555555');
-  await press('다음');
+  await typeDigits('555555'); // 6자리면 저절로 확인("다음" 없음)
   await waitFor(() => screen.getByText('이 폰에서는 번호를 쓸 수 없어요'));
   await press('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));

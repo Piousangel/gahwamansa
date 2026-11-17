@@ -12,11 +12,13 @@ type Props = {
   keyHeight?: number;
   /** 칸 묶음 읽기 라벨(문구는 호출부가 copy 에서). 없으면 예전 라벨 */
   groupLabel?: string;
+  /** 칸 바로 아래 한 줄(안내·확인 중·맞지 않음, 시안 P1_connect_v4) */
+  belowCells?: React.ReactNode;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
-// 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34("모두 지움" 20, "지움" 24).
+// 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
 function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
   return (
     <Pressable
@@ -31,7 +33,7 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells}: Props) {
   return (
     <View>
       <View style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessible accessibilityLabel={groupLabel ?? `입력한 번호 ${formatCode(value)}`}>
@@ -45,6 +47,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
           </View>
         ))}
       </View>
+      {belowCells ? <View style={styles.below}>{belowCells}</View> : null}
       {ROWS.map(r => (
         <View key={r[0]} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
           {r.map(d => (
@@ -53,15 +56,16 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
         </View>
       ))}
       <View style={[styles.row, keyHeight ? styles.rowFitted : null]}>
-        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={20} />
+        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
-        <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={24} />
+        <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
       </View>
     </View>
   );
 }
 const styles = StyleSheet.create({
   cells: {flexDirection: 'row', gap: 8, marginBottom: 16},
+  below: {marginTop: -8, marginBottom: 12},
   // 화면에 맞춰 줄일 때(keyHeight 지정): 칸은 보여 주는 곳이라 52 고정, 줄 간격 6(features/link/keypadFit)
   cellFitted: {minHeight: 52},
   cellsFitted: {marginBottom: 12},

@@ -111,18 +111,14 @@ test('P3: 하단 큰 버튼은 지금 단계 이름(0/3 사진 보기 → 1/3 �
   expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '둘 중 고르기'})).toBeTruthy();
 });
 
-test('P1: "다음" 아래에 번호가 없어요·코스 보기, 6자리 전에는 "번호 6개를 모두 써 주세요"가 다음 위에 보인다', async () => {
+test('P1 v4: 하단은 번호가 없어요·코스 보기 → 약관 한 줄("다음" 없음, 자동 확인)', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   const order = texts(screen.getByTestId('screen-dock'));
-  expect(order.indexOf('번호 6개를 모두 써 주세요')).toBeGreaterThanOrEqual(0);
-  expect(order.indexOf('번호 6개를 모두 써 주세요')).toBeLessThan(order.indexOf('다음'));
-  expect(order.indexOf('다음')).toBeLessThan(order.indexOf('번호가 없어요'));
+  expect(order).not.toContain('다음');
   expect(order.indexOf('번호가 없어요')).toBeLessThan(order.indexOf('코스 보기'));
-  for (const d of '123456') {
-    fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
-  }
-  expect(screen.queryByText('번호 6개를 모두 써 주세요')).toBeNull();
+  expect(order.indexOf('코스 보기')).toBeLessThan(order.indexOf('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요'));
+  expect(fireEvent).toBeTruthy();
 });
 
 test('a11y R9: 선택 카드는 라디오(checked), 묶음은 radiogroup', async () => {

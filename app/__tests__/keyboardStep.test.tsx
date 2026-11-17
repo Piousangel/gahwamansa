@@ -187,7 +187,7 @@ test('계측: 단계 완료 때 course_step_completed {step:hangul, attempt_no, 
   await press('다 썼어요');
   await press('이대로 마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  const ev = calls.filter(c => c.name === 'logEvent').map(c => c.args);
+  const ev = calls.filter(c => c.name === 'logEvent' && String(c.args[0]).startsWith('course_')).map(c => c.args);
   expect(ev[0][0]).toBe('course_step_completed');
   expect(ev[0][1]).toEqual({step: 'hangul', duration_sec: expect.any(Number), attempt_no: 2});
   expect(ev[1]).toEqual(['course_completed', {day_index: 1}]);
