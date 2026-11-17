@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest --testPathIgnorePatterns __integration__",
-    "test:integration": "jest -c jest.integration.config.js --runInBand"
+    "test:integration": "jest -c jest.integration.config.js --runInBand",
+    "check:dev-menu": "bash scripts/check-dev-menu-bundle.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",

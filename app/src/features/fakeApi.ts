@@ -77,8 +77,10 @@ export type FakeParent = {
 };
 const todayKst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
+export type FakeDevHooks = {resetToday(): void; nextDay(): void};
+
 // in-memory 가짜 구현. '123456' 만 성공, 위 표의 코드는 각 reason, 나머지는 invalid.
-export function createFakeApi(opts: FakeOptions = {}): Api {
+export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHooks} {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
   let consented = opts.consented ?? false;
@@ -124,7 +126,22 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         }))
       : [single()];
   let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
+  let contentDay = opts.day ?? 1; // 개발자 메뉴 "하루 넘기기"가 바꾼다
+  // 개발자 메뉴(fake 모드 전용): 오늘 코스 초기화·하루 넘기기. Api 인터페이스 밖이라 realApi 에는 없다
+  const devHooks: FakeDevHooks = {
+    resetToday() {
+      steps.clear();
+      answered = null;
+      savedLabel = null;
+    },
+    nextDay() {
+      contentDay += 1;
+      steps.clear();
+      answered = null;
+    },
+  };
   return {
+    __dev: devHooks,
     async signInWithSocial() {
       const r = opts.socialResult ?? 'ok';
       if (r === 'offline') {
@@ -184,7 +201,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         return many.map(p => ({parentId: p.parentId, title: p.title, shared: p.shared ?? true, items: (p.shared ?? true) ? (p.history ?? []) : []}));
       }
       const s = single();
-      const c = FAKE_CONTENT[((opts.day ?? 1) - 1) % FAKE_CONTENT.length];
+      const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
       const items: HistoryItem[] =
         opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), choiceLabel: savedLabel}] : []);
       return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? items : []}];
@@ -295,7 +312,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       if (opts.empty) {
         return null;
       }
-      const idx = ((opts.day ?? 1) - 1) % FAKE_CONTENT.length;
+      const idx = (contentDay - 1) % FAKE_CONTENT.length;
       const c = FAKE_CONTENT[idx];
       return {
         day_index: idx + 1,
@@ -313,7 +330,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         throw new ServerError('save_answer', 'consent_required', 'P0001'); // 서버와 같게
       }
       answered = choice;
-      const c = FAKE_CONTENT[((opts.day ?? 1) - 1) % FAKE_CONTENT.length];
+      const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
       savedLabel = choice === 'A' ? c.a : c.b;
     },
     async recordSessionStep(step) {

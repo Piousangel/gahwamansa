@@ -6,6 +6,7 @@ import {Text20} from '../../ui/Text20';
 import {copy} from '../../copy/copy';
 import {color, radius, size} from '../../ui/tokens';
 import {APP_VERSION, CONTACT_EMAIL, PRIVACY_URL} from '../../lib/appInfo';
+import {useAppVersionTaps} from '../../dev/devGate';
 
 const a = copy.child.app_info;
 
@@ -13,6 +14,7 @@ const a = copy.child.app_info;
 // TODO(오픈소스 라이선스 행): appInfo.OSS_LICENSES_READY 가 켜지면 목록 화면과 함께 연다.
 export function ChildAppInfo() {
   const privacy = PRIVACY_URL;
+  const versionTap = useAppVersionTaps();
   const mail = CONTACT_EMAIL;
   return (
     <Screen
@@ -23,10 +25,11 @@ export function ChildAppInfo() {
         </>
       }>
       <View style={styles.section}>
-        <View style={styles.row} accessible accessibilityLabel={`${a.version}, ${APP_VERSION}`}>
+        {/* 버전 줄: staging·개발 빌드에서만 7번 탭 → 개발자 메뉴(devGate). production 은 누를 수 없는 줄 */}
+        <Pressable testID="version-tap" disabled={!versionTap} onPress={versionTap} style={styles.row} accessible accessibilityLabel={`${a.version}, ${APP_VERSION}`}>
           <Text20 weight="bold" style={styles.flex}>{a.version}</Text20>
           <Text20 style={styles.sub}>{APP_VERSION}</Text20>
-        </View>
+        </Pressable>
         {privacy ? <LinkRow label={a.privacy} onPress={() => Linking.openURL(privacy)} /> : null}
         {mail ? <LinkRow label={a.contact} sub={mail} onPress={() => Linking.openURL(`mailto:${mail}`)} /> : null}
       </View>

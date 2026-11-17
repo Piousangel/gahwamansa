@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -11,6 +11,8 @@ import {BigButton} from '../../ui/BigButton';
 import {color, radius} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
+import {APP_VERSION} from '../../lib/appInfo';
+import {useAppVersionTaps} from '../../dev/devGate';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -24,6 +26,7 @@ export function ParentSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const versionTap = useAppVersionTaps();
 
   const run = async (action: () => Promise<void>, next: boolean, done: string | null) => {
     if (busy) {
@@ -102,10 +105,13 @@ export function ParentSettings() {
           <BigButton variant="secondary" label={copy.course.write_code} onPress={() => navigation.push('Connect', {from: 'course'})} />
         </View>
       )}
-      {/* 앱 정보: AI 그림 고지 1줄 */}
+      {/* 앱 정보: AI 그림 고지 1줄 + 버전 줄(staging·개발 빌드에서만 7번 탭 → 개발자 메뉴) */}
       <View style={styles.section}>
         <Text20 weight="bold">{t.app_info}</Text20>
         <Text20 style={styles.sub}>{t.ai_notice}</Text20>
+        <Pressable testID="version-tap" disabled={!versionTap} onPress={versionTap}>
+          <Text20 style={styles.sub}>{t.version.split('{버전}').join(APP_VERSION)}</Text20>
+        </Pressable>
       </View>
     </Screen>
   );

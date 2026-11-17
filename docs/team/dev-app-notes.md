@@ -299,3 +299,12 @@
 - linkSources 연결: AppRoot 가 `startInviteSources`·`subscribeInvite` → 첫 화면 띠(codeFound) → 부모님 고르면 Connect `prefill`(링크가 referrer 보다 우선, applyInvite). 연결 성공·쓸 수 없는 번호·다른 번호 쓰기 때 `consumeInvite`. 퍼널 link_opened{source}·referrer_found·code_prefilled{source}.
 - N3 시트 닫기 "닫기"(family.stop_sheet.close), N4 갈래 하나일 때 `hint_one`(라이터 확인 _status), N5 목록 간격 8·행 80·아이콘 원 48·그만두기 행 구분선+X 아이콘+화살표·갈래 테두리 2·화살표, 그만둘래요는 밑줄 보조 링크.
 - M4: radius.keypadKey 14·codeCell 12 를 tokens-v3.json(원본)·tokens.ts(사본)에 추가(designSystem 동기 테스트).
+
+### staging 전용 개발자 메뉴(보안 리뷰 대상) · 11-18
+- 진입: 설정의 버전 줄 7번 탭(어르신 P13 하단 "버전 1.0.0" 줄, 자녀 앱 정보의 버전 행). `src/dev/devGate.ts`(모든 빌드에 들어가는 작은 관문): production 은 항상 불가, staging 빌드 가능, local 은 `__DEV__` 일 때만. 허용 안 되면 버전 줄은 눌리지 않는다.
+- 번들 제외: `metroDevMenu.js` + `metro.config.js` resolveRequest — Gradle 이 번들 직전에 쓰는 `src/lib/env.generated.ts` 의 APP_ENV 가 production 이면 `src/dev/DevMenuHost.tsx` 를 `DevMenuHost.stub.tsx`(빈 대역)로 바꾼다. 구현만 import 하는 `sessionSlots`·`testFamily`·메뉴 문구도 함께 빠진다. 확인: `npm run check:dev-menu`(production·staging 번들을 만들어 표식 grep, production 에 없고 staging 에 있어야 통과).
+- 역할 전환: 역할별 세션(access·refresh 토큰)을 AsyncStorage `dev_menu_session_{parent|child}_v1` 에 보관하고 `setSession` 으로 바꾼 뒤 AppRoot 를 key 로 다시 마운트(스택 리셋). 지금 세션은 **서버 로그아웃 없이** 이 기기에서만 내린다(`auth._removeSession`, 비공개 API) — `signOut({scope:'local'})` 은 서버에서 그 세션 refresh 토큰을 무효로 해 보관 세션을 되살릴 수 없음을 통합 테스트로 확인했다. supabase-js 를 올릴 때 `__integration__/devMenu` 가 이름 변화를 잡는다.
+- 테스트 가족: 자녀(개발 빌드 `config.local.ts` 의 `devTestChild` 이메일·비밀번호, gitignore — 없으면 보관된 자녀 세션) → 가족·번호 → 자녀 세션 보관 → 어르신 익명 연결 → 어르신 세션 보관. 번호·토큰·비밀번호는 화면·로그·결과에 싣지 않는다. staging release 빌드에는 `config.local` 이 적용되지 않으므로 소셜 로그인 세션을 쓴다.
+- 오늘 코스 초기화·하루 넘기기: fake API(local 개발) 전용 훅 `__dev`(서버 영향 없음, fakeApi 와 함께 production 번들에도 있으나 무해). real 서버는 앱에서 기록·날짜를 바꿀 수 없어 메뉴에 그 사실만 표시. 도장: 이 기기 미연결 도장(localStamps) 지우기.
+- 표시: APP_ENV·API_MODE·서버 주소·버전(VERSION_NAME·CODE·GIT_SHA)·링크 도메인.
+- 아키텍처 예외: `src/dev` 는 개발 전용이라 supabase auth 를 realApi 밖에서 직접 쓴다(production 번들 제외로 한정).

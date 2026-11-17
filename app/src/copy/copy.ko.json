@@ -282,7 +282,8 @@
     "back": "돌아가기",
     "app_info": "앱 정보",
     "ai_notice": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
-    "family_row": "연결된 가족"
+    "family_row": "연결된 가족",
+    "version": "버전 {버전}"
   },
   "delete": {
     "parent": {
