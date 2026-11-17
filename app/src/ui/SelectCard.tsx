@@ -15,6 +15,7 @@ type Props = {
   selectedLabel?: string;
 };
 
+// 화면 읽기는 라디오(talkback-spec R9): 묶음은 쓰는 쪽에서 accessibilityRole="radiogroup" 으로 감싼다.
 // 명세 §2: minHeight 132, 반경 24, 테두리 4, 패딩 16, 글자 32 / 배지 20 굵게. 선택은 색 + 굵은 테두리 + 글자("골랐어요").
 export function SelectCard({label, selected, onPress, state, errorText, selectedLabel = copy.question.chosen}: Props) {
   const s: SelectCardState = state ?? (selected ? 'selected' : 'default');
@@ -22,9 +23,9 @@ export function SelectCard({label, selected, onPress, state, errorText, selected
   const locked = s === 'saving' || s === 'disabled';
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole="radio"
       accessibilityLabel={label}
-      accessibilityState={{selected: on, disabled: locked, busy: s === 'saving'}}
+      accessibilityState={{checked: on, disabled: locked, busy: s === 'saving'}}
       disabled={locked}
       onPress={onPress}
       style={({pressed}) => [

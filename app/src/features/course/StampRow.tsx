@@ -8,11 +8,12 @@ import {copy} from '../../copy/copy';
 const c = copy.course;
 
 // 이번 주 도장 줄 7칸(design-system README §4). 붙은 날 = 해님 도장(3종 번갈아), 빈 칸 = 점선, 오늘 = 굵은 점선.
-// "N일 연속" 숫자는 쓰지 않는다(쉰 날을 세지 않음). 줄 전체를 한 덩어리로 읽는다.
+// "N일 연속" 숫자는 쓰지 않는다(쉰 날을 세지 않음). 줄 전체를 한 덩어리로, 찍은 요일만 읽는다(개수·빈 날 미언급, talkback-spec P3-5).
 export function StampRow({days, todayIdx}: {days: boolean[]; todayIdx: number}) {
-  const n = days.filter(Boolean).length;
+  const stamped = c.weekdays.filter((_, i) => days[i]);
+  const label = stamped.length ? c.stamps_a11y.split('{요일}').join(stamped.join(' ')) : c.stamps_a11y_none;
   return (
-    <View style={styles.card} accessible accessibilityLabel={c.stamps_a11y.split('{n}').join(String(n))}>
+    <View style={styles.card} accessible accessibilityLabel={label}>
       <Text20 size={24} weight="bold">{c.stamps_label}</Text20>
       <View style={styles.row}>
         {days.map((on, i) => (

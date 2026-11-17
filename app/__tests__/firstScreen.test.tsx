@@ -3,7 +3,7 @@ import React from 'react';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -68,7 +68,7 @@ test('자동 확인이 틀리면 칸을 비우고 오류', async () => {
 
 test('이전 바 라벨, 코스 중에는 "오늘 코스로 돌아가기"', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByLabelText('오늘 코스로 돌아가기'));
   expect(screen.getByText('‹ 오늘 코스')).toBeTruthy();
 });

@@ -235,3 +235,13 @@
 - 렌더: design-system/assets/brand/_src/render.sh app (전체 렌더에도 포함).
 - 용량: 릴리스 유니버설 APK +238,085 바이트(약 0.23MB). AAB 밀도 분할이면 기기당 더 작음.
 - 미확인: 실기기에서 OEM 이 스플래시 아이콘을 다른 크기로 그리는지(그러면 전환 때 크기가 튐), Android 11 이하 compat 크기.
+### QA 실기기 스모크 수정·접근성 3건(11-17)
+- B2: 코스 홈 배너 "번호 쓰기" = push('Connect', {from:'course'}), 번호 화면 '이전'은 goBack(코스 홈). 설정의 "번호 쓰기"도 같음.
+- B3: 설정 입구를 미연결에도 표시. 미연결 설정은 "가족에게 답 보여 주기 / 번호를 받으면 그때부터 답이 저장돼요 / 번호 쓰기"만(보여 주기·지우기 숨김).
+- B6: Screen 위 여백 = max(52, 상태바 + 12)(§15 TopSafe 52 이상).
+- B4: Screen 본문이 넘치면 아래 28 페이드(끝까지 내리면 사라짐), 사진 단계 사진 높이 ≤ 화면 28%.
+- 단계 표시: StepHeader("사진 보기 1 / 3", 화면 읽기 "사진 보기, 3단계 중 1단계") — PhotoStep·QuestionStep만. HangulStep 은 P6 줄 담당이라 손대지 않음(합칠 때 `<StepHeader name={copy.course.step.hangul} n={3} />` 를 top 에 추가하면 됨).
+- P3 주 버튼 = 지금 단계 이름(copy 10절). P1 하단 = 이유 줄(6자리 전, 화면 읽기 제외) → 다음 → 번호가 없어요·코스 보기.
+- a11y: StampRow "이번 주 도장, 월 화 목 찍었어요"(없으면 "이번 주 도장"), SelectCard role radio + checked(질문 단계 묶음 radiogroup, 호칭 화면 묶음은 자녀 화면이라 미적용), Screen 진입 300ms 뒤 첫 머리글(위 고정 → 본문 순)에 sendAccessibilityEvent focus.
+- 문구 임시(라이터 확인): course.stamps_a11y·stamps_a11y_none·step_a11y.
+- 미반영: P1 빈 칸 "여기" 표시(키패드 높이 계산 변경 필요), 360x780에서 부제 "틀려도 괜찮아요"는 공간 부족 단계 규칙으로 숨김(설계대로), P3 제목 "오늘 코스예요"(기존 결정·테스트가 "오늘의 코스"), P5 제목 문구, 단계명 "자판으로 쓰기"(P6 줄).
