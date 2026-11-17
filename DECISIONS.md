@@ -303,3 +303,10 @@
 - 버전: 1.0.0, versionCode = git 커밋 수 → 출시 빌드는 main에서만
 - DB 반영: scripts/db-push.sh 가 env의 ref를 --remote로, dry-run 후 환경 이름·ref 재입력 확인, production은 스키마 백업 후 push(실행은 사용자)
 - npm run android = stagingDebug
+
+## 2026-11-17 연결 쉽게·기록 보기·완료감 채택(위임) — docs/team/board/2026-11-17-ease-and-joy/SUMMARY.md
+- 연결: 카톡 링크(App Links·Play Install Referrer로 번호 자동 채움) → 확인 화면 P1c [이 번호로 연결하기](자동 연결 금지) 기본, 손 입력은 6자리 자동 확인 보조("다음" 제거). 착수 첫날 카톡 인앱 스파이크로 가능성 확인
+- 기록 보기: 오늘 세 단계 보기 전용(B2 확장 대체), 지난 날 최근 30일 목록(빌드1 조건부), daily_sessions 콘텐츠 id 기록은 빌드1 필수
+- 완료감: 단계 체크 모션, P7 도장 "쾅" 1.4초(건너뛰기, 시스템 촉각 1회, 나무 도장 소리, 효과음 토글), 칭찬·연속·하트 없음
+- 디자인 리듬: StepRow·줄 높이·패딩·간격 규칙(SUMMARY D), "오늘의 코스" 제목 제거
+- 우선순위: ① 리듬 수정·연결 핵심·서버 기록 컬럼·미연결 문구 ② 완료감 ③ 설치 경로 자동 채움 ④ 호칭 미리보기 ⑤ 지난 날 화면
