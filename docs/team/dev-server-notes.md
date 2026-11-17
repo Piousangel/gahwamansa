@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0026) · 2026-11-17
+# 서버 계약 노트 (0019~0027) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -11,10 +11,11 @@
     { "parent_id": "uuid", "title": "엄마",  // 어르신별 호칭, 없으면 가족 호칭
       "connected": true,                   // false = 연결 끊김(프로필은 있고 기기 없음) → 배너, 응원 버튼 숨김
       "shared": true,                      // 동의 여부. false면 latest=null
-      "latest": { "prompt": "…", "choice_label": "가을", "answered_date": "2026-11-16" } } ] }
+      "latest": { "prompt": "…", "choice_label": "가을", "starter": "가을 이야기 들려주세요", "answered_date": "2026-11-16" } } ] }
 ```
 - `latest`는 **session_date(그 답의 날)** 기준 최신 1개. answered_date = session_date(답을 고친 시각 아님).
 - 어르신이 2명 이상이면 반드시 parent_id·title로 행을 나눠 보여 준다(섞이면 오표시).
+- `starter`(0027, 첫마디 한 줄): 어르신이 **고른 쪽** 선택지의 대화 시작 문장(`content_questions.starter_a/b`). 문장이 아직 없으면 null → 앱은 줄을 숨긴다. 문장은 라이터가 채우며 시드는 비어 있다.
 
 ### child_answer_history() → jsonb  (0021, C5 지난 답)
 ```json
