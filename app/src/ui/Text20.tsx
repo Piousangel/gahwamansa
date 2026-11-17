@@ -2,6 +2,7 @@ import React from 'react';
 import {Platform, Text, TextProps, StyleSheet} from 'react-native';
 import {BIG_TITLE_MIN, color, FONT_SCALE_MAX, FONT_SCALE_MAX_BODY, lineHeight, MIN_BODY_FONT} from './tokens';
 import {keepAllChildren, koreanTextProps} from './koreanText';
+import {useScreenTitleRef} from './screenTitle';
 
 type Props = TextProps & {size?: number; weight?: 'normal' | 'bold'};
 
@@ -13,8 +14,10 @@ export function Text20({size = MIN_BODY_FONT, weight, style, children, ...rest}:
   // Android 는 글자에 WJ 가 섞이므로 화면 읽기에는 원문을 준다(글자 단위 탐색에 빈 칸이 끼지 않게).
   const a11yLabel =
     rest.accessibilityLabel ?? (Platform.OS === 'android' && typeof children === 'string' ? children : undefined);
+  const titleRef = useScreenTitleRef(rest.accessibilityRole === 'header');
   return (
     <Text
+      ref={titleRef}
       {...koreanTextProps}
       maxFontSizeMultiplier={fs >= BIG_TITLE_MIN ? FONT_SCALE_MAX : FONT_SCALE_MAX_BODY}
       {...rest}

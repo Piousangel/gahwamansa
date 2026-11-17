@@ -119,7 +119,9 @@ describe('공용 컴포넌트 명세 수치', () => {
   });
   test('BigButton 비활성 이유를 글자로 알린다', () => {
     render(<BigButton label="정했어요" disabled disabledReason="하나를 골라 주세요" onPress={() => {}} />);
-    expect(screen.getByText('하나를 골라 주세요')).toBeTruthy();
+    // 화면엔 글자로 보이고, 화면 읽기는 버튼 힌트로 한 번만 읽는다(TalkBack R8)
+    expect(screen.getByText('하나를 골라 주세요', {includeHiddenElements: true})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '정했어요'}).props.accessibilityHint).toBe('하나를 골라 주세요');
   });
   test('BigButton 로딩이면 "잠시만요"와 누르기 막음', () => {
     const fn = jest.fn();
@@ -128,7 +130,7 @@ describe('공용 컴포넌트 명세 수치', () => {
   });
   test('SelectCard: 높이 132 이상, 글자 32, 저장 중이면 잠금', () => {
     render(<SelectCard label="봄" selected={false} state="saving" onPress={() => {}} />);
-    const card = screen.getByRole('button', {name: '봄'});
+    const card = screen.getByRole('radio', {name: '봄'}); // 화면 읽기는 라디오(talkback-spec R9)
     expect(flat(card.props.style).minHeight).toBeGreaterThanOrEqual(132);
     expect(flat(screen.getByText('봄').props.style).fontSize).toBe(32);
     expect(card).toBeDisabled();

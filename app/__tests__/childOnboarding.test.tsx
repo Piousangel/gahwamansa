@@ -64,7 +64,7 @@ test('가족 만들기 -> 호칭(기본 부모님) -> 번호 만들기 -> 큰 �
   const share = jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
   await loginAsChild(api);
   await waitFor(() => screen.getByText('부모님을 어떻게 부르세요?'));
-  expect(screen.getByRole('button', {name: '부모님', selected: true})).toBeTruthy();
+  expect(screen.getByRole('radio', {name: '부모님', checked: true})).toBeTruthy();
   fireEvent.press(screen.getByText('엄마'));
   await press('번호 만들기');
   await waitFor(() => screen.getByText('번호가 만들어졌어요'));

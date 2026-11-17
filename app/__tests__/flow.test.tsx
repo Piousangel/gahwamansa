@@ -1,6 +1,6 @@
 import React from 'react';
 import {render, screen, fireEvent, waitFor} from '@testing-library/react-native';
-import {enterCode, press, toHome} from '../testUtils/flow';
+import {enterCode, press, toHome, pressCourseNext} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 
@@ -19,16 +19,16 @@ test('틀린 번호는 어르신 문장으로 안내한다', async () => {
 });
 
 async function doAllSteps() {
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('마을 입구 나무'));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('나무'));
   await press('다 썼어요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));

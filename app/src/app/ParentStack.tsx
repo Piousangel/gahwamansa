@@ -11,7 +11,7 @@ import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {HangulStep} from '../features/course/HangulStep';
 
 export type ParentParams = {
-  Connect: undefined; Consent: undefined; CourseHome: undefined;
+  Connect: {from?: 'course'} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: undefined; QuestionStep: undefined; HangulStep: undefined;
   Settings: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };

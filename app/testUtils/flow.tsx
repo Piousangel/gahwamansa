@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import type {Api} from '../src/features/types';
 
@@ -7,6 +7,13 @@ import type {Api} from '../src/features/types';
 export async function press(name: string | RegExp) {
   await act(async () => {
     fireEvent.press(screen.getByRole('button', {name}));
+  });
+}
+
+// 코스 홈의 주 버튼(지금 단계 이름: 사진 보기 / 둘 중 고르기 / 글씨 쓰기, 시안 P3 copy 10절)을 누른다
+export async function pressCourseNext() {
+  await act(async () => {
+    fireEvent.press(within(screen.getByTestId('screen-dock')).getByTestId('big-button').findByProps({accessibilityRole: 'button'}));
   });
 }
 

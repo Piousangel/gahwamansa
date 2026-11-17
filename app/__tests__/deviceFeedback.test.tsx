@@ -5,7 +5,7 @@ import * as SafeArea from 'react-native-safe-area-context';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {CodeInput} from '../src/ui/CodeInput';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -119,7 +119,7 @@ test('인증번호 단계의 이전은 이메일 단계로', async () => {
 
 test('코스 진행 중 이전은 확인 없이 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await act(async () => fireEvent.press(screen.getByLabelText('오늘 코스로 돌아가기')));
   await waitFor(() => screen.getByText('오늘의 코스'));

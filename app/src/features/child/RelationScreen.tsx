@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -55,9 +56,12 @@ export function RelationScreen() {
     <Screen top={<BackBar />} bottom={<BigButton label={t.next} disabled={busy} onPress={next} />}>
       <Text20 size={28} weight="bold">{t.title}</Text20>
       <Text20>{t.hint}</Text20>
-      {PARENT_TITLES.map(p => (
-        <SelectCard key={p} label={p} selected={title === p} onPress={() => setTitle(p)} />
-      ))}
+      {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9) */}
+      <View testID="title-group" accessibilityRole="radiogroup">
+        {PARENT_TITLES.map(p => (
+          <SelectCard key={p} label={p} selected={title === p} onPress={() => setTitle(p)} />
+        ))}
+      </View>
       <Text20>{t.fallback}</Text20>
       <Text20>{t.later}</Text20>
       {failed ? <Text20 accessibilityLiveRegion="polite">{failed}</Text20> : null}

@@ -235,3 +235,33 @@
 - 렌더: design-system/assets/brand/_src/render.sh app (전체 렌더에도 포함).
 - 용량: 릴리스 유니버설 APK +238,085 바이트(약 0.23MB). AAB 밀도 분할이면 기기당 더 작음.
 - 미확인: 실기기에서 OEM 이 스플래시 아이콘을 다른 크기로 그리는지(그러면 전환 때 크기가 튐), Android 11 이하 compat 크기.
+### U0 공용 컴포넌트(앱 표준, 11-17) — app/src/ui
+- `SunBubble({text, moment:'firstMeet'|'complete'|'error', size?, readAloud?:{label,onPress}})`: 해님은 첫 만남·완료·오류에만, 표정은 moment 로 고정(40=도장, 오류는 56 이상). 하트·칭찬·40자 초과는 개발 경고. 자녀 화면(features/child·home) 사용 금지 테스트. 화면 읽기 켜짐이면 읽기 버튼 숨김(R16).
+- `Dialog({visible, title, body?, actions[{label,onPress,kind?,loading?,disabled?,disabledReason?}], warningLabel?, onBack?, returnFocusRef?})`: 어르신용. 맨 위=안전한 주 버튼, 밖 눌러도 안 닫힘·X 없음, 안드로이드 뒤로=맨 위 선택지. warningLabel 은 되돌릴 수 없는 행동에만.
+- `BottomSheet({visible, title, body?, children?, primary?, secondary?, onClose, closeLabel, returnFocusRef?})`: 자녀용. X·보조·밖·뒤로로 닫힘.
+- `Banner({kind:'error'|'offline'|'success'|'info', text, action?, onHidden?})`: 어르신용. 성공만 6초 뒤 사라짐.
+- `ToastProvider({bottomOffset})` + `useToast().show({text, kind?, action?})`: 자녀용, 한 번에 1개, 6초, 오류는 유지. 자녀 줄의 별도 Toast·Sheet 는 합칠 때 이것으로 대체(ARCHITECTURE).
+- `Photo({source, aspectRatio, accessibilityLabel, onError?})` + `imageCache.prefetchImages(uris)`: 자리표시 → 300ms 페이드, 동작 줄이기·미리 받은 사진은 바로. 새 의존성 없음.
+- 공통: 글자 최소 20(자녀 포함, impl-drift #5), 제목·버튼 배율 1.5·본문 2.0, 모션은 불투명도만(동작 줄이기면 0), 열리면 제목 포커스·닫히면 연 버튼으로(R12), 알림은 announce 한 번(R11, 오류도 polite), 장식 숨김(R5). ui/ 는 문구를 모름 → 라벨은 호출부가 copy 에서.
+- 실기기 미확인: TalkBack 포커스 이동·복귀 타이밍(300ms), Modal 위 announce 순서, 150·200% 대화상자 본문 스크롤.
+- 리뷰(reviews/2026-11-17-u0-components-review.md) 반영: M1 Dialog 뒤로가 비활성·로딩 선택지를 실행하지 않음 + 같은 그리기 안에서 두 번 실행 안 함(호출부가 actions 를 새로 넘기면 다시 가능) / M2 Photo 주소 바뀌면 key 로 새로 / M3 Toast 오류는 action 필수(타입), 없으면 자동 사라짐 / L4 닫히면 opacity 0 / L5 열림 포커스도 300ms / L6 포커스 도우미는 ui/screenTitle.ts(focusNode·focusLater·FOCUS_DELAY_MS) 한 벌, Screen·Dialog·Sheet 공용 / L7·L8 배너 버튼 배율 1.5·줄바꿈·토큰 / L9 토스트 타이머 정리 / L10 해님 문구 검사 lib/hanimText.ts + copy 원본·사본 전체 검사 / L12 Photo 로딩 중 loadingLabel 만 읽음. 남김: L11(R16 판단 두 곳)은 오디오 연결 때, #13 150% 대화상자 실기기, #14 서명 URL 캐시 키.
+- copy 위반 1건: `praise[0]` "오늘 코스를 마쳤어요. 잘하셨어요"(칭찬 금지 위반, 앱 코드에서 미사용). hanimText 테스트에 알려진 위반으로 등록 — 라이터가 원본을 고치면 목록에서 지운다.
+### U1 오디오 스파이크(11-17)
+- 후보·근거·실기기 항목: docs/team/dev-audio-spike.md. 권고(승인 전, package.json 미반영): @mhpdev/react-native-speech 1.4.4, react-native-sound 0.13.0, react-native-volume-manager 2.2.0. 정책 순수 함수 src/lib/audioPolicy.ts(덕킹 10%, 무음·화면 읽기·백그라운드 정지).
+### QA 실기기 스모크 수정·접근성 3건(11-17)
+- B2: 코스 홈 배너 "번호 쓰기" = push('Connect', {from:'course'}), 번호 화면 '이전'은 goBack(코스 홈). 설정의 "번호 쓰기"도 같음.
+- B3: 설정 입구를 미연결에도 표시. 미연결 설정은 "가족에게 답 보여 주기 / 번호를 받으면 그때부터 답이 저장돼요 / 번호 쓰기"만(보여 주기·지우기 숨김).
+- B6: Screen 위 여백 = max(52, 상태바 + 12)(§15 TopSafe 52 이상).
+- B4: Screen 본문이 넘치면 아래 28 페이드(끝까지 내리면 사라짐), 사진 단계 사진 높이 ≤ 화면 28%.
+- 단계 표시: StepHeader("사진 보기 1 / 3", 화면 읽기 "사진 보기, 3단계 중 1단계") — PhotoStep·QuestionStep만. HangulStep 은 P6 줄 담당이라 손대지 않음(합칠 때 `<StepHeader name={copy.course.step.hangul} n={3} />` 를 top 에 추가하면 됨).
+- P3 주 버튼 = 지금 단계 이름(copy 10절). P1 하단 = 이유 줄(6자리 전, 화면 읽기 제외) → 다음 → 번호가 없어요·코스 보기.
+- a11y: StampRow "이번 주 도장, 월 화 목 찍었어요"(없으면 "이번 주 도장"), SelectCard role radio + checked(질문 단계 묶음 radiogroup, 호칭 화면 묶음은 자녀 화면이라 미적용), Screen 진입 300ms 뒤 첫 머리글(위 고정 → 본문 순)에 sendAccessibilityEvent focus.
+- 문구 임시(라이터 확인): course.stamps_a11y·stamps_a11y_none·step_a11y.
+- 미반영: P1 빈 칸 "여기" 표시(키패드 높이 계산 변경 필요), 360x780에서 부제 "틀려도 괜찮아요"는 공간 부족 단계 규칙으로 숨김(설계대로), P3 제목 "오늘 코스예요"(기존 결정·테스트가 "오늘의 코스"), P5 제목 문구, 단계명 "자판으로 쓰기"(P6 줄).
+### QA 수정 리뷰 반영(f7e7428 리뷰, 11-17)
+- 제목 포커스: 머리글 등록은 useScreenTitleRef 한 경로(Text20 머리글·StepHeader). 등록은 마운트 동안만(ref 정리 함수로 해제), Screen 은 위 고정 영역 → 본문 순서로 지금 마운트된 첫 머리글을 고른다. 화면 읽기가 켜졌을 때만 300ms 타이머. 마운트 때 한 번만(goBack 으로 돌아온 화면 재포커스는 결정 필요 — 리뷰 ④).
+- 스택 정리: 번호 성공 → reset [번호, 동의], 동의 → replace 코스 홈, 코스 홈·설정에서 온 번호 화면의 "코스 보기" → popTo 코스 홈. 하드웨어 뒤로 테스트(navStack.test).
+- Screen 스크롤: 측정값은 ref, 페이드 boolean 이 바뀔 때만 다시 그림.
+- 호칭 화면 선택 카드 묶음 radiogroup.
+- **실기기 확인 항목**: 위 여백 max(52, 상태바+12)로 상태바 24 기기에서 모든 화면 +28px → 360x780 에서 번호 화면 키패드 맞춤 단계(level)와 사진 화면 질문 노출을 확인.
+- 남김: Text20 ref 합성(rest 의 ref 가 덮을 수 있음, 지금 사용처 없음), 안 쓰는 course.continue 문구 키 정리(라이터 문구 원본과 함께).

@@ -5,7 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError, ServerError} from '../src/features/types';
 import {createRealApi} from '../src/features/realApi';
-import {enterCode, press, toHome, toHomeConsented} from '../testUtils/flow';
+import {enterCode, press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 test('서버가 이미 동의한 상태면 동의 화면을 건너뛴다', async () => {
   render(<AppRoot api={createFakeApi({consented: true})} role="parent" />);
@@ -38,7 +38,7 @@ test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () =
 test('기록이 실패하면 완료 처리하지 않고 다시 하기를 안내한다', async () => {
   const api = createFakeApi({failRecord: 1, consented: true});
   await toHomeConsented(api);
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
@@ -51,7 +51,7 @@ test('소요 시간은 0~7200초 숫자로 보낸다', async () => {
   const api = createFakeApi({consented: true});
   const rec = jest.spyOn(api, 'recordSessionStep');
   await toHomeConsented(api);
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   const d = rec.mock.calls[0][1];
@@ -61,11 +61,11 @@ test('소요 시간은 0~7200초 숫자로 보낸다', async () => {
 
 async function toQuestion(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
 }
