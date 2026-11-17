@@ -11,6 +11,7 @@ import {color, radius} from '../../ui/tokens';
 import {appCopy, CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
 import {StampRow} from './StampRow';
+import {CheerDialog} from './CheerDialog';
 import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
@@ -115,6 +116,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   );
   return (
     <Screen top={top} bottom={dock}>
+      {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음) */}
+      <CheerDialog api={api} enabled={linked} />
       {syncError ? (
         <View style={styles.notice}>
           <Text20 size={24} weight="bold" accessibilityLiveRegion="polite">{syncError.title}</Text20>

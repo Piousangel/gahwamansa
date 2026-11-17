@@ -97,8 +97,8 @@
     "stay_healthy": "오늘도 건강하게 보내세요",
     "love_you": "사랑해요, 오늘도 좋은 하루예요",
     "will_call": "시간 날 때 전화드릴게요",
-    "always_thanks": "늘 고마워요",
-    "comfy_day": "오늘도 편안한 하루 보내세요"
+    "thanks_always": "늘 고마워요",
+    "peaceful_day": "오늘도 편안한 하루 보내세요"
   },
   "push": [
     {
@@ -243,7 +243,7 @@
     "continue": "이어서 하기"
   },
   "keyboard": {
-    "_status": "copy-v3-confirmed 10절 확정. card_a11y·photo_a11y 는 시안 P6 v4 읽기 라벨(라이터 확인 전)",
+    "_status": "copy-v3-confirmed 10절 확정. card_a11y·photo_a11y·step_a11y 는 시안 P6 v4·TalkBack 명세 읽기 라벨(라이터 확인 전)",
     "guide": "보이는 낱말을 아래 칸에 써요",
     "input_label": "낱말 쓰는 칸",
     "placeholder": "여기를 누르면 자판이 나와요",
@@ -257,6 +257,7 @@
     "your_word": "쓰신 낱말",
     "skip": "오늘은 넘어갈게요",
     "card_a11y": "쓸 낱말, {낱말}, {n} 글자. 자판으로 쓰거나 넘어갈 수 있어요",
+    "step_a11y": "{단계}, {전체}단계 중 {n}단계",
     "count_words": [
       "한",
       "두",

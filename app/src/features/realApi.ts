@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {OfflineError, ServerError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
+import {parseMyCheers} from '../api/contract/cheers';
 import type {
   Api, ChildState, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
@@ -281,6 +282,19 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async withdrawConsent() {
       const {error} = await sb.rpc('withdraw_consent');
       if (error) fail('withdraw_consent', error);
+    },
+    // 0020 응원(계약: api/contract/cheers.ts, ASSUMED — 서버 main 반영 후 통합 테스트 추가)
+    async getMyCheers() {
+      const {data, error} = await sb.rpc('get_my_cheers');
+      if (error) fail('get_my_cheers', error);
+      const parsed = parseMyCheers(data);
+      if (!parsed) throw new ServerError('get_my_cheers', 'contract_mismatch');
+      return parsed;
+    },
+    async markCheersRead(ids) {
+      const {data, error} = await sb.rpc('mark_cheers_read', {p_ids: ids});
+      if (error) fail('mark_cheers_read', error);
+      return Number(data ?? 0);
     },
   };
 }

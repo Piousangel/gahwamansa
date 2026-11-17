@@ -1,6 +1,7 @@
 import {OfflineError, ServerError} from './types';
 import {ChildSummary, PARENT_TITLES} from './types';
 import type {Api, RedeemResult, StepName, TodayContent} from './types';
+import type {MyCheers} from '../api/contract/cheers';
 import type {FailReason} from '../copy/copy';
 
 const FAIL_CODES: Record<string, FailReason> = {
@@ -43,6 +44,9 @@ export type FakeOptions = {
   weekDone?: number[]; // 이번 주(월=0) 이미 마친 요일(오늘 완료는 따로 더함)
   socialResult?: 'ok' | 'cancelled' | 'offline' | 'fail'; // signInWithSocial 결과(기본 ok)
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
+  cheers?: string[]; // 어르신에게 온 읽지 않은 응원의 message_key(최신순, 서버 get_my_cheers 와 같게)
+  failCheers?: boolean; // getMyCheers 실패
+  failMarkRead?: boolean; // markCheersRead 실패
 };
 
 // in-memory 가짜 구현. '123456' 만 성공, 위 표의 코드는 각 reason, 나머지는 invalid.
@@ -62,6 +66,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   // 자녀 가족의 가입 번호: 'live' 살아 있음 / 'expired' 지난 번호만 / null 아직 없음
   let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
+  let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
   return {
     async signInWithSocial() {
       const r = opts.socialResult ?? 'ok';
@@ -211,6 +216,23 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       consented = false;
       answered = null;
       savedLabel = null;
+    },
+    async getMyCheers() {
+      if (opts.failCheers) {
+        throw new OfflineError('offline');
+      }
+      if (!linked) {
+        throw new ServerError('get_my_cheers', 'parent_required', 'P0001'); // 서버처럼 연결된 어르신만
+      }
+      return {unread_count: unread.length, cheers: unread.slice(0, 20)};
+    },
+    async markCheersRead(ids) {
+      if (opts.failMarkRead) {
+        throw new OfflineError('offline');
+      }
+      const before = unread.length;
+      unread = ids === null ? [] : unread.filter(c => !ids.includes(c.id));
+      return before - unread.length;
     },
   };
 }

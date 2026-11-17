@@ -1,4 +1,5 @@
 import type {FailReason} from '../copy/copy';
+import type {MarkCheersReadResult, MyCheers} from '../api/contract/cheers';
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -83,4 +84,7 @@ export interface Api {
   fetchChildSummary(): Promise<ChildSummary>;
   setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
+  // 응원(P8): get_my_cheers / mark_cheers_read(0020, 계약은 api/contract/cheers.ts). 어르신만, 미연결 열람에서는 부르지 않는다
+  getMyCheers(): Promise<MyCheers>;
+  markCheersRead(ids: string[] | null): Promise<MarkCheersReadResult>;
 }
