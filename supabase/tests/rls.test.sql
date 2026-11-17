@@ -50,7 +50,7 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 -- ---------- 테스트 ----------
 -- 1~2. 가족A 자녀: 가족A 답변만 보임, 가족B 답변은 0행
 select pg_temp.act_as('a0000000-0000-0000-0000-0000000000c1', false);
-select is((select count(*)::int from public.answers), 1, '자녀A는 가족A 답변 1건만 본다');
+select is((select count(*)::int from public.answers), 0, '자녀A는 답변을 직접 읽지 못한다(child_summary RPC로만 본다)');
 select is((select count(*)::int from public.answers where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 답변이 0행이다');
 -- 3. 가족B 프로필/권한/응원이 안 보임
 select is((select count(*)::int from public.profiles where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 프로필이 0행이다');
