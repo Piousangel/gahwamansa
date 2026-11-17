@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, Easing, Pressable, StyleSheet, View} from 'react-native';
-import {useReduceMotion} from './motion';
+import {useMotionMode} from './motion';
 import {color, radius} from './tokens';
 import {Text20} from './Text20';
 import {Tape} from './assets/album';
@@ -84,10 +84,15 @@ export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn}:
   );
 }
 // 방금 마친 행. 끝 상태는 보통 했어요 행과 같다(누르는 '›'는 다 마친 뒤라 이 순간에는 없음).
+// 동작 줄이기·화면 읽기면 200ms 페이드만. 판정 전(null)에는 시작하지 않는다(첫 프레임에 큰 모션 금지, 리뷰 L3).
 function JustDoneRow({title, label, statusLabel}: {title: string; label: string; statusLabel: string}) {
-  const reduce = useReduceMotion();
+  const mode = useMotionMode();
+  const reduce = mode !== 'full';
   const v = useRef({check: new Animated.Value(0), face: new Animated.Value(0), text: new Animated.Value(0)}).current;
   useEffect(() => {
+    if (mode === null) {
+      return undefined;
+    }
     const ease = Easing.bezier(0.2, 0, 0, 1);
     const a = reduce
       ? Animated.parallel([v.check, v.face, v.text].map(x => Animated.timing(x, {toValue: 1, duration: 200, useNativeDriver: true})))
@@ -98,7 +103,7 @@ function JustDoneRow({title, label, statusLabel}: {title: string; label: string;
         ]);
     a.start();
     return () => a.stop();
-  }, [reduce, v]);
+  }, [mode, reduce, v]);
   return (
     <View accessible accessibilityLabel={label} style={[styles.row, styles.inline, styles.wait, styles.justDone]}>
       {/* 면: 흰 면 위로 초록 면이 서서히(테두리 자리는 그대로 둬 내용 시작 20 유지) */}
@@ -123,13 +128,17 @@ function JustDoneRow({title, label, statusLabel}: {title: string; label: string;
 }
 
 function TapeIn() {
-  const reduce = useReduceMotion();
+  const mode = useMotionMode();
+  const reduce = mode !== 'full';
   const x = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (mode === null) {
+      return undefined;
+    }
     const a = Animated.timing(x, {toValue: 1, duration: reduce ? 200 : 240, delay: reduce ? 0 : 160, useNativeDriver: true});
     a.start();
     return () => a.stop();
-  }, [reduce, x]);
+  }, [mode, reduce, x]);
   return (
     <Animated.View
       testID="step-tape-anim"

@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {useFocusEffect} from '@react-navigation/native';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
@@ -41,9 +42,11 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 이번 주 도장: 연결 = 서버, 미연결 = 기기 로컬(useWeekStamps). 오늘 단계가 바뀌면 다시 받는다.
   const linked = content ? content.linked : undefined;
   const week = useWeekStamps(api, linked, done.length);
-  // 단계 체크 모션(시안 P7_motion): 단계를 마치고 돌아온 순간 그 행만. 처음 열 때(이미 한 단계)는 움직이지 않는다
+  // 단계 체크 모션(시안 P7_motion): 단계를 마치고 코스 홈이 다시 포커스된 뒤(이전 화면이 닫히는 동안 돌지 않게, 리뷰 M1)
+  // 그 행만. 처음 열 때(이미 한 단계)는 움직이지 않는다. 기록은 화면이 닫히기 전에 반영되므로 '대기'에 두었다가 포커스 때 시작
   const [justDone, setJustDone] = useState<StepName | null>(null);
   const prevDone = useRef<StepName[] | null>(null);
+  const pending = useRef<StepName | null>(null);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -51,9 +54,22 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     const prev = prevDone.current;
     prevDone.current = done;
     if (prev && done.length > prev.length) {
-      setJustDone(done.find(x => !prev.includes(x)) ?? null);
+      const step = done.find(x => !prev.includes(x)) ?? null;
+      if (navigation.isFocused()) {
+        setJustDone(step);
+      } else {
+        pending.current = step;
+      }
     }
-  }, [done, content]);
+  }, [done, content, navigation]);
+  useFocusEffect(
+    useCallback(() => {
+      if (pending.current) {
+        setJustDone(pending.current);
+        pending.current = null;
+      }
+    }, []),
+  );
   // 아직 아무것도 못 받았는데 실패: 오류만 보여 준다(오프라인/서버 오류 문구가 다름)
   if (content === undefined && syncError) {
     return (

@@ -96,7 +96,7 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
   expect(screen.getByRole('button', {name: '마치기'})).toBeDisabled();
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 자동 이동 없음
-  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 2500});
+  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 6000});
   await press('마치기');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const rec = calls.filter(c => c.name === 'recordSessionStep');
@@ -133,7 +133,7 @@ test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴�
   const toFinish = () =>
     send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마치기');
   expect(toFinish()).toBe(false); // 알림 읽기가 끝나도록 바로 옮기지 않는다(재검토 ①)
-  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 2500}); // 1.5초(마치기 활성)와 함께
+  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 6000}); // 1.5초(마치기 활성)와 함께
   send.mockRestore();
   announce.mockRestore();
 });

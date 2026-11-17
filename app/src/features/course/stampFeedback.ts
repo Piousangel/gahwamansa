@@ -1,9 +1,9 @@
-import {Platform, Vibration} from 'react-native';
+import {NativeModules, Platform} from 'react-native';
 import {prefs as defaultPrefs, type Prefs} from '../../lib/prefs';
 import type {Ringer} from '../../lib/audioPolicy';
 
 // P7 도장 '쾅'이 닿는 순간(180ms)의 소리·촉각(시안 P7_motion "소리·촉각·타임라인").
-// - 촉각: 시스템 촉각 1회(짧게). 동작 줄이기에서도 유지(움직임이 아님). 단계 체크에는 없음.
+// - 촉각: 시스템 촉각 1회(짧게, 시스템 진동 설정 따름). 동작 줄이기에서도 유지(움직임이 아님). 단계 체크에는 없음.
 // - 소리: 나무 도장 '통' 한 번(250ms 이하, assets/stamp.wav). 설정 효과음 꺼짐·무음/진동 모드·읽어 주기 중이면 안 냄.
 //   벨소리 모드를 모르면 조용한 쪽(audioPolicy 와 같은 원칙).
 
@@ -78,11 +78,13 @@ function defaultPlayer(): SoundPlayer | null {
   return player;
 }
 
-// 촉각: Android 는 짧은 진동 20ms(VIBRATE 권한, 정상 권한이라 묻지 않음). iOS 의 Vibration 은 길게(약 0.4초) 울려
-// '길게 울리지 않음' 규칙과 어긋나므로 쓰지 않는다. TODO: iOS 햅틱(UIImpactFeedbackGenerator)은 의존성 결정 뒤.
+// 촉각: Android 는 시스템 촉각(앱 안 작은 네이티브 모듈 HapticModule.confirm = performHapticFeedback CONFIRM,
+// API 30 미만은 VIRTUAL_KEY). 권한이 필요 없고 시스템 '터치 진동' 끔 설정을 따른다(리뷰 M5).
+// iOS 는 빌드 1 Android 우선이라 보류(DECISIONS 11-18). 모듈이 없으면(테스트·iOS) 아무것도 하지 않는다.
 function defaultVibrate() {
-  if (Platform.OS === 'android') {
-    Vibration.vibrate(20);
+  const m = (NativeModules as {HapticModule?: {confirm(): void}}).HapticModule;
+  if (Platform.OS === 'android' && m) {
+    m.confirm();
   }
 }
 
