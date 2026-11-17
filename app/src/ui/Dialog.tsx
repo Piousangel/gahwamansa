@@ -1,10 +1,10 @@
-import React, {useRef, type RefObject} from 'react';
+import React, {useEffect, useRef, type RefObject} from 'react';
 import {Animated, Modal, ScrollView, StyleSheet, View} from 'react-native';
 import {color, font, radius} from './tokens';
 import {Text20} from './Text20';
 import {BigButton} from './BigButton';
 import {Icon} from './assets/icons';
-import {focusOn, useReturnFocus} from './a11y';
+import {useModalFocus} from './a11y';
 import {useFadeIn} from './useFadeIn';
 
 export type DialogAction = {
@@ -28,7 +28,7 @@ type Props = {
    *  로그아웃·그만 보여 주기 같은 확인에는 주지 않는다(impl-drift #6). 위험 버튼 자체는 actions 의 kind:'danger'.
    *  ui/ 는 문구를 모르므로 글자는 호출부가 copy 에서 넘긴다(ARCHITECTURE §2). */
   warningLabel?: string;
-  /** 안드로이드 뒤로. 없으면 맨 위(안전한) 선택지를 누른 것과 같다. */
+  /** 안드로이드 뒤로. 없으면 맨 위(안전한) 선택지를 누른 것과 같다(그 선택지가 비활성·로딩이면 무시). */
   onBack?: () => void;
   /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 대화상자를 연 버튼) */
   returnFocusRef?: RefObject<unknown>;
@@ -38,16 +38,29 @@ type Props = {
 /**
  * 어르신 대화상자(README §12): 지금 하던 일을 멈추고 꼭 답할 때만, 하루 한 번 이하. 단순 안내는 Banner, 오류는 오류 패널.
  * 접근성: alertdialog + accessibilityViewIsModal(iOS), Android 는 Modal 이 별도 창이라 TalkBack 포커스가 안에 갇힌다.
- * 열리면 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
+ * 열리면 300ms 뒤 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R2·R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
  */
 export function Dialog({visible, title, body, actions, warningLabel, onBack, returnFocusRef, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
-  useReturnFocus(visible, returnFocusRef);
-  const {opacity, start} = useFadeIn();
+  const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
+  const {opacity, start} = useFadeIn(visible);
+
+  // 리뷰 M1: 이중 요청 방지. 한 번 실행하면 호출부가 다시 그려 줄 때(로딩 표시·오류 등 actions 새로 받음)까지 무시
+  const fired = useRef(false);
+  useEffect(() => {
+    fired.current = false;
+  }, [actions, visible]);
+  const fire = (a: DialogAction | undefined) => {
+    if (!a || a.disabled || a.loading || fired.current) {
+      return;
+    }
+    fired.current = true;
+    a.onPress();
+  };
 
   const onShow = () => {
     start();
-    focusOn(titleRef);
+    openFocus();
   };
 
   return (
@@ -58,7 +71,7 @@ export function Dialog({visible, title, body, actions, warningLabel, onBack, ret
       statusBarTranslucent
       navigationBarTranslucent
       onShow={onShow}
-      onRequestClose={() => (onBack ?? actions[0]?.onPress)?.()}>
+      onRequestClose={() => (onBack ? onBack() : fire(actions[0]))}>
       {/* 어두운 배경: 누를 곳 없음(실수로 닫히지 않게) */}
       <Animated.View testID="dialog-scrim" style={[styles.scrim, {opacity}]}>
         <View testID={testID ?? 'dialog-card'} role="alertdialog" accessibilityViewIsModal style={styles.card}>
@@ -85,7 +98,7 @@ export function Dialog({visible, title, body, actions, warningLabel, onBack, ret
               <BigButton
                 key={a.label}
                 label={a.label}
-                onPress={a.onPress}
+                onPress={() => fire(a)}
                 loading={a.loading}
                 disabled={a.disabled}
                 disabledReason={a.disabledReason}

@@ -33,14 +33,47 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(card.props.accessibilityViewIsModal).toBe(true);
   });
 
-  test('열리면 화면 읽기 포커스가 제목으로 간다', () => {
+  test('R2·R12: 열리면 300ms 뒤 화면 읽기 포커스가 제목으로 간다(창 전환 직후 튕김 방지)', () => {
+    jest.useFakeTimers();
     const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
     render(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} />);
     act(() => {
       screen.UNSAFE_getByType(Modal).props.onShow?.();
     });
+    expect(spy).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(300));
     expect(spy).toHaveBeenCalledWith(expect.anything(), 'focus');
     spy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  test('리뷰 M1: 안전한 선택지가 비활성·로딩 중이면 안드로이드 뒤로를 무시한다', () => {
+    const stay = jest.fn();
+    for (const extra of [{disabled: true}, {loading: true}]) {
+      const {unmount} = render(
+        <Dialog visible title="보낼까요?" actions={[{label: '보내기', onPress: stay, ...extra}, {label: '그만둘래요', onPress: () => {}}]} />,
+      );
+      act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+      unmount();
+    }
+    expect(stay).not.toHaveBeenCalled();
+  });
+
+  test('리뷰 M1: 같은 화면에서 두 번 눌러도(버튼·뒤로) 한 번만 실행(이중 요청 방지)', () => {
+    const stay = jest.fn();
+    render(<Dialog visible title="보낼까요?" actions={actions(stay)} />);
+    fireEvent.press(screen.getByRole('button', {name: '계속 할게요'}));
+    fireEvent.press(screen.getByRole('button', {name: '계속 할게요'}));
+    act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+    expect(stay).toHaveBeenCalledTimes(1);
+  });
+
+  test('리뷰 L4: 닫혔다 다시 열 때 첫 프레임이 불투명도 0(깜빡임 없음)', () => {
+    const {rerender} = render(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} />);
+    act(() => screen.UNSAFE_getByType(Modal).props.onShow?.());
+    rerender(<Dialog visible={false} title="오늘은 여기까지 할까요?" actions={actions()} />);
+    rerender(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} />);
+    expect(StyleSheet.flatten(screen.getByTestId('dialog-scrim').props.style).opacity).toBe(0);
   });
 
   test('밖(어두운 배경)을 눌러도 닫히지 않고, 닫기 X도 없다', () => {

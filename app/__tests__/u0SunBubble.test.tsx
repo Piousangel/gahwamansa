@@ -1,7 +1,8 @@
 import React from 'react';
 import {AccessibilityInfo, StyleSheet} from 'react-native';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
-import {SunBubble, hanimTextIssues, hanimArt} from '../src/ui/SunBubble';
+import {SunBubble, hanimArt} from '../src/ui/SunBubble';
+import {hanimTextIssues} from '../src/lib/hanimText';
 import {FONT_SCALE_MAX_BODY} from '../src/ui/tokens';
 
 declare const __dirname: string;

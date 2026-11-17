@@ -22,6 +22,7 @@ describe('Photo(사진 자리표시·페이드 인)', () => {
 
   test('R6: 뜻이 있는 그림은 image 역할 + 라벨로 한 번 읽는다', () => {
     render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="오늘 사진, 가을 마을, AI가 만든 그림" />);
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'load');
     const img = screen.getByRole('image', {name: '오늘 사진, 가을 마을, AI가 만든 그림'});
     expect(img).toBeTruthy();
     expect(screen.getAllByLabelText('오늘 사진, 가을 마을, AI가 만든 그림')).toHaveLength(1);
@@ -29,17 +30,36 @@ describe('Photo(사진 자리표시·페이드 인)', () => {
 
   test('사진은 이름으로 읽히고, 다 불러오면 자리표시가 사라진다', () => {
     render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="바닷가 마을 사진" />);
-    expect(screen.getByLabelText('바닷가 마을 사진')).toBeTruthy();
-    fireEvent(screen.getByTestId('photo-image'), 'load');
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'load');
     expect(screen.queryByTestId('photo-placeholder', {includeHiddenElements: true})).toBeNull();
+    expect(screen.getByLabelText('바닷가 마을 사진')).toBeTruthy();
   });
 
   test('불러오기 실패면 자리표시를 남기고 onError 를 부른다', () => {
     const onError = jest.fn();
     render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="사진" onError={onError} />);
-    fireEvent(screen.getByTestId('photo-image'), 'error');
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'error');
     expect(screen.getByTestId('photo-placeholder', {includeHiddenElements: true})).toBeTruthy();
     expect(onError).toHaveBeenCalled();
+  });
+
+  test('리뷰 M2: 사진 주소가 바뀌면 상태를 처음부터(실패 뒤 다음 사진이 투명하게 남지 않음)', () => {
+    const {rerender} = render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="사진" />);
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'error');
+    rerender(<Photo source={{uri: uri + '?2'}} aspectRatio={1} accessibilityLabel="사진" />);
+    expect(screen.getByTestId('photo-placeholder', {includeHiddenElements: true})).toBeTruthy();
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'load');
+    expect(screen.queryByTestId('photo-placeholder', {includeHiddenElements: true})).toBeNull();
+    expect(screen.getByRole('image', {name: '사진'})).toBeTruthy();
+  });
+
+  test('리뷰 L12·R13: 다 불러오기 전에는 사진 라벨 대신 "잠시만요"(호출부 문구)만 읽는다', () => {
+    render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="오늘 사진" loadingLabel="잠시만요" />);
+    expect(screen.queryByRole('image', {name: '오늘 사진'})).toBeNull();
+    expect(screen.getByLabelText('잠시만요')).toBeTruthy();
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'load');
+    expect(screen.getByRole('image', {name: '오늘 사진'})).toBeTruthy();
+    expect(screen.queryByLabelText('잠시만요')).toBeNull();
   });
 
   test('페이드 인은 300ms, 동작 줄이기면 0(바로)', () => {
@@ -52,7 +72,7 @@ describe('Photo(사진 자리표시·페이드 인)', () => {
     await act(() => prefetchImages([uri]));
     const timing = jest.spyOn(Animated, 'timing');
     render(<Photo source={{uri}} aspectRatio={1} accessibilityLabel="사진" />);
-    fireEvent(screen.getByTestId('photo-image'), 'load');
+    fireEvent(screen.getByTestId('photo-image', {includeHiddenElements: true}), 'load');
     expect(timing).not.toHaveBeenCalled();
   });
 });

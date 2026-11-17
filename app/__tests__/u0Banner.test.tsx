@@ -3,6 +3,8 @@ import {AccessibilityInfo, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {Banner, BANNER_SUCCESS_MS} from '../src/ui/Banner';
 
+declare const __dirname: string;
+
 beforeEach(() => {
   jest.clearAllMocks(); // 프리셋의 AccessibilityInfo 는 jest.fn 이라 spyOn 이 같은 함수를 돌려줘 호출 수가 쌓인다
   jest.useFakeTimers();
@@ -42,6 +44,14 @@ describe('Banner(어르신 배너)', () => {
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
     screen.rerender(<Banner kind="offline" text="인터넷이 잠깐 끊겼어요" />);
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(2);
+  });
+
+  test('리뷰 L7·L8: 버튼 글자 배율 상한 1.5, 줄바꿈 허용, 눌림 색은 토큰', () => {
+    render(<Banner kind="error" text="저장하지 못했어요" action={{label: '다시 하기', onPress: () => {}}} />);
+    expect(screen.getByText('다시 하기').props.maxFontSizeMultiplier).toBe(1.5);
+    expect(StyleSheet.flatten(screen.getByTestId('banner').props.style).flexWrap).toBe('wrap');
+    const src: string = require('fs').readFileSync(require('path').join(__dirname, '../src/ui/Banner.tsx'), 'utf8');
+    expect(src).not.toMatch(/rgba\(|#[0-9A-Fa-f]{6}/);
   });
 
   test('R5: 아이콘은 장식(글자 옆)이라 읽지 않는다', () => {

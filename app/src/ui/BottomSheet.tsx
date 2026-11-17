@@ -4,7 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FONT_SCALE_MAX, color, font, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon} from './assets/icons';
-import {focusOn, useReturnFocus} from './a11y';
+import {useModalFocus} from './a11y';
 import {useFadeIn} from './useFadeIn';
 
 type SheetAction = {
@@ -40,9 +40,9 @@ type Props = {
  */
 export function BottomSheet({visible, title, body, children, primary, secondary, onClose, closeLabel, returnFocusRef, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
-  useReturnFocus(visible, returnFocusRef);
+  const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   const insets = useSafeAreaInsets();
-  const {opacity, start} = useFadeIn();
+  const {opacity, start} = useFadeIn(visible);
 
   return (
     <Modal
@@ -53,7 +53,7 @@ export function BottomSheet({visible, title, body, children, primary, secondary,
       navigationBarTranslucent
       onShow={() => {
         start();
-        focusOn(titleRef);
+        openFocus();
       }}
       onRequestClose={onClose}>
       <Animated.View style={[styles.root, {opacity}]}>

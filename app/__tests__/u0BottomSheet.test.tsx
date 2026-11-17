@@ -55,9 +55,13 @@ describe('BottomSheet(자녀 아래 시트)', () => {
     const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
     render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} />);
     expect(screen.getByTestId('sheet-panel').props.accessibilityViewIsModal).toBe(true);
+    jest.useFakeTimers();
     act(() => screen.UNSAFE_getByType(Modal).props.onShow?.());
+    expect(spy).not.toHaveBeenCalled(); // R2: 300ms 뒤
+    act(() => jest.advanceTimersByTime(300));
     expect(spy).toHaveBeenCalledWith(expect.anything(), 'focus');
     spy.mockRestore();
+    jest.useRealTimers();
   });
 
   test('R12: 닫히면 연 버튼으로 포커스가 돌아간다(300ms 뒤)', () => {

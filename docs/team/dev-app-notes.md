@@ -244,6 +244,8 @@
 - `Photo({source, aspectRatio, accessibilityLabel, onError?})` + `imageCache.prefetchImages(uris)`: 자리표시 → 300ms 페이드, 동작 줄이기·미리 받은 사진은 바로. 새 의존성 없음.
 - 공통: 글자 최소 20(자녀 포함, impl-drift #5), 제목·버튼 배율 1.5·본문 2.0, 모션은 불투명도만(동작 줄이기면 0), 열리면 제목 포커스·닫히면 연 버튼으로(R12), 알림은 announce 한 번(R11, 오류도 polite), 장식 숨김(R5). ui/ 는 문구를 모름 → 라벨은 호출부가 copy 에서.
 - 실기기 미확인: TalkBack 포커스 이동·복귀 타이밍(300ms), Modal 위 announce 순서, 150·200% 대화상자 본문 스크롤.
+- 리뷰(reviews/2026-11-17-u0-components-review.md) 반영: M1 Dialog 뒤로가 비활성·로딩 선택지를 실행하지 않음 + 같은 그리기 안에서 두 번 실행 안 함(호출부가 actions 를 새로 넘기면 다시 가능) / M2 Photo 주소 바뀌면 key 로 새로 / M3 Toast 오류는 action 필수(타입), 없으면 자동 사라짐 / L4 닫히면 opacity 0 / L5 열림 포커스도 300ms / L6 포커스 도우미는 ui/screenTitle.ts(focusNode·focusLater·FOCUS_DELAY_MS) 한 벌, Screen·Dialog·Sheet 공용 / L7·L8 배너 버튼 배율 1.5·줄바꿈·토큰 / L9 토스트 타이머 정리 / L10 해님 문구 검사 lib/hanimText.ts + copy 원본·사본 전체 검사 / L12 Photo 로딩 중 loadingLabel 만 읽음. 남김: L11(R16 판단 두 곳)은 오디오 연결 때, #13 150% 대화상자 실기기, #14 서명 URL 캐시 키.
+- copy 위반 1건: `praise[0]` "오늘 코스를 마쳤어요. 잘하셨어요"(칭찬 금지 위반, 앱 코드에서 미사용). hanimText 테스트에 알려진 위반으로 등록 — 라이터가 원본을 고치면 목록에서 지운다.
 ### U1 오디오 스파이크(11-17)
 - 후보·근거·실기기 항목: docs/team/dev-audio-spike.md. 권고(승인 전, package.json 미반영): @mhpdev/react-native-speech 1.4.4, react-native-sound 0.13.0, react-native-volume-manager 2.2.0. 정책 순수 함수 src/lib/audioPolicy.ts(덕킹 10%, 무음·화면 읽기·백그라운드 정지).
 ### QA 실기기 스모크 수정·접근성 3건(11-17)

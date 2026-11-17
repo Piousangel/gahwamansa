@@ -10,12 +10,11 @@ import {fadeMs, useReduceMotion} from './motion';
 /** 자녀 토스트 유지 시간(README §13: 6초, 최소 5초). 오류는 자동으로 사라지지 않는다. */
 export const TOAST_MS = 6000;
 
-export type ToastOptions = {
-  text: string;
-  kind?: 'info' | 'error';
-  /** 오류일 때 "다시 하기". 누르면 토스트를 닫고 부른다 */
-  action?: {label: string; onPress: () => void};
-};
+type ToastAction = {label: string; onPress: () => void};
+/** 오류는 "다시 하기"가 필수(리뷰 M3: 자동으로 안 사라지니 닫을 길이 있어야 함). 누르면 토스트를 닫고 부른다 */
+export type ToastOptions =
+  | {text: string; kind?: 'info'; action?: ToastAction}
+  | {text: string; kind: 'error'; action: ToastAction};
 type ToastApi = {show: (o: ToastOptions) => void; hide: () => void};
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -42,16 +41,26 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
   const opacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
+  // 리뷰 L9: 사라지는 타이머를 담아 두고 언마운트·새 토스트 때 정리
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = null;
+  };
+  useEffect(() => clearHide, []);
+
   const hide = useCallback(() => {
     const ms = fadeMs(reduce);
     if (ms > 0) {
       Animated.timing(opacity, {toValue: 0, duration: ms, useNativeDriver: true}).start();
     }
     const id = seq.current;
-    setTimeout(() => setToast(t => (t && t.id === id ? null : t)), ms);
+    clearHide();
+    hideTimer.current = setTimeout(() => setToast(t => (t && t.id === id ? null : t)), ms);
   }, [opacity, reduce]);
 
   const show = useCallback((o: ToastOptions) => {
+    clearHide();
     seq.current += 1;
     setToast({...o, id: seq.current});
   }, []);
@@ -68,7 +77,8 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
     } else {
       opacity.setValue(1);
     }
-    if (toast.kind === 'error') {
+    // 오류는 "다시 하기"를 누를 때까지 남긴다. 타입을 어기고 action 없이 오면 닫을 길이 없으니 자동으로 사라지게 한다
+    if (toast.kind === 'error' && toast.action) {
       return;
     }
     const t = setTimeout(hide, TOAST_MS);

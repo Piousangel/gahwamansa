@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Animated, Pressable, StyleSheet, View} from 'react-native';
-import {color, radius, shadow, touch} from './tokens';
+import {color, FONT_SCALE_MAX, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon, IconName} from './assets/icons';
 import {announce} from './a11y';
@@ -89,7 +89,7 @@ export function Banner({kind, text, action, onHidden, testID}: Props) {
           accessibilityLabel={action.label}
           onPress={action.onPress}
           style={({pressed}) => [styles.action, pressed ? styles.actionPressed : null]}>
-          <Text20 size={22} weight="bold" style={[styles.actionText, {color: look.ink}]}>
+          <Text20 size={22} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.actionText, {color: look.ink}]}>
             {action.label}
           </Text20>
         </Pressable>
@@ -100,11 +100,12 @@ export function Banner({kind, text, action, onHidden, testID}: Props) {
 
 const styles = StyleSheet.create({
   box: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: touch.elderMin, borderWidth: 3,
+    // 글자를 키우면 버튼이 아래 줄로 내려가 본문이 눌리지 않게(리뷰 L7)
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, minHeight: touch.elderMin, borderWidth: 3,
     borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 14, boxShadow: shadow.soft,
   },
-  text: {flex: 1},
+  text: {flexGrow: 1, flexShrink: 1, flexBasis: 160},
   action: {minHeight: touch.link, minWidth: touch.link, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, borderRadius: radius.chip},
-  actionPressed: {backgroundColor: 'rgba(116,72,33,0.10)'},
+  actionPressed: {backgroundColor: color.actionSoft},
   actionText: {textDecorationLine: 'underline'},
 });

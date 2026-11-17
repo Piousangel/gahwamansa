@@ -1,12 +1,11 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {AccessibilityInfo, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
 import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {color, layout, space} from './tokens';
-import {ScreenTitleContext} from './screenTitle';
+import {focusLater, ScreenTitleContext} from './screenTitle';
 
 const FADE_H = 28; // §15: 본문이 넘치면 아래 28 높이 페이드로 "더 있음"
-const TITLE_FOCUS_MS = 300; // talkback-spec R2: 화면 진입 300ms 뒤 제목에 접근성 포커스
 
 type Props = {
   children: React.ReactNode;
@@ -44,18 +43,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
       title.current = node;
     }
   }, []);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (title.current) {
-        try {
-          AccessibilityInfo.sendAccessibilityEvent(title.current as never, 'focus'); // 호스트 요소 ref 를 바로 받는 API
-        } catch {
-          // 포커스는 보조 기능: 실패해도 화면은 그대로
-        }
-      }
-    }, TITLE_FOCUS_MS);
-    return () => clearTimeout(t);
-  }, []);
+  useEffect(() => focusLater(() => title.current), []);
 
   // KAV: Android 도 padding. edgeToEdgeEnabled=true 라 adjustResize 로 창이 줄지 않을 수 있다.
   // (창이 실제로 줄면 KAV 가 겹친 높이를 0으로 계산해 두 번 밀리지 않는다.)

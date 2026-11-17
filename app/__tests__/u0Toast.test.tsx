@@ -84,6 +84,35 @@ describe('Toast(자녀 토스트)', () => {
     expect(screen.getByTestId('toast').props.accessibilityLiveRegion ?? 'none').toBe('none');
   });
 
+  test('리뷰 M3: 다시 하기 없는 오류 토스트는 닫을 길이 있다(자동으로 사라짐)', () => {
+    function NoAction() {
+      const toast = useToast();
+      return (
+        <Pressable testID="bare" onPress={() => toast.show({kind: 'error', text: '복사하지 못했어요'} as never)}>
+          <Text>bare</Text>
+        </Pressable>
+      );
+    }
+    render(
+      <ToastProvider>
+        <NoAction />
+      </ToastProvider>,
+    );
+    fireEvent.press(screen.getByTestId('bare'));
+    act(() => jest.advanceTimersByTime(TOAST_MS + 1000));
+    expect(screen.queryByText('복사하지 못했어요')).toBeNull();
+  });
+
+  test('리뷰 L9: 사라지는 중에 언마운트해도 경고 없음(타이머 정리)', () => {
+    const err = jest.spyOn(console, 'error');
+    const {unmount} = render(ui());
+    fireEvent.press(screen.getByTestId('ok'));
+    act(() => jest.advanceTimersByTime(TOAST_MS + 10));
+    unmount();
+    act(() => jest.advanceTimersByTime(1000));
+    expect(err).not.toHaveBeenCalled();
+  });
+
   test('Provider 없이 useToast 를 쓰면 바로 알려 준다', () => {
     const err = jest.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<Harness />)).toThrow(/ToastProvider/);

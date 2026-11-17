@@ -6,6 +6,7 @@ import {Icon} from './assets/icons';
 import {Sun, SunArt} from './assets/sun';
 import {SunStamp} from './assets/album';
 import {useScreenReader} from './a11y';
+import {hanimTextIssues} from '../lib/hanimText';
 
 /**
  * 해님이 말할 수 있는 때(DECISIONS 11-17 Gemini 회의 권고): 첫 만남·완료·오류뿐.
@@ -32,17 +33,6 @@ const drawSize = (moment: HanimMoment, size: SunSize): SunSize => (moment === 'e
 /** 그릴 그림 이름. 40은 도장(기본 미소)뿐이다. */
 export function hanimArt(moment: HanimMoment, size: SunSize): SunArt | 'sun-stamp' {
   return drawSize(moment, size) === 40 ? 'sun-stamp' : ART[moment];
-}
-
-const HEART = /[♥❤💕💖💗💓💞💘]|하트/;
-const PRAISE = /잘하셨|잘했|훌륭|최고|대단|칭찬|똑똑/;
-/** 해님 문구 규칙 위반을 찾는다(개발 중 경고용). 20자 안팎·두 줄까지 → 40자 넘으면 너무 긺. */
-export function hanimTextIssues(text: string): Array<'heart' | 'praise' | 'tooLong'> {
-  const out: Array<'heart' | 'praise' | 'tooLong'> = [];
-  if (HEART.test(text)) out.push('heart');
-  if (PRAISE.test(text)) out.push('praise');
-  if ([...text].length > 40) out.push('tooLong');
-  return out;
 }
 
 export function SunBubble({text, moment, size, readAloud, testID}: Props) {

@@ -1,35 +1,43 @@
-import {useEffect, useRef, useState, type RefObject} from 'react';
+import {useCallback, useEffect, useRef, useState, type RefObject} from 'react';
 import {AccessibilityInfo} from 'react-native';
+import {focusLater} from './screenTitle';
 
-// TalkBack 명세(docs/design/v3/a11y/talkback-spec.md) 공통 규칙 R1~R16 중 공용 컴포넌트가 지키는 것의 도우미.
-
-/** 화면 읽기 포커스를 이 요소로 옮긴다(R2·R12). setAccessibilityFocus 는 0.88에서 폐기 예정이라 이벤트를 쓴다. */
-export function focusOn(ref: RefObject<unknown> | undefined) {
-  const node = ref?.current;
-  if (node) {
-    AccessibilityInfo.sendAccessibilityEvent(node as never, 'focus');
-  }
-}
-
-/** 창이 닫히거나 화면이 바뀐 직후엔 포커스가 튕기므로 300ms 뒤에 옮긴다(R2). */
-export const FOCUS_DELAY_MS = 300;
+// TalkBack 명세(docs/design/v3/a11y/talkback-spec.md) 공통 규칙 중 공용 컴포넌트가 지키는 것의 도우미.
+// 포커스 이동 자체는 screenTitle.ts(focusNode·focusLater·FOCUS_DELAY_MS) 한 벌만 쓴다.
 
 /** R11: 상태 변화는 한 번만 알린다. liveRegion 과 같이 쓰면 두 번 읽혀 이 경로 하나만 쓴다. */
 export function announce(text: string) {
   AccessibilityInfo.announceForAccessibility(text);
 }
 
-/** R12: visible 이 true→false 로 바뀌면 연 버튼(returnFocusRef)으로 포커스를 돌려준다. */
-export function useReturnFocus(visible: boolean, returnFocusRef?: RefObject<unknown>) {
+/**
+ * 대화상자·시트 포커스(R2·R12): onShow 에서 openFocus() → 300ms 뒤 제목으로.
+ * visible 이 true→false 가 되면 300ms 뒤 연 버튼(returnFocusRef)으로. 닫힘·언마운트 때 대기 중인 타이머는 정리.
+ */
+export function useModalFocus(visible: boolean, titleRef: RefObject<unknown>, returnFocusRef?: RefObject<unknown>) {
+  const cancelOpen = useRef<(() => void) | null>(null);
   const was = useRef(visible);
+
+  const openFocus = useCallback(() => {
+    cancelOpen.current?.();
+    cancelOpen.current = focusLater(() => titleRef.current);
+  }, [titleRef]);
+
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | undefined;
-    if (was.current && !visible && returnFocusRef) {
-      t = setTimeout(() => focusOn(returnFocusRef), FOCUS_DELAY_MS);
+    let cancelReturn: (() => void) | undefined;
+    if (was.current && !visible) {
+      cancelOpen.current?.();
+      cancelOpen.current = null;
+      if (returnFocusRef) {
+        cancelReturn = focusLater(() => returnFocusRef.current);
+      }
     }
     was.current = visible;
-    return () => (t ? clearTimeout(t) : undefined);
+    return () => cancelReturn?.();
   }, [visible, returnFocusRef]);
+
+  useEffect(() => () => cancelOpen.current?.(), []);
+  return openFocus;
 }
 
 /** R16: 화면 읽기(TalkBack·VoiceOver)가 켜져 있는지. 확인 전에는 false, 바뀌면 따라간다. */
