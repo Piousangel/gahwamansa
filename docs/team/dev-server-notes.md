@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0027) · 2026-11-17
+# 서버 계약 노트 (0019~0028) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -29,7 +29,8 @@
 
 ### set_parent_title_for(p_parent uuid, p_title text) → jsonb  (0019)
 - 어르신 한 분의 호칭. 닫힌 목록 7개(엄마·아빠·어머니·아버지·할머니·할아버지·부모님).
-- `{ok:true}` | `{ok:false, reason:'invalid_title'|'invalid_target'}`(다른 가족·어르신 아님). 기존 `set_parent_title(p_title)`(가족 기본값)은 그대로.
+- `{ok:true}` | `{ok:false, reason:'invalid_title'|'invalid_target'|'duplicate_title'}`. `duplicate_title`(0028) = 같은 가족 다른 어르신이 이미 그 호칭(어르신별 호칭, 없으면 가족 호칭)으로 보임 → 앱은 "다른 호칭을 골라 주세요"류로 안내. 자기 호칭을 다시 정하는 것은 ok.
+- 연결(redeem) 때는 기본 호칭이 겹쳐도 막지 않는다. 그래서 child_summary에 같은 title이 둘 보일 수 있다 → 앱은 겹친 어르신에게 호칭 바꾸기를 권한다. 기존 `set_parent_title(p_title)`(가족 기본값)은 그대로.
 
 ### send_cheer(p_parent uuid, p_key text) → jsonb  (0020)
 - 키 4개만: `love_you`·`warm_day`·`thanks_always`·`peaceful_day`(copy-v3-confirmed 6절 확정 4개).
@@ -54,6 +55,25 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - KST 날짜가 바뀐 첫 호출에만 1칸 전진, 같은 날 여러 번 불러도 1회. 며칠 쉬어도 1칸(놓친 장 없이). 처음 연결이면 첫 콘텐츠부터.
 - `get_today_content()`는 읽기 전용 그대로(호출 순서 무관, 오늘 열 콘텐츠를 미리 보여 줌). `record_session_step`도 같은 전진을 해서 start_today를 빠뜨려도 반복되지 않는다.
 - 미연결 열람 `preview_content()`는 날짜 기반 그대로(은퇴 콘텐츠만 제외).
+
+### get_today_content() / start_today() — 오늘 내 답 (0028 확인·보강)
+- `answered_choice`('A'|'B'|null, 오늘 KST 저장된 내 답)와 `answered_label`(그 선택지 글자, 0028 추가)을 돌려준다. 동의 전·미저장이면 둘 다 null.
+
+### parent_history(p_days int default 30) → jsonb  (0028, 어르신 지난 날)
+```json
+{ "days": [ { "session_date": "2026-11-17", "day_index": 3, "completed": true,
+    "photo": { "caption": "…", "image_url": "…", "keyword": "나무" },
+    "question": { "prompt": "…", "option_a": "봄", "option_b": "가을" },
+    "choice_label": "가을" } ] }
+```
+- 어르신 본인만. p_days는 1~30으로 제한(넘치면 30). 코스를 연 날만(빈 날 없음), 최신순.
+- `choice_label`은 그날 저장된 답이 있을 때만, 동의 거부·철회한 날은 null(앱은 "고른 것" 줄을 빼고 보여 줌). 어르신이 친 글자는 저장하지 않아 없다. 0028 이전 행(콘텐츠 id 없음)은 나오지 않는다.
+- 낱말은 `photo.keyword`(word_id = 사진 id). 서버 보관이 31일이라 30일 이상은 없다.
+
+### peek_invite_code(p_code text) → jsonb  (0028, 연결 확인 화면 P1c)
+- 어르신 기기(익명)만. 번호를 쓰지 않고 `{ok:true, parent_title}`만. 실패 `{ok:false, reason:'invalid'|'expired'|'used'|'rate_limited'(+retry_after_sec)|'busy'|'not_parent_device'}`.
+- redeem과 **같은 시도 한도**(기기 10분 5회 실패, 전역 300회)를 공유한다 — peek 실패도 redeem 한도에 들어간다. 꺼진·상한 찬 심사 번호는 invalid.
+- 재연결 번호면 그 어르신 호칭, 가입 번호면 가족 호칭. 성공해도 [연결하기]에서 redeem을 따로 불러야 한다(자동 연결 금지).
 
 ### get_my_cheers() → jsonb  (0020, P8)
 ```json
@@ -82,6 +102,8 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
+- `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 단위(0029~)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
+- `daily_sessions.photo_id·question_id·word_id`(0028): 그날 받은 콘텐츠. start_today·record_session_step이 채움, 이전 행은 null.
 - `purge_expired_data(p_now default now())`(0023): 답·코스 기록 session_date < 오늘-30, 응원 31일, 초대 번호 사용·만료 후 30일, 입력 시도 30일. pg_cron `purge-expired-data` 매일 00:10 KST. 원격 반영 시 pg_cron 확장 켜짐 확인.
 - 심사 접근(0025): `admin_create_review_family(uuid[], p_max_uses=5)` → 심사 가족(is_review)+만료 없는 재사용 번호, **기본 꺼짐**. `admin_set_review_code(family, true|false)`로 심사 제출 때만 켜고, 끝나면 `admin_cleanup_review_family(family)`(심사 어르신 프로필·익명 계정 삭제 + 번호 끔). 연결 수가 max_uses에 닿거나 꺼져 있으면 redeem은 일반 `invalid`. 운영: `node supabase/ops/create-review-access.mjs create|enable|disable|cleanup …` — 번호는 출력만, Play 콘솔에만 적는다.
 - `delete_my_account()`(0026): 마지막 자녀면 가족 어르신의 **익명 인증 계정도 삭제** → 어르신 기기는 다음 실행 때 세션이 무효(앱은 새 익명 로그인 후 첫 화면/미연결 열람으로).
