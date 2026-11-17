@@ -1,5 +1,6 @@
-import React, {useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {Pressable, StyleSheet, Switch, View} from 'react-native';
+import {prefs} from '../../lib/prefs';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -8,7 +9,7 @@ import {Screen} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {color, radius} from '../../ui/tokens';
+import {color, radius, size} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 
@@ -55,6 +56,8 @@ export function ParentSettings() {
         </>
       }
       bottom={<BigButton variant="secondary" label={t.back} onPress={() => navigation.goBack()} />}>
+      {/* 도장 소리: 위험 구역(모두 지우기)보다 위(리뷰 L4) */}
+      <SfxRow />
       {linked ? (
         <>
         <View style={styles.section}>
@@ -111,7 +114,58 @@ export function ParentSettings() {
   );
 }
 
+// 도장 소리 토글(시안 P7_motion·P13, DECISIONS: 효과음은 도장 소리 하나라 이름 '도장 소리', 기본 켜짐). 이 기기에만 저장.
+// 행 전체가 스위치(터치 64 이상, talkback R10 "도장 소리, 스위치, 켜짐, 도장을 찍을 때 짧은 소리").
+// 저장값을 읽기 전에는 스위치를 그리지 않는다(켜짐→꺼짐 깜빡임 방지).
+function SfxRow() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    prefs()
+      .sfxEnabled()
+      .then(v => alive && setOn(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggle = () => {
+    if (on === null) {
+      return;
+    }
+    setOn(!on);
+    prefs().setSfxEnabled(!on);
+  };
+  return (
+    <Pressable
+      testID="sfx-row"
+      accessibilityRole="switch"
+      accessibilityLabel={t.sfx}
+      accessibilityHint={t.sfx_sub}
+      accessibilityState={{checked: !!on, disabled: on === null}}
+      onPress={toggle}
+      style={({pressed}) => [styles.section, styles.toggleRow, pressed ? styles.pressed : null]}>
+      <View style={styles.toggleText}>
+        <Text20 size={24} weight="bold">{t.sfx}</Text20>
+        <Text20 style={styles.sub}>{t.sfx_sub}</Text20>
+      </View>
+      {on === null ? null : (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Switch
+            value={on}
+            onValueChange={toggle}
+            trackColor={{false: color.lineSoft, true: color.done}}
+            thumbColor={color.card}
+          />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  toggleRow: {flexDirection: 'row', alignItems: 'center', minHeight: size.touchMin},
+  pressed: {backgroundColor: color.actionSoft},
+  toggleText: {flex: 1, gap: 4},
   title: {paddingBottom: 8},
   section: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 16, gap: 12},
   confirm: {backgroundColor: color.noticeSoft, borderRadius: radius.card, borderWidth: 4, borderColor: color.action, padding: 14, gap: 12},
