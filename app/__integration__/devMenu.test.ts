@@ -4,7 +4,7 @@ import {loadLocalConfig} from '../src/lib/config';
 import {createSupabase} from '../src/lib/supabase';
 import {createRealApi} from '../src/features/realApi';
 import {memoryStore} from '../src/lib/localStamps';
-import {createTestFamily, supabaseDevAuth} from '../src/dev/testFamily';
+import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from '../src/dev/testFamily';
 import {createSessionSlots} from '../src/dev/sessionSlots';
 
 declare const process: {env: Record<string, string | undefined>};
@@ -31,4 +31,12 @@ test('자녀 테스트 계정 → 가족·번호 → 어르신 익명 연결, �
   expect((await api.getChildState()).kind).toBe('family');
   expect(await slots.switchTo('child', 'parent')).toBe('restored');
   expect(await api.whoAmI()).toBe('parent');
+
+  // M3 정리: 어르신(익명)·테스트 자녀를 계정 지우기로. 보관 칸도 비워진다
+  expect(await cleanupTestFamily({api, auth, store: slotStore})).toEqual({ok: true, parent: true, child: true});
+  expect(await slotStore.getItem('dev_menu_session_child_v1')).toBeNull();
+  expect(await api.whoAmI()).toBe('none');
+  // 지운 자녀 계정으로는 다시 로그인할 수 없다
+  const again = await createSupabase(SUPABASE_URL, SUPABASE_KEY).auth.signInWithPassword(creds);
+  expect(again.error).toBeTruthy();
 });

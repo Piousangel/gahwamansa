@@ -23,12 +23,12 @@ try {
   // node_modules 가 없으면 기본 설정
 }
 
-// production 번들에는 개발자 메뉴 구현을 넣지 않는다(metroDevMenu.js). 환경은 Metro 가 시작할 때 한 번 읽는다
-const APP_ENV = bundleAppEnv(__dirname);
+// 출시 번들에서 개발 전용 코드(개발자 메뉴·config.local)를 뺀다(metroDevMenu.js). 환경은 Metro 가 시작할 때 env.generated.ts 에서 한 번 읽는다
+const BUNDLE = bundleAppEnv(__dirname);
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const r = context.resolveRequest(context, moduleName, platform);
   if (r && r.type === 'sourceFile') {
-    const stub = devMenuRedirect(r.filePath, APP_ENV, __dirname);
+    const stub = devMenuRedirect(r.filePath, BUNDLE, __dirname);
     if (stub) {
       return { ...r, filePath: stub };
     }

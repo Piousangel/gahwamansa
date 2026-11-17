@@ -308,3 +308,10 @@
 - 오늘 코스 초기화·하루 넘기기: fake API(local 개발) 전용 훅 `__dev`(서버 영향 없음, fakeApi 와 함께 production 번들에도 있으나 무해). real 서버는 앱에서 기록·날짜를 바꿀 수 없어 메뉴에 그 사실만 표시. 도장: 이 기기 미연결 도장(localStamps) 지우기.
 - 표시: APP_ENV·API_MODE·서버 주소·버전(VERSION_NAME·CODE·GIT_SHA)·링크 도메인.
 - 아키텍처 예외: `src/dev` 는 개발 전용이라 supabase auth 를 realApi 밖에서 직접 쓴다(production 번들 제외로 한정).
+
+### 개발자 메뉴 보안 리뷰 반영(2026-11-18-dev-menu-security-review)
+- H1: release(staging·production) 번들·환경 불명이면 `config.local.ts` 를 `config.local.empty.ts` 로(metroDevMenu.js). 검사 표식에 devTestChild·테스트 도메인 이메일·config.local 문자열 값 추가(카나리아 계정으로 확인).
+- M1: 판정은 Gradle 이 쓰는 `env.generated.ts` 의 APP_ENV·BUILD_TYPE(새 필드)만, 환경 변수 덮어쓰기 폐지. 파일이 없거나 값을 모르면 메뉴·config.local 모두 제외(fail-closed) — Metro 개발 서버는 debug 빌드(preBuild 가 파일을 씀) 뒤에 쓴다. Gradle release 번들 작업 doLast `verifyReleaseBundle`: 실제 산출물 bundle 에서 표식을 찾으면 빌드 실패. production 은 API_MODE=real 강제.
+- M2: 보관 칸에 saved_at, 7일 지나면 버림. 로그아웃·계정 지우기·처음으로 때 `devGate.clearDevSessions`(메뉴 구현이 등록, production 대역은 무동작). 연결 전 익명 세션은 버리지 않고 비어 있는 어르신 칸에 보관. "보관 세션 모두 지우기" 버튼. 암호화 저장(EncryptedSharedPreferences)은 `androidx.security:security-crypto` 새 의존성이 필요해 보류 — 리드 결정 필요.
+- M3: "테스트 가족 정리" — 만든 기록(`dev_menu_test_family_v1`)이 있을 때만, 어르신(익명)→테스트 자녀 순서로 기존 `delete_my_account`. 소셜(실제) 자녀 계정은 지우지 않는다. 테스트 계정은 테스트 도메인 이메일만.
+- L1: production 버전 줄은 Pressable 이 아닌 글자/View. L3: ARCHITECTURE 금지 목록에 `src/dev` 예외 1줄. L4: production 차단(env mock)·4초 창·setSession 오류·already_has_profile·redeem_failed·정리 분기·로그아웃 정리 테스트, `_removeSession` 존재 단위 테스트.

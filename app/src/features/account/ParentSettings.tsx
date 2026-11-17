@@ -109,9 +109,14 @@ export function ParentSettings() {
       <View style={styles.section}>
         <Text20 weight="bold">{t.app_info}</Text20>
         <Text20 style={styles.sub}>{t.ai_notice}</Text20>
-        <Pressable testID="version-tap" disabled={!versionTap} onPress={versionTap}>
-          <Text20 style={styles.sub}>{t.version.split('{버전}').join(APP_VERSION)}</Text20>
-        </Pressable>
+        {/* production(허용 안 됨)은 누를 수 있는 요소가 아닌 글자만(화면 읽기에 '사용 안 함'으로 읽히지 않게, 보안 리뷰 L1) */}
+        {versionTap ? (
+          <Pressable testID="version-tap" onPress={versionTap}>
+            <Text20 style={styles.sub}>{t.version.split('{버전}').join(APP_VERSION)}</Text20>
+          </Pressable>
+        ) : (
+          <Text20 testID="version-line" style={styles.sub}>{t.version.split('{버전}').join(APP_VERSION)}</Text20>
+        )}
       </View>
     </Screen>
   );

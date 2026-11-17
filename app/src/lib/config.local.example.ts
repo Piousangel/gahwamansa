@@ -16,5 +16,6 @@ const local: Partial<AppEnv> = {
 export default local;
 
 // 선택(개발자 메뉴 "테스트 가족 만들기"): 이메일·비밀번호로 로그인할 테스트 자녀 계정. 사용자가 정한 계정만, 이 파일(gitignore)에만 둔다.
-// 개발 빌드(__DEV__)에서만 읽는다. 없으면 개발자 메뉴는 보관된 자녀 세션(소셜 로그인 등)을 쓴다.
+// 개발 빌드(__DEV__)에서만 읽는다. release(staging·production) 번들에는 이 파일 자체가 들어가지 않는다(Metro 가 빈 모듈로 바꿈,
+// Gradle release 번들 검사가 확인). 테스트 도메인 이메일(@example.test 등)만 받는다. 없으면 보관된 자녀 세션(소셜 로그인 등)을 쓴다.
 // export const devTestChild = {email: 'kid@example.test', password: '...'};

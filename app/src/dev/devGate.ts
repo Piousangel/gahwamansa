@@ -34,7 +34,17 @@ export function useVersionTaps(allowed: boolean): (() => void) | undefined {
   return allowed ? onPress : undefined;
 }
 
-/** 설정 화면의 버전 줄용: 이 빌드 환경으로 판정한 탭 처리(production 이면 undefined) */
+/** 설정 화면의 버전 줄용: 이 빌드 환경으로 판정한 탭 처리(production 이면 undefined → 버전 줄은 누를 수 없는 글자) */
 export function useAppVersionTaps(): (() => void) | undefined {
   return useVersionTaps(isDevMenuAllowed(getAppEnv().APP_ENV, typeof __DEV__ === 'undefined' ? true : __DEV__));
+}
+
+// 보관 세션 정리 훅(보안 리뷰 M2): 개발자 메뉴 구현이 등록하고, 앱은 로그아웃·계정 지우기·처음으로 때 부른다.
+// production 대역에서는 아무도 등록하지 않아 아무 일도 하지 않는다.
+let cleaner: (() => Promise<void>) | null = null;
+export function registerDevSessionCleaner(fn: (() => Promise<void>) | null) {
+  cleaner = fn;
+}
+export function clearDevSessions(): Promise<void> {
+  return cleaner ? cleaner().catch(() => {}) : Promise.resolve();
 }

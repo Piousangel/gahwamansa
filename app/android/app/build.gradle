@@ -118,6 +118,8 @@ def loadAppEnv = { String flavor ->
     }
     if (m.APP_ENV != flavor) throw new GradleException("${f.name}: APP_ENV=${m.APP_ENV} 가 flavor(${flavor})와 달라요")
     if (!(m.API_MODE in ["fake", "real"])) throw new GradleException("${f.name}: API_MODE 는 fake 또는 real")
+    // production 은 실제 서버만(fake API·개발 훅이 출시 앱에서 쓰이지 않게, 보안 리뷰 2026-11-18 L2)
+    if (flavor == "production" && m.API_MODE != "real") throw new GradleException("${f.name}: production 은 API_MODE=real 만 허용")
     if (!(m.KAKAO_NATIVE_APP_KEY ==~ /[0-9a-f]{32}/)) throw new GradleException("${f.name}: KAKAO_NATIVE_APP_KEY 형식(32자리 16진수)이 아니에요")
     // 값 형식 허용 목록(리뷰 L1): APK 로 나가는 Supabase 키 칸은 publishable 키만(레거시 JWT·service_role 차단), URL 은 ref 와 일치
     if (!(m.SUPABASE_PROJECT_REF ==~ /[a-z0-9-]+/)) throw new GradleException("${f.name}: SUPABASE_PROJECT_REF 형식이 아니에요")
@@ -192,7 +194,31 @@ if (project.hasProperty("versionCode")) {
 def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
 
 // 번들 직전에 flavor 에 맞는 TS 설정을 쓴다(공개 값만). 파일은 gitignore
-def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost ->
+// release 번들 검사: Hermes 바이트코드도 ASCII 문자열은 그대로 담긴다. 표식이 있으면 실패한다.
+//  - 모든 release: config.local 테스트 계정(devTestChild)·테스트 도메인 이메일(@*.test, @example.*)·config.local 의 문자열 값
+//  - production: 개발자 메뉴 구현·세션 보관·테스트 가족 표식
+def RELEASE_EMAIL_ALLOW = ["name@example.com"] // 이메일 입력 칸 예시 문구(copy login.email_placeholder)
+def verifyReleaseBundle = { Task t, String flavor ->
+    def bundles = t.outputs.files.asFileTree.matching { include "**/*.bundle" }.files
+    if (bundles.isEmpty()) throw new GradleException("${t.name}: 검사할 번들을 찾지 못했어요")
+    def markers = ["devTestChild"]
+    if (flavor == "production") markers += ["bumojasik-dev-menu-impl", "dev_menu_session_", "createTestFamily"]
+    bundles.each { File b ->
+        def text = new String(b.bytes, "ISO-8859-1")
+        def hit = markers.findAll { text.contains(it) }
+        def emails = (text =~ /[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)*(?:example\.(?:test|com|org)|[A-Za-z0-9-]+\.test)/).collect { it instanceof List ? it[0] : it }.unique().findAll { !(it in RELEASE_EMAIL_ALLOW) }
+        def localFile = file("../../src/lib/config.local.ts")
+        def localValues = localFile.exists() ? (localFile.text =~ /['"]([^'"]{6,})['"]/).collect { it[1] }.findAll { !(it in ["fake", "real"]) } : []
+        hit += localValues.findAll { text.contains(it) }.collect { "config.local 값(${it.length()}자)" }
+        if (hit || emails) {
+            throw new GradleException("${b.name}(${flavor} release)에 개발 전용 코드·계정 표식이 있어요: ${hit + emails.collect { it.replaceAll(/^[^@]+/, '***') }}")
+        }
+    }
+    logger.lifecycle("release 번들 검사 통과(${flavor}): 개발 전용 표식 없음")
+}
+
+// BUILD_TYPE: Metro 가 release 번들에서 config.local·개발자 메뉴를 빼는 근거(metroDevMenu.js). 이 파일 하나만 믿는다
+def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost, boolean release ->
     def values = [
         APP_ENV: e.APP_ENV,
         API_MODE: e.API_MODE,
@@ -205,6 +231,7 @@ def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost -
         VERSION_NAME: versionName,
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
+        BUILD_TYPE: release ? "release" : "debug",
     ]
     def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
     generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +
@@ -342,7 +369,7 @@ android.applicationVariants.configureEach { variant ->
     }
     def generate = {
         checkPlaceholder()
-        writeEnvTs(e, vName, vCode, linkHost)
+        writeEnvTs(e, vName, vCode, linkHost, isRelease)
     }
     // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값 검사만(네이티브 컴파일 전에 일찍 실패)
     variant.preBuildProvider.configure { doFirst { isRelease ? checkPlaceholder() : generate() } }
@@ -355,6 +382,8 @@ android.applicationVariants.configureEach { variant ->
         t.doFirst { generate() }
         if (isRelease) {
             t.finalizedBy(cleanGeneratedAppEnv)
+            // 산출물 검사(보안 리뷰 2026-11-18 M1②): 실제로 APK 에 들어갈 번들에 개발 전용 코드·테스트 계정이 있으면 빌드 실패
+            t.doLast { verifyReleaseBundle(t, variant.flavorName) }
         }
     }
 }

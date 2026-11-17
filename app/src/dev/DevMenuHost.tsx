@@ -1,7 +1,7 @@
 // 개발자 메뉴(staging·local 개발 빌드 전용). production 번들에서는 Metro 가 DevMenuHost.stub.tsx 로 바꿔 이 파일·
 // sessionSlots·testFamily 가 빠진다(metroDevMenu.js, scripts/check-dev-menu-bundle.sh 로 확인). 실행 중에도 관문(devGate)이 한 번 더 막는다.
 // 문구는 내부 도구라 copy.ko.json 에 두지 않는다(사용자에게 보이지 않음). 비밀번호·토큰·번호는 화면·로그에 찍지 않는다.
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Modal, ScrollView, StyleSheet, View} from 'react-native';
 import type {Api} from '../features/types';
 import {getAppEnv} from '../lib/env';
@@ -9,9 +9,9 @@ import {localStamps} from '../lib/localStamps';
 import {Text20} from '../ui/Text20';
 import {BigButton} from '../ui/BigButton';
 import {color, radius} from '../ui/tokens';
-import {DevMenuContext, isDevMenuAllowed} from './devGate';
-import {createSessionSlots, type DevRole} from './sessionSlots';
-import {createTestFamily, supabaseDevAuth} from './testFamily';
+import {DevMenuContext, isDevMenuAllowed, registerDevSessionCleaner} from './devGate';
+import {ALL_DEV_KEYS, createSessionSlots, type DevRole} from './sessionSlots';
+import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily';
 import type {FakeDevHooks} from '../features/fakeApi';
 
 // 번들 검사 표식(scripts/check-dev-menu-bundle.sh): production 번들에 이 글자가 있으면 실패
@@ -33,6 +33,10 @@ const T = {
   close: '닫기',
   done: '했어요',
   noChild: '자녀 세션이 없어요. 자녀로 로그인한 뒤 다시 해 주세요',
+  notTest: '테스트 계정은 테스트 도메인 이메일(@example.test 등)만 쓸 수 있어요',
+  cleanup: '테스트 가족 정리(만든 어르신·테스트 자녀 계정 지우기)',
+  nothing: '정리할 테스트 가족이 없어요',
+  clearSlots: '보관 세션 모두 지우기',
   failed: '실패했어요',
 };
 
@@ -107,11 +111,35 @@ export function DevMenuHost({api, children}: Props) {
       const {auth, store} = realDeps();
       const r = await createTestFamily({api, auth, store, creds: localTestChild()});
       if (!r.ok) {
-        setMsg(r.reason === 'no_child_session' ? T.noChild : T.failed);
+        setMsg(r.reason === 'no_child_session' ? T.noChild : r.reason === 'not_test_account' ? T.notTest : T.failed);
         return;
       }
       restart(undefined);
     });
+
+  // M3: 내가 만든 테스트 가족 정리(기존 계정 지우기 경로). 실제 개인 자녀 계정은 지우지 않는다
+  const cleanup = () =>
+    run(async () => {
+      const {auth, store} = realDeps();
+      const r = await cleanupTestFamily({api, auth, store});
+      if (!r.ok) {
+        setMsg(T.nothing);
+        return;
+      }
+      restart(undefined);
+    });
+
+  // M2: 보관 세션은 로그아웃·계정 지우기·처음으로 때 지운다(AppRoot → devGate.clearDevSessions). fake 는 보관하지 않는다
+  useEffect(() => {
+    if (!allowed || fake) {
+      return;
+    }
+    registerDevSessionCleaner(async () => {
+      const {store} = realDeps();
+      await Promise.all(ALL_DEV_KEYS.map(k => store.removeItem(k)));
+    });
+    return () => registerDevSessionCleaner(null);
+  }, [allowed, fake]);
 
   const ctx = useMemo(() => ({open: () => (allowed ? setVisible(true) : undefined)}), [allowed]);
 
@@ -139,6 +167,18 @@ export function DevMenuHost({api, children}: Props) {
                     <Text20 weight="bold">{T.family}</Text20>
                     <Text20>{T.familyHint}</Text20>
                     <BigButton variant="secondary" label={T.family} loading={busy} onPress={makeFamily} />
+                    <BigButton variant="secondary" label={T.cleanup} disabled={busy} onPress={cleanup} />
+                    <BigButton
+                      variant="secondary"
+                      label={T.clearSlots}
+                      disabled={busy}
+                      onPress={() =>
+                        run(async () => {
+                          await createSessionSlots(realDeps().auth, realDeps().store).clearAll();
+                          setMsg(T.done);
+                        })
+                      }
+                    />
                   </>
                 )}
 

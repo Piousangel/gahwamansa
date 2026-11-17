@@ -26,10 +26,18 @@ export function ChildAppInfo() {
       }>
       <View style={styles.section}>
         {/* 버전 줄: staging·개발 빌드에서만 7번 탭 → 개발자 메뉴(devGate). production 은 누를 수 없는 줄 */}
-        <Pressable testID="version-tap" disabled={!versionTap} onPress={versionTap} style={styles.row} accessible accessibilityLabel={`${a.version}, ${APP_VERSION}`}>
-          <Text20 weight="bold" style={styles.flex}>{a.version}</Text20>
-          <Text20 style={styles.sub}>{APP_VERSION}</Text20>
-        </Pressable>
+        {versionTap ? (
+          <Pressable testID="version-tap" onPress={versionTap} style={styles.row} accessible accessibilityLabel={`${a.version}, ${APP_VERSION}`}>
+            <Text20 weight="bold" style={styles.flex}>{a.version}</Text20>
+            <Text20 style={styles.sub}>{APP_VERSION}</Text20>
+          </Pressable>
+        ) : (
+          // production: 누를 수 없는 줄(화면 읽기에 '사용 안 함'으로 읽히지 않게, 보안 리뷰 L1)
+          <View testID="version-line" style={styles.row} accessible accessibilityLabel={`${a.version}, ${APP_VERSION}`}>
+            <Text20 weight="bold" style={styles.flex}>{a.version}</Text20>
+            <Text20 style={styles.sub}>{APP_VERSION}</Text20>
+          </View>
+        )}
         {privacy ? <LinkRow label={a.privacy} onPress={() => Linking.openURL(privacy)} /> : null}
         {mail ? <LinkRow label={a.contact} sub={mail} onPress={() => Linking.openURL(`mailto:${mail}`)} /> : null}
       </View>
