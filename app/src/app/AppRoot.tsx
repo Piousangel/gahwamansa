@@ -16,6 +16,7 @@ import {useMotionMode} from '../features/link/useReduceMotion';
 import {color} from '../ui/tokens';
 import {finishFlight, flightPending, hideNativeSplash, kickBoot, useBootActive, useBootLoading, useSplashLanded, useSplashTarget} from './splash';
 import {SplashHold, SplashOverlay} from './SplashOverlay';
+import {localStamps} from '../lib/localStamps';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -119,8 +120,12 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
         }
       },
       syncError,
-      clear: () => setContent(undefined),
+      clear: () => {
+        setContent(undefined);
+        localStamps().clear(); // 모두 지우기: 기기 도장 목록(날짜만)도 지운다(기다리지 않음)
+      },
       resetRole: () => {
+        localStamps().clear(); // 처음 화면으로: 이 기기의 미연결 도장도 비운다
         setContent(undefined);
         setStart('Connect');
         setWho(null);

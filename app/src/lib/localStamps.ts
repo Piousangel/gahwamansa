@@ -62,12 +62,12 @@ export function createLocalStamps(store: KeyValueStore, now: () => Date = () => 
       await save(next);
       return next;
     },
-    /** 연결된 뒤 지운다(서버로 옮기지 않음). */
+    /** 연결 뒤·모두 지우기·처음으로 때 지운다(서버로 옮기지 않음). 지우기가 실패하면 빈 목록을 덮어써 남지 않게 한다. */
     async clear(): Promise<void> {
       try {
         await store.removeItem(KEY);
       } catch {
-        // 무시
+        await save([]);
       }
     },
   };

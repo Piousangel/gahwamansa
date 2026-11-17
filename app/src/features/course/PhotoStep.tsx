@@ -45,7 +45,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       }
       bottom={
         review ? (
-          <BigButton variant="secondary" label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />
+          <BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />
         ) : error ? (
           <StepError error={error} onRetry={go} />
         ) : (

@@ -1,12 +1,13 @@
 import React from 'react';
-import {StyleSheet} from 'react-native';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
+import {BackHandler, StyleSheet} from 'react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
 import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
-import {press} from '../testUtils/flow';
+import {press, toHomeConsented} from '../testUtils/flow';
+import {color} from '../src/ui/tokens';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
 
 // P3 코스 홈 v4(동결 시안 P3_course_home_v4): 리듬 규칙(D)·완료 상태 다시 보기(B)·제목 없음·미연결 띠.
@@ -276,5 +277,93 @@ describe('미연결', () => {
     await waitFor(async () => expect(await localStamps().read()).toEqual([]));
     expect(week).toHaveBeenCalled();
     expect(screen.queryAllByTestId(/^stamp-on-/, {includeHiddenElements: true})).toHaveLength(0);
+  });
+});
+
+describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
+  function captureBack() {
+    const handlers: (() => boolean | null | undefined)[] = [];
+    jest.spyOn(BackHandler, 'addEventListener').mockImplementation(((_: string, h: () => boolean) => {
+      handlers.push(h);
+      return {remove: () => handlers.splice(handlers.indexOf(h), 1)};
+    }) as never);
+    return async () => {
+      await act(async () => {
+        for (let i = handlers.length - 1; i >= 0; i--) {
+          if (handlers[i]()) {
+            break;
+          }
+        }
+      });
+    };
+  }
+  afterEach(() => jest.restoreAllMocks());
+
+  test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(화면에 행동 하나)', async () => {
+    await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'A'});
+    for (const [row, label] of [
+      ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
+      ['둘 중 고르기, 했어요', '둘 중 고르기, 다시 보는 중'],
+      ['자판으로 쓰기, 했어요', '자판으로 쓰기, 다시 보는 중'],
+    ]) {
+      await press(row);
+      await waitFor(() => screen.getByLabelText(label));
+      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button');
+      expect(StyleSheet.flatten(dockButton.props.style).minHeight).toBe(72); // 주 버튼 높이
+      fireEvent.press(dockButton);
+      await waitFor(() => screen.getByTestId('date-line'));
+    }
+  });
+
+  test('하드웨어 뒤로가기도 보기 전용에서 코스 홈으로', async () => {
+    const back = captureBack();
+    await home({completedSteps: ['photo', 'question', 'hangul']});
+    await press('둘 중 고르기, 했어요');
+    await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
+    await back();
+    await waitFor(() => screen.getByTestId('date-line'));
+  });
+
+  test('N2: P6 보기 전용 — 그림·캡션·제목·칸이 한 흰 카드 안, 칸 사이 10, 좁으면 줄어드는 칸', async () => {
+    await home({completedSteps: ['photo', 'question', 'hangul'], realImage: true});
+    await press('자판으로 쓰기, 했어요');
+    await waitFor(() => screen.getByLabelText('자판으로 쓰기, 다시 보는 중'));
+    const card = screen.getByTestId('kb-review-card');
+    expect(within(card).getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy();
+    expect(within(card).getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
+    const cells = StyleSheet.flatten(within(card).getByLabelText('오늘의 낱말, 나무').props.style);
+    expect(cells.gap).toBe(10);
+    const cell = StyleSheet.flatten(within(card).getByTestId('kb-review-cell-0', {includeHiddenElements: true}).props.style);
+    expect(cell.flexShrink).toBe(1);
+    expect(cell.maxWidth).toBeGreaterThanOrEqual(64); // 64 × 글자 배율(상한 1.5 → 96)
+    expect(cell.maxWidth).toBeLessThanOrEqual(96);
+  });
+
+  test('N3: P5 보기 전용 — 질문 28, 선택 칸 최소 높이 100, 고른 칸 체크 아이콘, 이름표 doneInk', async () => {
+    await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'B'});
+    await press('둘 중 고르기, 했어요');
+    await waitFor(() => screen.getByLabelText('고른 답, 가을'));
+    expect(StyleSheet.flatten(screen.getByText('더 좋아하는 계절은요?').props.style).fontSize).toBe(28);
+    const chosen = screen.getByLabelText('고른 답, 가을');
+    expect(StyleSheet.flatten(chosen.props.style).minHeight).toBe(100);
+    expect(within(chosen).getByTestId('icon-check', {includeHiddenElements: true})).toBeTruthy();
+    expect(StyleSheet.flatten(within(chosen).getByText('고른 답', {includeHiddenElements: true}).props.style).color).toBe(color.doneInk);
+    expect(StyleSheet.flatten(screen.getByLabelText('봄').props.style).minHeight).toBe(100);
+  });
+});
+
+describe('기기 도장 정리(낮음)', () => {
+  test('설정 "모두 지우기"를 마치면 기기 도장 목록도 지운다', async () => {
+    const local = createLocalStamps(memoryStore());
+    setLocalStampsForTest(local);
+    await toHomeConsented(createFakeApi({consented: true}));
+    await local.addToday(); // 연결 뒤 첫 로드에서 지워졌어도 다시 넣어 두고, 삭제 흐름이 지우는지 본다
+    await press('설정');
+    await press('모두 지우기');
+    await waitFor(() => screen.getByText('모두 지울까요?'));
+    await press('모두 지우기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+    await waitFor(async () => expect(await local.read()).toEqual([]));
+    setLocalStampsForTest(null);
   });
 });

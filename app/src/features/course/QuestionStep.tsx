@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {color, radius} from '../../ui/tokens';
+import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -66,8 +67,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
             <StepHeader name={copy.course.step.question} n={2} review />
           </>
         }
-        bottom={<BigButton variant="secondary" label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
-        <Text20 size={32} weight="bold">{q.prompt ?? appCopy.question_title}</Text20>
+        bottom={<BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
+        <Text20 size={28} weight="bold" style={styles.value}>{q.prompt ?? appCopy.question_title}</Text20>
         <ReviewChoice label={q.option_a} chosen={saved === 'A'} />
         <ReviewChoice label={q.option_b} chosen={saved === 'B'} />
       </Screen>
@@ -113,21 +114,26 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
       accessible
       accessibilityLabel={chosen ? copy.review.chosen_a11y.split('{값}').join(label) : label}
       style={[styles.card, chosen ? styles.chosen : null]}>
-      {chosen ? (
-        <Text20 weight="bold" oneLine style={styles.tag}>
-          {copy.review.chosen}
+      <View style={styles.cardText}>
+        {chosen ? (
+          <Text20 weight="bold" oneLine style={styles.tag}>
+            {copy.review.chosen}
+          </Text20>
+        ) : null}
+        <Text20 size={32} weight="bold" style={styles.value}>
+          {label}
         </Text20>
-      ) : null}
-      <Text20 size={32} weight="bold" style={styles.value}>
-        {label}
-      </Text20>
+      </View>
+      {chosen ? <Icon name="icon-check" size={32} color={color.done} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {borderRadius: radius.select, borderWidth: 2, borderColor: color.line, backgroundColor: color.card, paddingVertical: 16, paddingHorizontal: 20, gap: 4},
+  // 시안 P5_P6_review: 선택 칸 최소 높이 100, 고른 칸 오른쪽 체크, 이름표 doneInk
+  card: {minHeight: 100, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.select, borderWidth: 2, borderColor: color.line, backgroundColor: color.card, paddingVertical: 16, paddingHorizontal: 20},
+  cardText: {flex: 1, gap: 4},
   chosen: {borderWidth: 4, borderColor: color.action, backgroundColor: color.actionSoft, paddingHorizontal: 18},
-  tag: {color: color.actionPressed},
+  tag: {color: color.doneInk},
   value: {color: color.inkTitle},
 });

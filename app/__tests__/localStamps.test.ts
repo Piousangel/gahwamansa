@@ -54,3 +54,17 @@ test('연결 뒤 지우기', async () => {
   expect(await s.read()).toEqual([]);
   expect(await store.getItem('local_week_stamps_v1')).toBeNull();
 });
+
+test('지우기에서 removeItem 이 실패하면 빈 목록을 덮어써 남지 않게 한다', async () => {
+  const mem = memoryStore();
+  const store = {
+    ...mem,
+    removeItem: async () => {
+      throw new Error('x');
+    },
+  };
+  const s = createLocalStamps(store, at('2026-11-20T03:00:00Z'));
+  await s.addToday();
+  await s.clear();
+  expect(await s.read()).toEqual([]);
+});
