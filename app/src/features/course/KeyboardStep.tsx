@@ -16,7 +16,7 @@ import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 import {StepHeader} from './StepHeader';
-import {filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
+import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
 import type {StepName} from '../types';
 
 const k = copy.keyboard;
@@ -40,6 +40,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const {fontScale} = useWindowDimensions();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const finishRef = useRef<React.ComponentRef<typeof Pressable>>(null);
+  const doneRef = useRef<React.ComponentRef<typeof Pressable>>(null);
   const [text, setText] = useState('');
   const [phase, setPhase] = useState<Phase>('writing');
   const [attempts, setAttempts] = useState(0); // "다 썼어요"를 누른 수(이벤트 attempts 정의)
@@ -68,9 +69,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
       return undefined;
     }
     const t = setTimeout(() => setCanFinish(true), MATCH_HOLD_MS);
-    // 명세 P6: 자판 닫힘 → 알림 1회 → 포커스 '마치기'(비활성이어도 포커스는 가능, 1.5초 뒤 활성).
-    // 입력칸이 숨겨지며 TalkBack 포커스가 사라지지 않게 알림 직후 옮긴다.
-    const cancelFocus = focusLater(() => finishRef.current);
+    // 명세 P6: 자판 닫힘 → 알림 1회 → 포커스 '마치기'. 알림 읽기가 끝나도록 마치기가 눌리는 때(1.5초)에 옮긴다(재검토 ①).
+    const cancelFocus = focusLater(() => finishRef.current, MATCH_HOLD_MS);
     return () => {
       clearTimeout(t);
       cancelFocus();
@@ -116,13 +116,13 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
     setPhase('writing');
     inputRef.current?.focus();
   };
-  // TODO(이벤트 0022 log_event): course_step_completed {step:'hangul', result:'matched'|'as_is'|'skipped', attempt_no}
-  //   (서버 화이트리스트 이름·속성 키, 값은 영문 소문자 토큰). 글자 내용은 절대 보내지 않는다.
+  // 계측: useFinishStep 이 course_step_completed {step:'hangul', duration_sec, attempt_no}를 보낸다(0022).
+  //   서버 result 값은 granted·denied 뿐이라 일치·이대로·넘어가기 구분은 싣지 않는다. 글자 내용은 절대 보내지 않는다.
   // 마치기·이대로 마칠게요·넘어갈게요는 모두 같은 "단계 완료" 기록이다(평가하지 않음).
   const complete = async () => {
     setPhase(p => (p === 'sheet' ? 'writing' : p));
     const willFinishCourse = STEP_ORDER.every(s => s === 'hangul' || done.includes(s));
-    if (await finish('hangul')) {
+    if (await finish('hangul', attempts)) {
       if (willFinishCourse) {
         navigation.replace('CourseDone'); // P7: 알겠어요 → 코스 홈
       } else {
@@ -138,6 +138,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   ) : (
     <>
       <BigButton
+        buttonRef={doneRef}
         label={copy.course.next.hangul}
         disabled={!hasText}
         disabledReason={open ? undefined : k.need_one}
@@ -224,20 +225,23 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
         visible={phase === 'sheet'}
         title={k.sheet_title}
         body={`${k.your_word} ${normalizeWord(text)}`}
+        returnFocusRef={doneRef} // R12: 닫히면 연 버튼('다 썼어요')으로
         actions={[
           {label: k.retry, onPress: retry},
           {label: k.finish_as_is, onPress: complete},
         ]}
         onBack={retry}
-        testID="kb-retry"
-      />
+        testID="kb-retry">
+        {/* 확정된 칸만 채운다(받침 유지로 잠깐 찬 칸은 빼고, 재검토). 틀림 표시 없음 */}
+        <WordCells cells={cells} filled={confirmedCount(text, word)} big idPrefix="kb-dialog-cell" />
+      </Dialog>
     </Screen>
   );
 }
 
 // 낱말 카드: 음절 칸. 맞게 쓴 칸만 하늘색 + 확인 표시. 다른 칸은 빈 점선 칸 그대로(틀림 표시 없음).
 // 화면 읽기는 카드 한 덩어리로("쓸 낱말, 나무, 두 글자 …"). 칸 변화는 읽지 않는다(소음).
-function WordCells({cells, filled, big}: {cells: string[]; filled: number; big: boolean}) {
+function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[]; filled: number; big: boolean; idPrefix?: string}) {
   const word = cells.join('');
   const count = k.count_words[cells.length - 1] ?? String(cells.length);
   const label = k.card_a11y.split('{낱말}').join(word).split('{n}').join(count);
@@ -247,10 +251,10 @@ function WordCells({cells, filled, big}: {cells: string[]; filled: number; big: 
       {cells.map((ch, i) => {
         const on = i < filled;
         return (
-          <View key={`${ch}-${i}`} testID={`kb-cell-${i}`} style={[styles.cell, {width: side, height: side}, on ? styles.cellOn : null]}>
+          <View key={`${ch}-${i}`} testID={`${idPrefix}-${i}`} style={[styles.cell, {width: side, height: side}, on ? styles.cellOn : null]}>
             <Text20 size={big ? 40 : 32} weight="bold" maxFontSizeMultiplier={1} style={styles.title}>{ch}</Text20>
             {on ? (
-              <View testID={`kb-cell-check-${i}`} style={styles.badge}>
+              <View testID={`${idPrefix}-check-${i}`} style={styles.badge}>
                 <Icon name="icon-check" size={14} color={color.onAction} />
               </View>
             ) : null}

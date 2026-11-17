@@ -22,13 +22,22 @@ export function syllables(s: string): string[] {
 
 const nfd = (s: string) => s.normalize('NFD');
 
-export function filledCount(input: string, target: string): number {
+/** 정확히 같은 앞부분 음절 수(받침 유지 없음). P6 확인 대화상자는 이 확정된 칸만 채운다. */
+export function confirmedCount(input: string, target: string): number {
   const a = syllables(input);
   const b = syllables(target);
   let n = 0;
   while (n < a.length && n < b.length && a[n] === b[n]) {
     n += 1;
   }
+  return n;
+}
+
+/** 쓰는 중 화면의 칸: 확정된 칸 + 조합 중인 마지막 음절이 목표 음절을 자모 접두로 품으면 그 칸까지. */
+export function filledCount(input: string, target: string): number {
+  const a = syllables(input);
+  const b = syllables(target);
+  let n = confirmedCount(input, target);
   // 조합 중인 마지막 음절이 목표 음절을 자모 접두로 품으면(남 ⊃ 나) 그 칸도 채운다
   if (n < b.length && n === a.length - 1 && nfd(a[n]).startsWith(nfd(b[n]))) {
     n += 1;

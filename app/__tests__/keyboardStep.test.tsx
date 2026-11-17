@@ -56,7 +56,7 @@ test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼
   expect(screen.getByText('자판으로 쓰기')).toBeTruthy();
   expect(screen.getByText('3 / 3')).toBeTruthy();
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
-  expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자. 자판으로 쓰거나 넘어갈 수 있어요')).toBeTruthy();
+  expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자')).toBeTruthy();
   expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
   expect(screen.getByText('한 글자만 써도 누를 수 있어요', {includeHiddenElements: true})).toBeTruthy(); // 이유 줄은 힌트로 읽어 중복 읽기 숨김(R8)
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeDisabled();
@@ -132,7 +132,8 @@ test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴�
   expect(announce).toHaveBeenCalledWith('낱말을 다 쓰셨어요');
   const toFinish = () =>
     send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마치기');
-  await waitFor(() => expect(toFinish()).toBe(true));
+  expect(toFinish()).toBe(false); // 알림 읽기가 끝나도록 바로 옮기지 않는다(재검토 ①)
+  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 2500}); // 1.5초(마치기 활성)와 함께
   send.mockRestore();
   announce.mockRestore();
 });
@@ -164,6 +165,42 @@ test('다른 낱말로 "다 썼어요": 시트(낱말·쓰신 낱말), 다시 �
   await press('다 썼어요');
   await press('다시 써 볼게요');
   expect(screen.getByTestId('kb-skip-strong')).toBeTruthy();
+});
+
+test('반례: 받침 유지로 칸은 다 찼어도 일치가 아니면 "다 썼어요" → 대화상자, 대화상자 칸은 확정된 칸만(재검토 ③)', async () => {
+  await toKeyboardStep();
+  await type('나뭄');
+  expect(filled()).toEqual([0, 1]); // 쓰는 중 화면: 조합 중 받침 유지
+  expect(screen.queryByText('낱말을 다 쓰셨어요')).toBeNull(); // 자동 완료 없음
+  await press('다 썼어요');
+  expect(screen.getByText('낱말을 한 번 더 볼까요?')).toBeTruthy();
+  expect(screen.getByTestId('kb-dialog-cell-check-0', {includeHiddenElements: true})).toBeTruthy();
+  expect(screen.queryByTestId('kb-dialog-cell-check-1', {includeHiddenElements: true})).toBeNull();
+  expect(screen.getByText('쓰신 낱말 나뭄')).toBeTruthy();
+});
+
+test('계측: 단계 완료 때 course_step_completed {step:hangul, attempt_no, duration_sec} + course_completed, 글자 없음', async () => {
+  const {calls} = await toKeyboardStep();
+  await type('나모');
+  await press('다 썼어요');
+  await press('다시 써 볼게요');
+  await press('다 썼어요');
+  await press('이대로 마칠게요');
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  const ev = calls.filter(c => c.name === 'logEvent').map(c => c.args);
+  expect(ev[0][0]).toBe('course_step_completed');
+  expect(ev[0][1]).toEqual({step: 'hangul', duration_sec: expect.any(Number), attempt_no: 2});
+  expect(ev[1]).toEqual(['course_completed', {day_index: 1}]);
+  expect(JSON.stringify(ev)).not.toContain('나모');
+});
+
+test('계측 실패(한도·지워진 계정·네트워크)는 화면을 막지 않는다', async () => {
+  for (const eventResult of ['rate_limited', 'no_user', 'offline'] as const) {
+    await toKeyboardStep({eventResult});
+    await press('오늘은 넘어갈게요');
+    await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+    screen.unmount();
+  }
 });
 
 test('시트에서 "이대로 마칠게요"도 단계 완료로 저장한다(평가하지 않음)', async () => {

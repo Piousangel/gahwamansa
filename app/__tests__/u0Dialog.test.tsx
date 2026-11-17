@@ -1,5 +1,5 @@
 import React from 'react';
-import {AccessibilityInfo, Modal, StyleSheet} from 'react-native';
+import {AccessibilityInfo, Modal, StyleSheet, Text} from 'react-native';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {Dialog} from '../src/ui/Dialog';
 import {FONT_SCALE_MAX, FONT_SCALE_MAX_BODY} from '../src/ui/tokens';
@@ -24,6 +24,25 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(StyleSheet.flatten(body.props.style).fontSize).toBe(22);
     expect(body.props.maxFontSizeMultiplier).toBe(FONT_SCALE_MAX_BODY);
     expect(screen.getAllByRole('button')).toHaveLength(2);
+  });
+
+  test('children: 제목과 본문 사이에 내용(예: P6 음절 칸)을 넣고, 본문 스크롤 안에 같이 둔다', () => {
+    render(
+      <Dialog visible title="낱말을 한 번 더 볼까요?" body="쓰신 낱말 나모" actions={actions()}>
+        <Text testID="dialog-child">칸</Text>
+      </Dialog>,
+    );
+    expect(screen.getByTestId('dialog-child')).toBeTruthy();
+    expect(screen.getByText('쓰신 낱말 나모')).toBeTruthy();
+  });
+
+  test('children 만 있고 본문이 없어도 그린다', () => {
+    render(
+      <Dialog visible title="제목" actions={actions()}>
+        <Text testID="dialog-child">칸</Text>
+      </Dialog>,
+    );
+    expect(screen.getByTestId('dialog-child')).toBeTruthy();
   });
 
   test('alertdialog 역할 + 뒤 화면 읽기 막음(포커스 가둠)', () => {

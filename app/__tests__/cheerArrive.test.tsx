@@ -1,4 +1,5 @@
 import React from 'react';
+import {AccessibilityInfo} from 'react-native';
 import {render, screen, waitFor} from '@testing-library/react-native';
 import {press, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
@@ -78,6 +79,26 @@ test('미연결 열람에서는 응원을 묻지 않는다', async () => {
   await press('코스 보기');
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
   expect(get).not.toHaveBeenCalled();
+});
+
+test('알겠어요로 닫히면 포커스를 코스 홈 제목으로 돌려준다(R12, 재검토 ②)', async () => {
+  const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
+  await home({cheers: ['love_you']});
+  await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
+  send.mockClear();
+  await press('알겠어요');
+  const toTitle = () =>
+    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '오늘의 코스');
+  await waitFor(() => expect(toTitle()).toBe(true));
+  send.mockRestore();
+});
+
+test('코스 홈 진입은 start_today(0024)를 한 번 부른다', async () => {
+  const api = createFakeApi({linked: true, consented: true});
+  const start = jest.spyOn(api, 'startToday');
+  render(<AppRoot api={api} role="parent" restore />);
+  await waitFor(() => screen.getByText('오늘의 코스'));
+  expect(start).toHaveBeenCalledTimes(1);
 });
 
 test('번호로 연결한 직후 코스 홈에서도 응원을 보여 준다', async () => {

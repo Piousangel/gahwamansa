@@ -1,9 +1,9 @@
 // 응원 계약(서버 0020: send_cheer · get_my_cheers · mark_cheers_read). 플랫폼 무관 TS만(React·RN·copy import 금지).
-// ASSUMED(0020): 서버 줄 브랜치(0020_cheers_rpc.sql, dev-server-notes 2절)를 기준으로 썼다. main 반영·database.gen.ts
-// 재생성 뒤 이 파일만 맞춘다(ARCHITECTURE 5절). 앱 types·fakeApi·realApi 는 여기 타입만 쓴다.
+// 확정(0020, main 3b76263 · migrations/20261116000020_cheers_rpc.sql · dev-server-notes). 서버가 바뀌면
+// 이 파일만 맞춘다(ARCHITECTURE 5절). 앱 types·fakeApi·realApi 는 여기 타입만 쓴다. 통합 테스트: __integration__/cheers.test.ts
 
 /** 서버 send_cheer 화이트리스트와 글자까지 같아야 한다(copy-v3 6절 확정 4개). 순서 = 자녀 화면 목록 순서. */
-export const CHEER_KEYS = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'] as const; // ASSUMED(0020)
+export const CHEER_KEYS = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'] as const;
 export type CheerKey = (typeof CHEER_KEYS)[number];
 export const isCheerKey = (k: string): k is CheerKey => (CHEER_KEYS as readonly string[]).includes(k);
 
@@ -11,10 +11,10 @@ export const isCheerKey = (k: string): k is CheerKey => (CHEER_KEYS as readonly 
 export type MyCheers = {
   unread_count: number;
   cheers: {id: string; message_key: string; sent_at: string}[];
-}; // ASSUMED(0020)
+};
 
 /** mark_cheers_read(p_ids uuid[] default null) → int(바뀐 개수). null 이면 안 읽은 응원 전부. */
-export type MarkCheersReadResult = number; // ASSUMED(0020)
+export type MarkCheersReadResult = number;
 
 // 런타임 검증(zod 도입 전 최소판, 계획 12 3-3). 모양이 다르면 null → 호출부가 contract_mismatch 로 다룬다.
 export function parseMyCheers(v: unknown): MyCheers | null {

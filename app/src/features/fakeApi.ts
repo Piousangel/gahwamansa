@@ -47,6 +47,7 @@ export type FakeOptions = {
   cheers?: string[]; // 어르신에게 온 읽지 않은 응원의 message_key(최신순, 서버 get_my_cheers 와 같게)
   failCheers?: boolean; // getMyCheers 실패
   failMarkRead?: boolean; // markCheersRead 실패
+  eventResult?: 'rate_limited' | 'no_user' | 'invalid_props' | 'offline'; // logEvent 결과(기본 ok)
 };
 
 // in-memory 가짜 구현. '123456' 만 성공, 위 표의 코드는 각 reason, 나머지는 invalid.
@@ -156,6 +157,16 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         set.add(day(idx));
       }
       return {weekStart: day(0), doneDates: [...set].sort()};
+    },
+    async startToday() {
+      return this.getTodayContent(); // 가짜는 커서가 없다(day 옵션 고정)
+    },
+    async logEvent() {
+      const r = opts.eventResult;
+      if (r === 'offline') {
+        throw new OfflineError('offline');
+      }
+      return r ? {ok: false as const, reason: r} : {ok: true as const};
     },
     async getTodayContent(): Promise<TodayContent | null> {
       if (opts.empty) {

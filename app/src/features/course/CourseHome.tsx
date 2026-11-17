@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -8,6 +8,7 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {StepRow} from '../../ui/StepRow';
 import {color, radius} from '../../ui/tokens';
+import {useScreenTitleRef} from '../../ui/screenTitle';
 import {appCopy, CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
 import {StampRow} from './StampRow';
@@ -29,6 +30,7 @@ const STEPS: {step: StepName; route: 'PhotoStep' | 'QuestionStep' | 'KeyboardSte
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
   const {api, done, content, consented, setConsented, syncError, sync} = useSession();
   const [consentError, setConsentError] = useState<Message | null>(null);
+  const titleRef = useRef<unknown>(null); // P8 대화상자가 닫힌 뒤 포커스를 돌려줄 제목
   useLoadTodayContent();
   useBootLoading(content === undefined && !syncError); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
   // 이번 주 도장: 연결된 어르신만 서버에서 받는다(미연결 열람은 호출하지 않고 줄을 숨김). 오늘 단계가 바뀌면 다시 받는다.
@@ -106,7 +108,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         </View>
       ) : null}
       <View style={styles.titleRow}>
-        <Title />
+        <Title nodeRef={titleRef} />
         {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
         <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
       </View>
@@ -117,7 +119,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   return (
     <Screen top={top} bottom={dock}>
       {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음) */}
-      <CheerDialog api={api} enabled={linked} />
+      <CheerDialog api={api} enabled={linked} returnFocusRef={titleRef} />
       {syncError ? (
         <View style={styles.notice}>
           <Text20 size={24} weight="bold" accessibilityLiveRegion="polite">{syncError.title}</Text20>
@@ -153,11 +155,24 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   );
 }
 
-function Title() {
+// 화면 제목(R2: Screen 이 첫 포커스로 등록). nodeRef 를 주면 그 요소도 알려 준다(P8 응원 대화상자가 닫힌 뒤 포커스 복귀, R12).
+function Title({nodeRef}: {nodeRef?: React.RefObject<unknown>}) {
+  const register = useScreenTitleRef(true);
+  const ref = useCallback(
+    (node: unknown) => {
+      if (nodeRef) {
+        nodeRef.current = node;
+      }
+      return register(node);
+    },
+    [nodeRef, register],
+  );
   return (
-    <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>
-      {c.title}
-    </Text20>
+    <View ref={ref} accessible accessibilityRole="header" accessibilityLabel={c.title}>
+      <Text20 size={32} weight="bold" style={styles.title}>
+        {c.title}
+      </Text20>
+    </View>
   );
 }
 

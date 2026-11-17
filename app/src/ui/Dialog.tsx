@@ -22,6 +22,8 @@ type Props = {
   visible: boolean;
   title: string;
   body?: string;
+  /** 제목 아래·본문 위에 넣을 내용(예: P6 음절 칸). 본문과 같은 스크롤 안이라 150%에서도 버튼은 아래에 남는다. */
+  children?: React.ReactNode;
   /** 1~3개, 세로로 쌓는다. 선택지가 곧 닫는 길(X 없음, 밖 눌러도 안 닫힘). */
   actions: DialogAction[];
   /** 되돌릴 수 없는 행동(P9 2단계·C8 지우기)일 때만 준다: 경고 칩 글자(예: "조심하세요") + 경고 아이콘.
@@ -40,7 +42,7 @@ type Props = {
  * 접근성: alertdialog + accessibilityViewIsModal(iOS), Android 는 Modal 이 별도 창이라 TalkBack 포커스가 안에 갇힌다.
  * 열리면 300ms 뒤 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R2·R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
  */
-export function Dialog({visible, title, body, actions, warningLabel, onBack, returnFocusRef, testID}: Props) {
+export function Dialog({visible, title, body, children, actions, warningLabel, onBack, returnFocusRef, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   const {opacity, start} = useFadeIn(visible);
@@ -88,9 +90,10 @@ export function Dialog({visible, title, body, actions, warningLabel, onBack, ret
               {title}
             </Text20>
           </View>
-          {body ? (
+          {body || children ? (
             <ScrollView style={styles.bodyScroll} contentContainerStyle={styles.bodyContent}>
-              <Text20 size={22}>{body}</Text20>
+              {children}
+              {body ? <Text20 size={22}>{body}</Text20> : null}
             </ScrollView>
           ) : null}
           <View testID="dialog-actions" style={styles.actions}>
@@ -123,6 +126,6 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle, fontFamily: font.title},
   // 150%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
   bodyScroll: {flexGrow: 0, flexShrink: 1},
-  bodyContent: {paddingBottom: 4},
+  bodyContent: {paddingBottom: 4, gap: 12},
   actions: {marginTop: 4},
 });

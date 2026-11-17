@@ -1,4 +1,4 @@
-import {filledCount, isMatch, normalizeWord, syllables} from '../src/features/course/keyboardMatch';
+import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from '../src/features/course/keyboardMatch';
 
 // 자판으로 쓰기(P6) 판정: NFC 정규화 + 공백 제거 후 비교. 조합 중 판정은 하지 않는다(RN에 조합 이벤트가 없음) →
 // "목표 음절과 같아진 칸만, 앞에서부터" 채운다. 틀림은 어디에도 표시하지 않으므로 틀린 칸 정보는 만들지 않는다.
@@ -79,5 +79,18 @@ describe('isMatch', () => {
   test('목표가 비어 있으면 일치로 보지 않는다', () => {
     expect(isMatch('', '')).toBe(false);
     expect(isMatch(' ', ' ')).toBe(false);
+  });
+});
+
+describe('반례: 칸은 다 찼는데 일치가 아님(재검토 ③)', () => {
+  test('마지막 음절 받침 유지로 칸은 다 차도 isMatch 는 거짓 → 다 썼어요 때 대화상자', () => {
+    expect(filledCount('나뭄', '나무')).toBe(2);
+    expect(isMatch('나뭄', '나무')).toBe(false);
+  });
+  test('대화상자의 칸은 확정된 음절만(confirmedCount: 받침 유지 없이 정확히 같은 앞부분)', () => {
+    expect(confirmedCount('나뭄', '나무')).toBe(1);
+    expect(confirmedCount('남', '나무')).toBe(0);
+    expect(confirmedCount('나무가', '나무')).toBe(2);
+    expect(confirmedCount('가울', '가을')).toBe(1);
   });
 });
