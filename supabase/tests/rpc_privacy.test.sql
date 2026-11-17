@@ -53,7 +53,8 @@ select is((public.child_summary()) -> 'parents' -> 0 ->> 'shared', 'true', '동�
 select is((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'prompt', '어느 계절이 좋으세요?', '최근 답의 질문 문장이 보인다');
 select is((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'choice_label', '가을', '고른 선택지의 글자가 보인다');
 select is(((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'answered_date')::date, public.kst_today(), '답한 날짜(KST)가 보인다');
-select is(((public.child_summary()) -> 'parents' -> 0) - 'shared' - 'latest', '{}'::jsonb, '요약에는 shared·latest 외에 단계·연속일·시간 등이 없다');
+-- 0019에서 parent_id·title(어르신 구분), 0021에서 connected(연결 끊김)가 추가됐다. 그 밖의 참여 정보는 없어야 한다.
+select is(((public.child_summary()) -> 'parents' -> 0) - 'shared' - 'latest' - 'parent_id' - 'title' - 'connected', '{}'::jsonb, '요약에는 shared·latest·구분용 키 외에 단계·연속일·시간 등이 없다');
 
 -- 14. 다른 가족 자녀는 이 가족의 어르신을 볼 수 없다
 select pg_temp.act_as('71000000-0000-0000-0000-0000000000c2', false);
