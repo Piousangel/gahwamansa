@@ -22,6 +22,8 @@ react {
     //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
     // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+    // 환경 flavor(staging/production) 때문에 디버그 변형 이름을 직접 적는다(이 변형은 Metro 에서 JS 를 받음)
+    debuggableVariants = ["stagingDebug", "stagingDebugOptimized", "productionDebug", "productionDebugOptimized"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -89,6 +91,26 @@ android {
         def kakaoKey = (socialConfig =~ /KAKAO_NATIVE_APP_KEY = '([0-9a-f]{32})'/)[0][1]
         resValue "string", "kakao_scheme", "kakao" + kakaoKey
     }
+
+    // 환경 분리(09): 두 앱이 한 폰에 같이 설치된다. staging 은 Play 에 올리지 않는다(adb·App Distribution)
+    flavorDimensions "env"
+    productFlavors {
+        staging {
+            dimension "env"
+            applicationIdSuffix ".staging"
+            versionNameSuffix "-staging"
+        }
+        production {
+            dimension "env"
+        }
+    }
+    sourceSets {
+        // 스테이징 런처·스플래시(배지 T)는 브랜드 원본 폴더를 직접 연결(복사본을 두지 않음). 앱 이름은 src/staging/res
+        staging {
+            res.srcDirs += ["../../../design-system/assets/brand/android/staging/res"]
+        }
+    }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

@@ -58,11 +58,22 @@ test('런처 아이콘: 적응형 전경·배경·단색 PNG 레이어 + 레거�
   }
 });
 
-test('예전 해+폴라로이드 리소스는 없고, 스테이징 변형은 아직 연결하지 않는다(09 환경 분리 때)', () => {
-  for (const f of ['src/main/res/drawable/ic_launcher_foreground.xml', 'src/main/res/drawable/splash_symbol.xml', 'src/staging']) {
+test('예전 해+폴라로이드 리소스는 없다', () => {
+  for (const f of ['src/main/res/drawable/ic_launcher_foreground.xml', 'src/main/res/drawable/splash_symbol.xml']) {
     expect(fs.existsSync(android(f))).toBe(false);
   }
   expect(fs.existsSync(`${__dirname}/../src/ui/assets/symbol-sun-polaroid.svg`)).toBe(false);
+});
+
+// 09 환경 분리: staging flavor 는 브랜드 staging 에셋 폴더를 복사 없이 직접 연결, 이름은 "테스트 가화만사성"
+test('스테이징 런처(배지 T)는 브랜드 원본 폴더를 연결하고, 앱 리소스에 복사본(아이콘)을 두지 않는다', () => {
+  const gradle = fs.readFileSync(android('build.gradle'), 'utf8');
+  expect(gradle).toContain('res.srcDirs += ["../../../design-system/assets/brand/android/staging/res"]');
+  for (const d of DPIS) {
+    expect(fs.existsSync(brand(`android/staging/res/mipmap-${d}/ic_launcher.png`))).toBe(true);
+    expect(fs.existsSync(android(`src/staging/res/mipmap-${d}`))).toBe(false);
+  }
+  expect(fs.readFileSync(android('src/staging/res/values/strings.xml'), 'utf8')).toContain('<string name="app_name">테스트 가화만사성</string>');
 });
 
 // 사용자 피드백("D안이랑 좀 달라졌지"): 앱 안도 평면판이 아니라 D안 3D 그대로(네이티브 스플래시와 같은 그림)

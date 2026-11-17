@@ -1,0 +1,4 @@
+<resources>
+    <!-- 스테이징 앱 표시(DECISIONS 2026-11-17 디자인 리드 결정): 이름 "테스트 가화만사성", 아이콘 배지 T(브랜드 staging 에셋) -->
+    <string name="app_name">테스트 가화만사성</string>
+</resources>
