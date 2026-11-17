@@ -24,7 +24,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-REF="$(grep -E '^SUPABASE_PROJECT_REF=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '[:space:]')"
+# 줄이 없어도 grep 실패로 조용히 끝나지 않게 || true, 아래 형식 검사가 안내한다
+REF="$( (grep -E '^SUPABASE_PROJECT_REF=' "$ENV_FILE" || true) | head -1 | cut -d= -f2- | tr -d '[:space:]')"
 if [[ ! "$REF" =~ ^[a-z]{20}$ ]]; then
   echo "중단: $ENV_FILE 의 SUPABASE_PROJECT_REF 가 올바른 ref(소문자 20자)가 아니에요: '$REF'" >&2
   exit 1
@@ -34,7 +35,7 @@ fi
 OTHER_NAME=$([[ "$ENV_NAME" == staging ]] && echo production || echo staging)
 OTHER_FILE="$ROOT/app/env/$OTHER_NAME.env"
 if [[ -f "$OTHER_FILE" ]]; then
-  OTHER_REF="$(grep -E '^SUPABASE_PROJECT_REF=' "$OTHER_FILE" | head -1 | cut -d= -f2- | tr -d '[:space:]')"
+  OTHER_REF="$( (grep -E '^SUPABASE_PROJECT_REF=' "$OTHER_FILE" || true) | head -1 | cut -d= -f2- | tr -d '[:space:]')"
   if [[ "$OTHER_REF" == "$REF" ]]; then
     echo "중단: $ENV_NAME 과 $OTHER_NAME 의 ref 가 같아요($REF). env 파일을 확인하세요." >&2
     exit 1
@@ -43,6 +44,29 @@ fi
 
 cd "$ROOT"
 SUPABASE=(npx --no-install supabase)
+
+# production: 반영되는 마이그레이션은 "지금 작업 트리"의 supabase/migrations 이므로 main·깨끗한 트리·원격과 같은 커밋만 허용
+if [[ "$ENV_NAME" == production ]]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  if [[ "$BRANCH" != main ]]; then
+    echo "중단: production 반영은 main 에서만 해요(지금 '$BRANCH')." >&2
+    exit 1
+  fi
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "중단: 커밋 안 된 변경이 있어요. production 에는 커밋된 마이그레이션만 반영합니다." >&2
+    git status --short supabase/ >&2 || true
+    exit 1
+  fi
+  if git remote get-url origin >/dev/null 2>&1; then
+    git fetch --quiet origin main
+    if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+      echo "중단: 로컬 main 이 origin/main 과 달라요. pull/push 로 맞춘 뒤 다시 실행하세요." >&2
+      exit 1
+    fi
+  else
+    echo "주의: 원격 저장소(origin)가 없어 원격과 같은 커밋인지 확인하지 못했어요(로컬 main 기준으로 진행)."
+  fi
+fi
 
 echo "────────────────────────────────────────"
 echo " 대상 환경 : $ENV_NAME"
@@ -67,7 +91,8 @@ if [[ "$ANSWER_ENV" != "$ENV_NAME" || "$ANSWER_REF" != "$REF" ]]; then
 fi
 
 if [[ "$ENV_NAME" == production ]]; then
-  # 백업은 저장소 밖(실사용자 스키마 정보, 커밋 금지)
+  # 백업은 저장소 밖(커밋 금지), 본인만 읽기(umask 077). 스키마만 백업한다 — 데이터는 Pro 일일 백업(7일)/PITR 로 복원
+  umask 077
   BACKUP_DIR="${BUMOJASIK_BACKUP_DIR:-$HOME/bumo-jasik-backups}"
   mkdir -p "$BACKUP_DIR"
   BACKUP="$BACKUP_DIR/production-schema-$(date +%Y%m%d-%H%M%S).sql"
