@@ -80,10 +80,36 @@ export const isServerError = (e: unknown, reason: string): boolean =>
 // 앱이 직접 분류해 붙인 이유(인증 오류 등, DB 예외가 아님)
 export const hasReason = (e: unknown, reason: string): boolean => e instanceof ServerError && e.reason === reason;
 
+// P1c 연결 확인(peek_invite_code 0028): 번호를 쓰지 않고 누가 보낸 번호인지만 본다. redeem 과 같은 시도 한도
+export type PeekResult =
+  | {ok: true; parentTitle: string}
+  | {ok: false; reason: FailReason; retry_after_sec?: number};
+
+// 이벤트(log_event 0022). 서버 화이트리스트와 글자까지 같아야 한다(dev-server-notes §3). 번호·글자 값은 넣지 않는다
+export const EVENT_NAMES = [
+  'app_first_open', 'child_signup_completed', 'invite_code_issued', 'parent_code_redeemed', 'parent_code_failed',
+  'consent_shown', 'parent_consent_accepted', 'parent_consent_declined', 'course_step_completed', 'course_completed',
+  'child_report_viewed', 'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
+] as const;
+// 연결 퍼널(ease-and-joy E). 서버 화이트리스트에 아직 없어 보내지 않는다 → 서버 줄 요청(dev-app-notes)
+export const PENDING_EVENT_NAMES = ['link_opened', 'referrer_found', 'code_prefilled'] as const;
+export type EventName = (typeof EVENT_NAMES)[number] | (typeof PENDING_EVENT_NAMES)[number];
+// 속성은 서버가 허용한 키·값 형식만(번호 값 키 없음)
+export type EventProps = {
+  reason?: 'expired' | 'used' | 'locked' | 'invalid' | 'rate_limited' | 'busy' | 'already_linked' | 'not_parent_device';
+  attempt_no?: number;
+  channel?: 'kakao' | 'sms' | 'copy' | 'share_sheet' | 'other';
+  install_source?: string;
+  is_first?: boolean;
+};
+
 export interface Api {
   createFamily(): Promise<CreateFamilyResult>;
   issueInviteCode(targetProfileId?: string | null): Promise<string>;
   redeemInviteCode(code: string): Promise<RedeemResult>;
+  peekInviteCode(code: string): Promise<PeekResult>; // 어르신 기기. 연결하지 않는다
+  // 이벤트 기록. 실패해도 화면을 막지 않는다(throw 하지 않음)
+  logEvent(name: EventName, props?: EventProps): Promise<void>;
   giveConsent(version: string): Promise<void>; // 동의한 문구 버전(CONSENT_VERSION)
   // 앱 데이터 삭제(delete_my_account) 후 로그아웃까지. scope 는 서버가 알려 준다.
   // 삭제 전 범위 조회(delete_scope_preview). 삭제는 하지 않는다.

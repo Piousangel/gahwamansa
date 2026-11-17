@@ -1,6 +1,7 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ConnectScreen} from '../features/link/ConnectScreen';
+import type {Prefill} from '../features/link/useConnectFlow';
 import {ConsentScreen} from '../features/link/ConsentScreen';
 import {CourseHome} from '../features/course/CourseHome';
 import {PhotoStep} from '../features/course/PhotoStep';
@@ -11,7 +12,8 @@ import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {HangulStep} from '../features/course/HangulStep';
 
 export type ParentParams = {
-  Connect: {from?: 'course'} | undefined; Consent: undefined; CourseHome: undefined;
+  // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
+  Connect: {from?: 'course'; prefill?: Prefill} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: undefined; QuestionStep: undefined; HangulStep: undefined;
   Settings: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };

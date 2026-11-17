@@ -10,6 +10,8 @@ type Props = {
   onClear: () => void;
   /** 칸·키 높이(기본 size.codeBox). 화면이 남은 높이에 맞춰 64~68 로 정한다. */
   keyHeight?: number;
+  /** 칸 묶음 읽기 라벨(문구는 호출부가 copy 에서). 없으면 예전 라벨 */
+  groupLabel?: string;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
@@ -29,10 +31,10 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel}: Props) {
   return (
     <View>
-      <View style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessibilityLabel={`입력한 번호 ${formatCode(value)}`}>
+      <View style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessible accessibilityLabel={groupLabel ?? `입력한 번호 ${formatCode(value)}`}>
         {Array.from({length: CODE_LENGTH}).map((_, i) => (
           <View key={i} testID={`code-cell-${i}`} style={[styles.cell, keyHeight ? styles.cellFitted : null, i === Math.min(value.length, CODE_LENGTH - 1) && value.length < CODE_LENGTH ? styles.cellNow : null]}>
             {i === value.length && value.length < CODE_LENGTH ? (

@@ -17,11 +17,23 @@ export async function pressCourseNext() {
   });
 }
 
-export async function enterCode(code: string) {
+// P1: 6자리를 쓰면 300ms 뒤 저절로 확인("다음" 없음). 맞는 번호면 P1c 확인 화면이 뜨고,
+// confirm=true(기본)면 [이 번호로 연결하기]까지 누른다. 틀린 번호면 확인 화면이 없으니 그대로 돌아온다.
+export async function typeCode(code: string) {
   for (const d of code) {
     fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
   }
-  await press('다음');
+  await act(async () => {
+    await new Promise(r => setTimeout(r, 350));
+  });
+}
+
+export async function enterCode(code: string, confirm = true) {
+  await typeCode(code);
+  const yes = screen.queryByRole('button', {name: '이 번호로 연결하기'});
+  if (confirm && yes) {
+    await press('이 번호로 연결하기');
+  }
 }
 
 export async function toHome(api: Api, accept = true) {

@@ -179,6 +179,8 @@ def writeEnvTs = { Map e, String versionName, int versionCode ->
         VERSION_NAME: versionName,
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
+        // 선택 값(없으면 빈 칸): 공유 메시지 링크 주소. 도메인이 정해지면 env 파일에 SHARE_LINK_BASE=https://<도메인>/c
+        SHARE_LINK_BASE: e.SHARE_LINK_BASE ?: "",
     ]
     def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
     generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +

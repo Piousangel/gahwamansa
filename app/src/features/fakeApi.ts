@@ -1,6 +1,7 @@
 import {OfflineError, ServerError} from './types';
 import {CHILD_CHEER_KEYS, ChildSummary, PARENT_TITLES} from './types';
 import type {
+  PeekResult,
   Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
 } from './types';
 import type {FailReason} from '../copy/copy';
@@ -57,6 +58,7 @@ export type FakeOptions = {
   failCheer?: number; // sendCheer 가 처음 N번 실패(오프라인)
   cheerResult?: SendCheerResult; // sendCheer 결과 고정
   loginMethod?: LoginMethod | null; // 기본 kakao
+  failPeek?: boolean; // peekInviteCode 가 오프라인으로 실패
 };
 export type FakeParent = {
   parentId?: string;
@@ -225,6 +227,19 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return reason === 'rate_limited'
         ? {ok: false, reason, retry_after_sec: 600}
         : {ok: false, reason};
+    },
+    async peekInviteCode(code): Promise<PeekResult> {
+      if (opts.failPeek) {
+        throw new OfflineError('offline');
+      }
+      if (code === '123456') {
+        return {ok: true, parentTitle};
+      }
+      const reason = FAIL_CODES[code] ?? 'invalid';
+      return reason === 'rate_limited' ? {ok: false, reason, retry_after_sec: 600} : {ok: false, reason};
+    },
+    async logEvent() {
+      // 기록만 하고 아무것도 하지 않는다(테스트는 spy 로 확인)
     },
     async deleteScopePreview() {
       if (opts.failPreview) {

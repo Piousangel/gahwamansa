@@ -92,7 +92,7 @@ test('대기 화면: 상태를 불러오기 전에는 번호 보내기를 누를
 async function toLoginCode(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
@@ -121,7 +121,7 @@ test('발송 제한·오프라인 문구', async () => {
     .mockRejectedValueOnce(new OfflineError('x'));
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('요청이 많았어요. 잠시 뒤에 다시 받아 주세요'));
@@ -143,7 +143,7 @@ test('10분이 지나 틀리면 시간이 지났다고 알린다', async () => {
 test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
   await press('이전 화면으로 가기'); // 이메일 단계의 이전 = 로그인 방법(소셜) 화면
   await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
@@ -166,7 +166,7 @@ test('이미 어르신으로 연결된 폰은 자녀 로그인을 막는다', as
 test('이메일 입력은 자동 수정·대문자 변환을 끈다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   const input = await waitFor(() => screen.getByLabelText('이메일 주소'));
   expect(input.props.autoCorrect).toBe(false);
   expect(input.props.autoCapitalize).toBe('none');

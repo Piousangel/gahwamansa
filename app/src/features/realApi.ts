@@ -1,10 +1,10 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {OfflineError, ServerError} from './types';
+import {EVENT_NAMES, OfflineError, ServerError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import {pairShort} from '../lib/childFormat';
 import type {
-  Api, ChildParent, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
+  Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
 } from './types';
 
@@ -212,6 +212,25 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const {data, error} = await sb.rpc('redeem_invite_code', {p_code: code});
       if (error) fail('redeem_invite_code', error);
       return data as RedeemResult;
+    },
+    async peekInviteCode(code): Promise<PeekResult> {
+      await ensureSession();
+      const {data, error} = await sb.rpc('peek_invite_code', {p_code: code});
+      if (error) fail('peek_invite_code', error);
+      return data.ok
+        ? {ok: true, parentTitle: data.parent_title ?? '부모님'}
+        : {ok: false, reason: data.reason, retry_after_sec: data.retry_after_sec};
+    },
+    async logEvent(name, props) {
+      // 서버 화이트리스트에 없는 이름(PENDING)은 보내지 않는다. 계측 실패는 조용히 넘긴다
+      if (!(EVENT_NAMES as readonly string[]).includes(name)) {
+        return;
+      }
+      try {
+        await sb.rpc('log_event', {p_name: name, p_props: props ?? {}});
+      } catch {
+        // 무시
+      }
     },
     async giveConsent(version) {
       const {error} = await sb.rpc('give_consent', {p_version: version});

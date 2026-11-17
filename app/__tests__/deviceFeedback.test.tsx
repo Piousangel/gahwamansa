@@ -30,7 +30,7 @@ function captureBack() {
 async function toEmail() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
 }
 

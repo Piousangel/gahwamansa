@@ -40,7 +40,7 @@ test('첫 화면: 심볼·워드마크·소개·사진 묶음·질문·두 버�
 async function toOtp(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
-  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
+  await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('6자리를 다 쓰면 바로 확인해요'));
