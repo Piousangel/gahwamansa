@@ -107,9 +107,11 @@ describe('환경 파일·빌드 설정(정적 검사)', () => {
     expect(env.SUPABASE_PROJECT_REF).toBe('eigocuecmaapxnmhttwj');
   });
 
-  test('build.gradle: flavor 2개, staging 접미사', () => {
+  test('build.gradle: flavor 2개, staging 접미사, 서명 비밀은 저장소 밖(속성·환경변수)', () => {
     const g = fs.readFileSync(`${root}/android/app/build.gradle`, 'utf8');
     expect(g).toMatch(/staging\s*\{[^}]*applicationIdSuffix "\.staging"/);
     expect(g).toContain('production {');
+    expect(g).toContain('BUMOJASIK_UPLOAD_STORE_PASSWORD');
+    expect(g).not.toMatch(/storePassword\s+'(?!android')/); // debug 외 비밀번호 하드코딩 금지
   });
 });

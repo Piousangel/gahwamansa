@@ -165,6 +165,26 @@ def writeEnvTs = { Map e, String versionName, int versionCode ->
             "export default ${body};\n", "UTF-8")
 }
 
+/**
+ * release 서명: 업로드 키 경로·비밀번호는 저장소 밖에서만 읽는다.
+ * 1) 사용자 맥의 ~/.gradle/gradle.properties  2) 같은 이름의 환경변수
+ * 없으면 debug 키로 서명하고 경고한다(-PrequireReleaseSigning 이면 실패).
+ */
+def signingValue = { String name -> (project.findProperty(name) ?: System.getenv(name))?.toString() }
+def uploadStoreFile = signingValue("BUMOJASIK_UPLOAD_STORE_FILE")
+def uploadStorePassword = signingValue("BUMOJASIK_UPLOAD_STORE_PASSWORD")
+def uploadKeyAlias = signingValue("BUMOJASIK_UPLOAD_KEY_ALIAS")
+def uploadKeyPassword = signingValue("BUMOJASIK_UPLOAD_KEY_PASSWORD")
+def hasReleaseSigning = uploadStoreFile && uploadStorePassword && uploadKeyAlias && uploadKeyPassword &&
+        file(uploadStoreFile).exists()
+if (!hasReleaseSigning) {
+    def why = uploadStoreFile && !file(uploadStoreFile).exists() ? "키스토어 파일이 없어요(${uploadStoreFile})" : "BUMOJASIK_UPLOAD_* 4개 값이 없어요"
+    if (project.hasProperty("requireReleaseSigning")) {
+        throw new GradleException("release 서명 설정이 필요해요: ${why}. docs/team/RELEASE.md '서명' 참고")
+    }
+    logger.warn("경고: release 서명 설정 없음(${why}) → release 빌드를 debug 키로 서명합니다. Play 업로드·카카오/구글 release 지문과 맞지 않아요.")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -220,15 +240,22 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(uploadStoreFile)
+                storePassword uploadStorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // 업로드 키(사용자 맥에만). 설정이 없으면 위 경고와 함께 debug 키
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
