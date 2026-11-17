@@ -84,6 +84,14 @@ describe('BottomSheet(자녀 아래 시트)', () => {
     expect(b.props.accessibilityHint).toBe('이메일을 먼저 써 주세요');
   });
 
+  test('M2: 오류는 시트 안 버튼 위 한 줄(polite, 글자 20)로 보인다', () => {
+    render(<BottomSheet visible title="부르는 이름" onClose={jest.fn()} closeLabel="닫기" primary={{label: '저장', onPress: jest.fn()}} error="인터넷이 잠깐 끊겼어요" />);
+    const e = screen.getByTestId('sheet-error');
+    expect(e).toHaveTextContent('인터넷이 잠깐 끊겼어요');
+    expect(e.props.accessibilityLiveRegion).toBe('polite');
+    expect(StyleSheet.flatten(e.props.style).fontSize).toBe(20);
+  });
+
   test('R5: 핸들은 장식이라 읽지 않는다', () => {
     render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} />);
     expect(screen.getByTestId('sheet-handle', {includeHiddenElements: true}).props.importantForAccessibility).toBe('no');

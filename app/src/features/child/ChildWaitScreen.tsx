@@ -8,7 +8,7 @@ import {TopBar} from '../../ui/TopBar';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {useToast} from '../../shared/u0Overlays';
+import {useToast} from '../../ui/Toast';
 import {SmallButton} from '../../ui/SmallButton';
 import {copyText} from '../../ui/clipboard';
 import {Icon} from '../../ui/assets/icons';
@@ -31,7 +31,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const {state, error, setError, check} = useChildWaitState(api);
   const [busy, setBusy] = useState(false);
   const [renewed, setRenewed] = useState(false); // 이 화면에서 지난 번호 대신 새 번호를 만들었다
-  const {toast, show} = useToast();
+  const {show} = useToast();
   const notify = useNotifyPermission();
   useBootLoading(!state && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
   const linked = !!state?.linked;
@@ -49,7 +49,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
       await api.issueInviteCode();
       if (state.hadExpired) {
         setRenewed(true);
-        show(w.renewed);
+        show({text: w.renewed});
       }
       await check(true); // 새 번호를 바로 반영(진행 중인 확인과 겹쳐도 같은 상태로 끝난다)
     } catch (e) {
@@ -65,7 +65,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const copyCode = () => {
     if (code && copyText(code.code)) {
-      show(w.copied);
+      show({text: w.copied});
     }
   };
   const settings = () => navigation.navigate('Settings');
@@ -121,15 +121,15 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
               <Text20 weight="bold" style={styles.sub}>{w.code_label}</Text20>
               <SmallButton label={w.copy} onPress={copyCode} />
             </View>
-            <Text20
-              size={44}
-              weight="bold"
-              selectable
-              style={styles.code}
-              accessibilityLabel={copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}>
-              {formatCode(code.code)}
-            </Text20>
-            <Text20>{w.until.split('{시각}').join(formatExpiry(code.expiresAt))}</Text20>
+            {/* 리뷰 L6: 번호와 기한을 한 덩어리로 읽는다(복사하기 버튼은 따로) */}
+            <View
+              accessible
+              accessibilityLabel={`${copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}, ${w.until.split('{시각}').join(formatExpiry(code.expiresAt))}`}>
+              <Text20 size={44} weight="bold" selectable style={styles.code}>
+                {formatCode(code.code)}
+              </Text20>
+              <Text20>{w.until.split('{시각}').join(formatExpiry(code.expiresAt))}</Text20>
+            </View>
             {renewed ? <Text20 weight="bold">{copy.code.old_invalid}</Text20> : null}
           </View>
         ) : null}
@@ -183,7 +183,6 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           <Text20 style={styles.sub}>{w.example_note}</Text20>
         </View>
       </Screen>
-      {toast}
     </View>
   );
 }

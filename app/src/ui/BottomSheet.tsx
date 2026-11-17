@@ -29,6 +29,8 @@ type Props = {
   closeLabel: string;
   /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼) */
   returnFocusRef?: RefObject<unknown>;
+  /** 모달 안 오류 한 줄(리뷰 M2: 모달 위 토스트는 Modal 창 밑에 그려져 안 보인다). 버튼 바로 위, 화면 읽기 polite */
+  error?: string | null;
   testID?: string;
 };
 
@@ -38,7 +40,7 @@ type Props = {
  * Android 는 Modal 이 별도 창이라 바깥 화면을 읽지 않는다(iOS 는 accessibilityViewIsModal).
  * 모션: 불투명도만 300ms(위치 이동 없음, 동작 줄이기면 바로).
  */
-export function BottomSheet({visible, title, body, children, primary, secondary, onClose, closeLabel, returnFocusRef, testID}: Props) {
+export function BottomSheet({visible, title, body, children, primary, secondary, onClose, closeLabel, returnFocusRef, error, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   const insets = useSafeAreaInsets();
@@ -82,6 +84,11 @@ export function BottomSheet({visible, title, body, children, primary, secondary,
             {body ? <Text20 size={20}>{body}</Text20> : null}
             {children}
           </ScrollView>
+          {error ? (
+            <Text20 testID="sheet-error" size={20} weight="bold" accessibilityLiveRegion="polite" style={styles.error}>
+              {error}
+            </Text20>
+          ) : null}
           {primary ? <SheetButton action={primary} kind="primary" /> : null}
           {secondary ? <SheetButton action={secondary} kind="secondary" /> : null}
         </View>
@@ -146,4 +153,5 @@ const styles = StyleSheet.create({
   disabled: {backgroundColor: color.disabledBg},
   disabledText: {color: color.disabledInk, textDecorationLine: 'none'},
   reason: {textAlign: 'center', marginBottom: 6, color: color.inkSub},
+  error: {color: color.dangerInk},
 });

@@ -115,7 +115,7 @@ test('포그라운드 재조회 실패는 알리고 다시 할 수 있다(코스
   await waitFor(() => expect(screen.queryByText('잠깐 문제가 생겼어요')).toBeNull());
 });
 
-test('자녀 홈: 받은 답이 있으면 다시 불러오다 실패해도 답을 유지한다', async () => {
+test('자녀 홈: 다시 불러오다 실패하면 이전 답을 지우고 오류 상태(리드 결정 L1, 철회 뒤 옛 답 노출 방지)', async () => {
   const fire = captureAppState();
   const api = createFakeApi({consented: true, latest: {prompt: null, choiceLabel: '가을', answeredDate: '2026-11-16'}});
   render(<AppRoot api={api} role="child" />);
@@ -123,7 +123,7 @@ test('자녀 홈: 받은 답이 있으면 다시 불러오다 실패해도 답�
   jest.spyOn(api, 'fetchChildSummary').mockRejectedValueOnce(new OfflineError('x'));
   await fire();
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
-  expect(screen.getByText('가을')).toBeTruthy();
+  expect(screen.queryByText('가을')).toBeNull();
 });
 
 test('동의 화면에서 서버 확인이 실패하면 알리되 고를 수는 있다', async () => {

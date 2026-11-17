@@ -268,16 +268,17 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const {data, error} = await sb.rpc('child_summary');
       if (error) fail('child_summary', error);
       const family: string = data.parent_title ?? '부모님';
-      // parent_id·title·connected 는 0019·0021(dev-server-notes §1). 옛 서버(필드 없음)면 순번·가족 호칭·연결됨으로 채운다
-      const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>, i: number) => ({
-        parentId: p.parent_id ?? `parent-${i + 1}`,
+      // parent_id·title·connected 는 0019·0021(dev-server-notes §1). 옛 서버(필드 없음)면 id 는 ''(보낼 대상 아님, 리뷰 L3)·가족 호칭·연결됨
+      // shared:false 면 서버가 무엇을 보내도 답을 쓰지 않는다(리뷰 L2)
+      const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>) => ({
+        parentId: p.parent_id ?? '',
         title: p.title ?? family,
         shared: !!p.shared,
         connected: p.connected ?? true,
-        latest: p.latest
+        latest: p.shared && p.latest
           ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
           : null,
-        starter: p.latest?.starter ?? null, // ASSUMED(0027) 기능 회의 B3
+        starter: p.shared ? (p.latest?.starter ?? null) : null, // ASSUMED(0027) 기능 회의 B3
       }));
       const first = parents[0];
       return {
@@ -305,7 +306,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
         parentId: p.parent_id,
         title: p.title ?? '부모님',
         shared: !!p.shared,
-        items: (p.answers ?? []).map((a: Record<string, any>) => ({
+        items: (p.shared ? (p.answers ?? []) : []).map((a: Record<string, any>) => ({
           answeredDate: a.session_date,
           promptShort: a.prompt_short ?? pairShort(a.option_a, a.option_b),
           choiceLabel: a.choice_label,
@@ -340,7 +341,14 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
         // 무시
       }
       const {error} = await sb.auth.signOut({scope: 'local'});
-      if (error) fail('로그아웃', error);
+      if (error) {
+        // 리뷰 L5(리드 결정): 오프라인이면 supabase-js 가 세션을 남긴다 → 이 기기 저장 세션을 직접 지운다(서버 토큰은 만료로 정리)
+        const removeLocal = (sb.auth as unknown as {_removeSession?: () => Promise<void>})._removeSession;
+        if (!looksOffline(error) || !removeLocal) {
+          fail('로그아웃', error);
+        }
+        await removeLocal.call(sb.auth);
+      }
     },
     async withdrawConsent() {
       const {error} = await sb.rpc('withdraw_consent');

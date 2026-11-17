@@ -9,8 +9,9 @@ import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
-import {BottomSheet, Dialog} from '../../shared/u0Overlays';
-import {useToast} from '../../shared/u0Overlays';
+import {BottomSheet} from '../../ui/BottomSheet';
+import {Dialog} from '../../ui/Dialog';
+import {useToast} from '../../ui/Toast';
 import {Icon} from '../../ui/assets/icons';
 import {appCopy, copy, withTitle} from '../../copy/copy';
 import {color, radius, size} from '../../ui/tokens';
@@ -34,8 +35,9 @@ export function ChildSettings() {
   const [saving, setSaving] = useState(false);
   const [logout, setLogout] = useState(false);
   const [busy, setBusy] = useState(false);
-  const {toast, show} = useToast();
-  const fail = (e: unknown) => show(isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
+  const [modalError, setModalError] = useState<string | null>(null); // 리뷰 M2: 시트·대화상자 안 오류 줄
+  const {show} = useToast();
+  const failText = (e: unknown) => (isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
 
   useEffect(() => {
     let alive = true;
@@ -56,23 +58,28 @@ export function ChildSettings() {
 
   const openName = (t: Target) => {
     setPicked(t.title);
+    setModalError(null);
     setEditing(t);
   };
+  // 리뷰 L4(리드 결정): 다른 어르신이 쓰는 호칭은 고를 수 없다(머리글·토스트로 구분이 안 되므로)
+  const taken = new Set(targets.filter(t => editing && t.parentId !== editing.parentId).map(t => t.title));
+  const pickedTaken = taken.has(picked);
   const saveName = async () => {
-    if (!editing || saving) {
+    if (!editing || saving || pickedTaken) {
       return;
     }
     setSaving(true);
+    setModalError(null);
     try {
       const r = editing.parentId ? await api.setParentTitleFor(editing.parentId, picked) : await api.setParentTitle(picked);
       if (!r.ok) {
         throw new Error('invalid_title');
       }
       setEditing(null);
-      show(s.name_changed);
+      show({text: s.name_changed});
       load();
     } catch (e) {
-      fail(e);
+      setModalError(failText(e)); // 시트가 열린 채라 시트 안에 알린다
     } finally {
       setSaving(false);
     }
@@ -86,7 +93,7 @@ export function ChildSettings() {
       const code = await api.issueInviteCode(t.parentId);
       navigation.navigate('Code', {code, title: t.title});
     } catch (e) {
-      fail(e);
+      show({text: failText(e), kind: 'error', action: {label: copy.errors.offline.button, onPress: () => newPhoneCode(t)}});
     } finally {
       setBusy(false);
     }
@@ -102,7 +109,7 @@ export function ChildSettings() {
       resetRole(); // 첫 화면(역할 선택)으로
     } catch (e) {
       setBusy(false);
-      fail(e);
+      setModalError(failText(e)); // 대화상자 안에 알린다
     }
   };
   const logoutBody = method
@@ -140,7 +147,13 @@ export function ChildSettings() {
           <Text20 weight="bold" style={styles.groupTitle} accessibilityRole="header">{s.account}</Text20>
           <View style={styles.section}>
             {method ? <Row label={s.login_row} sub={s.login_via.split('{수단}').join(s.via[method])} /> : null}
-            <Row label={s.logout} onPress={() => setLogout(true)} />
+            <Row
+              label={s.logout}
+              onPress={() => {
+                setModalError(null);
+                setLogout(true);
+              }}
+            />
             <Row label={copy.child.delete_link} danger onPress={() => navigation.navigate('DeleteAccount')} />
           </View>
         </View>
@@ -153,22 +166,31 @@ export function ChildSettings() {
         <Text20 style={styles.foot}>{s.not_safety}</Text20>
       </Screen>
       <BottomSheet
+        testID="sheet"
         visible={!!editing}
         onClose={() => setEditing(null)}
         closeLabel={copy.child.cheer.close}
         title={rel.title}
-        hint={rel.hint}
-        footer={<BigButton label={s.name_save} loading={saving} onPress={saveName} />}>
+        body={rel.hint}
+        error={modalError}
+        primary={{label: s.name_save, onPress: saveName, disabled: saving || pickedTaken, disabledReason: pickedTaken ? s.name_taken : undefined}}>
         {PARENT_TITLES.map(p => (
           <SelectCard key={p} label={p} selected={picked === p} onPress={() => setPicked(p)} />
         ))}
         <Text20>{rel.fallback}</Text20>
       </BottomSheet>
-      <Dialog visible={logout} onClose={() => setLogout(false)} title={s.logout_title} body={logoutBody}>
-        <BigButton label={s.logout} loading={busy} onPress={doLogout} />
-        <BigButton variant="secondary" label={s.logout_cancel} onPress={() => setLogout(false)} />
-      </Dialog>
-      {toast}
+      <Dialog
+        testID="dialog"
+        visible={logout}
+        title={s.logout_title}
+        body={logoutBody}
+        error={modalError}
+        onBack={() => setLogout(false)}
+        actions={[
+          {label: s.logout, onPress: doLogout, kind: 'primary', loading: busy},
+          {label: s.logout_cancel, onPress: () => setLogout(false), kind: 'secondary'},
+        ]}
+      />
     </View>
   );
 }

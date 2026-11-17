@@ -67,7 +67,7 @@ test('realApi: child_summary 의 parent_id·title·connected·starter 를 읽고
         parents: [
           {parent_id: 'p1', title: '엄마', shared: true, connected: false,
             latest: {prompt: null, choice_label: '봄', answered_date: '2026-11-15', starter: '봄나물 뭐 좋아하세요?'}},
-          {shared: false, latest: null},
+          {shared: false, latest: {prompt: null, choice_label: '가을', answered_date: '2026-11-14'}}, // 서버가 잘못 보내도
         ],
       },
       error: null,
@@ -76,7 +76,7 @@ test('realApi: child_summary 의 parent_id·title·connected·starter 를 읽고
   const s = await createRealApi(sbWith(rpc).sb, social).fetchChildSummary();
   expect(s.parents).toEqual([
     {parentId: 'p1', title: '엄마', shared: true, connected: false, latest: {prompt: null, choiceLabel: '봄', answeredDate: '2026-11-15'}, starter: '봄나물 뭐 좋아하세요?'},
-    {parentId: 'parent-2', title: '부모님', shared: false, connected: true, latest: null, starter: null},
+    {parentId: '', title: '부모님', shared: false, connected: true, latest: null, starter: null}, // L2: shared:false 면 답 안 씀, L3: id 없으면 ''
   ]);
 });
 
@@ -101,6 +101,16 @@ test('realApi: child_answer_history·send_cheer(p_parent, p_key)·set_parent_tit
   expect(rpc).toHaveBeenLastCalledWith('set_parent_title', {p_title: '엄마'}); // 가족 기본값(기존)
   await api.setParentTitleFor('p1', '아빠');
   expect(rpc).toHaveBeenLastCalledWith('set_parent_title_for', {p_parent: 'p1', p_title: '아빠'});
+});
+
+test('realApi L5: 오프라인 로그아웃은 이 기기 저장 세션을 직접 지운다', async () => {
+  const removeSession = jest.fn(() => Promise.resolve());
+  const signOut = jest.fn(() => Promise.resolve({error: {message: 'Network request failed'}}));
+  const sb = {auth: {getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})), signOut, _removeSession: removeSession}};
+  await createRealApi(sb as never, social).signOut();
+  expect(removeSession).toHaveBeenCalledTimes(1);
+  const sb2 = {auth: {...sb.auth, signOut: jest.fn(() => Promise.resolve({error: {message: 'boom', code: 'XX'}}))}};
+  await expect(createRealApi(sb2 as never, social).signOut()).rejects.toBeTruthy(); // 서버 오류는 그대로 알린다
 });
 
 test('realApi: 로그인 수단은 세션 provider, 로그아웃은 SDK 정리 뒤 이 기기 세션만', async () => {

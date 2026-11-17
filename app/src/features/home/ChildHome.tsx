@@ -8,11 +8,12 @@ import {TopBar} from '../../ui/TopBar';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {BottomSheet} from '../../shared/u0Overlays';
-import {useToast} from '../../shared/u0Overlays';
+import {BottomSheet} from '../../ui/BottomSheet';
+import {useToast} from '../../ui/Toast';
+import {useSendCheer} from './useSendCheer';
 import {appCopy, copy, withTitle} from '../../copy/copy';
 import {color, radius, size} from '../../ui/tokens';
-import {CHILD_CHEER_KEYS, CheerKey, ChildParent, ChildSummary, isOffline, SendCheerResult} from '../types';
+import {CHILD_CHEER_KEYS, ChildParent, ChildSummary} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
 import {useBootLoading} from '../../app/splash';
 import {formatAnswerDate} from './formatDate';
@@ -36,48 +37,14 @@ export function ChildHome() {
   const {api} = useSession();
   const {info, error, loading, load} = useChildSummary();
   const [sheet, setSheet] = useState(false);
-  const [sending, setSending] = useState(false);
   const [making, setMaking] = useState(false);
-  const {toast, show} = useToast();
+  const {show} = useToast();
+  const {send, sending} = useSendCheer(api, load);
   useBootLoading(loading && !info && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
 
   const list = info ? cards(info) : [];
   const many = list.length > 1;
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
-
-  // 연결된 어르신 한 분씩 보낸다(send_cheer 는 어르신 한 분 대상). 받은 분의 호칭으로 "{호칭}께 보냈어요".
-  const send = async (key: CheerKey) => {
-    if (sending) {
-      return;
-    }
-    setSheet(false);
-    setSending(true);
-    const sentTo: string[] = [];
-    let failed: SendCheerResult | null = null;
-    try {
-      for (const p of reachable) {
-        const r = await api.sendCheer(p.parentId, key);
-        if (r.ok) {
-          sentTo.push(p.title);
-        } else {
-          failed = r;
-        }
-      }
-      if (sentTo.length) {
-        show(withTitle(c.cheer.sent, sentTo.join('·')));
-      } else {
-        // TODO(라이터): daily_limit·disconnected 전용 문구가 없어 일반 오류 제목을 쓴다
-        show(copy.errors.server.title);
-      }
-      if (failed && !failed.ok && (failed.reason === 'disconnected' || failed.reason === 'invalid_target')) {
-        load(); // 연결 상태가 바뀌었다 → 배너·버튼을 서버 기준으로
-      }
-    } catch (e) {
-      show(isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
-    } finally {
-      setSending(false);
-    }
-  };
 
   const makeCode = async (p: ChildParent) => {
     if (making) {
@@ -88,7 +55,7 @@ export function ChildHome() {
       const code = await api.issueInviteCode(p.parentId || null);
       navigation.navigate('Code', {code, title: p.title});
     } catch (e) {
-      show(childErrorMessage(e, h.error).title);
+      show({text: childErrorMessage(e, h.error).title, kind: 'error', action: {label: h.error.button, onPress: () => makeCode(p)}});
     } finally {
       setMaking(false);
     }
@@ -139,19 +106,21 @@ export function ChildHome() {
           </>
         )}
       </Screen>
-      <BottomSheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} hint={c.cheer.hint}>
+      <BottomSheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} body={c.cheer.hint} testID="sheet">
         {CHILD_CHEER_KEYS.map(k => (
           <Pressable
             key={k}
             accessibilityRole="button"
             accessibilityLabel={copy.cheers[k]}
-            onPress={() => send(k)}
+            onPress={() => {
+              setSheet(false);
+              send(k, reachable);
+            }}
             style={({pressed}) => [styles.option, pressed ? styles.optionPressed : null]}>
             <Text20 size={22}>{copy.cheers[k]}</Text20>
           </Pressable>
         ))}
       </BottomSheet>
-      {toast}
     </View>
   );
 }
@@ -169,7 +138,12 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
   }
   const today = formatAnswerDate(p.latest.answeredDate) === '오늘';
   return (
-    <View testID="child-home-card" style={styles.card}>
+    // 리뷰 L6: 카드 한 장을 한 덩어리로 읽는다(호칭의 최근 답, 답, 날짜, 이야기 문장)
+    <View
+      testID="child-home-card"
+      style={styles.card}
+      accessible
+      accessibilityLabel={[head, p.latest.choiceLabel, formatAnswerDate(p.latest.answeredDate), p.starter ? `${h.starter_label}, ${p.starter}` : today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old].join(', ')}>
       <View style={styles.tape} />
       <Text20 weight="bold" style={styles.sub}>{head}</Text20>
       <Text20 size={72} weight="bold" style={styles.choice}>{p.latest.choiceLabel}</Text20>
