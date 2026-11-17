@@ -119,17 +119,30 @@ def loadAppEnv = { String flavor ->
     if (m.APP_ENV != flavor) throw new GradleException("${f.name}: APP_ENV=${m.APP_ENV} 가 flavor(${flavor})와 달라요")
     if (!(m.API_MODE in ["fake", "real"])) throw new GradleException("${f.name}: API_MODE 는 fake 또는 real")
     if (!(m.KAKAO_NATIVE_APP_KEY ==~ /[0-9a-f]{32}/)) throw new GradleException("${f.name}: KAKAO_NATIVE_APP_KEY 형식(32자리 16진수)이 아니에요")
+    // 값 형식 허용 목록(리뷰 L1): APK 로 나가는 Supabase 키 칸은 publishable 키만(레거시 JWT·service_role 차단), URL 은 ref 와 일치
+    if (!(m.SUPABASE_PROJECT_REF ==~ /[a-z0-9-]+/)) throw new GradleException("${f.name}: SUPABASE_PROJECT_REF 형식이 아니에요")
+    if (!(m.SUPABASE_PUBLISHABLE_KEY ==~ /sb_publishable_[A-Za-z0-9_-]+/)) {
+        throw new GradleException("${f.name}: SUPABASE_PUBLISHABLE_KEY 는 sb_publishable_ 로 시작하는 키만 넣어요(anon·service_role JWT 금지)")
+    }
+    if (m.SUPABASE_URL != "https://${m.SUPABASE_PROJECT_REF}.supabase.co".toString()) {
+        throw new GradleException("${f.name}: SUPABASE_URL 이 https://${m.SUPABASE_PROJECT_REF}.supabase.co 와 달라요")
+    }
     m.SOURCE = f.name
     m.PLACEHOLDER = placeholder
     return m
 }
 def appEnvs = [staging: loadAppEnv("staging"), production: loadAppEnv("production")]
+// 리뷰 M2: 같은 카카오 키면 두 앱이 같은 kakao{키}://oauth 를 받아 한 폰에 같이 설치 시 웹 로그인 복귀가 엉킨다
+if (appEnvs.staging.KAKAO_NATIVE_APP_KEY == appEnvs.production.KAKAO_NATIVE_APP_KEY) {
+    logger.warn("경고: staging·production 카카오 네이티브 키가 같아요. 두 앱을 한 폰에 같이 설치하면 카카오 웹 로그인 복귀가 엉킬 수 있어요. staging 키 발급·등록은 docs/team/RELEASE.md '외부 콘솔 등록'.")
+}
 
 /**
  * 버전 규칙(docs/team/RELEASE.md):
  * - versionName = app/package.json 의 version(한 곳에서만 바꾼다)
  * - versionCode = git 커밋 수(git rev-list --count HEAD). 출시는 main 에서만 빌드하므로 계속 커진다.
- *   -PversionCode=<숫자> 로 덮을 수 있다(git 이 없는 곳, 핫픽스 재빌드 등)
+ *   -PversionCode=<숫자> 로 덮을 수 있다(git 이 없는 곳, 핫픽스 재빌드 등). git 을 못 읽으면 빌드 실패(조용히 1 이 되지 않게)
+ * - 이전 출시 번호보다 큰지는 scripts/build-production.sh 가 app/android/release-versions.txt 로 확인한다
  */
 def appVersionName = new groovy.json.JsonSlurper().parse(file("../../package.json")).version
 def gitOutput = { List<String> cmd ->
@@ -141,9 +154,16 @@ def gitOutput = { List<String> cmd ->
         return ""
     }
 }
-def appVersionCode = project.hasProperty("versionCode")
-        ? project.property("versionCode").toString().toInteger()
-        : (gitOutput(["git", "rev-list", "--count", "HEAD"]) ?: "1").toInteger()
+def appVersionCode
+if (project.hasProperty("versionCode")) {
+    appVersionCode = project.property("versionCode").toString().toInteger()
+} else {
+    def count = gitOutput(["git", "rev-list", "--count", "HEAD"])
+    if (!(count ==~ /\d+/)) {
+        throw new GradleException("versionCode 를 git 커밋 수로 정하지 못했어요(git 없음·저장소 아님). -PversionCode=<숫자> 를 주세요.")
+    }
+    appVersionCode = count.toInteger()
+}
 def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
 
 // 번들 직전에 flavor 에 맞는 TS 설정을 쓴다(공개 값만). 파일은 gitignore
@@ -262,26 +282,44 @@ android {
     }
 }
 
-// 변형마다 자기 환경 값을 env.generated.ts 에 쓴다.
-// - 디버그: preBuild 때(Metro 가 이 파일을 읽음)
-// - release: JS 번들 작업 바로 직전(한 번에 두 flavor 를 빌드해도 각자 자기 값으로 번들되게)
+// env.generated.ts 규칙(리뷰 M1: 마지막 release 값이 남아 Metro 가 엉뚱한 서버로 붙지 않게):
+// - 디버그 변형: preBuild 때 자기 flavor 값으로 쓴다(Metro 가 이 파일을 읽음). Metro 는 마지막으로 빌드한 디버그 flavor 값을 준다
+// - release 변형: JS 번들 작업 바로 직전에 쓰고, 번들이 끝나면(실패해도) 지운다 → 그 뒤 Metro 는 기본값(로컬+fake)
+//   (한 번에 두 flavor 를 빌드해도 각자 자기 값으로 번들된다)
+def cleanGeneratedAppEnv = tasks.register("cleanGeneratedAppEnv") {
+    description = "release 번들 뒤 src/lib/env.generated.ts 를 지운다(Metro 가 release 값을 물려받지 않게)"
+    outputs.upToDateWhen { false }
+    doLast { generatedEnvTs.delete() }
+}
 android.applicationVariants.configureEach { variant ->
     def e = appEnvs[variant.flavorName]
     def vName = variant.versionName
     def vCode = variant.versionCode
-    def generate = {
+    def isRelease = !variant.buildType.debuggable
+    def checkPlaceholder = {
         if (e.PLACEHOLDER) {
+            // 리뷰 L2: 예시 값으로 출시 빌드가 조용히 성공하지 않게. 로컬 확인용은 -PallowPlaceholderEnv
+            if (isRelease && !project.hasProperty("allowPlaceholderEnv")) {
+                throw new GradleException("app/env/${variant.flavorName}.env 가 없어 ${variant.name} 을 만들 수 없어요(예시 값 금지). 확인용이면 -PallowPlaceholderEnv")
+            }
             logger.warn("경고: app/env/${variant.flavorName}.env 가 없어 ${e.SOURCE}(예시 값)로 빌드합니다. 이 앱은 서버에 붙지 못해요.")
         }
+    }
+    def generate = {
+        checkPlaceholder()
         writeEnvTs(e, vName, vCode)
     }
-    variant.preBuildProvider.configure { doFirst { generate() } }
+    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값 검사만(네이티브 컴파일 전에 일찍 실패)
+    variant.preBuildProvider.configure { doFirst { isRelease ? checkPlaceholder() : generate() } }
     def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
     tasks.matching { it.name == bundleTask }.configureEach { t ->
         // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)
         t.inputs.property("appEnv", e.collectEntries { k, v -> [(k): v.toString()] })
         t.inputs.property("appVersion", "${vName}/${vCode}/${appGitSha}")
         t.doFirst { generate() }
+        if (isRelease) {
+            t.finalizedBy(cleanGeneratedAppEnv)
+        }
     }
 }
 

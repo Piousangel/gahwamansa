@@ -100,6 +100,21 @@ describe('환경 파일·빌드 설정(정적 검사)', () => {
     }
   });
 
+  test.each(['env/staging.env', 'env/production.env.example'])('%s: 값 형식(publishable 키, URL=ref)', f => {
+    const env = parse(`${root}/${f}`);
+    expect(env.SUPABASE_PUBLISHABLE_KEY).toMatch(/^sb_publishable_[A-Za-z0-9_-]+$/);
+    expect(env.SUPABASE_URL).toBe(`https://${env.SUPABASE_PROJECT_REF}.supabase.co`);
+  });
+
+  test('build.gradle 안전 규칙(리뷰 L1·L2·M1·M5): 값 허용 목록, 예시 값 release 차단, 생성 파일 정리, git 실패 시 중단', () => {
+    const g = fs.readFileSync(`${root}/android/app/build.gradle`, 'utf8');
+    expect(g).toContain('==~ /sb_publishable_[A-Za-z0-9_-]+/');
+    expect(g).toContain('hasProperty("allowPlaceholderEnv")');
+    expect(g).toContain('t.finalizedBy(cleanGeneratedAppEnv)');
+    expect(g).toContain('versionCode 를 git 커밋 수로 정하지 못했어요');
+    expect(g).not.toMatch(/\?: "1"\)\.toInteger\(\)/);
+  });
+
   test('staging 은 현재 원격(eigocuecmaapxnmhttwj)', () => {
     const env = parse(`${root}/env/staging.env`);
     expect(env.APP_ENV).toBe('staging');
