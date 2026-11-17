@@ -1,4 +1,4 @@
-// 스토어 심사용 가족 + 재사용 가입 번호 만들기(0027 admin_create_review_family). 번호는 화면에만 출력하고 어디에도 저장하지 않는다.
+// 스토어 심사용 가족 + 재사용 가입 번호 만들기(0025 admin_create_review_family). 번호는 화면에만 출력하고 어디에도 저장하지 않는다.
 // 준비: 심사용 자녀 계정 2개를 먼저 만든다(대시보드 Authentication > Add user, 이메일+비밀번호). 그 user id 2개를 인자로 넘긴다.
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (키는 출력하지 않음)
 // 사용: node supabase/ops/create-review-access.mjs <자녀1 user id> <자녀2 user id>

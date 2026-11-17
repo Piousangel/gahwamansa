@@ -20,7 +20,7 @@ insert into public.content_questions (id, day_index, option_a, option_b, prompt)
   ('6c000000-0000-0000-0000-000000000003', 3, 'q3a', 'q3b', 'p3');
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions) values
   (1, 'u1', 'cap1', 'k1', array['r1a', 'r1b']), (2, 'u2', 'cap2', 'k2', array['r2a', 'r2b']), (3, 'u3', 'cap3', 'k3', array['r3a', 'r3b']);
--- 0026부터 오늘 콘텐츠는 어르신별 커서로 정한다: 어제 1일차를 열었으면 오늘은 2일차
+-- 0024부터 오늘 콘텐츠는 어르신별 커서로 정한다: 어제 1일차를 열었으면 오늘은 2일차
 update public.profiles set content_seq = 1, content_seq_date = public.kst_today() - 1 where id = '6b000000-0000-0000-0000-0000000000a1';
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$

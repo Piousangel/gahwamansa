@@ -1,5 +1,5 @@
--- 0026 콘텐츠 순번: 어르신별 커서 + 게시 콘텐츠 수정 금지 + day_index 상한 제거
--- 근거: docs/plans/11-backoffice.md, docs/team/reviews/2026-11-17-backoffice-plan-review.md 높음 1·3항, DECISIONS 2026-11-17 위임(0026, 어르신별 커서),
+-- 0024 콘텐츠 순번: 어르신별 커서 + 게시 콘텐츠 수정 금지 + day_index 상한 제거
+-- 근거: docs/plans/11-backoffice.md, docs/team/reviews/2026-11-17-backoffice-plan-review.md 높음 1·3항, DECISIONS 2026-11-17 위임(0024, 어르신별 커서),
 --       리드 결정(start_today 별도 RPC, get_today_content 읽기 전용, 빠진 날 건너뛰지 않음).
 -- 문제: 기존 my_day_index = mod(오늘 - course_start_date, n) + 1. 콘텐츠가 1개만 늘어도 n이 바뀌어 한 바퀴 이상 돈 어르신의 '오늘'이 밀린다.
 --       날짜 차이로 계산하는 어떤 공식도 n이 바뀌면 밀린다(리뷰 높음 1).

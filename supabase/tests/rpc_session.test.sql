@@ -18,7 +18,7 @@ insert into public.profiles (id, user_id, family_id, role, consented_at, course_
 -- 콘텐츠 3일분 (순환 테스트용: 행 수 N=3)
 insert into public.content_questions (day_index, option_a, option_b) values (1, 'a', 'b'), (2, 'c', 'd'), (3, 'e', 'f');
 insert into public.content_photos (day_index, image_url, caption, keyword) values (1, 'x', 'x', 'x'), (2, 'x', 'x', 'x'), (3, 'x', 'x', 'x');
--- 0026부터 커서 기준: 어제 1일차를 열었으면 오늘은 2일차
+-- 0024부터 커서 기준: 어제 1일차를 열었으면 오늘은 2일차
 update public.profiles set content_seq = 1, content_seq_date = public.kst_today() - 1 where id = '5b000000-0000-0000-0000-0000000000a1';
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$

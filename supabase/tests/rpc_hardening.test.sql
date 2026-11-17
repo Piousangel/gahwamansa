@@ -25,7 +25,7 @@ insert into public.content_questions (id, day_index, option_a, option_b, prompt)
   ('8c000000-0000-0000-0000-000000000005', 5, 'a', 'b', 'p5');
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions) values
   (1, 'u', 'c1', 'k', '{x,y}'), (2, 'u', 'c2', 'k', '{x,y}'), (5, 'u', 'c5', 'k', '{x,y}');
--- 0026부터 커서 기준: 어제 2일차를 열었으면 오늘은 구멍(3·4)을 건너뛴 5일차
+-- 0024부터 커서 기준: 어제 2일차를 열었으면 오늘은 구멍(3·4)을 건너뛴 5일차
 update public.profiles set content_seq = 2, content_seq_date = public.kst_today() - 1 where id = '8b300000-0000-0000-0000-0000000000a1';
 insert into public.invite_codes (code, family_id, created_by) values ('811111', '8f100000-0000-0000-0000-000000000001', '8b100000-0000-0000-0000-0000000000c1');
 

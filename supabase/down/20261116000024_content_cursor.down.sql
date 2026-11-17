@@ -1,4 +1,4 @@
--- 0026 되돌리기(수동). my_day_index는 0009, record_session_step은 0005, preview_content는 0015 정의로 다시 만들어야 한다.
+-- 0024 되돌리기(수동). my_day_index는 0009, record_session_step은 0005, preview_content는 0015 정의로 다시 만들어야 한다.
 -- day_index 30 상한은 31 이상 행이 없을 때만 되돌릴 수 있다.
 drop function if exists public.start_today();
 drop function if exists public.advance_content_cursor(uuid);
