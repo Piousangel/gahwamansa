@@ -5,6 +5,7 @@ import {makeNonce, sha256Hex} from '../lib/sha256';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult} from '../api/contract/events';
 import {pairShort} from '../lib/childFormat';
+import {parsePeekResult} from '../api/contract/invite';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -250,9 +251,9 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       await ensureSession();
       const {data, error} = await sb.rpc('peek_invite_code', {p_code: code});
       if (error) fail('peek_invite_code', error);
-      return data.ok
-        ? {ok: true, parentTitle: data.parent_title ?? '부모님'}
-        : {ok: false, reason: data.reason, retry_after_sec: data.retry_after_sec};
+      const r = parsePeekResult(data); // 계약 밖이면 일반 서버 오류(리뷰 M3)
+      if (!r) throw new ServerError('peek_invite_code', 'contract_mismatch');
+      return r;
     },
     async giveConsent(version) {
       const {error} = await sb.rpc('give_consent', {p_version: version});

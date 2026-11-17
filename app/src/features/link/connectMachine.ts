@@ -4,6 +4,9 @@
 import type {FailReason} from '../../copy/copy';
 import type {PeekResult, RedeemResult} from '../types';
 
+// 호칭을 모르면 null(peek 가 호칭을 주지 않음 → 번호만 보여 줌)
+type Title = string | null;
+
 export const AUTO_CHECK_MS = 300;
 
 export type FailKind = Exclude<FailReason, 'invalid' | 'rate_limited'> | 'locked' | 'offline' | 'server';
@@ -11,10 +14,10 @@ export type Step = 'peek' | 'redeem';
 export type ConnectState =
   | {kind: 'idle'; code: string; inline: 'invalid' | null}
   | {kind: 'peeking'; code: string}
-  | {kind: 'confirm'; code: string; title: string}
-  | {kind: 'redeeming'; code: string; title: string}
+  | {kind: 'confirm'; code: string; title: Title}
+  | {kind: 'redeeming'; code: string; title: Title}
   | {kind: 'ok'; code: string}
-  | {kind: 'failed'; code: string; reason: FailKind; step: Step; title?: string; retryAfterSec?: number};
+  | {kind: 'failed'; code: string; reason: FailKind; step: Step; title?: Title};
 
 export type ConnectEvent =
   | {type: 'edit'; code: string}
@@ -38,7 +41,11 @@ function failKind(reason: FailReason): FailKind | 'invalid' {
 export function connectReducer(s: ConnectState, e: ConnectEvent): ConnectState {
   switch (e.type) {
     case 'edit':
-      // 쓰는 중에는 언제든 고칠 수 있다(확인 중이면 그 확인은 버린다). 고치면 안내 줄은 사라진다
+      // 쓰는 중에는 언제든 고칠 수 있다(확인 중이면 그 확인은 버린다). 고치면 안내 줄은 사라진다.
+      // 6자리가 찬 뒤 숫자 키는 같은 값이 온다 → 아무것도 바꾸지 않는다(같은 번호 재확인 = 시도 한도 소모, 리뷰 H1)
+      if (e.code === s.code) {
+        return s;
+      }
       return s.kind === 'idle' || s.kind === 'peeking' ? {kind: 'idle', code: e.code, inline: null} : s;
     case 'peek':
       return shouldAutoCheck(s) || (s.kind === 'failed' && s.step === 'peek') ? {kind: 'peeking', code: s.code} : s;
@@ -52,11 +59,11 @@ export function connectReducer(s: ConnectState, e: ConnectEvent): ConnectState {
       const k = failKind(e.result.reason);
       return k === 'invalid'
         ? {kind: 'idle', code: s.code, inline: 'invalid'} // 숫자는 그대로
-        : {kind: 'failed', code: s.code, reason: k, step: 'peek', retryAfterSec: e.result.retry_after_sec};
+        : {kind: 'failed', code: s.code, reason: k, step: 'peek'};
     }
     case 'redeem':
-      if (s.kind === 'confirm' || (s.kind === 'failed' && s.step === 'redeem' && s.title)) {
-        return {kind: 'redeeming', code: s.code, title: s.title as string};
+      if (s.kind === 'confirm' || (s.kind === 'failed' && s.step === 'redeem' && s.title !== undefined)) {
+        return {kind: 'redeeming', code: s.code, title: s.title ?? null};
       }
       return s;
     case 'redeemed': {
@@ -69,7 +76,7 @@ export function connectReducer(s: ConnectState, e: ConnectEvent): ConnectState {
       const k = failKind(e.result.reason);
       return k === 'invalid'
         ? {kind: 'idle', code: s.code, inline: 'invalid'}
-        : {kind: 'failed', code: s.code, reason: k, step: 'redeem', title: s.title, retryAfterSec: e.result.retry_after_sec};
+        : {kind: 'failed', code: s.code, reason: k, step: 'redeem', title: s.title};
     }
     case 'error':
       if (s.kind === 'peeking') {
@@ -80,14 +87,15 @@ export function connectReducer(s: ConnectState, e: ConnectEvent): ConnectState {
       }
       return s;
     case 'other':
-      return initialConnect();
+      // 연결 중에는 버리지 않는다(서버는 연결됐는데 화면만 빈 번호 쓰기로 가는 구멍, 리뷰 M1)
+      return s.kind === 'redeeming' ? s : initialConnect();
     case 'retry':
       if (s.kind !== 'failed') {
         return s;
       }
       // 인터넷·서버 문제는 같은 단계를 다시, 번호 문제(기간 지남·쓴 번호·잠김)는 비우고 처음부터
       if (s.reason === 'offline' || s.reason === 'server' || s.reason === 'busy') {
-        return s.step === 'peek' ? {kind: 'peeking', code: s.code} : {kind: 'redeeming', code: s.code, title: s.title ?? ''};
+        return s.step === 'peek' ? {kind: 'peeking', code: s.code} : {kind: 'redeeming', code: s.code, title: s.title ?? null};
       }
       return initialConnect();
   }

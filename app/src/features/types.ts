@@ -36,7 +36,7 @@ export type SendCheerResult =
   | {ok: true; cheerId: string}
   | {ok: false; reason: (typeof CHEER_FAIL_REASONS)[number]};
 export type LoginMethod = 'kakao' | 'google' | 'email';
-export const PARENT_TITLES = ['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님'] as const;
+export {PARENT_TITLES} from '../api/contract/invite';
 // 자녀 앱의 현재 단계(로그인 뒤). 번호 1개만 다룬다(빌드 1).
 export type ChildState =
   | {kind: 'no_family'}
@@ -82,10 +82,8 @@ export const isServerError = (e: unknown, reason: string): boolean =>
 // 앱이 직접 분류해 붙인 이유(인증 오류 등, DB 예외가 아님)
 export const hasReason = (e: unknown, reason: string): boolean => e instanceof ServerError && e.reason === reason;
 
-// P1c 연결 확인(peek_invite_code 0028): 번호를 쓰지 않고 누가 보낸 번호인지만 본다. redeem 과 같은 시도 한도
-export type PeekResult =
-  | {ok: true; parentTitle: string}
-  | {ok: false; reason: FailReason; retry_after_sec?: number};
+export type {PeekResult} from '../api/contract/invite';
+import type {PeekResult} from '../api/contract/invite';
 
 export interface Api {
   createFamily(): Promise<CreateFamilyResult>;

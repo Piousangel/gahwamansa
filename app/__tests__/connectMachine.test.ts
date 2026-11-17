@@ -28,7 +28,7 @@ test('기간 지남·쓴 번호·잠김은 안내 패널, 버튼을 누르면 �
   expect(exp).toMatchObject({kind: 'failed', reason: 'expired', step: 'peek'});
   expect(connectReducer(exp, {type: 'retry'})).toEqual(initialConnect());
   const locked = run([{type: 'edit', code: '222222'}, {type: 'peek'}, {type: 'peeked', result: {ok: false, reason: 'rate_limited', retry_after_sec: 600}}]);
-  expect(locked).toMatchObject({kind: 'failed', reason: 'locked', retryAfterSec: 600});
+  expect(locked).toMatchObject({kind: 'failed', reason: 'locked'}); // 문구가 "조금 뒤에"라 남은 초는 들고 있지 않는다(리뷰 L3)
 });
 
 test('인터넷 문제는 같은 단계를 다시(확인이면 확인, 연결이면 연결)', () => {
@@ -48,4 +48,25 @@ test('확인 중에 숫자를 고치면 그 확인 결과는 버린다', () => {
 
 test('다른 번호 쓰기: 확인 화면에서 비우고 처음부터', () => {
   expect(connectReducer({kind: 'confirm', code: '123456', title: '엄마'}, {type: 'other'})).toEqual(initialConnect());
+});
+
+test('H1: 6자리가 찬 뒤 같은 번호 edit(키 연타)는 상태를 바꾸지 않는다(안내 줄·확인 중 유지, 재확인 없음)', () => {
+  const invalid = run([{type: 'edit', code: '999999'}, {type: 'peek'}, {type: 'peeked', result: {ok: false, reason: 'invalid'}}]);
+  const again = connectReducer(invalid, {type: 'edit', code: '999999'});
+  expect(again).toBe(invalid);
+  expect(shouldAutoCheck(again)).toBe(false);
+  const peeking = run([{type: 'edit', code: '123456'}, {type: 'peek'}]);
+  expect(connectReducer(peeking, {type: 'edit', code: '123456'})).toBe(peeking);
+});
+
+test('M1: 연결 중(redeeming)에는 다른 번호 쓰기·이전으로 상태를 버리지 않는다', () => {
+  const r: ConnectState = {kind: 'redeeming', code: '123456', title: '엄마'};
+  expect(connectReducer(r, {type: 'other'})).toBe(r);
+  expect(connectReducer(r, {type: 'redeemed', result: {ok: true, family_id: 'f', profile_id: 'p'}})).toEqual({kind: 'ok', code: '123456'});
+});
+
+test('L2: 호칭 없는 확인(peek 이 호칭을 못 줌)도 연결 실패 뒤 다시 연결할 수 있다', () => {
+  const c: ConnectState = {kind: 'confirm', code: '123456', title: null};
+  const failed = run([{type: 'redeem'}, {type: 'error', offline: true}], c);
+  expect(connectReducer(failed, {type: 'redeem'})).toEqual({kind: 'redeeming', code: '123456', title: null});
 });

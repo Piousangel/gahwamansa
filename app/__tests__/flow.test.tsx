@@ -14,7 +14,7 @@ test('Connect -> Consent -> CourseHome 이동', async () => {
 
 test('틀린 번호는 어르신 문장으로 안내한다', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
-  await enterCode('999999');
+  await enterCode('999999', false);
   await waitFor(() => screen.getByText('이 번호로는 연결되지 않아요. 숫자를 한 번 더 봐 주세요')); // 11-3, 숫자는 그대로
 });
 

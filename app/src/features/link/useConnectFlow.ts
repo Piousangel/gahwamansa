@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useReducer, useRef} from 'react';
 import {isOffline} from '../types';
 import type {Api} from '../types';
-import {isSendableEvent, type EventProps, type PendingEventName, type EventName} from '../../api/contract/events';
+import type {EventName, EventProps} from '../../api/contract/events';
 import {AUTO_CHECK_MS, connectReducer, initialConnect, shouldAutoCheck} from './connectMachine';
 
 // 번호가 밖에서 들어온 경로(ease-and-joy A②). link = App Links(…/c#번호), referrer = 설치 직후 Install Referrer
@@ -9,14 +9,17 @@ export type Prefill = {code: string; source: 'link' | 'referrer'};
 
 // P1·P1c 흐름 훅: 6자리를 다 쓰면 300ms 뒤 peek(번호를 쓰지 않음) → 확인 화면 → [이 번호로 연결하기]에서만 redeem.
 // 늦게 온 응답은 순번으로 버린다. 이벤트에 번호 값은 넣지 않는다.
-// 계측은 기다리지 않고 실패도 무시한다. 서버 목록에 없는 퍼널 이름(PENDING)은 보내지 않는다
-function track(api: Api, name: EventName | PendingEventName, props?: EventProps) {
-  if (isSendableEvent(name)) {
-    api.logEvent(name, props).catch(() => {});
-  }
+// 계측은 기다리지 않고 실패도 무시한다(번호 값은 넣지 않는다)
+function track(api: Api, name: EventName, props?: EventProps) {
+  api.logEvent(name, props).catch(() => {});
 }
 
-export function useConnectFlow(api: Api, prefill?: Prefill) {
+// 밖에서 들어온 번호는 6자리 숫자만 받는다(리뷰 L1). 형식이 다르면 없는 것으로 본다
+const validPrefill = (p?: Prefill): Prefill | undefined => (p && /^[0-9]{6}$/.test(p.code) ? p : undefined);
+
+// TODO(App Links): 화면이 떠 있는 동안 새 링크가 열리면(params 변경) 지금은 처음 값만 쓴다
+export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
+  const prefill = validPrefill(rawPrefill);
   const [state, dispatch] = useReducer(connectReducer, prefill?.code ?? '', initialConnect);
   const seq = useRef(0);
   const alive = useRef(true);
@@ -34,8 +37,9 @@ export function useConnectFlow(api: Api, prefill?: Prefill) {
       return;
     }
     prefilled.current = true;
-    track(api, prefill.source === 'link' ? 'link_opened' : 'referrer_found');
-    track(api, 'code_prefilled');
+    const source = prefill.source === 'link' ? 'app_link' : 'referrer';
+    track(api, prefill.source === 'link' ? 'link_opened' : 'referrer_found', prefill.source === 'link' ? {source} : undefined);
+    track(api, 'code_prefilled', {source});
   }, [api, prefill]);
 
   const peek = useCallback(
@@ -91,11 +95,23 @@ export function useConnectFlow(api: Api, prefill?: Prefill) {
     }
   }, [api, state]);
 
+  // 같은 값(6자리 뒤 숫자 키)이면 아무것도 하지 않는다: 진행 중 확인도 살린다(리뷰 H1)
+  const codeRef = useRef(state.code);
+  codeRef.current = state.code;
   const edit = useCallback((next: string) => {
+    if (next === codeRef.current) {
+      return;
+    }
     seq.current += 1; // 진행 중 확인은 버린다
     dispatch({type: 'edit', code: next});
   }, []);
+  // 연결 중에는 다른 번호 쓰기·이전을 받지 않는다(응답을 버리면 서버만 연결된다, 리뷰 M1)
+  const busyRef = useRef(false);
+  busyRef.current = state.kind === 'redeeming';
   const other = useCallback(() => {
+    if (busyRef.current) {
+      return;
+    }
     seq.current += 1;
     dispatch({type: 'other'});
   }, []);

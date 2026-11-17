@@ -111,7 +111,7 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
     <>
       {codeFound ? (
         <View testID="code-found-band" accessibilityRole="text" accessibilityLiveRegion="polite" style={styles.band}>
-          <Icon name="icon-family" size={24} color={color.action} />
+          <Icon name="icon-mail" size={24} color={color.action} />
           <Text20 weight="bold" style={styles.bandText}>{f.code_found}</Text20>
         </View>
       ) : null}

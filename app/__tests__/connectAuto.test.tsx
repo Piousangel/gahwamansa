@@ -76,6 +76,51 @@ test('맞지 않는 번호: 숫자는 그대로, 칸 아래 한 줄, 고치면 �
   await waitFor(() => expect(peek).toHaveBeenLastCalledWith('999996'));
 });
 
+test('H1 회귀: 맞지 않음 뒤 숫자 키를 연타해도 같은 번호로 다시 확인하지 않는다(시도 한도 보호)', async () => {
+  const api = createFakeApi();
+  const peek = jest.spyOn(api, 'peekInviteCode');
+  render(<AppRoot api={api} role="parent" />);
+  await typeCode('999999');
+  await waitFor(() => screen.getByText('이 번호로는 연결되지 않아요. 숫자를 한 번 더 봐 주세요'));
+  await typeCode('111');
+  expect(peek).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('이 번호로는 연결되지 않아요. 숫자를 한 번 더 봐 주세요')).toBeTruthy();
+});
+
+test('H1 회귀: 확인 중에 숫자 키를 눌러도 확인은 한 번', async () => {
+  const api = createFakeApi();
+  let release: () => void = () => {};
+  const real = api.peekInviteCode.bind(api);
+  const peek = jest.spyOn(api, 'peekInviteCode').mockImplementation(async c => {
+    await new Promise<void>(r => (release = r));
+    return real(c);
+  });
+  render(<AppRoot api={api} role="parent" />);
+  await typeCode('123456');
+  await typeCode('7');
+  await act(async () => release());
+  await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
+  expect(peek).toHaveBeenCalledTimes(1);
+});
+
+test('M1 회귀: 연결 중 이전(하드웨어 뒤로 포함)은 막고, 결과가 오면 동의 화면으로', async () => {
+  const api = createFakeApi();
+  let release: () => void = () => {};
+  const real = api.redeemInviteCode.bind(api);
+  jest.spyOn(api, 'redeemInviteCode').mockImplementation(async c => {
+    await new Promise<void>(r => (release = r));
+    return real(c);
+  });
+  render(<AppRoot api={api} role="parent" />);
+  await typeCode('123456');
+  await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
+  await press('이 번호로 연결하기');
+  await press('이전 화면으로 가기');
+  expect(screen.queryByLabelText('연결 번호 6자리 쓰는 칸')).toBeNull(); // 빈 번호 쓰기로 가지 않음
+  await act(async () => release());
+  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+});
+
 test('다른 번호 쓰기: 확인 화면에서 비우고 번호 쓰기로', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await typeCode('123456');
@@ -105,7 +150,7 @@ test('연결 중 인터넷이 끊기면 다시 하기로 같은 번호를 다시
   expect(redeem).toHaveBeenCalledTimes(2);
 });
 
-test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번호 값 없음), 퍼널 새 이름은 보내지 않음', async () => {
+test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번호 값 없음), 손 입력은 채움 이벤트 없음', async () => {
   const api = createFakeApi();
   const log = jest.spyOn(api, 'logEvent');
   render(<AppRoot api={api} role="parent" />);
@@ -119,7 +164,7 @@ test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번�
   expect(log).toHaveBeenCalledWith('parent_code_failed', {reason: 'expired'});
   expect(log).toHaveBeenCalledWith('parent_code_redeemed', undefined);
   expect(JSON.stringify(log.mock.calls)).not.toMatch(/123456|111111/);
-  expect(log.mock.calls.map(c => c[0])).not.toContain('code_prefilled');
+  expect(log.mock.calls.map(c => c[0])).not.toContain('code_prefilled'); // 손 입력이라 채움 이벤트 없음
 });
 
 test('밖에서 들어온 번호(prefill)는 기다리지 않고 바로 확인하되, 연결은 하지 않는다', async () => {
@@ -132,10 +177,45 @@ test('밖에서 들어온 번호(prefill)는 기다리지 않고 바로 확인�
   expect(redeem).not.toHaveBeenCalled();
 });
 
+test('M2·M4: 칸 아래 줄은 늘 있는 live region 하나(글만 바뀜), 맞지 않음에는 경고 아이콘', async () => {
+  render(<AppRoot api={createFakeApi()} role="parent" />);
+  const region = screen.getByTestId('connect-below');
+  expect(region.props.accessibilityLiveRegion).toBe('polite');
+  await typeCode('999999');
+  await waitFor(() => screen.getByText('이 번호로는 연결되지 않아요. 숫자를 한 번 더 봐 주세요'));
+  expect(screen.getByTestId('connect-below')).toBe(region); // 같은 노드
+  expect(screen.getByTestId('icon-warning', {includeHiddenElements: true})).toBeTruthy();
+});
+
+test('L1: 밖에서 들어온 번호가 6자리 숫자가 아니면 무시한다(확인하지 않음)', async () => {
+  const {renderHook} = require('@testing-library/react-native');
+  const {useConnectFlow} = require('../src/features/link/useConnectFlow');
+  const api = createFakeApi();
+  const peek = jest.spyOn(api, 'peekInviteCode');
+  const {result} = renderHook(() => useConnectFlow(api, {code: '12a456', source: 'link'}));
+  await act(async () => {
+    await new Promise<void>(r => setTimeout(() => r(), 50));
+  });
+  expect(result.current.state).toEqual({kind: 'idle', code: '', inline: null});
+  expect(peek).not.toHaveBeenCalled();
+});
+
+test('0029 퍼널: 링크로 들어온 번호는 link_opened{source}·code_prefilled{source}(번호 값 없음)', async () => {
+  const {renderHook} = require('@testing-library/react-native');
+  const {useConnectFlow} = require('../src/features/link/useConnectFlow');
+  const api = createFakeApi();
+  const log = jest.spyOn(api, 'logEvent');
+  renderHook(() => useConnectFlow(api, {code: '123456', source: 'link'}));
+  await waitFor(() => expect(log).toHaveBeenCalledWith('code_prefilled', {source: 'app_link'}));
+  expect(log).toHaveBeenCalledWith('link_opened', {source: 'app_link'});
+  expect(JSON.stringify(log.mock.calls)).not.toContain('123456');
+});
+
 test('첫 화면 띠(FS_link): 번호가 들어왔을 때만, 질문은 그대로', () => {
   const {rerender} = render(<RoleSelect onChoose={jest.fn()} />);
   expect(screen.queryByTestId('code-found-band')).toBeNull();
   rerender(<RoleSelect onChoose={jest.fn()} codeFound />);
   expect(screen.getByText('가족이 보낸 번호가 있어요')).toBeTruthy();
+  expect(screen.getByTestId('icon-mail', {includeHiddenElements: true})).toBeTruthy(); // 시안 봉투 아이콘
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
 });

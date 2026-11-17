@@ -1,5 +1,7 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {Icon} from '../../ui/assets/icons';
+import {focusLater} from '../../ui/screenTitle';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -74,6 +76,9 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   };
 
   const ok = state.kind === 'ok';
+  const groupRef = useRef<React.ComponentRef<typeof View>>(null);
+  const isInvalid = state.kind === 'idle' && state.inline === 'invalid';
+  useEffect(() => (isInvalid ? focusLater(() => groupRef.current) : undefined), [isInvalid]);
   useEffect(() => {
     if (ok) {
       toConsent();
@@ -83,7 +88,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   }, [ok]);
 
   if (state.kind === 'confirm' || state.kind === 'redeeming') {
-    return <ConfirmView state={state} onYes={redeem} onOther={other} />;
+    // key: 같은 화면 안 분기라도 새 Screen 으로 마운트해 제목에 포커스(talkback R2, 리뷰 M2)
+    return <ConfirmView key="confirm" state={state} onYes={redeem} onOther={other} />;
   }
   if (state.kind === 'failed') {
     const m = failMessage(state.reason);
@@ -97,7 +103,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       }
     };
     return (
-      <Screen top={<BackBar onBack={state.step === 'redeem' ? other : back} />} bottom={<BigButton variant="secondary" label={m.button} onPress={onFailButton} />}>
+      <Screen key="failed" top={<BackBar onBack={state.step === 'redeem' ? other : back} />} bottom={<BigButton variant="secondary" label={m.button} onPress={onFailButton} />}>
         <View testID="connect-failed" accessibilityLiveRegion="polite" style={styles.failed}>
           <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.title}>{m.title}</Text20>
           <Text20>{m.body}</Text20>
@@ -108,13 +114,18 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
 
   const checking = state.kind === 'peeking' || ok;
   const invalid = state.kind === 'idle' && state.inline === 'invalid';
-  // 칸 바로 아래 한 줄: 기본 안내 / 확인 중 / 맞지 않음(숫자는 그대로)
-  const below = checking ? (
-    <Text20 testID="connect-checking" weight="bold" accessibilityLiveRegion="polite" style={styles.title}>{copy.connect.checking}</Text20>
-  ) : invalid ? (
-    <Text20 testID="connect-invalid" weight="bold" accessibilityLiveRegion="polite" style={styles.invalid}>{copy.connect.invalid_inline}</Text20>
-  ) : (
-    <Text20 style={styles.sub}>{copy.connect.auto_hint}</Text20>
+  // 칸 바로 아래 한 줄: 기본 안내 / 확인 중 / 맞지 않음(숫자는 그대로).
+  // 항상 마운트된 live region 하나에 글만 바꾼다(새로 붙은 노드는 기기에 따라 안 읽힘, 리뷰 M2·R11)
+  const below = (
+    <View testID="connect-below" accessibilityLiveRegion="polite" style={styles.belowRow}>
+      {invalid ? <Icon name="icon-warning" size={24} color={color.dangerInk} /> : null}
+      <Text20
+        testID={checking ? 'connect-checking' : invalid ? 'connect-invalid' : 'connect-hint'}
+        weight={checking || invalid ? 'bold' : undefined}
+        style={[styles.flex, checking ? styles.title : invalid ? styles.invalid : styles.sub]}>
+        {checking ? copy.connect.checking : invalid ? copy.connect.invalid_inline : copy.connect.auto_hint}
+      </Text20>
+    </View>
   );
   // 링크 두 개: 가운데 정렬, 간격 24, 64 터치(시안 P1_connect_v4)
   const links = (
@@ -126,6 +137,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
 
   return (
     <Screen
+      key="entry"
       fill={!overflow}
       scrollEnabled={overflow}
       top={
@@ -155,7 +167,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
         {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
         <View style={overflow ? null : styles.pinned}>
-          <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} />
+          <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
         </View>
       </View>
     </Screen>
@@ -169,7 +181,7 @@ function ConfirmView({state, onYes, onOther}: {state: Extract<ConnectState, {kin
   const a11y = copy.code.show_a11y.split('{앞}').join(state.code.slice(0, 3).split('').join(' ')).split('{뒤}').join(state.code.slice(3).split('').join(' '));
   return (
     <Screen
-      top={<BackBar onBack={onOther} />}
+      top={<BackBar onBack={busy ? noop : onOther} />}
       bottom={
         <>
           <BigButton label={c.yes} loading={busy} loadingLabel={c.busy} onPress={onYes} />
@@ -194,7 +206,9 @@ function ConfirmView({state, onYes, onOther}: {state: Extract<ConnectState, {kin
 }
 
 // "써 주세요"가 갈라져 "주세요"만 다음 줄에 남지 않게 붙인다(QA P1#5)
-const TITLE = copy.connect.title.replace('써 주세요', '써 주세요');
+const TITLE = copy.connect.title.replace('써 주세요', '써\u00A0주세요');
+// 연결 중 이전(리뷰 M1): 화면을 바꾸지 않고 하드웨어 뒤로도 삼킨다
+const noop = () => {};
 
 const styles = StyleSheet.create({
   area: {flex: 1, minHeight: 0, overflow: 'hidden'},
@@ -205,6 +219,8 @@ const styles = StyleSheet.create({
   sub: {color: color.inkSub},
   invalid: {color: color.dangerInk},
   legal: {textAlign: 'center', color: color.ink, marginBottom: 4},
+  belowRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  flex: {flex: 1},
   failed: {gap: 8},
   card: {backgroundColor: color.card, borderWidth: 3, borderColor: color.action, borderRadius: radius.card, padding: 20, gap: 10},
   center: {textAlign: 'center', color: color.inkTitle},

@@ -55,13 +55,14 @@ test('P1#5 제목은 "써 주세요"를 붙여 줄바꿈하고 제목색, P1#6 �
   expect(flat(screen.getByText('6자리를 다 쓰면 바로 확인해요')).color).toBe(color.inkSub); // v4: 칸 아래 안내
 });
 
-test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + 테두리 3 + 최소 64', () => {
+test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + 테두리 2(동결 시안 P1_connect_v4) + 최소 64', () => {
   render(<CodeInput value="1" onDigit={() => {}} onDelete={() => {}} onClear={() => {}} />);
   expect(flat(screen.getByTestId('code-cell-1')).backgroundColor).toBe(color.noticeSoft);
   expect(screen.getByTestId('code-cursor')).toBeTruthy();
   const key = flat(screen.getByLabelText('숫자 5'));
   expect(key.backgroundColor).toBe(color.card);
-  expect(key.borderWidth).toBe(3);
+  expect(key.borderWidth).toBe(2);
+  expect(key.borderRadius).toBe(14);
   expect(key.minHeight as number).toBeGreaterThanOrEqual(64);
 });
 

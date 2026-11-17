@@ -87,7 +87,7 @@ test('번호 칸: 지금 쓸 칸이 강조되고, 키는 볼록(흰 면+테두�
   expect(cell(2).borderColor).not.toBe(cell(3).borderColor);
   const key = screen.getByLabelText('숫자 1');
   const ks = StyleSheet.flatten(typeof key.props.style === 'function' ? key.props.style({pressed: false}) : key.props.style);
-  expect(ks.borderWidth).toBe(3); // DECISIONS: 키는 흰 면+테두리+그림자
+  expect(ks.borderWidth).toBe(2); // DECISIONS: 키는 흰 면+테두리+그림자(테두리 2는 동결 시안 P1_connect_v4)
   expect(ks.backgroundColor).not.toBe(cell(3).backgroundColor);
 });
 

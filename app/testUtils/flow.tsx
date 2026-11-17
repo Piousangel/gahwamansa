@@ -34,12 +34,17 @@ export async function typeCode(code: string) {
   });
 }
 
+// confirm=false: 맞지 않는 번호·실패 패널을 보려는 테스트(확인 화면을 기대하지 않음)
 export async function enterCode(code: string, confirm = true) {
   await typeCode(code);
-  const yes = screen.queryByRole('button', {name: '이 번호로 연결하기'});
-  if (confirm && yes) {
-    await press('이 번호로 연결하기');
+  if (!confirm) {
+    return;
   }
+  const yes = screen.queryByRole('button', {name: '이 번호로 연결하기'});
+  if (!yes) {
+    throw new Error(`enterCode(${code}): 확인 화면(이 번호로 연결하기)이 없어요. 실패를 보려면 enterCode(code, false)`);
+  }
+  await press('이 번호로 연결하기');
 }
 
 export async function toHome(api: Api, accept = true) {

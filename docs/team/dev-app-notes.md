@@ -279,6 +279,11 @@
 - 첫 화면 띠(FS_link): `RoleSelect codeFound` prop만. 번호 출처가 생기면 AppRoot 가 넘긴다.
 - 문구: copy-v3 11절이 시안보다 우선(시안 "은행 번호"→"통장 번호", P1c 제목·호칭 줄·맞지 않음 줄은 11절). `connect.auto_hint`·`connect_confirm.busy`·`first.code_found` 추가.
 - 공유 메시지: 11-1 #5 6줄. 링크는 env `SHARE_LINK_BASE`(app/env/*.env, 없으면 링크 줄 생략 + 설치 안내를 스토어 문장으로).
-- **서버 줄 요청(log_event 화이트리스트)**: `link_opened`, `referrer_found`, `code_prefilled` 추가 필요(속성: 기존 `channel`·`install_source`만, 번호 값 금지). 앱은 `api/contract/events.ts` PENDING_EVENT_NAMES 로 들고 있다가 서버 반영 뒤 EVENT_NAMES 로 옮긴다. `redeem_ok`는 기존 `parent_code_redeemed`로 대신함.
+- 퍼널 이벤트: 0029 반영으로 `link_opened{source}`·`referrer_found`·`code_prefilled{source}`(source = app_link·referrer)를 보낸다. `redeem_ok`는 기존 `parent_code_redeemed`.
 - 테스트 헬퍼: `testUtils/flow.enterCode`는 자동 확인 후 P1c [이 번호로 연결하기]까지 누른다(가짜 타이머 테스트도 동작). `keyboardStep.test` 계측 검사는 연결 이벤트가 앞에 생겨 `course_*`만 골라 보도록 한 줄 바꿈(P6 줄 확인 필요).
 - 남은 일: /c 웹 안내 페이지(web/C_page, site/), App Links·Install Referrer, P1c 시안의 보조 "처음으로" 링크(지금은 패널 버튼 하나).
+
+### 연결 쉽게 리뷰 반영(2026-11-17-connect-ease-review)
+- H1 6자리 뒤 같은 번호 edit 무시(리듀서·훅), M1 연결 중 이전·다른 번호 쓰기·하드웨어 뒤로 막음, M2 Screen key 로 상태별 재마운트(제목 포커스 R2)·칸 아래 줄은 고정 live region 하나·맞지 않음 때 칸 묶음 포커스, M3 `api/contract/invite.ts` parsePeekResult(계약 밖이면 서버 오류, 호칭 없으면 번호만), M4 키 반경 14·테두리 2, 칸 68·반경 12·아래 선 3, 맞지 않음 경고 아이콘, FS_link 봉투 아이콘(icon-mail).
+- 낮음: prefill 6자리 검사, Gradle SHARE_LINK_BASE 형식 검사, enterCode 확인 버튼 없으면 실패(실패 테스트는 enterCode(code, false)), keyboardStep 은 parent_code_redeemed 만 빼고 전 이벤트 개수·순서 검사, 무의미 단언 제거, TITLE NBSP 이스케이프, locked retryAfterSec 제거.
+- 남김: L5(칸 묶음 accessible 로 칸별 라벨 없어짐 → talkback-spec 표 수정은 디자인·QA 판단), L9 리드 일괄 반영 목록 조정(이 브랜치가 11-5 중 errors.invalid·connect.success·offline.body·ai_notice·login·cheer·name_taken·first.intro[1]·course.step.hangul 을 이미 반영, push[] 폐기만 남음), P1c 실패 시안의 버튼 2개, 키·칸 모양 토큰화(14·12 리드 결정).
