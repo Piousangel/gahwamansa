@@ -4,10 +4,12 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy} from '../../copy/copy';
 import {useChildSummary} from './useChildSummary';
+import {useBootLoading} from '../../app/splash';
 import {formatAnswerDate} from './formatDate';
 
 export function ChildHome() {
   const {info, error, loading, load} = useChildSummary();
+  useBootLoading(loading && !info && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
 
   // 받은 답이 없을 때만 오류 화면. 이미 받은 답이 있으면 그대로 두고 오류 줄만 덧붙인다.
   if (error && !info) {

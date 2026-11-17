@@ -10,6 +10,7 @@ import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import {formatCode} from '../../ui/codeInputLogic';
 import type {ChildState} from '../types';
+import {useBootLoading} from '../../app/splash';
 import {errorMessage} from '../course/useFinishStep';
 
 const POLL_MS = 15000;
@@ -20,6 +21,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const {api} = useSession();
   const [state, setState] = useState<Family | null>(null);
   const [error, setError] = useState<Message | null>(null);
+  useBootLoading(!state && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
   const alive = useRef(true);
   const inFlight = useRef(false);
 

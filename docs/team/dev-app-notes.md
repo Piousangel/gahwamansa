@@ -211,3 +211,9 @@
 - 미확인: 실기기 Android 12+ 아이콘 실제 크기·compat 모습, 심볼 이동 위치 정합(edge-to-edge 기준).
 ### 지난 답 탭 버그(PM 감사 C5)
 - 원인: ChildReport 가 데이터를 조회하지 않고 빈 문구를 고정 출력. 요약 조회를 `useChildSummary` 로 분리해 앨범·지난 답이 함께 쓰고, 지난 답은 최근 답 1개(날짜·질문·고른 답)·빈·나누지 않음·로딩·오류 상태를 보여 준다. 여러 개 목록은 범위 결정(감사 질문 5)과 목록 RPC 가 필요.
+### 시작 대기 일원화(실기기 20-splash.png 지적, 11-17)
+- 원인: 시작 대기를 AppRoot 의 whoAmI 대기에서만 덮었다. 자녀 세션은 ChildGate, 어르신은 CourseHome 등 다음 화면이 각자 좌상단 "잠시만요"를 그렸다.
+- 수정: `splash.ts` 시작 대기(boot) 한 곳. 첫 로딩 중인 화면은 `useBootLoading(true)`(AppRoot·ChildGate·CourseHome·ChildWaitScreen·ChildHome). 로딩 중인 화면이 150ms 동안 없으면 대기 종료.
+  - 대기 중에는 AppRoot 가 종이색 SplashHold 를 덮고 뒤 화면은 화면 읽기에서 숨긴다. 2초가 넘으면 심볼 아래에만 "잠시만요". 오프라인 화면은 대기가 아니다.
+- 테스트: jest.after.js 가 매 테스트 전 시작 대기·심볼 이동을 끝낸 상태로 만든다(화면 단위 테스트용). splash.test 는 resetSplash 로 처음부터 검사.
+- [first-screen] 릴리스 로그 제거(리드 지시).

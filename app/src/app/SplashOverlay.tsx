@@ -3,6 +3,7 @@ import {Animated, Easing, StyleSheet, View} from 'react-native';
 import {BrandSymbol} from '../ui/assets/brandSymbol';
 import type {MotionMode} from '../features/link/useReduceMotion';
 import type {SplashTarget} from './splash';
+import {color} from '../ui/tokens';
 
 export const SPLASH_SYMBOL = 128;
 const STD = Easing.bezier(0.4, 0, 0.2, 1);
@@ -79,7 +80,7 @@ export function SplashOverlay({
 // JS 대기 화면(복원 중): 스플래시와 같은 자리·같은 크기의 심볼만. 2초가 넘으면 아래 24에 "잠시만요".
 export function SplashHold({win, slowText}: {win: {width: number; height: number}; slowText: React.ReactNode | null}) {
   return (
-    <View testID="splash-hold" style={StyleSheet.absoluteFill}>
+    <View testID="splash-hold" style={[StyleSheet.absoluteFill, styles.paper]}>
       <View style={[styles.abs, {left: (win.width - SPLASH_SYMBOL) / 2, top: (win.height - SPLASH_SYMBOL) / 2}]}>
         <BrandSymbol size={SPLASH_SYMBOL} />
       </View>
@@ -92,5 +93,6 @@ export function SplashHold({win, slowText}: {win: {width: number; height: number
 
 const styles = StyleSheet.create({
   abs: {position: 'absolute'},
+  paper: {backgroundColor: color.paper},
   slow: {position: 'absolute', left: 16, right: 16, alignItems: 'center'},
 });

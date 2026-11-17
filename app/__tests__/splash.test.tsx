@@ -1,6 +1,6 @@
 import React from 'react';
 import {AccessibilityInfo, Animated, NativeModules} from 'react-native';
-import {act, fireEvent, render, screen} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {resetFirstScreenMotion} from '../src/features/link/RoleSelect';
@@ -13,7 +13,7 @@ const android = (p: string) => `${__dirname}/../android/app/${p}`;
 
 beforeEach(() => {
   resetFirstScreenMotion();
-  resetSplash();
+  resetSplash(); // 이 파일은 스플래시를 처음 상태부터 본다(jest.after.js 가 끝낸 상태를 되돌림)
   (NativeModules as {SplashModule?: unknown}).SplashModule = {hide: jest.fn()};
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
@@ -78,9 +78,14 @@ test('동작 줄이기: 이동 없이 300ms 페이드아웃만', () => {
   expect([...durations]).toEqual([300]);
 });
 
-test('첫 실행 오버레이는 목표 위치를 못 받아도 1초 뒤 사라진다(안전장치), 두 번째 첫 화면에서는 없다', async () => {
+test('첫 실행: 시작 대기(심볼) 뒤 이어서 날아가는 심볼, 목표를 못 받아도 1초 뒤 사라진다, 두 번째 첫 화면에서는 없다', async () => {
   jest.useFakeTimers();
   const {unmount} = render(<AppRoot api={createFakeApi()} />);
+  expect(screen.getByTestId('splash-hold')).toBeTruthy();
+  await act(async () => {
+    jest.advanceTimersByTime(200); // 대기 화면 없음 → 시작 대기 끝
+  });
+  expect(screen.queryByTestId('splash-hold')).toBeNull();
   expect(screen.getByTestId('splash-flight', {includeHiddenElements: true})).toBeTruthy();
   await act(async () => {
     jest.advanceTimersByTime(1500);
@@ -89,6 +94,71 @@ test('첫 실행 오버레이는 목표 위치를 못 받아도 1초 뒤 사라�
   unmount();
   render(<AppRoot api={createFakeApi()} />);
   expect(screen.queryByTestId('splash-flight', {includeHiddenElements: true})).toBeNull();
+});
+
+// 실기기 지적(20-splash.png): 자녀 세션 복원 중 ChildGate 의 좌상단 "잠시만요"가 보였다.
+// 모든 시작 경로에서 처음에는 심볼 대기 화면 하나만, "잠시만요"는 2초가 넘을 때 심볼 아래에만.
+const never = () => new Promise<never>(() => {});
+describe.each([
+  ['첫 실행(복원 확인 중)', () => {
+    const api = createFakeApi();
+    jest.spyOn(api, 'whoAmI').mockImplementation(never);
+    return api;
+  }],
+  ['어르신 세션(코스 불러오는 중)', () => {
+    const api = createFakeApi({who: 'parent', linked: true, consented: true});
+    jest.spyOn(api, 'getTodayContent').mockImplementation(never);
+    return api;
+  }],
+  ['자녀 세션(자녀 상태 확인 중 = ChildGate)', () => {
+    const api = createFakeApi({who: 'child', childFamily: true});
+    jest.spyOn(api, 'getChildState').mockImplementation(never);
+    return api;
+  }],
+  ['자녀 세션(연결됨, 앨범 불러오는 중)', () => {
+    const api = createFakeApi({who: 'child', childFamily: true, childLinked: true});
+    jest.spyOn(api, 'fetchChildSummary').mockImplementation(never);
+    return api;
+  }],
+  ['자녀 세션(연결 대기, 대기 화면 불러오는 중)', () => {
+    const api = createFakeApi({who: 'child', childFamily: true});
+    let n = 0;
+    const real = api.getChildState.bind(api);
+    jest.spyOn(api, 'getChildState').mockImplementation(() => (n++ === 0 ? real() : never()));
+    return api;
+  }],
+])('시작 경로 %s', (_name, make) => {
+  test('처음에는 심볼 대기 화면만(뒤 화면의 "잠시만요" 없음), 2초가 넘으면 심볼 아래에만 "잠시만요"', async () => {
+    jest.useFakeTimers();
+    render(<AppRoot api={make()} restore />);
+    for (let i = 0; i < 10; i++) {
+      await act(async () => {
+        jest.advanceTimersByTime(100); // 1초: 경로를 따라 화면이 바뀌어도
+      });
+      expect(screen.getByTestId('splash-hold')).toBeTruthy();
+      expect(screen.queryByText('잠시만요')).toBeNull();
+    }
+    await act(async () => {
+      jest.advanceTimersByTime(1100);
+    });
+    expect(screen.getAllByText('잠시만요')).toHaveLength(1); // 뒤 화면 것은 화면 읽기·쿼리에서 숨겨짐
+    expect(screen.getByTestId('splash-hold')).toHaveTextContent('잠시만요');
+  });
+});
+
+test('오프라인: 시작 대기가 끝나고 오프라인 화면이 바로 보인다(대기 화면이 덮지 않음)', async () => {
+  const api = createFakeApi();
+  jest.spyOn(api, 'whoAmI').mockRejectedValue(new (require('../src/features/types').OfflineError)('x'));
+  render(<AppRoot api={api} restore />);
+  expect(screen.getByTestId('splash-hold')).toBeTruthy();
+  await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
+  expect(screen.queryByTestId('splash-hold')).toBeNull();
+});
+
+test('세션 복원이 끝나면 대기 화면이 걷히고 실제 화면(어르신 코스 홈)', async () => {
+  render(<AppRoot api={createFakeApi({who: 'parent', linked: true, consented: true})} restore />);
+  await waitFor(() => screen.getByText('오늘의 코스'));
+  await waitFor(() => expect(screen.queryByTestId('splash-hold')).toBeNull());
 });
 
 test('날아오는 심볼이 도착하기 전에는 첫 화면의 진짜 심볼을 숨기고, 도착하면 보인다', async () => {

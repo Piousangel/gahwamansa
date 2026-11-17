@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {AppState, StatusBar, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {initialWindowMetrics, SafeAreaProvider} from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import {appCopy, offlineMessage, Message} from '../copy/copy';
 import {errorMessage} from '../features/course/useFinishStep';
 import {useMotionMode} from '../features/link/useReduceMotion';
 import {color} from '../ui/tokens';
-import {finishFlight, flightPending, hideNativeSplash, useSplashLanded, useSplashTarget} from './splash';
+import {finishFlight, flightPending, hideNativeSplash, kickBoot, useBootActive, useBootLoading, useSplashLanded, useSplashTarget} from './splash';
 import {SplashHold, SplashOverlay} from './SplashOverlay';
 
 export type Role = 'parent' | 'child';
@@ -124,22 +124,28 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
     [api, content, syncError, sync],
   );
 
-  // 스플래시 이어가기: 대기 화면은 심볼만(2초가 넘으면 "잠시만요"), 첫 화면이 정해지면 심볼을 넘긴다(실행당 한 번)
+  // 스플래시 이어가기: 시작 대기(어느 경로든 첫 로딩)는 이 한 곳의 심볼 대기 화면만 보인다.
+  // 2초가 넘으면 심볼 아래에만 "잠시만요". 대기가 끝나면 심볼을 첫 화면으로 넘긴다(실행당 한 번).
   const win = useWindowDimensions();
-  const waiting = start === 'loading' || who === 'loading';
+  const waiting = start !== 'offline' && (start === 'loading' || who === 'loading'); // 오프라인 화면은 대기가 아님
+  useBootLoading(waiting);
+  useLayoutEffect(kickBoot, []);
+  const boot = useBootActive();
+  const hold = boot || waiting;
   const [slow, setSlow] = useState(false);
   useEffect(() => {
-    if (!waiting) {
+    if (!hold) {
+      setSlow(false);
       return;
     }
     const t = setTimeout(() => setSlow(true), 2000);
     return () => clearTimeout(t);
-  }, [waiting]);
+  }, [hold]);
   const motion = useMotionMode();
   const target = useSplashTarget();
   const landed = useSplashLanded();
   const [flying] = useState(flightPending);
-  const showFlight = flying && !landed && !waiting && start !== 'offline';
+  const showFlight = flying && !landed && !hold && start !== 'offline';
   // 첫 화면(역할 선택)으로 갈 때만 자리 이동, 바로 홈으로 가면 페이드(목표 없음 → 동작 줄이기와 같은 300ms)
   const flightMode = who === null ? motion : motion === null ? null : motion === 'none' ? 'none' : 'reduce';
 
@@ -165,18 +171,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   } else if (who === 'child') {
     body = <ChildStack initialRouteName={role === 'child' ? 'Tabs' : 'Gate'} />;
   } else if (waiting) {
-    body = (
-      <SplashHold
-        win={win}
-        slowText={
-          slow ? (
-            <Text20 accessibilityLiveRegion="polite" maxFontSizeMultiplier={2} style={styles.slow}>
-              {appCopy.loading}
-            </Text20>
-          ) : null
-        }
-      />
-    );
+    body = null; // 아래 SplashHold 가 덮는다
   } else if (who === null) {
     body = (
       <RoleSelect
@@ -195,9 +190,24 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       {/* 종이색 배경 위라 시계·배터리 아이콘을 어둡게(앱 전체 라이트) */}
       <StatusBar barStyle="dark-content" />
       <View testID="app-root" style={styles.root} onLayout={hideNativeSplash}>
-        <SessionContext.Provider value={value}>
-          <NavigationContainer>{body}</NavigationContainer>
-        </SessionContext.Provider>
+        {/* 시작 대기 중에는 뒤 화면을 화면 읽기에서 숨긴다(덮개만 읽힘) */}
+        <View style={styles.root} importantForAccessibility={hold ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={hold}>
+          <SessionContext.Provider value={value}>
+            <NavigationContainer>{body}</NavigationContainer>
+          </SessionContext.Provider>
+        </View>
+        {hold ? (
+          <SplashHold
+            win={win}
+            slowText={
+              slow ? (
+                <Text20 accessibilityLiveRegion="polite" maxFontSizeMultiplier={2} style={styles.slow}>
+                  {appCopy.loading}
+                </Text20>
+              ) : null
+            }
+          />
+        ) : null}
         {showFlight ? <SplashOverlay win={win} target={who === null ? target : null} mode={flightMode} onDone={finishFlight} /> : null}
       </View>
     </SafeAreaProvider>

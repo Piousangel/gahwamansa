@@ -7,6 +7,7 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
+import {useBootLoading} from '../../app/splash';
 
 // 자녀 시작 화면 결정: 어르신 폰 -> 막음 / 로그인 안 됨 -> 로그인 / 가족 없음 -> 호칭 / 연결 대기 -> 대기 / 연결됨 -> 앨범.
 export function ChildGate() {
@@ -14,6 +15,8 @@ export function ChildGate() {
   const {api, resetRole} = useSession();
   const [error, setError] = useState<Message | null>(null);
   const [parentPhone, setParentPhone] = useState(false);
+  const [deciding, setDeciding] = useState(true);
+  useBootLoading(deciding && !error && !parentPhone); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
 
   const decide = useCallback(async () => {
     setError(null);
@@ -23,6 +26,7 @@ export function ChildGate() {
       if (who === 'parent') {
         // 이 기기는 어르신으로 연결돼 있다. 자녀로 로그인하면 세션을 덮어써 어르신 연결이 끊기므로 막는다.
         setParentPhone(true);
+        setDeciding(false);
         return;
       }
       if (who !== 'child') {
@@ -33,6 +37,7 @@ export function ChildGate() {
       go(s.kind === 'no_family' ? 'Relation' : s.linked ? 'Tabs' : 'Wait');
     } catch (e) {
       setError(errorMessage(e));
+      setDeciding(false);
     }
   }, [api, navigation]);
 

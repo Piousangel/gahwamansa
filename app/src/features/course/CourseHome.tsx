@@ -15,6 +15,7 @@ import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
 import {errorMessage} from './useFinishStep';
+import {useBootLoading} from '../../app/splash';
 import type {StepName, WeekStamps} from '../types';
 
 const c = copy.course;
@@ -28,6 +29,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const {api, done, content, consented, setConsented, syncError, sync} = useSession();
   const [consentError, setConsentError] = useState<Message | null>(null);
   useLoadTodayContent();
+  useBootLoading(content === undefined && !syncError); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
   // 이번 주 도장: 연결된 어르신만 서버에서 받는다(미연결 열람은 호출하지 않고 줄을 숨김). 오늘 단계가 바뀌면 다시 받는다.
   // 실패하면 도장 줄만 숨긴다(장식이라 코스 진행을 막지 않음, 코스 오류는 syncError 가 알림).
   const [week, setWeek] = useState<WeekStamps | null>(null);
