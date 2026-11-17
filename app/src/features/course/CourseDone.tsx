@@ -7,11 +7,10 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {color, size, space} from '../../ui/tokens';
+import {color, space} from '../../ui/tokens';
 import {copy} from '../../copy/copy';
 import {StampRow} from './StampRow';
 import {kstWeekdayIndex, stampsFromDates} from './stamps';
-import {Sun} from '../../ui/assets/sun';
 import {SunStamp} from '../../ui/assets/album';
 import {useWeekStamps} from './useWeekStamps';
 import {useMotionMode} from '../../ui/motion';
@@ -21,6 +20,7 @@ import {prefs} from '../../lib/prefs';
 const d = copy.done;
 const BIG = 120; // 큰 도장 지름(시안 P7_motion, 오늘 칸 도장 40으로 줄어 앉는다)
 const INK = BIG + 24; // 인주 번짐 지름(시안 inset −12)
+const WEEK_WAIT_MS = 1500;
 
 // 타임라인(시안 P7_motion "소리·촉각·타임라인", 약 1.4초)
 export const P7_T = {land: 180, squash: 140, inkAt: 220, ink: 420, textAt: 500, text: 200, flyAt: 900, fly: 480, fade: 200} as const;
@@ -58,12 +58,23 @@ export function setMeasureForTest(f: typeof measureInWindow | null) {
 //   '화면을 누르면 바로 넘어가요'는 첫 1회, 하단 독(버튼 아래)에 둬 사라져도 본문이 움직이지 않는다.
 // - 동작 줄이기·화면 읽기: 크기·이동 없이 120 도장이 제자리에서, 제목·문구와 함께 200ms 페이드. 오늘 칸은 이미 찍힌 상태.
 //   소리·촉각은 유지(움직임이 아님). 판정 전(첫 프레임)에는 아무 모션도 시작하지 않는다.
-// - 다 끝나면 도장이 있던 맨 위 칸에 완료 해님(디자인 확인: 시안 P7_done 해님과 같은 자리).
+// - 다 끝나면 맨 위 칸은 비운다(완료 해님 없음, 디자인 결정 11-18). 칸 높이는 남겨 본문이 움직이지 않는다.
 // - 미연결도 같은 연출(도장은 기기에 찍힘, 11-7 #19). 칭찬·연속·하트 없음.
 export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'CourseDone'>) {
   const {api, content} = useSession();
   const linked = !!content?.linked;
-  const week = useWeekStamps(api, content ? content.linked : undefined, 'done');
+  const fetched = useWeekStamps(api, content ? content.linked : undefined, 'done');
+  // 이번 주 도장 응답이 1.5초 안에 오지 않으면 도장 줄 없이 진행(제목·문구가 투명으로 고착되지 않게, 리뷰 후속)
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    if (fetched !== undefined) {
+      return undefined;
+    }
+    const t = setTimeout(() => setGaveUp(true), WEEK_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [fetched]);
+  // 포기한 뒤 늦게 온 결과는 이 화면에서 무시(도장 줄이 뒤늦게 생겨 본문이 움직이거나 문구가 바뀌지 않게)
+  const week = gaveUp ? null : fetched;
   const mode = useMotionMode();
   const toHome = () => navigation.popTo('CourseHome');
   useBackAction(toHome);
@@ -80,7 +91,6 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     tx: new Animated.Value(0),
     ty: new Animated.Value(0),
     fly: new Animated.Value(1),
-    sun: new Animated.Value(0),
   }).current;
   const bigRef = useRef<Node>(null);
   const cellRef = useRef<Node>(null);
@@ -97,8 +107,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       return;
     }
     setPhase('done');
-    Animated.timing(v.sun, {toValue: 1, duration: P7_T.fade, useNativeDriver: true}).start();
-  }, [v]);
+  }, []);
 
   const finishNow = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -191,8 +200,14 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const days = week ? stampsFromDates(week.weekStart, week.doneDates) : null;
   const firstStamp = !!days && days[todayIdx] && days.filter(Boolean).length === 1;
   // 미연결(11-7 #19): 도장은 기기에 찍히고, 가족에게는 번호를 받은 뒤부터 보인다는 것을 말한다
+  // 연결(UX U5, 라이터 11-9): 알림 켜짐이면 '내일 {시각}에 새 사진을 알려 드려요', 꺼짐·알림 기능 없음이면 '내일 새 사진이 와요'.
+  // TODO(푸시 0032~): 알림 상태·시각이 생기면 next_photo_time 으로. 지금은 알림 기능이 없어 항상 next_photo. 미연결(11-7 #19)은 그대로
   const body =
-    week === undefined ? null : !linked ? d.unlinked_body.replace('. ', '.\n') : firstStamp ? d.first_stamp : d.body.replace('. ', '.\n');
+    week === undefined
+      ? null
+      : !linked
+        ? d.unlinked_body.replace('. ', '.\n')
+        : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
   const full = mode === 'full';
   const bigShown = mode === 'reduce' || (full && phase !== 'done');
 
@@ -238,10 +253,6 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
               ) : null}
               <SunStamp variant={todayIdx} size={BIG} />
             </Animated.View>
-          ) : phase === 'done' ? (
-            <Animated.View style={{opacity: v.sun}}>
-              <Sun art="sun-happy" size={size.sunLarge} />
-            </Animated.View>
           ) : null}
         </View>
         {/* 제목·문구는 함께 페이드(시안 mo-text) */}
@@ -268,5 +279,5 @@ const styles = StyleSheet.create({
   gone: {opacity: 0},
   big: {width: BIG, height: BIG, alignItems: 'center', justifyContent: 'center'},
   // 인주 번짐: 도장 뒤 원이 퍼지며 옅어진다(220ms 전에는 투명)
-  ink: {position: 'absolute', width: INK, height: INK, borderRadius: INK / 2, backgroundColor: color.blush},
+  ink: {position: 'absolute', width: INK, height: INK, borderRadius: INK / 2, backgroundColor: color.brandSealDeep},
 });

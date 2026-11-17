@@ -9,6 +9,7 @@ import {Screen} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
+import {SettingsGroup, SettingsRow} from '../../ui/SettingsRow';
 import {color, radius, size} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
@@ -56,13 +57,24 @@ export function ParentSettings() {
         </>
       }
       bottom={<BigButton variant="secondary" label={t.back} onPress={() => navigation.goBack()} />}>
-      {/* 도장 소리: 위험 구역(모두 지우기)보다 위(리뷰 L4) */}
-      <SfxRow />
+      {/* 행 목록(시안 P13_more v2, UX U8): 구역 가족 → 알림과 소리 → 앱, 위험 행(모두 지우기)은 맨 아래 */}
+      <SettingsGroup title={t.group_family} />
       {linked ? (
         <>
-        <View style={styles.section}>
-          <Text20 size={24} weight="bold">{t.share_row}</Text20>
-          <Text20>{consented ? t.shared_now : t.not_shared_now}</Text20>
+          <Text20 style={styles.sub}>{t.share_scope}</Text20>
+          <SettingsRow
+            testID="settings-row-share"
+            title={t.share_row}
+            sub={consented ? t.shared_now : t.not_shared_now}
+            accessibilityLabel={`${t.share_row}, ${consented ? t.shared_now : t.not_shared_now}`}
+            accessibilityHint=""
+            noChevron
+            onPress={() => setConfirm(confirm !== 'none' ? 'none' : consented ? 'stop' : 'resume')}
+          />
+          {/* 보여 주지 않는 중이면 '다시 보여 주기'를 행 아래에 분명히(띠 '다시 정하기'로 온 사람이 찾게, 리뷰 L4) */}
+          {!consented && confirm === 'none' ? (
+            <BigButton variant="secondary" label={t.resume} onPress={() => setConfirm('resume')} />
+          ) : null}
           {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
           {confirm === 'stop' ? (
             <View style={styles.confirm}>
@@ -77,26 +89,15 @@ export function ParentSettings() {
               <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
               <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
             </View>
-          ) : consented ? (
-            <BigButton variant="secondary" label={t.stop} onPress={() => setConfirm('stop')} />
-          ) : (
-            <BigButton label={t.resume} onPress={() => setConfirm('resume')} />
-          )}
+          ) : null}
           {error ? (
             <View style={styles.error} accessibilityLiveRegion="polite">
               <Text20 size={24} weight="bold" style={styles.errorTitle}>{error.title}</Text20>
               <Text20>{error.body}</Text20>
             </View>
           ) : null}
-        </View>
-        {/* P16 연결된 가족(copy 11-3 settings.family_row): 누구와 연결됐는지 확인·그만두기 */}
-        <View style={styles.section}>
-          <BigButton variant="secondary" label={t.family_row} onPress={() => navigation.navigate('Family')} />
-        </View>
-        <View style={styles.section}>
-          <BigButton variant="danger" label={t.delete_row} onPress={() => navigation.navigate('DeleteAccount')} />
-          <Text20 style={styles.sub}>{t.delete_hint}</Text20>
-        </View>
+          {/* P16 연결된 가족(copy 11-3 settings.family_row): 누구와 연결됐는지 확인·그만두기 */}
+          <SettingsRow testID="settings-row-family" title={t.family_row} onPress={() => navigation.navigate('Family')} />
         </>
       ) : (
         <View style={styles.section}>
@@ -105,11 +106,21 @@ export function ParentSettings() {
           <BigButton variant="secondary" label={copy.course.write_code} onPress={() => navigation.push('Connect', {from: 'course'})} />
         </View>
       )}
-      {/* 앱 정보: AI 그림 고지 1줄 */}
-      <View style={styles.section}>
-        <Text20 weight="bold">{t.app_info}</Text20>
-        <Text20 style={styles.sub}>{t.ai_notice}</Text20>
-      </View>
+      <SettingsGroup title={t.group_sound} />
+      <SfxRow />
+      <SettingsGroup title={t.group_app} />
+      {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
+      {/* TODO(dev-menu 합칠 때): 버전 줄은 SettingsRow 로 이 아래에, devGate 허용(staging·개발)일 때만 onPress=versionTap, production 은 누르지 않는 글 행 */}
+      <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
+      {linked ? (
+        <SettingsRow
+          testID="settings-row-delete"
+          danger
+          title={t.delete_row}
+          sub={t.delete_hint}
+          onPress={() => navigation.navigate('DeleteAccount')}
+        />
+      ) : null}
     </Screen>
   );
 }

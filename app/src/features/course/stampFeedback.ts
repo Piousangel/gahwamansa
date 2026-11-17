@@ -1,4 +1,5 @@
-import {NativeModules, Platform} from 'react-native';
+import {Platform} from 'react-native';
+import {hapticConfirm} from '../../ui/haptic';
 import {prefs as defaultPrefs, type Prefs} from '../../lib/prefs';
 import type {Ringer} from '../../lib/audioPolicy';
 
@@ -82,10 +83,7 @@ function defaultPlayer(): SoundPlayer | null {
 // API 30 미만은 VIRTUAL_KEY). 권한이 필요 없고 시스템 '터치 진동' 끔 설정을 따른다(리뷰 M5).
 // iOS 는 빌드 1 Android 우선이라 보류(DECISIONS 11-18). 모듈이 없으면(테스트·iOS) 아무것도 하지 않는다.
 function defaultVibrate() {
-  const m = (NativeModules as {HapticModule?: {confirm(): void}}).HapticModule;
-  if (Platform.OS === 'android' && m) {
-    m.confirm();
-  }
+  hapticConfirm();
 }
 
 // 벨소리 모드: iOS 는 Ambient 카테고리가 무음 스위치를 따르므로 normal. Android 는 react-native-volume-manager(승인됨)
