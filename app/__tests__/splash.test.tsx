@@ -50,6 +50,9 @@ test('런처 아이콘: 적응형 전경·배경·단색 PNG 레이어 + 레거�
     expect(xml).toContain('@mipmap/ic_launcher_foreground');
     expect(xml).toContain('@mipmap/ic_launcher_monochrome');
   }
+  for (const n of ['ic_launcher', 'ic_launcher_round']) {
+    expect(same(android(`src/main/res/mipmap-anydpi-v26/${n}.xml`), brand(`android/res/mipmap-anydpi-v26/${n}.xml`))).toBe(true);
+  }
   for (const d of DPIS) {
     for (const n of ['ic_launcher', 'ic_launcher_round', 'ic_launcher_foreground', 'ic_launcher_background', 'ic_launcher_monochrome']) {
       expect(same(android(`src/main/res/mipmap-${d}/${n}.png`), brand(`android/res/mipmap-${d}/${n}.png`))).toBe(true);
