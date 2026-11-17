@@ -32,7 +32,7 @@ export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
     <View>
       <View style={styles.cells} accessibilityLabel={`입력한 번호 ${formatCode(value)}`}>
         {Array.from({length: CODE_LENGTH}).map((_, i) => (
-          <View key={i} style={styles.cell}>
+          <View key={i} testID={`code-cell-${i}`} style={[styles.cell, i === Math.min(value.length, CODE_LENGTH - 1) && value.length < CODE_LENGTH ? styles.cellNow : null]}>
             <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.cellText}>{value[i] ?? ''}</Text>
           </View>
         ))}
@@ -54,10 +54,13 @@ export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
 }
 const styles = StyleSheet.create({
   cells: {flexDirection: 'row', gap: 8, marginBottom: 16},
-  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
+  // 칸 = 채울 자리: 옅은 면 + 굵은 아래 선. 지금 쓸 칸은 굵은 테두리(action, 대비 7.05)와 흰 면으로 강조
+  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 4, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
+  cellNow: {borderWidth: 4, borderBottomWidth: 4, borderColor: color.action, backgroundColor: color.card},
   cellText: {fontSize: 34, color: color.ink, fontWeight: 'bold'},
   row: {flexDirection: 'row', gap: 8, marginBottom: 8},
-  key: {flex: 1, minHeight: size.codeBox, borderRadius: radius.card, backgroundColor: color.card, borderWidth: 3, borderColor: color.line, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
-  keyPressed: {backgroundColor: color.actionSoft, borderColor: color.action},
+  // 키 = 누르는 버튼: 채워진 면(paperEdge, 글자 대비 5.76), 테두리 없음. 눌림은 actionSoft(6.03)
+  key: {flex: 1, minHeight: size.codeBox, borderRadius: radius.card, backgroundColor: color.paperEdge, borderWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
+  keyPressed: {backgroundColor: color.actionSoft},
   keyText: {color: color.ink, fontWeight: 'bold', textAlign: 'center'},
 });

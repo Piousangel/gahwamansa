@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AppState} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {initialWindowMetrics, SafeAreaProvider} from 'react-native-safe-area-context';
 import type {Api, StepName, TodayContent} from '../features/types';
 import {SessionContext} from './session';
 import {ParentStack} from './ParentStack';
@@ -161,7 +161,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SessionContext.Provider value={value}>
         <NavigationContainer>{body}</NavigationContainer>
       </SessionContext.Provider>

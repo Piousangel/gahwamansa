@@ -1,14 +1,16 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, TextInput} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
+import {BackBar} from '../../app/BackBar';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, radius} from '../../ui/tokens';
 import {copy, offlineMessage} from '../../copy/copy';
 import {hasReason, isOffline} from '../types';
-import {CodeEntry} from '../link/CodeEntry';
+import {OtpField} from './OtpField';
+import {TextLink} from '../link/TextLink';
 
 const t = copy.login;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -16,10 +18,12 @@ const RESEND_WAIT_MS = 60 * 1000; // 다시 받기 대기(남용·연타 방지)
 const CODE_VALID_MS = 10 * 60 * 1000; // 메일 템플릿 기준 유효 10분
 
 // 자녀 로그인: 이메일 -> 메일로 온 인증번호 6자리(Supabase OTP). 성공하면 시작 화면(ChildGate)부터 다시 정한다.
+// 주 버튼은 하단 고정 영역(내비게이션 바 위), 보조는 그 안. 이전: 이메일 단계는 역할 선택, 번호 단계는 이메일 단계.
 export function ChildLogin() {
   const navigation = useNavigation();
   const {api, resetRole} = useSession();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [stage, setStage] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export function ChildLogin() {
       await api.sendEmailCode(addr);
       sentAt.current = Date.now();
       setStage('code');
+      setCode('');
       setNote(again ? t.resent : null);
       startCooldown();
     } catch (e) {
@@ -71,28 +76,35 @@ export function ChildLogin() {
     }
   };
 
-  const verify = async (code: string): Promise<boolean> => {
+  const verify = async () => {
     setBusy(true);
     setNote(null);
     try {
       await api.verifyEmailCode(email.trim(), code);
       navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
-      return true;
     } catch (e) {
       // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
       const expired = Date.now() - sentAt.current > CODE_VALID_MS;
       setNote(
         hasReason(e, 'otp_expired') ? (expired ? t.expired : t.bad_code) : isOffline(e) ? offlineMessage.title : t.failed.title,
       );
-      return false;
+      setCode('');
     } finally {
       setBusy(false);
     }
   };
 
+  const toEmail = useCallback(() => {
+    setStage('email');
+    setNote(null);
+  }, []);
+  const noteView = note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null;
+
   if (stage === 'email') {
     return (
-      <Screen>
+      <Screen
+        top={<BackBar onBack={resetRole} />}
+        bottom={<BigButton label={t.send} disabled={busy} onPress={() => send(false)} />}>
         <Text20 size={28} weight="bold">{t.title}</Text20>
         <Text20>{t.hint}</Text20>
         <TextInput
@@ -107,33 +119,30 @@ export function ChildLogin() {
           keyboardType="email-address"
           style={styles.input}
         />
-        {note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null}
-        <BigButton label={t.send} disabled={busy} onPress={() => send(false)} />
-        <BigButton variant="secondary" label={t.back} onPress={resetRole} />
+        {noteView}
       </Screen>
     );
   }
   return (
-    <Screen>
+    <Screen
+      top={<BackBar onBack={toEmail} />}
+      bottom={
+        <>
+          <TextLink label={t.resend} disabled={busy || !canResend} onPress={() => send(true)} />
+          <TextLink label={t.other_email} onPress={toEmail} />
+          <BigButton label={t.verify} disabled={busy || code.length !== 6} onPress={verify} />
+        </>
+      }>
       <Text20 size={26} weight="bold">{t.code_title}</Text20>
       <Text20>{t.sent.split('{이메일}').join(email.trim())}</Text20>
+      <OtpField value={code} onChange={setCode} />
       <Text20>{t.code_valid}</Text20>
       <Text20>{t.code_hint}</Text20>
-      {note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null}
-      <CodeEntry submitLabel={t.verify} busy={busy} onSubmit={verify} />
-      <BigButton variant="secondary" label={t.resend} disabled={busy || !canResend} onPress={() => send(true)} />
-      <BigButton
-        variant="secondary"
-        label={t.other_email}
-        onPress={() => {
-          setStage('email');
-          setNote(null);
-        }}
-      />
+      {noteView}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  input: {minHeight: 56, fontSize: 20, borderWidth: 2, borderColor: color.line, borderRadius: radius.chip, backgroundColor: color.card, paddingHorizontal: 12, marginVertical: 12, color: color.ink},
+  input: {minHeight: 64, fontSize: 22, borderBottomWidth: 4, borderColor: color.action, borderRadius: radius.input, backgroundColor: color.paperSoft, paddingHorizontal: 12, marginVertical: 12, color: color.ink},
 });

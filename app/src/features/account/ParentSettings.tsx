@@ -5,6 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, radius} from '../../ui/tokens';
@@ -45,9 +46,12 @@ export function ParentSettings() {
   return (
     <Screen
       top={
-        <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>
-          {copy.settings.open}
-        </Text20>
+        <>
+          <BackBar />
+          <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>
+            {copy.settings.open}
+          </Text20>
+        </>
       }
       bottom={<BigButton variant="secondary" label={t.back} onPress={() => navigation.goBack()} />}>
       <View style={styles.section}>

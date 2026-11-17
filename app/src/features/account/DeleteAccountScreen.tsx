@@ -3,6 +3,7 @@ import {StyleSheet, TextInput, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, FONT_SCALE_MAX_BODY, radius} from '../../ui/tokens';
@@ -90,7 +91,7 @@ export function DeleteAccountScreen({role}: Props) {
   );
 
   return (
-    <Screen bottom={dock}>
+    <Screen top={<BackBar />} bottom={dock}>
       {child && scope === null ? (
         <Text20>{appCopy.loading}</Text20>
       ) : child ? (

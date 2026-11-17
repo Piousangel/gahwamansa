@@ -134,9 +134,7 @@ test('10분이 지나 틀리면 시간이 지났다고 알린다', async () => {
   await act(async () => {
     jest.advanceTimersByTime(11 * 60 * 1000);
   });
-  for (const d of '000000') {
-    fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
-  }
+  fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000');
   await press('확인하기');
   await waitFor(() => screen.getByText('인증번호 시간이 지났어요. 다시 받아 주세요'));
 });
@@ -145,7 +143,7 @@ test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/자녀예요/);
   await waitFor(() => screen.getByText('이메일로 시작해요'));
-  await press('처음으로');
+  await press('이전 화면으로'); // 이메일 단계의 이전 = 역할 선택
   await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
 });
 

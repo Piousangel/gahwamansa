@@ -2,6 +2,7 @@ import React from 'react';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
@@ -11,6 +12,8 @@ import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
 export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'HangulStep'>) {
+  // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
+  const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
   const {content} = useSession();
   if (!content?.photo) {
@@ -23,6 +26,7 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
   };
   return (
     <Screen
+      top={<BackBar onBack={toCourseHome} />}
       bottom={
         error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.hangul} loading={busy} onPress={go} />
       }>

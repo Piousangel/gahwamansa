@@ -4,6 +4,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
@@ -49,7 +50,7 @@ export function RelationScreen() {
   };
 
   return (
-    <Screen>
+    <Screen top={<BackBar />} bottom={<BigButton label={t.next} disabled={busy} onPress={next} />}>
       <Text20 size={28} weight="bold">{t.title}</Text20>
       <Text20>{t.hint}</Text20>
       {PARENT_TITLES.map(p => (
@@ -58,7 +59,6 @@ export function RelationScreen() {
       <Text20>{t.fallback}</Text20>
       <Text20>{t.later}</Text20>
       {failed ? <Text20 accessibilityLiveRegion="polite">{failed}</Text20> : null}
-      <BigButton label={t.next} disabled={busy} onPress={next} />
     </Screen>
   );
 }

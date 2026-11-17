@@ -3,6 +3,7 @@ import {Image, StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, shadow} from '../../ui/tokens';
@@ -13,6 +14,8 @@ import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
 export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
+  // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
+  const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
   const [imageFailed, setImageFailed] = useState(false);
   const {content} = useSession();
@@ -28,6 +31,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   };
   return (
     <Screen
+      top={<BackBar onBack={toCourseHome} />}
       bottom={
         error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
       }>

@@ -1,6 +1,7 @@
 import React from 'react';
 import {Share, StyleSheet, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
+import {Screen} from '../../ui/Screen';
 import {BigButton} from '../../ui/BigButton';
 import {formatCode} from '../../ui/codeInputLogic';
 import {color, radius} from '../../ui/tokens';
@@ -15,15 +16,24 @@ type Props = {
   sendLabel: string;
   primaryLabel: string;
   onPrimary: () => void;
+  top?: React.ReactNode; // 이전 바 등
 };
 
-export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary}: Props) {
+export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary, top}: Props) {
   const shown = formatCode(code);
   const send = () => {
     Share.share({message: shareMessage.split('{번호}').join(shown)}).catch(() => {});
   };
+  // 보내기·다음 버튼은 하단 고정 영역(내비게이션 바 위)
   return (
-    <>
+    <Screen
+      top={top}
+      bottom={
+        <>
+          <BigButton label={sendLabel} onPress={send} />
+          <BigButton variant="secondary" label={primaryLabel} onPress={onPrimary} />
+        </>
+      }>
       <Text20 size={28} weight="bold">{title}</Text20>
       <View style={styles.box} accessible accessibilityLabel={`번호 ${code.split('').join(' ')}`}>
         <Text20 size={44} weight="bold" style={styles.code}>{shown}</Text20>
@@ -31,9 +41,7 @@ export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLa
       {lines.map(l => (
         <Text20 key={l}>{l}</Text20>
       ))}
-      <BigButton label={sendLabel} onPress={send} />
-      <BigButton variant="secondary" label={primaryLabel} onPress={onPrimary} />
-    </>
+    </Screen>
   );
 }
 

@@ -1,28 +1,15 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {CodeInput} from '../../ui/CodeInput';
-import {BigButton} from '../../ui/BigButton';
-import {canSubmit, clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
+import {clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
 
-// 6자리 번호 쓰기(역할에 묶이지 않음): 어르신의 가족 번호, 자녀의 메일 인증번호에 같이 쓴다.
-// onSubmit 이 false 를 돌려주면 입력을 비운다(틀린 번호).
-type Props = {submitLabel: string; busy?: boolean; onSubmit: (code: string) => Promise<boolean | void>};
-
-export function CodeEntry({submitLabel, busy, onSubmit}: Props) {
-  const [code, setCode] = useState('');
-  const submit = async () => {
-    if ((await onSubmit(code)) === false) {
-      setCode('');
-    }
-  };
+// 6자리 번호 쓰기(역할에 묶이지 않음, 큰 키패드). 제출 버튼은 화면의 하단 고정 영역에 둔다.
+export function CodeEntry({value, onChange}: {value: string; onChange: (next: string) => void}) {
   return (
-    <>
-      <CodeInput
-        value={code}
-        onDigit={d => setCode(c => inputDigit(c, d))}
-        onDelete={() => setCode(deleteOne)}
-        onClear={() => setCode(clearAll())}
-      />
-      <BigButton label={submitLabel} disabled={!canSubmit(code) || busy} onPress={submit} />
-    </>
+    <CodeInput
+      value={value}
+      onDigit={d => onChange(inputDigit(value, d))}
+      onDelete={() => onChange(deleteOne(value))}
+      onClear={() => onChange(clearAll())}
+    />
   );
 }

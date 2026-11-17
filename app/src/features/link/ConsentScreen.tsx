@@ -3,6 +3,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
@@ -50,16 +51,22 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   if (declined) {
     return (
-      <Screen>
+      <Screen bottom={<BigButton label={copy.consent.declined_button} onPress={() => navigation.navigate('CourseHome')} />}>
         <Text20 size={28} weight="bold">{copy.consent.declined_notice}</Text20>
         <Text20>{copy.consent.declined_detail}</Text20>
         <Text20>{copy.consent.declined_reassure}</Text20>
-        <BigButton label={copy.consent.declined_button} onPress={() => navigation.navigate('CourseHome')} />
       </Screen>
     );
   }
   return (
-    <Screen>
+    <Screen
+      top={<BackBar />}
+      bottom={
+        <>
+          <BigButton label={copy.consent.accept} disabled={busy} onPress={accept} />
+          <BigButton variant="secondary" label={copy.consent.decline} onPress={decline} />
+        </>
+      }>
       <Text20 size={30} weight="bold">{copy.consent.title}</Text20>
       {copy.consent.body.map(t => (
         <Text20 key={t} size={22}>{t}</Text20>
@@ -71,8 +78,6 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
           <Text20>{shown.body}</Text20>
         </>
       ) : null}
-      <BigButton label={copy.consent.accept} disabled={busy} onPress={accept} />
-      <BigButton variant="secondary" label={copy.consent.decline} onPress={decline} />
     </Screen>
   );
 }

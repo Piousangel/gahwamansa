@@ -3,6 +3,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
@@ -12,6 +13,8 @@ import {isServerError} from '../types';
 import {errorMessage, useFinishStep} from './useFinishStep';
 
 export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
+  // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
+  const toCourseHome = () => navigation.popTo('CourseHome');
   const {api, consented, content} = useSession();
   const {finish, error, setError} = useFinishStep();
   const [saving, setSaving] = useState(false);
@@ -48,6 +51,7 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
 
   return (
     <Screen
+      top={<BackBar onBack={toCourseHome} />}
       bottom={
         error ? (
           <StepError error={error} onRetry={confirm} />

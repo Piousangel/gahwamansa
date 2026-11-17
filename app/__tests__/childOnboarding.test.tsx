@@ -22,7 +22,7 @@ async function loginAsChild(api: ReturnType<typeof createFakeApi>) {
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
-  await typeDigits(EMAIL_CODE);
+  fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), EMAIL_CODE);
   await press('확인하기');
 }
 
@@ -50,7 +50,7 @@ test('틀린 인증번호는 안내한다', async () => {
   await press(/자녀예요/);
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
-  await typeDigits('000000');
+  fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000');
   await press('확인하기');
   await waitFor(() => screen.getByText('인증번호가 맞지 않아요. 가장 최근 메일의 번호를 확인해 주세요'));
 });

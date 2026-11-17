@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy, Message} from '../../copy/copy';
@@ -41,9 +42,8 @@ export function ChildGate() {
 
   if (parentPhone) {
     return (
-      <Screen>
+      <Screen top={<BackBar onBack={resetRole} />} bottom={<BigButton label={copy.login.back} onPress={resetRole} />}>
         <Text20 size={26} weight="bold">{copy.login.parent_device}</Text20>
-        <BigButton label={copy.login.back} onPress={resetRole} />
       </Screen>
     );
   }

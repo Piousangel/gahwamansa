@@ -99,21 +99,29 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   if (linked) {
     const d = copy.connect_done;
     return (
-      <Screen>
+      <Screen
+        bottom={
+          <BigButton
+            label={d.button}
+            onPress={() => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Tabs'}]}))}
+          />
+        }>
         <Text20 size={28} weight="bold">{d.title}</Text20>
         {d.body.map(l => (
           <Text20 key={l}>{withTitle(l, title)}</Text20>
         ))}
-        <BigButton
-          label={d.button}
-          onPress={() => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Tabs'}]}))}
-        />
       </Screen>
     );
   }
   const w = copy.connect_wait;
   return (
-    <Screen>
+    <Screen
+      bottom={
+        <>
+          <BigButton label={w.show_code} disabled={!state} onPress={showCode} />
+          <BigButton variant="secondary" label={w.send} disabled={!state?.code} onPress={send} />
+        </>
+      }>
       <Text20 size={28} weight="bold">{w.title}</Text20>
       {state ? <Text20>{withTitle(w.body, title)}</Text20> : <Text20>{appCopy.loading}</Text20>}
       {error ? (
@@ -122,8 +130,6 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           <BigButton variant="secondary" label={error.button} onPress={check} />
         </>
       ) : null}
-      <BigButton label={w.show_code} disabled={!state} onPress={showCode} />
-      <BigButton variant="secondary" label={w.send} disabled={!state?.code} onPress={send} />
     </Screen>
   );
 }
