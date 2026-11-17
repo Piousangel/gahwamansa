@@ -245,6 +245,17 @@ android {
         flavor.buildConfigField "String", "SUPABASE_URL", "\"${e.SUPABASE_URL}\""
         flavor.buildConfigField "String", "SUPABASE_PROJECT_REF", "\"${e.SUPABASE_PROJECT_REF}\""
         flavor.buildConfigField "boolean", "ENV_PLACEHOLDER", "${e.PLACEHOLDER}"
+        // 카톡 초대 링크 App Links(https://<host>/c#123456). 도메인 미정 → 기본 비활성(activity-alias enabled=false).
+        // 켜기: app/env/<flavor>.env 에 APP_LINK_HOST=<도메인> 또는 -PappLinkHost=<도메인>(로컬 확인용, 모든 flavor)
+        // 스파이크 기록: docs/team/spikes/2026-11-17-install-referrer-applinks.md
+        def linkHost = (project.findProperty("appLinkHost") ?: e.APP_LINK_HOST ?: "").toString().trim()
+        if (linkHost && !(linkHost ==~ /[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+/)) {
+            throw new GradleException("APP_LINK_HOST 는 소문자 도메인만(스킴·경로 없이): ${linkHost}")
+        }
+        flavor.manifestPlaceholders += [
+            appLinkHost    : linkHost ?: "applinks.invalid",
+            appLinksEnabled: linkHost ? "true" : "false",
+        ]
     }
     sourceSets {
         // 스테이징 런처·스플래시(배지 T)는 브랜드 원본 폴더를 직접 연결(복사본을 두지 않음). 앱 이름은 src/staging/res
@@ -326,6 +337,9 @@ android.applicationVariants.configureEach { variant ->
 dependencies {
     // 시스템 스플래시(Android 12+ SplashScreen API, 24~30 은 같은 모습 compat). 정확한 버전 고정(1.2.0, 2025-11 배포)
     implementation("androidx.core:core-splashscreen:1.2.0")
+    // Google Play Install Referrer(공식 클라이언트, 정확한 버전 고정). 첫 실행 1회만 읽는다 — InstallReferrerModule
+    // https://developer.android.com/google/play/installreferrer/library
+    implementation("com.android.installreferrer:installreferrer:2.2")
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

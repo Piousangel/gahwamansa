@@ -25,6 +25,21 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <!-- 카톡 초대 링크 https://<host>/c#123456 → MainActivity(번호는 URL 조각, JS 가 Linking 으로 읽음).
+           도메인 미정이라 기본 비활성(appLinksEnabled=false): 비활성 alias 의 intent-filter 는 등록·검증되지 않는다.
+           host 는 build.gradle 의 APP_LINK_HOST / -PappLinkHost. 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md -->
+      <activity-alias
+        android:name=".InviteLinkActivity"
+        android:targetActivity=".MainActivity"
+        android:enabled="${appLinksEnabled}"
+        android:exported="true">
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="${appLinkHost}" android:path="/c" />
+        </intent-filter>
+      </activity-alias>
       <!-- 카카오톡이 없을 때 카카오계정(웹) 로그인에서 앱으로 돌아오는 화면. scheme 은 kakao{네이티브 앱 키}(공개 값) -->
       <activity
         android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"

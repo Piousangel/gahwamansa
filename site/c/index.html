@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 번호가 담긴 링크라 검색·미리보기 수집 금지. 조각(#)은 서버로 가지 않지만 페이지 자체도 색인하지 않는다 -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>가족 연결 - 가화만사성</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* 초안: 어르신이 읽는 페이지. 큰 글자·큰 버튼(최소 56px), 색은 ../style.css 토큰만 */
+  .code{font-size:2.6rem;font-weight:800;letter-spacing:.12em;text-align:center;margin:12px 0;font-variant-numeric:tabular-nums}
+  .btn{display:block;width:100%;min-height:56px;margin:12px 0;padding:14px 16px;border-radius:14px;border:2px solid var(--accent);
+       background:var(--accent);color:var(--bg);font-weight:800;font-size:1.1rem;text-align:center;text-decoration:none}
+  .btn.sub{background:var(--card);color:var(--accent)}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main>
+<!--
+  초대 링크 안내 페이지 초안 (스파이크 docs/team/spikes/2026-11-17-install-referrer-applinks.md)
+  링크 모양: https://<도메인>/c#123456  — 번호는 URL 조각(#)이라 서버 접근 기록에 남지 않는다.
+  흐름:
+   1) 앱이 있고 App Links 검증됨 → 이 페이지가 열리지 않고 앱이 바로 열림(일반 브라우저). 카톡 인앱 브라우저는 이 페이지를 열 수 있음.
+   2) 이 페이지가 열리면: 번호를 크게 보여 주고
+      - [앱에서 열기]: intent://<도메인>/c?code=번호#Intent;scheme=https;package=…;S.browser_fallback_url=<Play 링크>;end
+        (조각 자리를 #Intent 가 쓰므로 번호는 쿼리로. intent:// 는 서버에 요청되지 않는다. 사용자가 눌러야 동작 — 자동 이동 안 함)
+      - [앱 설치하기]: https://play.google.com/store/apps/details?id=…&referrer=code%3D번호  → 설치 후 첫 실행에 Install Referrer 로 번호 자동 채움
+   3) JS 가 안 돌면: noscript 안내(카톡 메시지의 번호를 직접 입력)
+  TODO(사용자): HOST 를 실제 도메인으로, 배포 위치에 /.well-known/assetlinks.json 함께 올리기
+-->
+<h1>가족이 연결 번호를 보냈어요</h1>
+
+<div id="has-code" hidden>
+  <p>가화만사성 앱에 이 번호를 넣으면 가족과 연결돼요.</p>
+  <p class="code" id="code" aria-label="연결 번호"></p>
+  <a class="btn" id="open-app" href="#" hidden>앱에서 열기</a>
+  <a class="btn sub" id="install" href="#">앱 설치하기</a>
+  <p class="meta">설치한 뒤 앱을 처음 열면 번호가 미리 채워져 있어요. 안 채워져 있으면 위 번호를 직접 넣어 주세요. 번호는 7일 동안 쓸 수 있어요.</p>
+</div>
+
+<div id="no-code" hidden>
+  <p>링크에 번호가 없어요. 가족이 보낸 카톡 메시지에 있는 숫자 6자리를 앱에 직접 넣어 주세요.</p>
+  <a class="btn sub" id="install-plain" href="#">앱 설치하기</a>
+</div>
+
+<noscript>
+  <p class="box">가족이 보낸 카톡 메시지에 있는 <strong>숫자 6자리</strong>를 가화만사성 앱에 직접 넣어 주세요.</p>
+</noscript>
+
+<script>
+(function () {
+  // ---- 설정(도메인 확정 후 사용자) ----
+  var HOST = 'example.test';             // TODO: 실제 도메인(앱 APP_LINK_HOST 와 같은 값)
+  var PACKAGE = 'com.bumojasik.app';      // production 만 Play 에 있다(staging 은 Play 에 없음)
+  // ----------------------------------
+
+  var PLAY = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
+
+  function normalize(raw) {
+    var s = String(raw || '').replace(/[\s-]/g, '');
+    return /^\d{6}$/.test(s) ? s : null;
+  }
+  function readCode() {
+    var h = location.hash ? location.hash.slice(1) : '';
+    try { h = decodeURIComponent(h); } catch (e) { return null; }
+    return normalize(h);
+  }
+  function playUrl(code) {
+    // referrer 값 자체를 한 번 인코딩해 넣는다: referrer=code%3D123456 (Play 가 풀어 앱에 "code=123456" 으로 준다)
+    return code ? PLAY + '&referrer=' + encodeURIComponent('code=' + code) : PLAY;
+  }
+  function intentUrl(code) {
+    return 'intent://' + HOST + '/c?code=' + code +
+      '#Intent;scheme=https;package=' + PACKAGE +
+      ';S.browser_fallback_url=' + encodeURIComponent(playUrl(code)) + ';end';
+  }
+
+  var code = readCode();
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  if (!code) {
+    document.getElementById('no-code').hidden = false;
+    document.getElementById('install-plain').href = PLAY;
+    return;
+  }
+  document.getElementById('has-code').hidden = false;
+  // 번호는 textContent 로만(조각 값은 사용자 입력 — HTML 로 넣지 않는다). 읽기 좋게 3·3
+  document.getElementById('code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
+  document.getElementById('install').href = playUrl(code);
+  if (isAndroid) {
+    var open = document.getElementById('open-app');
+    open.href = intentUrl(code);
+    open.hidden = false;
+  }
+})();
+</script>
+</main>
+</body>
+</html>

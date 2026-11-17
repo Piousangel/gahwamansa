@@ -1,0 +1,23 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bumojasik.app",
+      "sha256_cert_fingerprints": [
+        "TODO_PLAY_APP_SIGNING_SHA256 (Play Console > 설정 > 앱 서명 > 앱 서명 키 인증서 SHA-256)",
+        "TODO_UPLOAD_KEY_SHA256 (내부 테스트 전 adb 설치 확인용, 선택)"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bumojasik.app.staging",
+      "sha256_cert_fingerprints": [
+        "TODO_STAGING_SIGNING_SHA256 (staging 은 Play 에 없음: 실제 배포에 쓰는 키의 SHA-256. debug.keystore 지문은 넣지 않는다)"
+      ]
+    }
+  }
+]
