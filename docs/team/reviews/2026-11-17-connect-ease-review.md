@@ -73,3 +73,48 @@
 
 ## 합치기 판정
 **조건부 합치기 — H1·M1을 고친 뒤 main에 합친다.** 둘 다 몇 줄짜리 수정(리듀서 같은 값 무시, redeeming 중 뒤로 막기)과 회귀 테스트 2~3개면 된다. M2(포커스·알림)는 실기기 TalkBack 확인과 함께 이번 브랜치에서 하는 것을 권장, M3·M4와 낮음 항목은 후속 가능. p3-course-home-v4와는 3파일 단순 충돌이 나므로 먼저 들어가는 쪽 뒤에 다른 쪽이 main을 받아 풀 것.
+
+---
+
+## 재검토 — 2026-11-17 (984d497 리뷰 반영 · 4273a16 main 병합 · 465487c P16 연결된 가족)
+
+### 실행 결과(임시 worktree, 끝난 뒤 제거)
+- 브랜치 그대로: `tsc --noEmit` exit 0, `jest --maxWorkers=2`(통합 제외) **63 suites / 543 tests 통과**
+- 최신 main(3593dc1, 스파이크 Install Referrer·App Links 병합 포함)을 합친 트리: tsc exit 0, jest **64 suites / 614 tests 통과**
+- 통합 테스트(peek·parent_family_list 실서버)는 돌리지 않음
+- merge-tree: main ← child-ease-joy **충돌 없음**(main이 브랜치보다 7커밋 앞섬, 텍스트 충돌 없음). p3-course-home-v4 ↔ child-ease-joy **여전히 3파일 단순 충돌**(`ParentStack.tsx` ParentParams 줄 — 이제 `Family` 추가로 범위가 조금 넓어짐, 두 `copy.ko.json` 끝 묶음). 양쪽을 합치면 됨
+
+### 1차 지적 해결 여부
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| H1 같은 번호 재확인(시도 한도 소모) | **해결** | 리듀서 `edit` 같은 값이면 그대로(`connectMachine.ts` edit), 훅 `codeRef`로 seq도 그대로. 회귀 테스트 2건(맞지 않음 뒤 연타·확인 중 키 → peek 1회) |
+| M1 연결 중 뒤로 | **해결** | 리듀서 `other`가 redeeming이면 무시, 훅 `busyRef`, ConfirmView BackBar `busy ? noop`(하드웨어 뒤로도 삼킴). 회귀 테스트 있음 |
+| M2 포커스·live region | **해결** | 상태별 `Screen key`로 다시 마운트 → `Screen`이 300ms 뒤 첫 머리글에 포커스(R2). 칸 아래 줄은 늘 있는 `View accessibilityLiveRegion` 하나에 글만 바뀜. 맞지 않음 때 `focusLater(groupRef)`. 실기기 TalkBack 확인은 여전히 필요 |
+| M3 peek 검증 | **해결** | `api/contract/invite.ts parsePeekResult`(reason 목록·호칭 목록·retry 숫자), 계약 밖이면 `ServerError('contract_mismatch')` → 서버 오류 패널. 호칭이 없으면 null → "번호만" 상태(시안 P1c 둘째 상태와 맞음) |
+| M4 시안 차이 | **해결(1건 남음)** | 키 반경 14·테두리 2, 칸 68·반경 12(`radius.chip`)·아래 선 3, 맞지 않음 경고 아이콘, FS_link 봉투 아이콘. 남은 것: `CodeInput.tsx:21 KEY_RADIUS = 14`가 토큰 밖 숫자(주석에 "리드 결정 대기") → 리드가 토큰(`radius.key` 등) 추가를 결정해야 함. 칸 68로 `KEYPAD_FIXED`가 16 늘어 작은 화면에서 스크롤 모드(4단계)로 더 자주 빠짐 — 실기기 3버튼 내비 확인 권장 |
+| L1 prefill 형식 | 해결(`validPrefill`), 화면이 떠 있을 때 새 링크는 TODO로 남김 |
+| L2 빈 호칭 redeem | 해결(`title !== undefined`, null 허용) |
+| L3 retryAfterSec | 해결(상태에서 제거) |
+| L6 Gradle 형식 검사 | 해결(`SHARE_LINK_BASE` https 허용 목록) — 단 아래 N1 참고 |
+| L7 enterCode | 해결(확인 화면 없으면 throw, 실패 보기는 `enterCode(code, false)`) |
+| L8 테스트 완화·무의미 단언 | 해결 |
+| L10 NBSP | 해결(`' '` 이스케이프 복구) |
+
+### 0029 퍼널 이벤트
+- `EVENT_NAMES`에 `link_opened`·`referrer_found`·`code_prefilled`, 속성 `source`(app_link·referrer·manual) — dev-server-notes 3절과 글자까지 일치. 보내는 모양도 계약대로: `link_opened{source:'app_link'}`, `referrer_found{}`, `code_prefilled{source}`, 성공은 `parent_code_redeemed`. 번호 값은 어디에도 없음(테스트 `JSON.stringify(log.mock.calls)`에 번호 없음 검사 있음). **문제 없음.**
+
+### 새 지적
+
+#### 중간
+- **N1. 링크 도메인 원본이 둘이 된다(main 스파이크와 합칠 때).** main은 `APP_LINK_HOST`(호스트만, 테스트 도메인·staging=production 금지 검사, 매니페스트 App Links와 같은 값)를, 이 브랜치는 `SHARE_LINK_BASE`(https://호스트/c)를 따로 둔다. 둘이 어긋나면 자녀가 보낸 링크가 앱이 검증하지 않는 도메인을 가리켜 App Links가 안 열린다. 텍스트 충돌은 없어서 병합은 조용히 된다. 권장: `SHARE_LINK_BASE`를 없애고 `appShareLink`가 `https://${APP_LINK_HOST}/c`로 만들게(원본 하나, ARCHITECTURE·RELEASE "원본 한 곳" 원칙). 최소한 Gradle에서 두 값의 호스트가 같은지 검사.
+- **N2. 스파이크 코드와 이름이 다르다(연결할 때 어긋날 곳).** main `lib/linkSources`는 `InviteSource = 'app_link' | 'install_referrer'`, 분석 이벤트 이름 `invite_code_prefilled`(`inviteAnalyticsEvent`)를 쓰는데, 서버 화이트리스트는 `code_prefilled`·`source` 값 `referrer`, 이 브랜치 `Prefill.source`는 `'link' | 'referrer'`다. 지금은 스파이크가 화면에 연결돼 있지 않아(앱 코드에서 import 없음) 실해는 없다. 연결 작업에서 `inviteAnalyticsEvent`는 쓰지 말고(서버가 거부) `useConnectFlow` 경로 하나로 보내고, source 이름을 계약 하나(`api/contract/events`의 `source`)에 맞출 것.
+- **N3. P16 시트 닫기 문구(리드 결정 반영 필요).** `ParentFamilyScreen.tsx:150 closeLabel={s.cancel}` → X 버튼이 "그만둘래요"로 읽히고 주 버튼(`:153`)도 같은 "그만둘래요"라 같은 말이 두 번 나온다. DECISIONS(main 3593dc1) "시트 닫기 문구는 '닫기'". 권장: `family.stop_sheet.close: "닫기"`를 원본 copy에 추가하고 closeLabel에 사용(자녀 키 `child.cheer.close` 재사용은 하지 말 것). 주 버튼 "그만둘래요"는 11-8 확정 그대로.
+
+#### 낮음
+- **N4. 이미 철회 상태 시트.** `consented`가 false면 `:155`에서 '그만 보여 주기' 갈래를 숨겨(테스트 있음) 동작은 맞다. 그러나 안내 "둘 중 하나를 골라 주세요"와 행 보조 "답 보여 주기만 그만두거나, 모두 지울 수 있어요"는 그대로라 선택지 하나와 말이 맞지 않는다. 철회 상태에서는 안내 줄을 빼거나(문구 추가 없이) 라이터에 한 줄 요청.
+- **N5. P16 시안 1:1 차이.** 목록 간격 앱 10 / 시안 8(`:182`), '그만두기' 행은 시안이 위 구분선(1px lineSoft, 위 여백 8)의 평평한 행인데 앱은 카드(흰 면·반경 22, `:184`), 시트 갈래는 시안이 두 갈래 같은 모양(테두리 2 line, 반경 22, 패딩 16/16/16/20, 오른쪽 화살표)인데 앱은 테두리 3·'모두 지우기' 빨간 테두리·글자, 화살표 없음(`:187`). 빈 상태 안내 줄은 시안이 가운데 정렬. 시안 이전 바 글자 "설정"은 앱 공통 "이전"과 다름(앱 규칙 유지가 맞아 보임). 위 차이는 동결 시안 기준이라 맞추거나 리드 예외로 기록.
+- **N6. 구조.** `features/family`가 `app/session`·`app/BackBar`·`app/ParentStack` 타입을 import(ARCHITECTURE §2 features→app, 기존 정리 계획 12 대상과 같은 패턴), 어르신 화면이 `shared/childError`를 씀(이름만 어색). 정리 계획 목록에 추가 권장.
+- 확인해서 문제 없음: 계약 `api/contract/family.ts`는 0030과 일치(`title` null 허용·호칭 목록 검사, `family[]`의 seq·connected_at·connected_date(YYYY-MM-DD) 검사, 자녀 이름·id 없음). 연결 전 `{title:null, family:[]}` → 빈 상태 + 번호 쓰기(P1, 뒤로 오면 P16). '그만 보여 주기'는 확인 상자 없이 `withdrawConsent` → `setConsented(false)` → 성공 배너 `settings.stopped`(11-8 대체문, 되돌리는 길 안내), 실패는 시트 안 오류 줄. '모두 지우기'는 시트를 닫고 `DeleteAccount`(P9 두 단계)로만 가고 여기서 지우지 않음. BottomSheet 사용은 리드 예외로 허용됨.
+
+### 재검토 판정
+**합치기 가능(조건 1개): N3(닫기 문구)만 고치고 합친다.** 1차 H1·M1~M3은 해결, M4는 토큰 결정 1건만 남음. N1·N2는 이 브랜치를 막을 일은 아니지만 **스파이크 연결 작업 전에** 링크 도메인 원본을 하나로 정해야 한다(리드 결정). p3-course-home-v4와는 3파일 단순 충돌이니 먼저 들어간 쪽 뒤에 다른 쪽이 main을 받아 풀 것.
