@@ -160,3 +160,8 @@
 - v27 새 시트: P16_family(연결된 가족 1·2명, 연결 끊기 두 갈래 시트, 빈 상태), C4_title_dup(호칭 겹침 안내 줄·이름 고르기 시트·바꾼 뒤 토스트·탭 밖 토스트·토스트 위치 규칙), N3_connected(잠금 화면 처음·다시 연결, 앱 안 위쪽 배너, 규칙). 새 문구 (라이터 확인)
 - 구현 대조 3차: _qa/2026-11-17-impl-drift.md #12~27(p3-course-home-v4: 했어요 체크 아이콘 없음·'번호 쓰기 ›' 누락 확인)
 - QA 5폭 × 100/150/200%: P16 60/0, C4_title_dup 60/0, N3 45/0, P7_motion 50/0, P5_P6_review 30/0, P15 75/0, P3 v4 105/0
+
+## 14. 2026-11-18 (게시 없음, 로컬 파일만 — 사용자 요청: 아티팩트 새로 게시 안 함)
+- P7_motion: 결정 2건(해님 없음, 인주 color.brandSealDeep) 명세 반영. design-system/tokens-v3.json color.brandSealDeep 추가
+- P16_family·C4_title_dup·N3_connected: copy 11-8 확정 문구로 교체
+- 구현 대조 4차 #28~35, UX 개선 제안 _qa/ux-improvements-2026-11-18.md(13건)

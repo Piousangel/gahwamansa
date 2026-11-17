@@ -138,6 +138,11 @@
     "accentPeach": {
       "value": "#FFD6C2",
       "role": "첫 화면 소개 아이콘 원(가족). 장식, 정보 전달 안 함. inkTitle 대비 8.99"
+    },
+    "brandSealDeep": {
+      "value": "#C44F2E",
+      "role": "인주(P7 도장 '쾅' 번짐 원, 브랜드 인장 두께). 장식 전용, 정보 전달 안 함, 투명도 0.35 이하로만",
+      "note": "2026-11-18 디자인 리드 결정: 새 이름(stampInk)을 만들지 않고 브랜드 README의 brandSealDeep를 토큰으로 올림. blush(해님 볼)로 대체 금지"
     }
   },
   "colorRules": [
