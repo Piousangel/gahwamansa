@@ -9,7 +9,8 @@
     "no_code_link": "번호가 없어요",
     "no_code_help": "번호는 가족이 앱에서 만들어 줘요",
     "success": "연결됐어요! 이제 함께해요",
-    "view_course": "코스 보기"
+    "view_course": "코스 보기",
+    "code_a11y": "연결 번호 6자리 중 {n}번째 칸"
   },
   "consent": {
     "title": "고른 답을 가족과 나눠요",
@@ -244,13 +245,6 @@
       ]
     }
   },
-  "role": {
-    "title": "어떻게 쓰실 거예요?",
-    "child": "자녀예요",
-    "child_sub": "부모님과 연결할 번호를 만들어요",
-    "parent": "받은 번호가 있어요",
-    "parent_sub": "가족에게 받은 번호를 써요"
-  },
   "login": {
     "title": "이메일로 시작해요",
     "hint": "가족 연결 번호를 만들 때 필요해요",
@@ -274,9 +268,15 @@
       "body": "잠시 뒤에 다시 해 볼까요?",
       "button": "다시 하기"
     },
-    "parent_device": "이 폰은 부모님 폰으로 쓰고 있어요",
     "back": "처음으로",
-    "code_label": "인증번호 6자리"
+    "code_label": "인증번호 6자리",
+    "code_auto_hint": "6자리를 다 쓰면 바로 확인해요",
+    "checking": "인증번호를 확인하고 있어요",
+    "blocked_parent_device": {
+      "title": "이 폰은 부모님 휴대폰으로 쓰고 있어요",
+      "body": "자녀 로그인은 자녀 휴대폰에서 해 주세요",
+      "button": "알겠어요"
+    }
   },
   "relation": {
     "title": "부모님을 어떻게 부르세요?",
@@ -292,7 +292,8 @@
     "use_on": "{호칭} 폰에서 이 번호를 써 주세요",
     "send": "번호 보내기",
     "wait": "연결 기다리기",
-    "share_message": "가화만사성에서 같이 쓸 번호예요. 앱을 열고 번호 6개를 써 주세요. {번호} (7일 동안 쓸 수 있어요)"
+    "share_message": "가화만사성에서 같이 쓸 번호예요. 앱을 열고 번호 6개를 써 주세요. {번호} (7일 동안 쓸 수 있어요)",
+    "show_a11y": "연결 번호 {앞}, {뒤}"
   },
   "connect_wait": {
     "title": "연결을 기다리고 있어요",
@@ -309,8 +310,22 @@
     "button": "앨범으로"
   },
   "nav": {
-    "_status": "임시(라이터 확정 필요)",
     "back": "‹ 이전",
-    "back_a11y": "이전 화면으로"
+    "back_a11y": "이전 화면으로 가기",
+    "back_course": "‹ 오늘 코스",
+    "back_course_a11y": "오늘 코스로 돌아가기"
+  },
+  "first": {
+    "_status": "copy-v3-confirmed 8절 확정",
+    "wordmark": "가화만사성",
+    "tagline": "옛날 사진 한 장으로 가족과 이야기를 나눠요",
+    "polaroid_caption": "마을 입구 나무",
+    "polaroid_ai": "AI가 만든 그림",
+    "polaroid_a11y": "옛날 사진 예시, AI가 만든 그림",
+    "question": "이 휴대폰은 누구 거예요?",
+    "parent": "부모님 휴대폰이에요",
+    "parent_sub": "가족에게 받은 번호를 써요",
+    "child": "자녀 휴대폰이에요",
+    "child_sub": "부모님께 보낼 번호를 만들어요"
   }
 }

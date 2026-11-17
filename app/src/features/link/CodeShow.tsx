@@ -3,6 +3,7 @@ import {Share, StyleSheet, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
 import {Screen} from '../../ui/Screen';
 import {BigButton} from '../../ui/BigButton';
+import {copy} from '../../copy/copy';
 import {formatCode} from '../../ui/codeInputLogic';
 import {color, radius} from '../../ui/tokens';
 
@@ -35,7 +36,7 @@ export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLa
         </>
       }>
       <Text20 size={28} weight="bold">{title}</Text20>
-      <View style={styles.box} accessible accessibilityLabel={`번호 ${code.split('').join(' ')}`}>
+      <View style={styles.box} accessible accessibilityLabel={copy.code.show_a11y.split('{앞}').join(code.slice(0, 3).split('').join(' ')).split('{뒤}').join(code.slice(3).split('').join(' '))}>
         <Text20 size={44} weight="bold" style={styles.code}>{shown}</Text20>
       </View>
       {lines.map(l => (

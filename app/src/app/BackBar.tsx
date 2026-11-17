@@ -20,9 +20,9 @@ export function useBackAction(onBack?: () => void) {
   );
 }
 
-// 상단 "‹ 이전" 바(터치 64 이상, 화면 읽기 "이전 화면으로"). 하드웨어 뒤로가기와 같은 동작.
+// 상단 "‹ 이전" 바(터치 64 이상, 화면 읽기 "이전 화면으로 가기"). 코스 단계는 "‹ 오늘 코스"(코스 홈으로). 하드웨어 뒤로가기와 같은 동작.
 // onBack 을 주지 않으면 스택에서 뒤로 갈 수 있을 때만 보인다(첫 화면에는 없음).
-export function BackBar({onBack}: {onBack?: () => void}) {
+export function BackBar({onBack, course}: {onBack?: () => void; course?: boolean}) {
   const navigation = useNavigation();
   useBackAction(onBack);
   const action = onBack ?? (navigation.canGoBack() ? () => navigation.goBack() : undefined);
@@ -32,12 +32,12 @@ export function BackBar({onBack}: {onBack?: () => void}) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={copy.nav.back_a11y}
+      accessibilityLabel={course ? copy.nav.back_course_a11y : copy.nav.back_a11y}
       onPress={action}
       hitSlop={8}
       style={({pressed}) => [styles.bar, pressed ? styles.pressed : null]}>
       <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.text}>
-        {copy.nav.back}
+        {course ? copy.nav.back_course : copy.nav.back}
       </Text>
     </Pressable>
   );

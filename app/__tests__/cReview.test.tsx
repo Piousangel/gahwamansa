@@ -16,7 +16,7 @@ test('real 시작: 오프라인이라 whoAmI 가 실패하면 멈추지 않고 �
   render(<AppRoot api={api} restore />);
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
   expect(who).toHaveBeenCalledTimes(2);
 });
 
@@ -91,7 +91,7 @@ test('대기 화면: 상태를 불러오기 전에는 번호 다시 보기를 �
 
 async function toLoginCode(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
@@ -119,7 +119,7 @@ test('발송 제한·오프라인 문구', async () => {
     .mockRejectedValueOnce(new ServerError('send_email_code', 'rate_limited', '429'))
     .mockRejectedValueOnce(new OfflineError('x'));
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('요청이 많았어요. 잠시 뒤에 다시 받아 주세요'));
@@ -135,33 +135,32 @@ test('10분이 지나 틀리면 시간이 지났다고 알린다', async () => {
     jest.advanceTimersByTime(11 * 60 * 1000);
   });
   fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000');
-  await press('확인하기');
   await waitFor(() => screen.getByText('인증번호 시간이 지났어요. 다시 받아 주세요'));
 });
 
 test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   await waitFor(() => screen.getByText('이메일로 시작해요'));
-  await press('이전 화면으로'); // 이메일 단계의 이전 = 역할 선택
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await press('이전 화면으로 가기'); // 이메일 단계의 이전 = 역할 선택
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('이미 어르신으로 연결된 폰은 자녀 로그인을 막는다', async () => {
   const api = createFakeApi({linked: true});
   const send = jest.spyOn(api, 'sendEmailCode');
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
-  await waitFor(() => screen.getByText('이 폰은 부모님 폰으로 쓰고 있어요'));
+  await press(/자녀 휴대폰이에요/);
+  await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
   expect(screen.queryByLabelText('이메일 주소')).toBeNull();
   expect(send).not.toHaveBeenCalled();
-  await press('처음으로');
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await press('알겠어요');
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('이메일 입력은 자동 수정·대문자 변환을 끈다', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   const input = await waitFor(() => screen.getByLabelText('이메일 주소'));
   expect(input.props.autoCorrect).toBe(false);
   expect(input.props.autoCapitalize).toBe('none');
@@ -174,11 +173,5 @@ test('호칭 화면: 오프라인이면 오프라인 문구', async () => {
   await waitFor(() => screen.getByText('부모님을 어떻게 부르세요?'));
   await press('번호 만들기');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
-});
-
-test('역할 선택 설명은 버튼의 힌트로 읽힌다', async () => {
-  render(<AppRoot api={createFakeApi()} />);
-  const b = await waitFor(() => screen.getByRole('button', {name: '자녀예요'}));
-  expect(b.props.accessibilityHint).toBe('부모님과 연결할 번호를 만들어요');
 });
 

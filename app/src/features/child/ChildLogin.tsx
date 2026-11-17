@@ -76,11 +76,21 @@ export function ChildLogin() {
     }
   };
 
-  const verify = async () => {
+  // 6자리를 채우면 자동 확인. 같은 번호로 두 번 부르지 않는다(진행 중이면 무시).
+  const verifying = useRef(false);
+  const onCode = (v: string) => {
+    setCode(v);
+    if (v.length === 6 && !verifying.current) {
+      verify(v);
+    }
+  };
+
+  const verify = async (value: string) => {
+    verifying.current = true;
     setBusy(true);
     setNote(null);
     try {
-      await api.verifyEmailCode(email.trim(), code);
+      await api.verifyEmailCode(email.trim(), value);
       navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
     } catch (e) {
       // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
@@ -90,6 +100,7 @@ export function ChildLogin() {
       );
       setCode('');
     } finally {
+      verifying.current = false;
       setBusy(false);
     }
   };
@@ -130,12 +141,12 @@ export function ChildLogin() {
         <>
           <TextLink label={t.resend} disabled={busy || !canResend} onPress={() => send(true)} />
           <TextLink label={t.other_email} onPress={toEmail} />
-          <BigButton label={t.verify} disabled={busy || code.length !== 6} onPress={verify} />
         </>
       }>
       <Text20 size={26} weight="bold">{t.code_title}</Text20>
       <Text20>{t.sent.split('{이메일}').join(email.trim())}</Text20>
-      <OtpField value={code} onChange={setCode} />
+      <OtpField value={code} onChange={onCode} />
+      <Text20 accessibilityLiveRegion="polite">{busy ? t.checking : t.code_auto_hint}</Text20>
       <Text20>{t.code_valid}</Text20>
       <Text20>{t.code_hint}</Text20>
       {noteView}

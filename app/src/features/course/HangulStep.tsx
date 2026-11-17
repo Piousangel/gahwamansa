@@ -26,7 +26,7 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
   };
   return (
     <Screen
-      top={<BackBar onBack={toCourseHome} />}
+      top={<BackBar course onBack={toCourseHome} />}
       bottom={
         error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.hangul} loading={busy} onPress={go} />
       }>

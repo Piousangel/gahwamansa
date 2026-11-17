@@ -17,19 +17,18 @@ async function typeDigits(code: string) {
 
 async function loginAsChild(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   await waitFor(() => screen.getByText('이메일로 시작해요'));
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
-  fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), EMAIL_CODE);
-  await press('확인하기');
+  fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), EMAIL_CODE); // 6자리면 자동 확인
 }
 
 test('첫 화면은 역할 선택: 받은 번호가 있어요 -> 번호 입력', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
-  await press(/받은 번호가 있어요/);
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
+  await press(/부모님 휴대폰이에요/);
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
@@ -37,7 +36,7 @@ test('이메일 형식이 틀리면 보내지 않는다', async () => {
   const api = createFakeApi();
   const send = jest.spyOn(api, 'sendEmailCode');
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'not-an-email');
   await press('인증번호 받기');
   expect(send).not.toHaveBeenCalled();
@@ -47,11 +46,10 @@ test('이메일 형식이 틀리면 보내지 않는다', async () => {
 test('틀린 인증번호는 안내한다', async () => {
   const api = createFakeApi();
   render(<AppRoot api={api} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000');
-  await press('확인하기');
   await waitFor(() => screen.getByText('인증번호가 맞지 않아요. 가장 최근 메일의 번호를 확인해 주세요'));
 });
 
@@ -129,12 +127,12 @@ test('복원: 로그인돼 있고 연결된 자녀는 바로 앨범', async () =
 
 test('어르신 번호 화면에서 not_parent_device 면 처음으로 -> 역할 선택', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/받은 번호가 있어요/);
+  await press(/부모님 휴대폰이에요/);
   await typeDigits('555555');
   await press('다음');
   await waitFor(() => screen.getByText('이 폰에서는 번호를 쓸 수 없어요'));
   await press('처음으로');
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('realApi: 메일 인증번호 보내기·확인', async () => {

@@ -40,10 +40,12 @@ export function ChildGate() {
     decide();
   }, [decide]);
 
+  const blocked = copy.login.blocked_parent_device;
   if (parentPhone) {
     return (
-      <Screen top={<BackBar onBack={resetRole} />} bottom={<BigButton label={copy.login.back} onPress={resetRole} />}>
-        <Text20 size={26} weight="bold">{copy.login.parent_device}</Text20>
+      <Screen top={<BackBar onBack={resetRole} />} bottom={<BigButton label={blocked.button} onPress={resetRole} />}>
+        <Text20 size={26} weight="bold">{blocked.title}</Text20>
+        <Text20>{blocked.body}</Text20>
       </Screen>
     );
   }

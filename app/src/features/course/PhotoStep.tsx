@@ -31,7 +31,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   };
   return (
     <Screen
-      top={<BackBar onBack={toCourseHome} />}
+      top={<BackBar course onBack={toCourseHome} />}
       bottom={
         error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
       }>

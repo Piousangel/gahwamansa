@@ -29,7 +29,7 @@ function captureBack() {
 
 async function toEmail() {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/자녀예요/);
+  await press(/자녀 휴대폰이에요/);
   await waitFor(() => screen.getByText('이메일로 시작해요'));
 }
 
@@ -50,10 +50,10 @@ test('하단 고정 영역은 안드로이드 내비게이션 바(하단 inset) 
   expect((pad as {paddingBottom: number}).paddingBottom).toBeGreaterThanOrEqual(48);
 });
 
-test('인증번호 화면: 확인하기는 하단 고정, 다시 받기·다른 이메일은 그 안의 보조', async () => {
+test('인증번호 화면: 자동 확인이라 확인 버튼 없이 다시 받기·다른 이메일이 하단 고정 영역에', async () => {
   await toOtp();
   const dock = within(screen.getByTestId('screen-dock'));
-  expect(dock.getByRole('button', {name: '확인하기'})).toBeTruthy();
+  expect(screen.queryByRole('button', {name: '확인하기'})).toBeNull();
   expect(dock.getByRole('button', {name: '인증번호 다시 받기'})).toBeTruthy();
   expect(dock.getByRole('button', {name: '다른 이메일 쓰기'})).toBeTruthy();
 });
@@ -65,14 +65,13 @@ test('인증번호는 기본 숫자 키보드(일회용 번호 자동 채우기)
   expect(input.props.textContentType).toBe('oneTimeCode');
   expect(input.props.maxLength).toBe(6);
   expect(screen.queryByLabelText('숫자 1')).toBeNull();
-  expect(screen.getByRole('button', {name: '확인하기'})).toBeDisabled();
-  fireEvent.changeText(input, '24a6810');
-  expect(screen.getByRole('button', {name: '확인하기'})).toBeEnabled(); // 숫자만 남긴다
+  fireEvent.changeText(input, '24a6810'); // 숫자만 남겨 6자리 -> 자동 확인
+  await waitFor(() => screen.getByText('부모님을 어떻게 부르세요?'));
 });
 
 test('어르신 번호 입력은 큰 키패드를 유지한다', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/받은 번호가 있어요/);
+  await press(/부모님 휴대폰이에요/);
   await waitFor(() => screen.getByLabelText('숫자 1'));
 });
 
@@ -89,25 +88,25 @@ test('번호 칸: 지금 쓸 칸이 강조되고, 키는 채워진 면(칸과 �
 
 test('이전 바: 64 이상, 라벨 "이전 화면으로", 첫 화면에는 없다', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
-  expect(screen.queryByLabelText('이전 화면으로')).toBeNull();
-  await press(/자녀예요/);
-  const back = await waitFor(() => screen.getByLabelText('이전 화면으로'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
+  expect(screen.queryByLabelText('이전 화면으로 가기')).toBeNull();
+  await press(/자녀 휴대폰이에요/);
+  const back = await waitFor(() => screen.getByLabelText('이전 화면으로 가기'));
   expect(StyleSheet.flatten(back.props.style).minHeight).toBeGreaterThanOrEqual(64);
   await act(async () => fireEvent.press(back));
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('하드웨어 뒤로가기도 이전 바와 같다(자녀 이메일 -> 역할 선택)', async () => {
   const back = captureBack();
   await toEmail();
   await back();
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('인증번호 단계의 이전은 이메일 단계로', async () => {
   await toOtp();
-  await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로')));
+  await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로 가기')));
   await waitFor(() => screen.getByText('이메일로 시작해요'));
 });
 
@@ -115,21 +114,21 @@ test('코스 진행 중 이전은 확인 없이 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press(/사진 보기/);
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
-  await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로')));
+  await act(async () => fireEvent.press(screen.getByLabelText('오늘 코스로 돌아가기')));
   await waitFor(() => screen.getByText('오늘의 코스'));
   expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
 });
 
 test('어르신 번호 화면의 이전은 역할 선택으로, 설정의 이전은 코스 홈으로', async () => {
   render(<AppRoot api={createFakeApi()} />);
-  await press(/받은 번호가 있어요/);
-  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로'))));
-  await waitFor(() => screen.getByText('어떻게 쓰실 거예요?'));
+  await press(/부모님 휴대폰이에요/);
+  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로 가기'))));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('설정의 이전은 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press('설정');
-  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로'))));
+  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로 가기'))));
   await waitFor(() => screen.getByText('오늘의 코스'));
 });

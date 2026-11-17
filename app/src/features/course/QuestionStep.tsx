@@ -51,7 +51,7 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
 
   return (
     <Screen
-      top={<BackBar onBack={toCourseHome} />}
+      top={<BackBar course onBack={toCourseHome} />}
       bottom={
         error ? (
           <StepError error={error} onRetry={confirm} />
