@@ -130,7 +130,7 @@ describe('공용 컴포넌트 명세 수치', () => {
   });
   test('SelectCard: 높이 132 이상, 글자 32, 저장 중이면 잠금', () => {
     render(<SelectCard label="봄" selected={false} state="saving" onPress={() => {}} />);
-    const card = screen.getByRole('button', {name: '봄'});
+    const card = screen.getByRole('radio', {name: '봄'}); // 화면 읽기는 라디오(talkback-spec R9)
     expect(flat(card.props.style).minHeight).toBeGreaterThanOrEqual(132);
     expect(flat(screen.getByText('봄').props.style).fontSize).toBe(32);
     expect(card).toBeDisabled();

@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {Image, StyleSheet, View} from 'react-native';
+import {Image, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
@@ -19,6 +20,9 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   const {finish, error, busy} = useFinishStep();
   const [imageFailed, setImageFailed] = useState(false);
   const {content} = useSession();
+  // 사진 높이는 화면 높이의 28% 이하(QA B4: 작은 화면에서 회상 질문이 더 보이게). 틀 폭 = 사진 높이 x 272/236 + 안쪽 14x2
+  const {height: winH} = useWindowDimensions();
+  const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236) + 28);
   const photo = content?.photo;
   if (!photo) {
     return null;
@@ -31,11 +35,16 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   };
   return (
     <Screen
-      top={<BackBar course onBack={toCourseHome} />}
+      top={
+        <>
+          <BackBar course onBack={toCourseHome} />
+          <StepHeader name={copy.course.step.photo} n={1} />
+        </>
+      }
       bottom={
         error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
       }>
-      <View style={styles.polaroid}>
+      <View testID="photo-polaroid" style={[styles.polaroid, {maxWidth: frameW}]}>
         {photo.image_url.startsWith('pending://') || imageFailed ? (
           // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
           <View style={[styles.photo, styles.pending]}>

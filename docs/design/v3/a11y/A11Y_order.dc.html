@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>A11Y 읽기 순서</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<!--
+TalkBack 읽기 순서 보드(2026-11-17 디자인 리드). 번호 = 화면 읽기가 읽는 순서. 명세 전문: docs/design/v3/a11y/talkback-spec.md(공통 규칙 R1~R16, 화면별 라벨).
+그림은 시안 렌더에 번호를 얹은 PNG(a11y/img). 시안이 바뀌면 qa/a11yshot.cjs로 다시 그린다.
+-->
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1700px;box-sizing:border-box;padding:28px;background:#EDE7DE;font-family:'Noto Sans KR',sans-serif;display:flex;flex-direction:column;gap:20px">
+<div><div style="font-size:26px;font-weight:900;color:#4E2F14">TalkBack 읽기 순서 · 첫 실행·어르신 코스·자녀 핵심</div>
+<div style="font-size:15px;color:#744821;margin-top:4px;line-height:1.6">공통: 화면에 들어오면 첫 포커스는 제목 · 장식(아이콘·테이프·심볼)은 읽지 않음 · 비활성 버튼은 이유를 힌트로 · 시트가 열리면 시트 제목으로, 닫히면 연 버튼으로 · 상태 변화는 한 번만 알림. 전문 talkback-spec.md</div></div>
+<div style="display:grid;grid-template-columns:repeat(4,390px);gap:28px"><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">첫 화면</div><img src="img/FS_final.png" alt="첫 화면 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">1 워드마크+소개 한 덩어리 → 2 사진 묶음(AI가 만든 그림) → 3 질문 → 4·5 버튼</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">P3 코스 홈</div><img src="img/P3.png" alt="P3 코스 홈 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">1 날짜 → 2 음악 켜기(PX_music 보드 자리) → 3 설정 → 4 한 줄 → 5 도장(찍은 요일) → 6~8 단계 행 → 9 큰 버튼</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">P4 사진 보기</div><img src="img/P4.png" alt="P4 사진 보기 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">돌아가기 → 제목(3단계 중 1단계) → 사진 라벨 → 안내 → 질문 2 → 읽어 주세요 → 다 봤어요</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">P5 둘 중 고르기</div><img src="img/P5.png" alt="P5 둘 중 고르기 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">제목 → 안내 → 질문 → 5 읽어 주세요(PX_read_aloud 자리) → 선택 카드(라디오) → 정했어요(비활성 이유 힌트)</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">P6 자판으로 쓰기</div><img src="img/P6.png" alt="P6 자판으로 쓰기 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">낱말 카드 한 덩어리("쓸 낱말, 가을, 두 글자") → 입력칸 → 다 썼어요 → 넘어가기</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">C0 로그인</div><img src="img/C0.png" alt="C0 로그인 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">제목 → 안내 → 카카오 → Google → 이메일</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">C3 연결 대기</div><img src="img/C3.png" alt="C3 연결 대기 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">첫 포커스 3 제목. 6 알림 줄·7 예시 카드는 스크롤 아래</div></div><div style="display:flex;flex-direction:column;gap:8px;width:390px"><div style="font-size:18px;font-weight:900;color:#4E2F14">C4 앨범</div><img src="img/C4.png" alt="C4 앨범 읽기 순서" width="390" style="display:block;width:390px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)"><div style="font-size:14px;line-height:1.55;color:#744821">제목 → 설정 → 최근 답 카드 한 덩어리 → 응원 보내기 → 탭</div></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1700,"height":2032}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

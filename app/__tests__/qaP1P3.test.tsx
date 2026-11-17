@@ -24,10 +24,10 @@ test('P3#1 위 줄: 날짜 + 오른쪽 설정 링크(64 터치), 본문에 큰 �
   await waitFor(() => screen.getByText('가족에게 답 보여 주기'));
 });
 
-test('P3#2 스티치 2곳(날짜 아래, 하단 버튼 위), P3#9 주 버튼 "이어서 하기"', async () => {
+test('P3#2 스티치 2곳(날짜 아래, 하단 버튼 위), P3#9 주 버튼은 지금 단계 이름(시안 copy 10절, QA 11-17)', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   expect(screen.getAllByTestId('stitch', {includeHiddenElements: true})).toHaveLength(2);
-  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '이어서 하기'})).toBeTruthy();
+  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '사진 보기'})).toBeTruthy();
 });
 
 test('P3#6·8 지금 단계 라벨 뒤 테이프, 대기 행은 한 줄(상태 글자 보통 굵기·inkSub)', () => {

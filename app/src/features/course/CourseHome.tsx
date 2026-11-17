@@ -86,11 +86,11 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const all = done.length === 3;
   const current = STEPS.find(s => !done.includes(s.step));
   // 표준 화면 틀: 제목은 위 고정, 단계는 누르지 않는 행, 지금 할 단계로 가는 큰 버튼 1개만 아래 고정(글자를 키우면 본문만 스크롤)
-  // 하단: 스티치 구분선 + 주 버튼 "이어서 하기"(시안 P3). 실선 대신 스티치
+  // 하단: 스티치 구분선 + 주 버튼은 지금 단계 이름(시안 P3, copy 10절). 실선 대신 스티치
   const dock = current ? (
     <>
       <Stitch width="100%" />
-      <BigButton label={c.continue} onPress={() => navigation.navigate(current.route)} />
+      <BigButton label={c.step[current.step]} onPress={() => navigation.navigate(current.route)} />
     </>
   ) : undefined;
   const todayIdx = kstWeekdayIndex();
@@ -100,14 +100,14 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       {preview ? (
         <View style={styles.strip}>
           <Text20 style={styles.stripText}>{c.disconnected_banner}</Text20>
-          <TextLink label={c.write_code} onPress={() => navigation.popTo('Connect')} />
+          {/* 번호 화면을 위에 쌓아, 거기서 '이전'이면 이 코스 홈으로 돌아온다(QA B2) */}
+          <TextLink label={c.write_code} onPress={() => navigation.push('Connect', {from: 'course'})} />
         </View>
       ) : null}
       <View style={styles.titleRow}>
         <Title />
-        {preview ? null : (
-          <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
-        )}
+        {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
+        <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
       </View>
       <Text20 testID="date-line" size={22} weight="bold" style={styles.date}>{kstDateLine()}</Text20>
       <Stitch width="100%" />

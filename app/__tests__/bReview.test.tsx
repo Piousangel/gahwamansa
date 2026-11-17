@@ -5,7 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {isServerError, OfflineError, ServerError} from '../src/features/types';
-import {press} from '../testUtils/flow';
+import {press, pressCourseNext} from '../testUtils/flow';
 
 const preview = {
   day_index: 1,
@@ -109,7 +109,7 @@ test('미연결 열람 중 포그라운드 재조회는 화면에서 한 단계�
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await press('코스 보기');
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));

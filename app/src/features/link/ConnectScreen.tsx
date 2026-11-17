@@ -15,8 +15,10 @@ import {canSubmit} from '../../ui/codeInputLogic';
 import {KEY_MIN, keypadKeyHeight} from './keypadFit';
 import {copy, reasonToMessage, Message} from '../../copy/copy';
 
-export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams, 'Connect'>) {
+export function ConnectScreen({navigation, route}: NativeStackScreenProps<ParentParams, 'Connect'>) {
   const {api, resetRole} = useSession();
+  // 코스 홈·설정에서 "번호 쓰기"로 왔으면 이전은 그 화면으로, 처음 화면에서 왔으면 역할 선택으로(QA B2)
+  const back = route.params?.from === 'course' ? () => navigation.goBack() : resetRole;
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
@@ -89,11 +91,11 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
       top={
         linksOnTop && !error ? (
           <View style={styles.topRow}>
-            <BackBar onBack={resetRole} />
+            <BackBar onBack={back} />
             {links}
           </View>
         ) : (
-          <BackBar onBack={resetRole} />
+          <BackBar onBack={back} />
         )
       }
       bottom={
@@ -101,13 +103,19 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
           <BigButton variant="secondary" label={error.button} onPress={onErrorButton} />
         ) : (
           <>
-            {linksOnTop ? null : links}
+            {/* 시안 P1: 이유 줄(6자리 전) → 다음 → 번호가 없어요·코스 보기. 이유 줄은 버튼 힌트로 읽으므로 화면 읽기에서 뺀다(R8) */}
+            {canSubmit(code) || busy ? null : (
+              <Text20 style={styles.reason} importantForAccessibility="no" accessibilityElementsHidden>
+                {copy.connect.need_six}
+              </Text20>
+            )}
             <BigButton
               label={copy.connect.button}
               disabled={!canSubmit(code) || busy}
               accessibilityHint={canSubmit(code) ? undefined : copy.connect.need_six}
               onPress={submit}
             />
+            {linksOnTop ? null : links}
           </>
         )
       }>
@@ -142,4 +150,5 @@ const styles = StyleSheet.create({
   topRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'},
   title: {color: color.inkTitle},
   hint: {color: color.inkSub},
+  reason: {color: color.inkSub, textAlign: 'center'},
 });
