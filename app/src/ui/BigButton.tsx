@@ -17,11 +17,13 @@ type Props = {
   disabledReason?: string;
   /** 버튼 아래 설명을 스크린리더가 버튼과 함께 읽도록 */
   accessibilityHint?: string;
+  /** 접근성 포커스를 옮길 때 쓰는 누름 영역 ref(예: P6 일치 뒤 '마치기'로 포커스) */
+  buttonRef?: React.Ref<React.ComponentRef<typeof Pressable>>;
 };
 
 // 명세 §1: 주 minHeight 72·글자 32, 보조·위험 minHeight 64·글자 26·테두리 3, 반경 36, 고정 height 없음.
 // 눌림은 색만 바뀜(움직임·Android 리플 없음). 위험은 색이 아니라 외곽선(비채움)+문구로 주 버튼과 구분한다.
-export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, accessibilityHint}: Props) {
+export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, accessibilityHint, buttonRef}: Props) {
   const primary = variant === 'primary';
   const blocked = !!disabled || !!loading;
   const shown = loading ? loadingLabel : label;
@@ -34,6 +36,7 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
         </Text20>
       ) : null}
       <Pressable
+        ref={buttonRef}
         accessibilityRole="button"
         accessibilityLabel={shown}
         accessibilityHint={disabled && disabledReason ? disabledReason : accessibilityHint}

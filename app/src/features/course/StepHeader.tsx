@@ -7,13 +7,19 @@ import {useScreenTitleRef} from '../../ui/screenTitle';
 
 // 단계 화면 제목 줄(P4·P5): "사진 보기   1 / 3". 화면 읽기는 한 덩어리로 "사진 보기, 3단계 중 1단계"(talkback-spec R4).
 // 화면 제목 포커스(R2) 대상: Text20 머리글과 같은 경로(useScreenTitleRef)로 등록한다.
+const TOTAL_STEPS = 3;
+
 export function StepHeader({name, n}: {name: string; n: 1 | 2 | 3}) {
   const titleRef = useScreenTitleRef(true);
-  const label = copy.course.step_a11y.split('{name}').join(name).split('{n}').join(String(n));
+  // copy-v3 11절 11번: "{단계}, {전체}단계 중 {n}단계" → "사진 보기, 3단계 중 1단계"
+  const label = copy.course.step_a11y
+    .split('{단계}').join(name)
+    .split('{전체}').join(String(TOTAL_STEPS))
+    .split('{n}').join(String(n));
   return (
     <View ref={titleRef} testID="step-header" style={styles.row} accessible accessibilityRole="header" accessibilityLabel={label}>
       <Text20 size={26} weight="bold" style={styles.name}>{name}</Text20>
-      <Text20 size={22} weight="bold" style={styles.count}>{`${n} / 3`}</Text20>
+      <Text20 size={22} weight="bold" style={styles.count}>{`${n} / ${TOTAL_STEPS}`}</Text20>
     </View>
   );
 }

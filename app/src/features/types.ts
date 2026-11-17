@@ -1,4 +1,6 @@
 import type {FailReason} from '../copy/copy';
+import type {MarkCheersReadResult, MyCheers} from '../api/contract/cheers';
+import type {EventName, EventProps, LogEventResult} from '../api/contract/events';
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -100,6 +102,11 @@ export interface Api {
   // 이번 주(KST 월요일 시작) 코스를 마친 날짜. 어르신만(자녀는 parent_required). 미연결 열람에서는 부르지 않는다
   getWeekStamps(): Promise<WeekStamps>;
   getTodayContent(): Promise<TodayContent | null>;
+  // start_today(0024): 코스 홈 진입 때. KST 날짜가 바뀐 첫 호출에만 콘텐츠 커서를 1칸 전진하고 get_today_content 와 같은 객체를 준다.
+  // 미연결 기기는 getTodayContent 와 같게 미리 보기로 떨어진다.
+  startToday(): Promise<TodayContent | null>;
+  // log_event(0022): 계측. 실패도 값으로 돌려준다(예외는 네트워크 등). 화면을 막지 않게 호출부는 결과를 기다리지 않는다.
+  logEvent(name: EventName, props?: EventProps): Promise<LogEventResult>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
@@ -118,4 +125,7 @@ export interface Api {
   // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
   signOut(): Promise<void>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
+  // 응원(P8): get_my_cheers / mark_cheers_read(0020, 계약은 api/contract/cheers.ts). 어르신만, 미연결 열람에서는 부르지 않는다
+  getMyCheers(): Promise<MyCheers>;
+  markCheersRead(ids: string[] | null): Promise<MarkCheersReadResult>;
 }
