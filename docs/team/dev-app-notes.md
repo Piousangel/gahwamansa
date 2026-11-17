@@ -265,3 +265,10 @@
 - 호칭 화면 선택 카드 묶음 radiogroup.
 - **실기기 확인 항목**: 위 여백 max(52, 상태바+12)로 상태바 24 기기에서 모든 화면 +28px → 360x780 에서 번호 화면 키패드 맞춤 단계(level)와 사진 화면 질문 노출을 확인.
 - 남김: Text20 ref 합성(rest 의 ref 가 덮을 수 있음, 지금 사용처 없음), 안 쓰는 course.continue 문구 키 정리(라이터 문구 원본과 함께).
+
+### 자녀 화면 v3 리뷰 반영(2026-11-17-child-screens-review, 11-17)
+- U0 교체: 임시 shared/u0Overlays 삭제 → ui/Toast(ToastProvider는 ChildStack 전체 + 탭 안쪽 bottomOffset 68)·ui/BottomSheet·ui/Dialog. 모달 위 오류는 토스트가 아니라 BottomSheet·Dialog의 새 `error` prop(버튼 위 한 줄, polite, U0 테스트 추가).
+- M1 대기 확인: useIsFocused + AppState, 다시 보일 때 1회. M4 요청 순번으로 늦은 응답 버림.
+- M3 응원: 어르신별 try/catch, 결과 정리는 cheerLogic.summarizeCheer(순수, 테스트), "다시 하기"는 이번에 받은 분을 건너뜀. partial·daily_limit 문구는 임시(라이터 확인, impl-drift #11).
+- L1(리드): 다시 불러오기 실패 시 이전 값 지움 → 오류 상태. L2 shared:false면 답 무시. L3 parent_id 없으면 ''. L4(리드): 다른 어르신이 쓰는 호칭은 저장 비활성(서버 set_parent_title_for 중복 거부는 리드가 서버 줄에 요청). L5(리드): 오프라인 로그아웃은 auth._removeSession(비공개 API, supabase-js 올릴 때 확인)으로 이 기기 세션 정리. L6 번호+기한·최근 답 카드 한 덩어리 읽기.
+- **정리 계획 12 대상(ARCHITECTURE §2 위반, 자녀 줄이 새로 만든 것)**: features→app — `features/home/ChildHome.tsx`(ChildStack 타입·session·splash), `features/home/ChildReport.tsx`(ChildStack), `features/child/ChildSettings.tsx`(ChildStack·session·BackBar), `features/child/ChildAppInfo.tsx`(BackBar), `features/child/ChildWaitScreen.tsx`(ChildStack·session·splash, 기존 파일). shared→app — `shared/useChildData.ts`(session). 이동 대상: ChildParams → navigation/types.ts, session·splash → state/, BackBar → ui/. ASSUMED(0027) starter 는 types.ts·realApi.ts 에 있음 → contracts 생기면 옮김.

@@ -45,6 +45,15 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(screen.getByTestId('dialog-child')).toBeTruthy();
   });
 
+  test('M2: 오류는 대화상자 안 버튼 위 한 줄(polite)로 보인다', () => {
+    const {rerender} = render(<Dialog visible title="로그아웃할까요?" actions={actions()} />);
+    expect(screen.queryByTestId('dialog-error')).toBeNull();
+    rerender(<Dialog visible title="로그아웃할까요?" actions={actions()} error="잠깐 문제가 생겼어요" />);
+    const e = screen.getByTestId('dialog-error');
+    expect(e).toHaveTextContent('잠깐 문제가 생겼어요');
+    expect(e.props.accessibilityLiveRegion).toBe('polite');
+  });
+
   test('alertdialog 역할 + 뒤 화면 읽기 막음(포커스 가둠)', () => {
     render(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} />);
     const card = screen.getByTestId('dialog-card');

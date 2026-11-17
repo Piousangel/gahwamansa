@@ -152,7 +152,114 @@
     "no_answer": "고른 답이 생기면 여기에 보여요",
     "not_shared": "답을 나누지 않는 중이에요",
     "past_title": "지난 답",
-    "delete_link": "내 계정 지우기"
+    "delete_link": "내 계정 지우기",
+    "home": {
+      "_src": "copy-v3 6·10절, 시안 C4_home·C4_home_states",
+      "bar_title": "우리 집 앨범",
+      "talk_old": "이 답으로 이야기를 시작해 봐요",
+      "loading_reason": "불러오면 누를 수 있어요",
+      "error": {
+        "title": "화면이 열리지 않아요",
+        "body": "잠시 뒤에 다시 해 볼까요?",
+        "button": "다시 하기"
+      },
+      "disconnected": {
+        "title": "{호칭} 폰의 연결이 풀렸어요",
+        "body": "새 번호를 만들어 보내 주세요",
+        "button": "번호 만들기"
+      },
+      "starter_label": "이야기 꺼내기",
+      "_starter_status": "기능 회의 B3(F11) 표지, 라이터 확인 필요. 문장은 서버 starter"
+    },
+    "cheer": {
+      "button": "응원 보내기",
+      "title": "어떤 말을 보낼까요?",
+      "hint": "하나를 누르면 바로 보내요",
+      "close": "닫기",
+      "sent": "{호칭}께 보냈어요",
+      "partial": "{호칭}께 보냈어요. 다른 분께는 다시 보내 주세요",
+      "daily_limit": "오늘은 응원을 다 보냈어요. 내일 다시 보낼 수 있어요",
+      "_status": "partial·daily_limit 은 리뷰 M3 임시 문구(디자인 확정 전, 라이터 확인). impl-drift #11"
+    },
+    "wait": {
+      "_src": "copy-v3 10절 C3, 시안 C3_wait v4",
+      "chip": "연결 기다리는 중",
+      "title": "{호칭} 폰에서 번호를 쓰면 이어져요",
+      "code_label": "연결 번호",
+      "copy": "복사하기",
+      "copied": "복사했어요",
+      "until": "{시각}까지 쓸 수 있어요",
+      "steps_title": "이렇게 하시면 돼요",
+      "steps": [
+        "{호칭} 폰에 가화만사성을 설치해요",
+        "첫 화면에서 이 버튼을 눌러요",
+        "숫자 6개를 쓰고, 답을 보여 줄지 고르면 돼요"
+      ],
+      "expired_title": "번호 기간이 지났어요",
+      "expired_body": "새 번호를 만들어 다시 보내 주세요",
+      "new_code": "새 번호 만들기",
+      "make_code": "번호 만들기",
+      "renewed": "새 번호를 만들었어요",
+      "send": "번호 보내기",
+      "example_chip": "예시",
+      "example_title": "매일 이런 사진과 질문이 가요",
+      "example_question": "어느 계절이 더 좋으세요?",
+      "example_note": "보기만 하는 예시예요. 실제 사진은 날마다 달라요",
+      "notify": "연결되면 알려 드릴게요",
+      "notify_button": "알림 켜기"
+    },
+    "past": {
+      "_src": "copy-v3 6·10절 C5, 시안 C5_history v4",
+      "title": "{호칭}의 지난 답",
+      "title_many": "지난 답",
+      "sub": "최근 한 달 동안 고른 답이에요",
+      "topic": "이야기 주제 추천",
+      "topic_badge": "곧 유료",
+      "error": "목록이 열리지 않아요. 잠시 뒤에 다시 해 볼까요?",
+      "retry": "다시 하기",
+      "row_a11y": "{날짜}, {질문}, 고른 답 {답}"
+    },
+    "settings": {
+      "_src": "copy-v3 6·10절 C7, 시안 C7_settings·C7_settings_v2",
+      "title": "설정",
+      "name_row": "부르는 이름",
+      "name_save": "저장",
+      "name_changed": "부르는 이름을 바꿨어요",
+      "newphone_row": "새 폰 연결 번호",
+      "newphone_sub": "{호칭} 폰을 바꿨을 때 써요",
+      "account": "계정",
+      "login_row": "로그인",
+      "login_via": "{수단} 로그인했어요",
+      "via": {
+        "kakao": "카카오로",
+        "google": "Google로",
+        "email": "이메일로"
+      },
+      "method": {
+        "kakao": "카카오",
+        "google": "Google",
+        "email": "이메일"
+      },
+      "logout": "로그아웃",
+      "logout_title": "로그아웃할까요?",
+      "logout_body": "같은 방법({수단})으로 다시 로그인하면 지금 가족과 그대로 이어져요",
+      "logout_cancel": "그만둘래요",
+      "app": "앱",
+      "app_info": "앱 정보",
+      "version": "버전 {버전}",
+      "not_safety": "안부나 안전을 확인하는 서비스가 아니에요",
+      "name_taken": "다른 분이 쓰는 이름이에요. 다른 이름을 골라 주세요",
+      "_name_taken_status": "리뷰 L4 리드 결정(같은 호칭 중복 금지) 임시 문구, 라이터 확인"
+    },
+    "app_info": {
+      "title": "앱 정보",
+      "version": "버전",
+      "privacy": "개인정보 처리방침",
+      "contact": "문의하기",
+      "oss": "오픈소스 라이선스",
+      "ai_title": "AI가 만든 것",
+      "ai_body": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요"
+    }
   },
   "settings": {
     "open": "설정",
@@ -235,7 +342,7 @@
     ],
     "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
     "stamps_a11y_none": "이번 주 도장",
-    "step_a11y": "{name}, 3단계 중 {n}단계",
+    "step_a11y": "{단계}, {전체}단계 중 {n}단계",
     "_status": "stamps_a11y·stamps_a11y_none·step_a11y 는 임시(talkback-spec 형식, 라이터 확정 필요)",
     "continue": "이어서 하기"
   },
@@ -342,7 +449,17 @@
     "wait": "연결 기다리기",
     "share_message": "가화만사성에서 같이 쓸 번호예요. 앱을 열고 번호 6개를 써 주세요. {번호} (7일 동안 쓸 수 있어요)",
     "show_a11y": "연결 번호 {앞}, {뒤}",
-    "old_invalid": "전에 보낸 번호는 이제 쓸 수 없어요"
+    "old_invalid": "전에 보낸 번호는 이제 쓸 수 없어요",
+    "share": {
+      "_status": "시안 C2_share(기능 회의 B4) 문장 전체 라이터 확인 대기. Play 빌드 전용(토스 판은 1단계 '가화만사성 앱을 열어요'). [스토어 링크] 줄은 출시 주소 확정 뒤 추가",
+      "intro": "가화만사성에서 같이 쓸 번호예요.",
+      "step1": "1. Play 스토어에서 가화만사성을 설치해요",
+      "step2": "2. 첫 화면에서 '부모님 휴대폰이에요'를 눌러요",
+      "step3": "3. 번호 6개를 써요: {번호}",
+      "until": "{시각}까지 쓸 수 있어요.",
+      "until_days": "7일 동안 쓸 수 있어요.",
+      "safe": "이 앱은 돈이나 은행 번호를 묻지 않아요."
+    }
   },
   "connect_wait": {
     "title": "연결을 기다리고 있어요",

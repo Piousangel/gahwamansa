@@ -66,5 +66,6 @@ test('동의 거부해도 코스는 볼 수 있고 답변 저장 API는 호출�
 
 test('자녀 역할이면 자녀 탭이 보인다', async () => {
   render(<AppRoot api={createFakeApi()} role="child" />);
-  await waitFor(() => screen.getByText('부모님의 최근 답'));
+  await waitFor(() => screen.getByRole('tab', {name: '앨범'}));
+  expect(screen.getByRole('tab', {name: '지난 답'})).toBeTruthy();
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
@@ -61,9 +61,8 @@ test('어르신 삭제 화면의 버튼은 64 이상, 글자는 20 이상', asyn
 
 async function openChildDelete(api: ReturnType<typeof createFakeApi>, expectText = '부모님의 기록도 함께 지워져요') {
   render(<AppRoot api={api} role="child" />);
-  await act(async () => {
-    fireEvent.press(screen.getByText('지난 답'));
-  });
+  await waitFor(() => screen.getByRole('button', {name: '설정'}));
+  await press('설정'); // C7 v2: 내 계정 지우기는 설정에
   await press('내 계정 지우기');
   await waitFor(() => screen.getByText(expectText));
 }

@@ -34,6 +34,8 @@ type Props = {
   onBack?: () => void;
   /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 대화상자를 연 버튼) */
   returnFocusRef?: RefObject<unknown>;
+  /** 모달 안 오류 한 줄(리뷰 M2: 모달 위 토스트는 Modal 창 밑에 그려져 안 보인다). 버튼 바로 위, 화면 읽기 polite */
+  error?: string | null;
   testID?: string;
 };
 
@@ -42,7 +44,7 @@ type Props = {
  * 접근성: alertdialog + accessibilityViewIsModal(iOS), Android 는 Modal 이 별도 창이라 TalkBack 포커스가 안에 갇힌다.
  * 열리면 300ms 뒤 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R2·R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
  */
-export function Dialog({visible, title, body, children, actions, warningLabel, onBack, returnFocusRef, testID}: Props) {
+export function Dialog({visible, title, body, children, actions, warningLabel, onBack, returnFocusRef, error, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   const {opacity, start} = useFadeIn(visible);
@@ -96,6 +98,11 @@ export function Dialog({visible, title, body, children, actions, warningLabel, o
               {body ? <Text20 size={22}>{body}</Text20> : null}
             </ScrollView>
           ) : null}
+          {error ? (
+            <Text20 testID="dialog-error" weight="bold" accessibilityLiveRegion="polite" style={styles.error}>
+              {error}
+            </Text20>
+          ) : null}
           <View testID="dialog-actions" style={styles.actions}>
             {actions.map((a, i) => (
               <BigButton
@@ -128,4 +135,5 @@ const styles = StyleSheet.create({
   bodyScroll: {flexGrow: 0, flexShrink: 1},
   bodyContent: {paddingBottom: 4, gap: 12},
   actions: {marginTop: 4},
+  error: {color: color.dangerInk},
 });

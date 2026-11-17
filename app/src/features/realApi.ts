@@ -4,8 +4,10 @@ import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult} from '../api/contract/events';
+import {pairShort} from '../lib/childFormat';
 import type {
-  Api, ChildState, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
+  Api, ChildParent, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
+  SendCheerResult, StepName, TodayContent,
 } from './types';
 
 export interface RealApi extends Api {
@@ -277,18 +279,89 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async fetchChildSummary(): Promise<ChildSummary> {
       const {data, error} = await sb.rpc('child_summary');
       if (error) fail('child_summary', error);
-      const first = (data.parents ?? [])[0];
-      const l = first?.latest;
+      const family: string = data.parent_title ?? '부모님';
+      // parent_id·title·connected 는 0019·0021(dev-server-notes §1). 옛 서버(필드 없음)면 id 는 ''(보낼 대상 아님, 리뷰 L3)·가족 호칭·연결됨
+      // shared:false 면 서버가 무엇을 보내도 답을 쓰지 않는다(리뷰 L2)
+      const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>) => ({
+        parentId: p.parent_id ?? '',
+        title: p.title ?? family,
+        shared: !!p.shared,
+        connected: p.connected ?? true,
+        latest: p.shared && p.latest
+          ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
+          : null,
+        starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
+      }));
+      const first = parents[0];
       return {
-        parentTitle: data.parent_title ?? '부모님',
-        shared: first ? !!first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
-        latest: l ? {prompt: l.prompt ?? null, choiceLabel: l.choice_label, answeredDate: l.answered_date} : null,
+        parentTitle: family,
+        shared: first ? first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
+        latest: first?.latest ?? null,
+        parents,
       };
     },
     async setParentTitle(title) {
       const {data, error} = await sb.rpc('set_parent_title', {p_title: title});
       if (error) fail('set_parent_title', error);
       return data.ok ? {ok: true} : {ok: false, reason: 'invalid_title'};
+    },
+    async setParentTitleFor(parentId, title) {
+      const {data, error} = await sb.rpc('set_parent_title_for', {p_parent: parentId, p_title: title});
+      if (error) fail('set_parent_title_for', error);
+      const reason = data.reason === 'invalid_target' || data.reason === 'duplicate_title' ? data.reason : 'invalid_title';
+      return data.ok ? {ok: true} : {ok: false, reason};
+    },
+    // TODO(계약 검증기): ARCHITECTURE §5 contracts 런타임 검증이 생기면 아래 세 매핑을 그 검증기로 통과시킨다
+    async fetchAnswerHistory(): Promise<ParentHistory[]> {
+      const {data, error} = await sb.rpc('child_answer_history');
+      if (error) fail('child_answer_history', error);
+      return (data?.parents ?? []).map((p: Record<string, any>) => ({
+        parentId: p.parent_id,
+        title: p.title ?? '부모님',
+        shared: !!p.shared,
+        items: (p.shared ? (p.answers ?? []) : []).map((a: Record<string, any>) => ({
+          answeredDate: a.session_date,
+          promptShort: a.prompt_short ?? pairShort(a.option_a, a.option_b),
+          choiceLabel: a.choice_label,
+        })),
+      }));
+    },
+    async sendCheer(parentId, key): Promise<SendCheerResult> {
+      const {data, error} = await sb.rpc('send_cheer', {p_parent: parentId, p_key: key});
+      if (error) fail('send_cheer', error);
+      return data.ok ? {ok: true, cheerId: data.cheer_id} : {ok: false, reason: data.reason};
+    },
+    async getLoginMethod(): Promise<LoginMethod | null> {
+      const {data, error} = await sb.auth.getSession();
+      if (error) fail('세션 확인', error);
+      const p = data.session?.user.app_metadata?.provider;
+      return p === 'kakao' || p === 'google' || p === 'email' ? p : null;
+    },
+    async signOut() {
+      // 소셜 SDK 세션 정리(실패해도 계속) → 이 기기 세션만 지운다(다른 기기 로그인은 그대로)
+      try {
+        const {data} = await sb.auth.getSession();
+        const meta = data.session?.user.app_metadata ?? {};
+        const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+        const auth = socialAuth();
+        if (list.includes('kakao')) {
+          await auth.signOut('kakao');
+        }
+        if (list.includes('google')) {
+          await auth.signOut('google');
+        }
+      } catch {
+        // 무시
+      }
+      const {error} = await sb.auth.signOut({scope: 'local'});
+      if (error) {
+        // 리뷰 L5(리드 결정): 오프라인이면 supabase-js 가 세션을 남긴다 → 이 기기 저장 세션을 직접 지운다(서버 토큰은 만료로 정리)
+        const removeLocal = (sb.auth as unknown as {_removeSession?: () => Promise<void>})._removeSession;
+        if (!looksOffline(error) || !removeLocal) {
+          fail('로그아웃', error);
+        }
+        await removeLocal.call(sb.auth);
+      }
     },
     async withdrawConsent() {
       const {error} = await sb.rpc('withdraw_consent');
