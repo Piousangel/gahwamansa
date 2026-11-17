@@ -296,3 +296,10 @@
 - 승인(정확한 버전 고정): TTS @mhpdev/react-native-speech@1.4.4, 효과음·BGM react-native-sound@0.13.0, 무음 감지 react-native-volume-manager@2.2.0. 제외: react-native-tts(멈춤·새 아키텍처 미지원), expo-*(expo 의존·배포 2주 미만), audio-api(무거움)
 - 정책: TTS 중 BGM 10% 덕킹, 무음·진동·상태 불명이면 BGM·효과음 끔, 읽어 주기는 사용자가 직접 누른 소리라 무음에서도 허용, TalkBack 켜짐·백그라운드·이어폰 빠짐이면 BGM 정지
 - 공용 컴포넌트 표준: SunBubble·Dialog(어르신)·BottomSheet·Toast(자녀)·Banner·Photo(app/src/ui)
+
+## 2026-11-17 환경 분리 구현 방식 (인프라 줄, 리드 채택)
+- 설정 주입: Gradle이 app/env/<flavor>.env(공개 값만) → 리소스·BuildConfig·src/lib/env.generated.ts(gitignore). react-native-config는 RN 0.88 호환 미확인이라 버림. 비밀값 형태 감지 시 빌드 실패
+- 서명: ~/.gradle/gradle.properties의 BUMOJASIK_UPLOAD_* 4개(없으면 debug 서명 + 경고)
+- 버전: 1.0.0, versionCode = git 커밋 수 → 출시 빌드는 main에서만
+- DB 반영: scripts/db-push.sh 가 env의 ref를 --remote로, dry-run 후 환경 이름·ref 재입력 확인, production은 스키마 백업 후 push(실행은 사용자)
+- npm run android = stagingDebug
