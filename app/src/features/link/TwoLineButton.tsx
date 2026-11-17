@@ -1,6 +1,6 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text} from 'react-native';
-import {color, FONT_SCALE_MAX, radius, shadow} from '../../ui/tokens';
+import {color, FONT_SCALE_MAX, radius} from '../../ui/tokens';
 import {keepAllChildren, koreanTextProps} from '../../ui/koreanText';
 
 // 첫 화면 큰 버튼: 제목 + 버튼 안 둘째 줄 설명(어느 버튼의 설명인지 헷갈리지 않게). 높이 88 이상.
@@ -31,7 +31,7 @@ export function TwoLineButton({title, sub, onPress, variant = 'primary'}: Props)
 
 const styles = StyleSheet.create({
   base: {minHeight: 88, borderRadius: radius.button, paddingHorizontal: 20, paddingVertical: 12, justifyContent: 'center', marginVertical: 6},
-  primary: {backgroundColor: color.action, boxShadow: shadow.soft},
+  primary: {backgroundColor: color.action}, // 그림자 없음(패널 합의)
   primaryPressed: {backgroundColor: color.actionPressed},
   // 보조: 흰 면 + 테두리(시안 대비 #744821/흰 7.80)
   secondary: {backgroundColor: color.card, borderWidth: 3, borderColor: color.action},

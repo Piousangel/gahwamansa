@@ -132,6 +132,11 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       const {error} = await sb.rpc('give_consent', {p_version: version});
       if (error) fail('give_consent', error);
     },
+    async getWeekStamps() {
+      const {data, error} = await sb.rpc('my_week_stamps');
+      if (error) fail('my_week_stamps', error);
+      return {weekStart: data.week_start, doneDates: data.done_dates ?? []};
+    },
     async getTodayContent(): Promise<TodayContent | null> {
       // 처음 설치한 기기는 세션이 없다. anon 은 RPC 권한이 없으므로 먼저 익명 로그인한다(서버 권한은 열지 않음).
       await ensureSession();

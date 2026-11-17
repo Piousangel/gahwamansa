@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {polaroidLayout} from '../src/features/link/polaroidLayout';
@@ -80,11 +80,44 @@ test('글자 150%: 소개 항목도 숨기고 제목·질문·버튼은 남긴�
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
 });
 
-test('셋째 항목이 두 줄로 넘치면 짧은 문구로 바꾼다', async () => {
+test('셋째 항목은 두 줄이 되어도 확정 문구(주어 "자녀가")를 유지한다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   const third = screen.getByText(INTRO[2], {includeHiddenElements: true});
   await act(async () => {
     fireEvent(third, 'textLayout', {nativeEvent: {lines: [{}, {}]}});
   });
-  expect(screen.getByText('고른 답으로 취향을 알아 가요', {includeHiddenElements: true})).toBeTruthy();
+  expect(screen.getByText(INTRO[2], {includeHiddenElements: true})).toBeTruthy();
+  expect(screen.queryByText('고른 답으로 취향을 알아 가요', {includeHiddenElements: true})).toBeNull();
+  expect(third.props.numberOfLines).toBeUndefined();
+});
+
+test('AI 표기는 폴라로이드 틀 밖 아래 보조 글자, 틀 반경 3 이하·사진 반경 0', async () => {
+  render(<AppRoot api={createFakeApi()} />);
+  await measure(328, 400);
+  const frame = screen.getByLabelText('옛날 사진 예시, AI가 만든 그림');
+  const {StyleSheet} = require('react-native');
+  expect(StyleSheet.flatten(frame.props.style).borderRadius).toBeLessThanOrEqual(3);
+  expect(StyleSheet.flatten(screen.getByTestId('intro-photo').props.style).borderRadius ?? 0).toBe(0);
+  const ai = screen.getByTestId('intro-ai-label');
+  // 틀 안에 있지 않다
+  expect(within(frame).queryByText('AI가 만든 그림', {includeHiddenElements: true})).toBeNull();
+  expect(ai).toBeTruthy();
+});
+
+test('하단 고정 영역 아래 여백은 16 + inset 이상', async () => {
+  const SafeArea = require('react-native-safe-area-context');
+  const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+  const orig = insets.getMockImplementation();
+  insets.mockImplementation(() => ({top: 24, bottom: 48, left: 0, right: 0}));
+  render(<AppRoot api={createFakeApi()} />);
+  const dock = screen.getByTestId('screen-dock');
+  const {StyleSheet} = require('react-native');
+  const pad = StyleSheet.flatten((dock.children[0] as unknown as {props: {contentContainerStyle: unknown}}).props.contentContainerStyle);
+  expect(pad.paddingBottom).toBeGreaterThanOrEqual(16 + 48);
+  insets.mockImplementation(orig);
+});
+
+test('셋째 줄은 마지막 세 어절을 붙여 "자녀가 / 취향을 알아 가요"로만 나뉜다', () => {
+  const {keepTail} = require('../src/features/link/RoleSelect');
+  expect(keepTail('고른 답으로 자녀가 취향을 알아 가요')).toBe('고른 답으로 자녀가 취향을\u00A0알아\u00A0가요');
 });

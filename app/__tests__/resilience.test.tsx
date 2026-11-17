@@ -105,7 +105,7 @@ test('already_linked 버튼은 코스로 이동한다', async () => {
   render(<AppRoot api={createFakeApi({consented: true, linked: true})} role="parent" />);
   await enterCode('444444');
   await waitFor(() => screen.getByText('이미 연결돼 있어요'));
-  await press('이어서 하기');
+  await press('사진 보기'); // errors.already_linked.button
   await waitFor(() => screen.getByText('오늘의 코스'));
 });
 

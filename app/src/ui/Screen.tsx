@@ -41,7 +41,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
           <ScrollView
             bounces={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[styles.dockPad, {paddingBottom: Math.max(layout.dock.paddingBottomMin, insets.bottom)}]}>
+            contentContainerStyle={[styles.dockPad, {paddingBottom: Math.max(layout.dock.paddingBottomMin, 16 + insets.bottom)}]}>
             {bottom}
           </ScrollView>
         </View>
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   bg: {flex: 1, backgroundColor: color.paper},
   top: {paddingHorizontal: layout.bodyPadding.x},
   body: {flex: 1, minHeight: 0},
-  fill: {flexGrow: 1},
+  fill: {flexGrow: 1, paddingBottom: 8}, // 한 화면 구성은 아래 여백을 줄여 본문 공간을 확보
   bodyPad: {
     paddingTop: layout.bodyPadding.top,
     paddingHorizontal: layout.bodyPadding.x,
@@ -62,8 +62,6 @@ const styles = StyleSheet.create({
   },
   dock: {
     backgroundColor: color.paper,
-    borderTopWidth: 1,
-    borderTopColor: color.lineSoft,
   },
   // 버튼끼리는 BigButton 바깥 여백(위아래 6)으로 12 간격
   dockPad: {paddingTop: layout.dock.paddingTop - 6, paddingHorizontal: layout.dock.x},

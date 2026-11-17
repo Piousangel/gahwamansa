@@ -15,6 +15,7 @@ export const PARENT_TITLES = ['엄마', '아빠', '어머니', '아버지', '할
 export type ChildState =
   | {kind: 'no_family'}
   | {kind: 'family'; parentTitle: string; linked: boolean; code: {code: string; expiresAt: string} | null};
+export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
 export type DeleteScope = 'parent' | 'child' | 'family';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
@@ -64,6 +65,8 @@ export interface Api {
   getChildState(): Promise<ChildState>;
   // 이 기기가 누구로 열려 있는지(시작 화면 결정): 연결된 어르신 / 로그인한 자녀 / 없음(역할 선택)
   whoAmI(): Promise<'parent' | 'child' | 'none'>;
+  // 이번 주(KST 월요일 시작) 코스를 마친 날짜. 어르신만(자녀는 parent_required). 미연결 열람에서는 부르지 않는다
+  getWeekStamps(): Promise<WeekStamps>;
   getTodayContent(): Promise<TodayContent | null>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;

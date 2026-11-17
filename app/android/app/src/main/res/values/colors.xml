@@ -1,0 +1,4 @@
+<resources>
+    <!-- 디자인 토큰 color.paper 와 같은 값(app/src/ui/tokens.ts) -->
+    <color name="paper">#F6F3EE</color>
+</resources>

@@ -27,6 +27,9 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
   const shown = loading ? loadingLabel : label;
   return (
     <View testID="big-button" style={styles.wrap}>
+      {disabled && disabledReason ? (
+        <Text20 style={styles.reason}>{disabledReason}</Text20>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={shown}
@@ -67,9 +70,6 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
           </Text>
         )}
       </Pressable>
-      {disabled && disabledReason ? (
-        <Text20 style={styles.reason}>{disabledReason}</Text20>
-      ) : null}
     </View>
   );
 }
@@ -78,9 +78,10 @@ const styles = StyleSheet.create({
   base: {borderRadius: radius.button, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 8, alignSelf: 'stretch'},
   primary: {minHeight: size.buttonPrimary},
   outline: {minHeight: size.buttonSecondary, borderWidth: 3, boxShadow: 'none'},
-  disabled: {backgroundColor: color.disabledBg, borderColor: color.line, borderWidth: 2, boxShadow: 'none'}, // 면 대비 1.1이라 경계선으로 모양을 남김
+  // 비활성: 테두리 없음(보조 버튼처럼 보이지 않게, QA P1#12). 대신 버튼 위 이유 줄로 왜 못 누르는지 알린다
+  disabled: {backgroundColor: color.disabledBg, borderWidth: 0, boxShadow: 'none'},
   text: {fontWeight: 'bold', textAlign: 'center', letterSpacing: 0},
   textPrimary: {fontSize: fontSize.buttonPrimary, lineHeight: Math.round(fontSize.buttonPrimary * lineHeight.button)},
   textOutline: {fontSize: fontSize.buttonSecondary, lineHeight: Math.round(fontSize.buttonSecondary * lineHeight.button)},
-  reason: {textAlign: 'center', marginTop: 8, color: color.inkSub},
+  reason: {textAlign: 'center', marginBottom: 8, color: color.inkSub},
 });

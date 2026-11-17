@@ -71,3 +71,9 @@ test('첫 화면: 남은 높이가 작으면 사진을 숨긴다', async () => {
   expect(screen.queryByTestId('intro-photo')).toBeNull();
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
 });
+
+test('실기기 S25 첫 화면 남은 영역(약 328x183dp)에서도 사진이 보인다', () => {
+  const l = polaroidLayout(328, 183, 1, {maxPhotoW: 180, maxPhotoH: 171});
+  expect(l).not.toBeNull();
+  expect(fits(l!, 328, 183)).toBe(true);
+});

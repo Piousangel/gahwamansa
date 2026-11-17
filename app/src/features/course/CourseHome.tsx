@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -11,11 +11,11 @@ import {color, radius} from '../../ui/tokens';
 import {appCopy, CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
 import {StampRow} from './StampRow';
-import {kstDateLine, kstWeekdayIndex, weekStamps} from './stamps';
+import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
 import {errorMessage} from './useFinishStep';
-import type {StepName} from '../types';
+import type {StepName, WeekStamps} from '../types';
 
 const c = copy.course;
 const STEPS: {step: StepName; route: 'PhotoStep' | 'QuestionStep' | 'HangulStep'}[] = [
@@ -28,6 +28,25 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const {api, done, content, consented, setConsented, syncError, sync} = useSession();
   const [consentError, setConsentError] = useState<Message | null>(null);
   useLoadTodayContent();
+  // 이번 주 도장: 연결된 어르신만 서버에서 받는다(미연결 열람은 호출하지 않고 줄을 숨김). 오늘 단계가 바뀌면 다시 받는다.
+  // 실패하면 도장 줄만 숨긴다(장식이라 코스 진행을 막지 않음, 코스 오류는 syncError 가 알림).
+  const [week, setWeek] = useState<WeekStamps | null>(null);
+  const linked = !!content && content.linked;
+  const doneCount = done.length;
+  useEffect(() => {
+    if (!linked) {
+      setWeek(null);
+      return;
+    }
+    let alive = true;
+    api
+      .getWeekStamps()
+      .then(w => alive && setWeek(w))
+      .catch(() => alive && setWeek(null));
+    return () => {
+      alive = false;
+    };
+  }, [api, linked, doneCount]);
   const consentNow = async () => {
     setConsentError(null);
     try {
@@ -65,11 +84,14 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const all = done.length === 3;
   const current = STEPS.find(s => !done.includes(s.step));
   // 표준 화면 틀: 제목은 위 고정, 단계는 누르지 않는 행, 지금 할 단계로 가는 큰 버튼 1개만 아래 고정(글자를 키우면 본문만 스크롤)
+  // 하단: 스티치 구분선 + 주 버튼 "이어서 하기"(시안 P3). 실선 대신 스티치
   const dock = current ? (
-    <BigButton label={c.step[current.step]} onPress={() => navigation.navigate(current.route)} />
+    <>
+      <Stitch width="100%" />
+      <BigButton label={c.continue} onPress={() => navigation.navigate(current.route)} />
+    </>
   ) : undefined;
   const todayIdx = kstWeekdayIndex();
-  const stamps = weekStamps(todayIdx, content.streak, all);
   // 미연결 열람: 상단 얇은 띠 한 줄 + 작은 링크(오늘 할 일보다 가볍게, 주 버튼은 아래 하나뿐)
   const top = (
     <>
@@ -79,8 +101,13 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           <TextLink label={c.write_code} onPress={() => navigation.popTo('Connect')} />
         </View>
       ) : null}
-      <Title />
-      <Text20 testID="date-line" style={styles.date}>{kstDateLine()}</Text20>
+      <View style={styles.titleRow}>
+        <Title />
+        {preview ? null : (
+          <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
+        )}
+      </View>
+      <Text20 testID="date-line" size={22} weight="bold" style={styles.date}>{kstDateLine()}</Text20>
       <Stitch width="100%" />
     </>
   );
@@ -102,7 +129,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       ) : done.length === 2 ? (
         <Text20 size={24}>{c.left_one}</Text20>
       ) : null}
-      <StampRow days={stamps} todayIdx={todayIdx} />
+      {preview || !week ? null : <StampRow days={stampsFromDates(week.weekStart, week.doneDates)} todayIdx={todayIdx} />}
       {!consented && !preview ? (
         <View style={styles.notice}>
           <Text20>{copy.consent.title}</Text20>
@@ -117,9 +144,6 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           return <StepRow key={s.step} title={c.step[s.step]} status={status} statusLabel={statusLabel} />;
         })}
       </View>
-      {preview ? null : (
-        <BigButton variant="secondary" label={copy.settings.open} onPress={() => navigation.navigate('Settings')} />
-      )}
     </Screen>
   );
 }
@@ -134,7 +158,8 @@ function Title() {
 
 const styles = StyleSheet.create({
   title: {paddingBottom: 4},
-  date: {color: color.handwrite},
+  titleRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'},
+  date: {color: color.inkTitle},
   // 얇은 띠: 옅은 면, 테두리 없음, 한 줄 + 오른쪽 링크
   strip: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.noticeSoft, borderRadius: radius.chip, paddingHorizontal: 12, marginBottom: 8},
   stripText: {flex: 1, fontSize: 20},

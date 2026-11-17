@@ -1,0 +1,12 @@
+<resources>
+
+    <!-- Android 10+: 내비게이션 바 뒤까지 앱 종이색이 보이게(시스템 대비 막 끔), 아이콘은 어둡게. QA 첫 화면 #2 -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+</resources>

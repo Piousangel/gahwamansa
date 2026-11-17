@@ -135,6 +135,10 @@ test('3단계 기록 -> completed, streak 1, 같은 날 재호출해도 streak �
   expect(again.streak).toBe(1);
   const today = await parent.getTodayContent();
   expect([...today!.completed_steps].sort()).toEqual(['hangul', 'photo', 'question']);
+  const week = await parent.getWeekStamps();
+  expect(week.weekStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(week.doneDates).toHaveLength(1); // 오늘
+  await expect(child.getWeekStamps()).rejects.toThrow(/parent_required/);
   expect(today!.streak).toBe(1);
 });
 

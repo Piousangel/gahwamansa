@@ -38,6 +38,7 @@ export type FakeOptions = {
   who?: 'parent' | 'child' | 'none'; // 시작 시 이 기기의 상태(복원)
   childFamily?: boolean; // 자녀가 이미 가족을 만들었는가(번호 123456 발급된 상태)
   childLinked?: boolean; // 어르신이 이미 연결됐는가
+  weekDone?: number[]; // 이번 주(월=0) 이미 마친 요일(오늘 완료는 따로 더함)
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
@@ -119,6 +120,17 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
     },
     async giveConsent(_version: string) {
       consented = true;
+    },
+    async getWeekStamps() {
+      const kst = new Date(Date.now() + 9 * 3600e3);
+      const idx = (kst.getUTCDay() + 6) % 7;
+      const mon = new Date(kst.getTime() - idx * 86400e3);
+      const day = (i: number) => new Date(mon.getTime() + i * 86400e3).toISOString().slice(0, 10);
+      const set = new Set((opts.weekDone ?? []).map(day));
+      if (steps.size === 3) {
+        set.add(day(idx));
+      }
+      return {weekStart: day(0), doneDates: [...set].sort()};
     },
     async getTodayContent(): Promise<TodayContent | null> {
       if (opts.empty) {

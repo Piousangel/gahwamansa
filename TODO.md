@@ -228,5 +228,5 @@
 
 ## 27. 앱 서명 키 지문 (공개 값)
 - 디버그 키(개발 테스트용, 공용 android 키): SHA1 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25 / 카카오 키 해시 Xo8WBi6jzSxKDVR4drqm84yr9iU=
-- 출시 키(release.keystore, 사용자 보관, git 제외): 지문은 사용자가 keytool -list로 확인해 기록 예정
+- 출시 키(release.keystore, 사용자 보관, git 제외): SHA1 40:B2:89:EE:1C:E2:B3:C2:C1:33:CD:56:FF:94:14:99:15:93:66:CE / SHA256 74:4B:1D:40:84:C9:82:A4:23:CF:E7:03:B4:9A:D3:ED:60:C9:B7:C4:9E:76:3B:1C:89:9E:9F:7A:4C:30:F7:F1
 - [ ] release.keystore 파일과 비밀번호 백업(사용자)

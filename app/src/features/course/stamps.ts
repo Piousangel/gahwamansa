@@ -12,10 +12,9 @@ export function kstWeekdayIndex(now: Date = new Date()): number {
   return (kst(now).getUTCDay() + 6) % 7;
 }
 
-// 이번 주 7칸 중 도장이 붙는 날. 서버가 주는 값은 연속일(streak)뿐이라, 오늘 끝냈으면 오늘까지,
-// 아니면 어제까지 streak 일을 거슬러 칠한다(이번 주 밖은 자름). 연속이 아니던 이번 주의 앞선 날은 표시하지 못한다(서버에 주간 기록 RPC 필요).
-export function weekStamps(todayIdx: number, streak: number, doneToday: boolean): boolean[] {
-  const end = doneToday ? todayIdx : todayIdx - 1;
-  const start = end - streak + 1;
-  return Array.from({length: 7}, (_, i) => streak > 0 && i >= Math.max(0, start) && i <= end);
+// 이번 주 7칸(월~일) 중 도장이 붙는 날: 서버가 준 완료 날짜(my_week_stamps)를 그대로 칠한다(띄엄띄엄 한 날 포함).
+export function stampsFromDates(weekStart: string, doneDates: string[]): boolean[] {
+  const start = Date.parse(`${weekStart}T00:00:00Z`);
+  const idx = new Set(doneDates.map(d => Math.round((Date.parse(`${d}T00:00:00Z`) - start) / 86400e3)));
+  return Array.from({length: 7}, (_, i) => idx.has(i));
 }

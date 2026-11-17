@@ -9,7 +9,7 @@ import {BigButton} from '../src/ui/BigButton';
 import {color} from '../src/ui/tokens';
 import {press, toHomeConsented} from '../testUtils/flow';
 
-const flat = (el: {props: {style: unknown}}) => {
+const flat = (el: {props: Record<string, any>}) => {
   const st = typeof el.props.style === 'function' ? (el.props.style as (s: {pressed: boolean}) => unknown)({pressed: false}) : el.props.style;
   return StyleSheet.flatten(st as never) as Record<string, unknown>;
 };
@@ -81,12 +81,13 @@ test('P1#12 비활성 "다음": 테두리 없음 + 위에 이유 줄', async () 
   expect(reason).toBeTruthy();
 });
 
-test('P1#12 번호 화면: 6칸 미만이면 다음이 비활성이고 이유 줄', async () => {
+test('P1#12 번호 화면: 6칸 미만이면 다음이 비활성, 이유는 화면 읽기 힌트로(키패드 공간 우선)', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
-  await waitFor(() => screen.getByText('번호 6개를 모두 써 주세요'));
   await act(async () => fireEvent.press(screen.getByLabelText('숫자 1')));
-  expect(screen.getByRole('button', {name: '다음'})).toBeDisabled();
+  const next = screen.getByRole('button', {name: '다음'});
+  expect(next).toBeDisabled();
+  expect(next.props.accessibilityHint).toBe('번호 6개를 모두 써 주세요');
 });
 
 test('P1#13·P3 하단 영역 위 1dp 실선 없음', async () => {

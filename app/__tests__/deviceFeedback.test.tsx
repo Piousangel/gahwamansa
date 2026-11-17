@@ -75,14 +75,14 @@ test('어르신 번호 입력은 큰 키패드를 유지한다', async () => {
   await waitFor(() => screen.getByLabelText('숫자 1'));
 });
 
-test('번호 칸: 지금 쓸 칸이 강조되고, 키는 채워진 면(칸과 다른 모양)', () => {
+test('번호 칸: 지금 쓸 칸이 강조되고, 키는 볼록(흰 면+테두리)으로 칸(오목)과 다른 모양', () => {
   render(<CodeInput value="12" onDigit={() => {}} onDelete={() => {}} onClear={() => {}} />);
   const cell = (i: number) => StyleSheet.flatten(screen.getByTestId(`code-cell-${i}`).props.style);
   expect(cell(2).borderWidth).toBeGreaterThan(cell(3).borderWidth ?? 0);
   expect(cell(2).borderColor).not.toBe(cell(3).borderColor);
   const key = screen.getByLabelText('숫자 1');
   const ks = StyleSheet.flatten(typeof key.props.style === 'function' ? key.props.style({pressed: false}) : key.props.style);
-  expect(ks.borderWidth ?? 0).toBe(0);
+  expect(ks.borderWidth).toBe(3); // DECISIONS: 키는 흰 면+테두리+그림자
   expect(ks.backgroundColor).not.toBe(cell(3).backgroundColor);
 });
 

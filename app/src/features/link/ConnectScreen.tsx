@@ -5,6 +5,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
+import {color} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CodeEntry} from './CodeEntry';
@@ -21,11 +22,15 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
   const [reason, setReason] = useState<string | null>(null);
 
   const [code, setCode] = useState('');
-  // 6칸 + 키 4줄이 하단 고정 영역 위에 스크롤 없이 들어가게: 남은 높이를 재서 키 높이(64~68)를 정한다.
-  // 64로도 모자라면 보조 문구(틀려도 괜찮아요)를 숨기고, 그래도 모자라면 키 64로 두고 본문 스크롤을 켠다.
+  // 6칸 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이(keypad-area, 자식 크기에 영향받지 않게 재는 영역)로
+  // 키 높이(64~68)를 정하고, 모자라면 공간을 단계별로 만든다:
+  //   1단계 보조 문구(틀려도 괜찮아요) 숨김 → 2단계 제목 26→22 → 3단계 링크 두 개를 이전 바 줄로 올림
+  //   → 4단계 키 64 + 본문 스크롤(작은 화면·3버튼 내비게이션 등, 잘리지 않게)
   const [keyH, setKeyH] = useState<number | undefined>(undefined);
-  const [tight, setTight] = useState(false);
-  const [overflow, setOverflow] = useState(false);
+  const [level, setLevel] = useState(0);
+  const [help, setHelp] = useState(false);
+  const overflow = level >= 4;
+  const linksOnTop = level >= 3;
   const onArea = (e: LayoutChangeEvent) => {
     if (overflow) {
       return;
@@ -33,11 +38,11 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
     const k = keypadKeyHeight(e.nativeEvent.layout.height);
     if (k !== null) {
       setKeyH(k);
-    } else if (!tight) {
-      setTight(true);
+    } else if (level < 3) {
+      setLevel(l => l + 1);
     } else {
       setKeyH(KEY_MIN);
-      setOverflow(true);
+      setLevel(4);
     }
   };
   const submit = async () => {
@@ -69,24 +74,47 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
     }
   };
 
+  // 링크 두 개는 한 줄에 나란히(64 터치). 비활성 "다음"의 이유는 화면 읽기 힌트로만(키패드 공간 우선)
+  const links = (
+    <View testID="connect-links" style={styles.links}>
+      <TextLink label={copy.connect.no_code_link} touch={64} onPress={() => setHelp(h => !h)} />
+      <TextLink label={copy.connect.view_course} touch={64} onPress={() => navigation.navigate('CourseHome')} />
+    </View>
+  );
   // 이전: 역할 선택으로(어르신 스택의 첫 화면). 주 버튼은 하단 고정 영역(내비게이션 바 위).
   return (
     <Screen
       fill={!overflow}
       scrollEnabled={overflow}
-      top={<BackBar onBack={resetRole} />}
+      top={
+        linksOnTop && !error ? (
+          <View style={styles.topRow}>
+            <BackBar onBack={resetRole} />
+            {links}
+          </View>
+        ) : (
+          <BackBar onBack={resetRole} />
+        )
+      }
       bottom={
         error ? (
           <BigButton variant="secondary" label={error.button} onPress={onErrorButton} />
         ) : (
           <>
-            <TextLink label={copy.connect.view_course} onPress={() => navigation.navigate('CourseHome')} />
-            <BigButton label={copy.connect.button} disabled={!canSubmit(code) || busy} onPress={submit} />
+            {linksOnTop ? null : links}
+            <BigButton
+              label={copy.connect.button}
+              disabled={!canSubmit(code) || busy}
+              accessibilityHint={canSubmit(code) ? undefined : copy.connect.need_six}
+              onPress={submit}
+            />
           </>
         )
       }>
-      <Text20 size={26} weight="bold" accessibilityRole="header">{copy.connect.title}</Text20>
-      {tight ? null : <Text20>{copy.connect.hint}</Text20>}
+      <Text20 size={level >= 2 ? 22 : 26} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
+        {TITLE}
+      </Text20>
+      {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : level >= 1 ? null : <Text20 style={styles.hint}>{copy.connect.hint}</Text20>}
       {error ? (
         <View accessibilityLiveRegion="polite">
           <Text20 size={24} weight="bold">{error.title}</Text20>
@@ -94,11 +122,24 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
         </View>
       ) : (
         <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
-          <CodeEntry value={code} onChange={setCode} keyHeight={keyH} />
+          {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
+          <View style={overflow ? null : styles.pinned}>
+            <CodeEntry value={code} onChange={setCode} keyHeight={keyH} />
+          </View>
         </View>
       )}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({area: {flex: 1, minHeight: 0}});
+// "써 주세요"가 갈라져 "주세요"만 다음 줄에 남지 않게 붙인다(QA P1#5)
+const TITLE = copy.connect.title.replace('써 주세요', '써\u00A0주세요');
+
+const styles = StyleSheet.create({
+  area: {flex: 1, minHeight: 0, overflow: 'hidden'},
+  pinned: {position: 'absolute', top: 0, left: 0, right: 0},
+  links: {flexDirection: 'row', justifyContent: 'space-around', flexWrap: 'wrap', columnGap: 16},
+  topRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'},
+  title: {color: color.inkTitle},
+  hint: {color: color.inkSub},
+});
