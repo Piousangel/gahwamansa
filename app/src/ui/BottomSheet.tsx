@@ -1,8 +1,8 @@
 import React, {useRef, type RefObject} from 'react';
 import {Animated, Modal, Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {color, font, radius, shadow, touch} from './tokens';
-import {ChildText} from './ChildText';
+import {FONT_SCALE_MAX, color, font, radius, shadow, touch} from './tokens';
+import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {focusOn, useReturnFocus} from './a11y';
 import {useFadeIn} from './useFadeIn';
@@ -64,9 +64,9 @@ export function BottomSheet({visible, title, body, children, primary, secondary,
           <View testID="sheet-handle" style={styles.handle} importantForAccessibility="no" accessibilityElementsHidden />
           <View style={styles.head}>
             <View ref={titleRef} accessible accessibilityRole="header" style={styles.titleWrap}>
-              <ChildText size={24} weight="bold" scale="title" style={styles.title}>
+              <Text20 size={24} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.title}>
                 {title}
-              </ChildText>
+              </Text20>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -77,7 +77,7 @@ export function BottomSheet({visible, title, body, children, primary, secondary,
             </Pressable>
           </View>
           <ScrollView style={styles.bodyScroll}>
-            {body ? <ChildText size={18}>{body}</ChildText> : null}
+            {body ? <Text20 size={20}>{body}</Text20> : null}
             {children}
           </ScrollView>
           {primary ? <SheetButton action={primary} kind="primary" /> : null}
@@ -94,9 +94,9 @@ function SheetButton({action, kind}: {action: SheetAction; kind: 'primary' | 'se
   return (
     <View>
       {disabled && disabledReason ? (
-        <ChildText size={16} style={styles.reason} importantForAccessibility="no" accessibilityElementsHidden>
+        <Text20 size={20} style={styles.reason} importantForAccessibility="no" accessibilityElementsHidden>
           {disabledReason}
-        </ChildText>
+        </Text20>
       ) : null}
       <Pressable
         accessibilityRole="button"
@@ -110,13 +110,13 @@ function SheetButton({action, kind}: {action: SheetAction; kind: 'primary' | 'se
           primary ? (pressed ? styles.primaryPressed : styles.primary) : pressed ? styles.pressedSoft : null,
           disabled ? styles.disabled : null,
         ]}>
-        <ChildText
-          size={18}
+        <Text20
+          size={20}
           weight="bold"
-          scale="button"
+          maxFontSizeMultiplier={FONT_SCALE_MAX}
           style={[primary ? styles.primaryText : styles.secondaryText, disabled ? styles.disabledText : null]}>
           {label}
-        </ChildText>
+        </Text20>
       </Pressable>
     </View>
   );
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   handle: {alignSelf: 'center', width: 48, height: 5, borderRadius: 3, backgroundColor: color.lineGhost},
   head: {flexDirection: 'row', alignItems: 'flex-start', gap: 8},
   titleWrap: {flex: 1, paddingTop: 12},
-  title: {fontFamily: font.title},
+  title: {fontFamily: font.title, color: color.inkTitle},
   close: {minWidth: touch.childRecommended, minHeight: touch.childRecommended, alignItems: 'center', justifyContent: 'center', borderRadius: 28},
   bodyScroll: {flexGrow: 0, flexShrink: 1},
   button: {minHeight: touch.childButton, borderRadius: radius.childCard, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16},

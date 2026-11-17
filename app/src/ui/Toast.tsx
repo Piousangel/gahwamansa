@@ -1,8 +1,8 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, Pressable, StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {color, radius, shadow, touch} from './tokens';
-import {ChildText} from './ChildText';
+import {FONT_SCALE_MAX, color, radius, shadow, touch} from './tokens';
+import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {announce} from './a11y';
 import {fadeMs, useReduceMotion} from './motion';
@@ -93,9 +93,9 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
                 <Icon name="icon-warning" size={24} color={color.dangerInk} />
               </View>
             ) : null}
-            <ChildText size={16} weight="bold" style={[styles.text, error ? styles.errorText : styles.infoText]}>
+            <Text20 size={20} weight="bold" style={[styles.text, error ? styles.errorText : styles.infoText]}>
               {toast.text}
-            </ChildText>
+            </Text20>
             {toast.action ? (
               <Pressable
                 accessibilityRole="button"
@@ -105,9 +105,9 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
                   toast.action?.onPress();
                 }}
                 style={({pressed}) => [styles.action, pressed ? styles.actionPressed : null]}>
-                <ChildText size={16} weight="bold" scale="button" style={[styles.actionText, error ? styles.errorText : styles.infoText]}>
+                <Text20 size={20} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.actionText, error ? styles.errorText : styles.infoText]}>
                   {toast.action.label}
-                </ChildText>
+                </Text20>
               </Pressable>
             ) : null}
           </Animated.View>

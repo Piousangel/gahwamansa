@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import {color, font, fontSize, radius, shadow, touch} from './tokens';
+import {color, font, FONT_SCALE_MAX, fontSize, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {Sun, SunArt} from './assets/sun';
@@ -20,7 +20,7 @@ type Props = {
   moment: HanimMoment;
   /** 기본: 첫 만남·완료 88, 오류 56. 오류는 걱정 표정이 56 이상에만 있어 40을 줘도 56으로 그린다. */
   size?: SunSize;
-  /** 주면 말풍선 오른쪽 아래에 64x64 "소리로 읽어 주기" 버튼을 붙인다. 화면 읽기가 켜져 있으면 숨김(TalkBack R16, 소리 겹침). */
+  /** 주면 말풍선 오른쪽 아래에 "읽어 주세요" 글자 버튼(아이콘+글자, 높이 64)을 붙인다. 화면 읽기가 켜져 있으면 숨김(TalkBack R16, 소리 겹침). */
   onReadAloud?: () => void;
   testID?: string;
 };
@@ -76,10 +76,15 @@ export function SunBubble({text, moment, size, onReadAloud, testID}: Props) {
         {onReadAloud && !screenReader ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="소리로 읽어 주기"
+            accessibilityLabel="읽어 주세요"
             onPress={onReadAloud}
             style={({pressed}) => [styles.read, pressed ? styles.readPressed : null]}>
-            <Icon name="icon-speaker" size={32} color={color.action} />
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Icon name="icon-speaker" size={28} color={color.action} />
+            </View>
+            <Text20 size={22} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.readText}>
+              읽어 주세요
+            </Text20>
           </Pressable>
         ) : null}
       </View>
@@ -102,7 +107,9 @@ const styles = StyleSheet.create({
   text: {color: color.inkTitle, fontFamily: font.title},
   read: {
     alignSelf: 'flex-end', marginTop: 8, minWidth: touch.iconButton, minHeight: touch.iconButton, borderRadius: touch.iconButton / 2,
+    flexDirection: 'row', gap: 6, paddingHorizontal: 16,
     alignItems: 'center', justifyContent: 'center', backgroundColor: color.card, borderWidth: 2, borderColor: color.line,
   },
+  readText: {color: color.action},
   readPressed: {backgroundColor: color.actionSoft},
 });

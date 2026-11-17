@@ -11,7 +11,7 @@ export function useReduceMotion(): boolean {
   useEffect(() => {
     let alive = true;
     Promise.resolve(AccessibilityInfo.isReduceMotionEnabled())
-      .then(v => alive && setReduce(!!v))
+      .then(v => alive && v && setReduce(true)) // 기본값과 같으면 다시 그리지 않는다
       .catch(() => {});
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', v => setReduce(!!v));
     return () => {

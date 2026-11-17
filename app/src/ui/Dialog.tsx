@@ -24,8 +24,9 @@ type Props = {
   body?: string;
   /** 1~3개, 세로로 쌓는다. 선택지가 곧 닫는 길(X 없음, 밖 눌러도 안 닫힘). */
   actions: DialogAction[];
-  /** danger: "조심하세요" 칩 + 경고 아이콘(색만으로 구분하지 않음) */
-  tone?: 'normal' | 'danger';
+  /** 되돌릴 수 없는 행동(P9 2단계·C8 지우기)일 때만: "조심하세요" 칩 + 경고 아이콘.
+   *  로그아웃·그만 보여 주기 같은 확인에는 쓰지 않는다(impl-drift #6). 위험 버튼 자체는 actions 의 kind:'danger'. */
+  irreversible?: boolean;
   /** 안드로이드 뒤로. 없으면 맨 위(안전한) 선택지를 누른 것과 같다. */
   onBack?: () => void;
   /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 대화상자를 연 버튼) */
@@ -38,11 +39,10 @@ type Props = {
  * 접근성: alertdialog + accessibilityViewIsModal(iOS), Android 는 Modal 이 별도 창이라 TalkBack 포커스가 안에 갇힌다.
  * 열리면 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
  */
-export function Dialog({visible, title, body, actions, tone = 'normal', onBack, returnFocusRef, testID}: Props) {
+export function Dialog({visible, title, body, actions, irreversible = false, onBack, returnFocusRef, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   useReturnFocus(visible, returnFocusRef);
   const {opacity, start} = useFadeIn();
-  const danger = tone === 'danger';
 
   const onShow = () => {
     start();
@@ -61,7 +61,7 @@ export function Dialog({visible, title, body, actions, tone = 'normal', onBack, 
       {/* 어두운 배경: 누를 곳 없음(실수로 닫히지 않게) */}
       <Animated.View testID="dialog-scrim" style={[styles.scrim, {opacity}]}>
         <View testID={testID ?? 'dialog-card'} role="alertdialog" accessibilityViewIsModal style={styles.card}>
-          {danger ? (
+          {irreversible ? (
             <View style={styles.chip}>
               <Icon name="icon-warning" size={24} color={color.onAction} />
               <Text20 weight="bold" style={styles.chipText}>

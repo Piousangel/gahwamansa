@@ -70,11 +70,11 @@ describe('Toast(자녀 토스트)', () => {
     expect(screen.queryByText('보내지 못했어요')).toBeNull();
   });
 
-  test('글자 16 굵게, R11: 나타날 때 한 번만 읽음(오류도 polite, 알림 경로 하나)', () => {
+  test('글자 20 굵게(자녀도 최소 20), R11: 나타날 때 한 번만 읽음(오류도 polite, 알림 경로 하나)', () => {
     render(ui());
     fireEvent.press(screen.getByTestId('ok'));
     const t = StyleSheet.flatten(screen.getByText('응원을 보냈어요').props.style);
-    expect(t.fontSize).toBe(16);
+    expect(t.fontSize).toBe(20);
     expect(t.fontWeight).toBe('bold');
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('응원을 보냈어요');
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);

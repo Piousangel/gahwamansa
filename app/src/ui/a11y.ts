@@ -39,7 +39,7 @@ export function useScreenReader(): boolean {
     let alive = true;
     // 네이티브 모듈이 없을 때(테스트·일부 기기) undefined 를 돌려줘도 죽지 않게 감싼다
     Promise.resolve(AccessibilityInfo.isScreenReaderEnabled())
-      .then(v => alive && setOn(!!v))
+      .then(v => alive && v && setOn(true))
       .catch(() => {});
     const sub = AccessibilityInfo.addEventListener('screenReaderChanged', v => setOn(!!v));
     return () => {

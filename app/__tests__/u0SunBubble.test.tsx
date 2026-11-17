@@ -40,10 +40,12 @@ describe('SunBubble(해님 말풍선)', () => {
     expect(StyleSheet.flatten(art.props.style).width).toBe(56);
   });
 
-  test('읽어 주기 버튼은 64x64 이상, 이름이 있고 누르면 호출된다', () => {
+  test('읽어 주기 버튼은 아이콘만이 아니라 글자 "읽어 주세요"(R7 라벨=보이는 글), 64 이상, 누르면 호출', () => {
     const fn = jest.fn();
     render(<SunBubble moment="firstMeet" text="오늘의 사진을 천천히 보세요" onReadAloud={fn} />);
-    const btn = screen.getByRole('button', {name: '소리로 읽어 주기'});
+    const btn = screen.getByRole('button', {name: '읽어 주세요'});
+    expect(screen.getByText('읽어 주세요')).toBeTruthy();
+    expect(screen.getByText('읽어 주세요').props.maxFontSizeMultiplier).toBe(1.5);
     const s = StyleSheet.flatten(btn.props.style);
     expect(s.minWidth).toBeGreaterThanOrEqual(64);
     expect(s.minHeight).toBeGreaterThanOrEqual(64);
@@ -52,10 +54,11 @@ describe('SunBubble(해님 말풍선)', () => {
   });
 
   test('R16: 화면 읽기가 켜져 있으면 읽어 주기 버튼을 숨긴다(소리 겹침)', async () => {
-    const sr = jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValueOnce(true);
+    const sr = jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockImplementation(() => Promise.resolve(true));
     render(<SunBubble moment="firstMeet" text="오늘의 사진을 천천히 보세요" onReadAloud={() => {}} />);
-    await waitFor(() => expect(screen.queryByRole('button', {name: '소리로 읽어 주기'})).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', {name: '읽어 주세요'})).toBeNull());
     expect(sr).toHaveBeenCalled();
+    sr.mockImplementation(() => Promise.resolve(false));
   });
 
   test('읽어 주기가 없으면 말풍선은 누를 수 없다(버튼 0개)', () => {
