@@ -11,7 +11,7 @@ import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
 export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'HangulStep'>) {
-  const {finish, error} = useFinishStep();
+  const {finish, error, busy} = useFinishStep();
   const {content} = useSession();
   if (!content?.photo) {
     return null;
@@ -22,12 +22,13 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
     }
   };
   return (
-    <Screen>
+    <Screen
+      bottom={
+        error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.hangul} loading={busy} onPress={go} />
+      }>
       <Text20 size={36} weight="bold">{content.photo.keyword}</Text20>
-      <Text20>{appCopy.hangul_hint}</Text20>
+      <Text20 size={22}>{appCopy.hangul_hint}</Text20>
       <AssetPlaceholder name="writing-guide" width={300} height={200} />
-      <BigButton label={copy.course.next.hangul} onPress={go} />
-      <StepError error={error} onRetry={go} />
     </Screen>
   );
 }

@@ -20,15 +20,17 @@ export function DeleteDoneScreen() {
         ? withTitle(d.child.done_last, title ?? '부모님')
         : d.child.done_keep;
   return (
-    <Screen>
-      <Text20 size={28} weight="bold">{message}</Text20>
+    <Screen
+      bottom={
+        <BigButton
+          label={role === 'child' ? d.child.back : d.parent.back}
+          onPress={() =>
+            navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: role === 'child' ? 'Login' : 'Connect'}]}))
+          }
+        />
+      }>
+      <Text20 size={28} weight="bold" accessibilityRole="header">{message}</Text20>
       {role === 'child' ? <Text20>{d.child.thanks}</Text20> : null}
-      <BigButton
-        label={role === 'child' ? d.child.back : d.parent.back}
-        onPress={() =>
-          navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: role === 'child' ? 'Login' : 'Connect'}]}))
-        }
-      />
     </Screen>
   );
 }

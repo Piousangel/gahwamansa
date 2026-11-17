@@ -112,9 +112,9 @@ test('미연결 열람 중 포그라운드 재조회는 화면에서 한 단계�
   await press(/사진 보기/);
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByText('사진 보기 - 했어요'));
+  await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
   await act(async () => {
     handlers.forEach(h => h('active'));
   });
-  expect(screen.getByText('사진 보기 - 했어요')).toBeTruthy();
+  expect(screen.getByLabelText('사진 보기, 했어요')).toBeTruthy();
 });

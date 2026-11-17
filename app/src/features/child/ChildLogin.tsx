@@ -1,0 +1,139 @@
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, TextInput} from 'react-native';
+import {CommonActions, useNavigation} from '@react-navigation/native';
+import {useSession} from '../../app/session';
+import {Screen} from '../../ui/Screen';
+import {Text20} from '../../ui/Text20';
+import {BigButton} from '../../ui/BigButton';
+import {color, radius} from '../../ui/tokens';
+import {copy, offlineMessage} from '../../copy/copy';
+import {hasReason, isOffline} from '../types';
+import {CodeEntry} from '../link/CodeEntry';
+
+const t = copy.login;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const RESEND_WAIT_MS = 60 * 1000; // 다시 받기 대기(남용·연타 방지). 화면에는 숫자를 쓰지 않는다
+const CODE_VALID_MS = 10 * 60 * 1000; // 메일 템플릿 기준 유효 10분
+
+// 자녀 로그인: 이메일 -> 메일로 온 인증번호 6자리(Supabase OTP). 성공하면 시작 화면(ChildGate)부터 다시 정한다.
+export function ChildLogin() {
+  const navigation = useNavigation();
+  const {api, resetRole} = useSession();
+  const [email, setEmail] = useState('');
+  const [stage, setStage] = useState<'email' | 'code'>('email');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [canResend, setCanResend] = useState(false);
+  const sentAt = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+  }, []);
+
+  const startCooldown = () => {
+    setCanResend(false);
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+    timer.current = setTimeout(() => setCanResend(true), RESEND_WAIT_MS);
+  };
+
+  const sendError = (e: unknown) =>
+    hasReason(e, 'rate_limited')
+      ? t.rate_limited
+      : hasReason(e, 'invalid_email')
+        ? t.bad_email
+        : isOffline(e)
+          ? offlineMessage.title
+          : t.failed.title;
+
+  const send = async (again: boolean) => {
+    const addr = email.trim();
+    if (!EMAIL_RE.test(addr)) {
+      setNote(t.bad_email);
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      await api.sendEmailCode(addr);
+      sentAt.current = Date.now();
+      setStage('code');
+      setNote(again ? t.resent : null);
+      startCooldown();
+    } catch (e) {
+      setNote(sendError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verify = async (code: string): Promise<boolean> => {
+    setBusy(true);
+    setNote(null);
+    try {
+      await api.verifyEmailCode(email.trim(), code);
+      navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
+      return true;
+    } catch (e) {
+      // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
+      const expired = Date.now() - sentAt.current > CODE_VALID_MS;
+      setNote(
+        hasReason(e, 'otp_expired') ? (expired ? t.expired : t.bad_code) : isOffline(e) ? offlineMessage.title : t.failed.title,
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (stage === 'email') {
+    return (
+      <Screen>
+        <Text20 size={28} weight="bold">{t.title}</Text20>
+        <Text20>{t.hint}</Text20>
+        <TextInput
+          accessibilityLabel={t.email_label}
+          placeholder={t.email_placeholder}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          keyboardType="email-address"
+          style={styles.input}
+        />
+        {note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null}
+        <BigButton label={t.send} disabled={busy} onPress={() => send(false)} />
+        <BigButton variant="secondary" label={t.back} onPress={resetRole} />
+      </Screen>
+    );
+  }
+  return (
+    <Screen>
+      <Text20 size={26} weight="bold">{t.code_title}</Text20>
+      <Text20>{t.sent.split('{이메일}').join(email.trim())}</Text20>
+      <Text20>{t.code_valid}</Text20>
+      <Text20>{t.code_hint}</Text20>
+      {note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null}
+      <CodeEntry submitLabel={t.verify} busy={busy} onSubmit={verify} />
+      <BigButton variant="secondary" label={t.resend} disabled={busy || !canResend} onPress={() => send(true)} />
+      <BigButton
+        variant="secondary"
+        label={t.other_email}
+        onPress={() => {
+          setStage('email');
+          setNote(null);
+        }}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  input: {minHeight: 56, fontSize: 20, borderWidth: 2, borderColor: color.line, borderRadius: radius.chip, backgroundColor: color.card, paddingHorizontal: 12, marginVertical: 12, color: color.ink},
+});

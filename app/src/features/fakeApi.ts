@@ -35,6 +35,9 @@ export type FakeOptions = {
   failDelete?: number; // deleteMyAccount 가 처음 N번 실패
   parentTitle?: string; // 자녀 홈 호칭(기본 부모님)
   latest?: ChildSummary['latest']; // 자녀에게 보일 최근 답(미지정이면 저장한 답에서 만든다)
+  who?: 'parent' | 'child' | 'none'; // 시작 시 이 기기의 상태(복원)
+  childFamily?: boolean; // 자녀가 이미 가족을 만들었는가(번호 123456 발급된 상태)
+  childLinked?: boolean; // 어르신이 이미 연결됐는가
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
@@ -50,18 +53,48 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   let failRecord = opts.failRecord ?? 0;
   let failChildHome = opts.failChildHome ?? 0;
   const baseStreak = opts.streak ?? 0;
-  let issued = 0;
+  let childFamily = opts.childFamily ?? opts.childLinked ?? false;
+  let childLinked = opts.childLinked ?? false;
+  let emailVerified = opts.who === 'child';
   return {
+    async sendEmailCode(email) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        throw new ServerError('send_email_code', 'invalid_email', 'validation_failed');
+      }
+    },
+    async verifyEmailCode(_email, code) {
+      if (code !== '246810') {
+        throw new ServerError('verify_email_code', 'otp_expired', 'otp_expired');
+      }
+      emailVerified = true;
+    },
+    async getChildState() {
+      if (!childFamily) {
+        return {kind: 'no_family'};
+      }
+      return {
+        kind: 'family',
+        parentTitle,
+        linked: childLinked,
+        code: childLinked ? null : {code: '123456', expiresAt: '2099-01-01T00:00:00Z'},
+      };
+    },
+    async whoAmI() {
+      return opts.who ?? (emailVerified ? 'child' : linked ? 'parent' : 'none');
+    },
     async createFamily() {
+      childFamily = true;
       return {family_id: 'fam-1', profile_id: 'child-1'};
     },
     async issueInviteCode() {
-      issued += 1;
-      return String(100000 + issued * 7).slice(0, 6);
+      return '123456'; // 어르신 쪽 fake redeem 이 받는 번호와 같게
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
       if (code === '123456') {
         linked = true;
+        if (childFamily) {
+          childLinked = true;
+        }
         return {ok: true, family_id: 'fam-1', profile_id: 'parent-1'};
       }
       const reason = FAIL_CODES[code] ?? 'invalid';
@@ -83,9 +116,6 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       steps.clear();
       consented = false;
       return {scope: opts.deleteScope ?? 'parent'};
-    },
-    async restoreSession() {
-      return linked ? 'linked' : 'unlinked';
     },
     async giveConsent(_version: string) {
       consented = true;

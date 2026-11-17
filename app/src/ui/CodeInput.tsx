@@ -1,6 +1,6 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {color, radius} from './tokens';
+import {color, FONT_SCALE_MAX, radius, size} from './tokens';
 import {CODE_LENGTH, formatCode} from './codeInputLogic';
 
 type Props = {
@@ -12,10 +12,17 @@ type Props = {
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
-function Key({label, a11y, onPress}: {label: string; a11y: string; onPress: () => void}) {
+// 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34("모두 지움" 20, "지움" 24).
+function Key({label, a11y, onPress, textSize = 34}: {label: string; a11y: string; onPress: () => void; textSize?: number}) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={a11y} onPress={onPress} style={styles.key}>
-      <Text style={styles.keyText}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      onPress={onPress}
+      style={({pressed}) => [styles.key, pressed ? styles.keyPressed : null]}>
+      <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.keyText, {fontSize: textSize}]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -26,7 +33,7 @@ export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
       <View style={styles.cells} accessibilityLabel={`입력한 번호 ${formatCode(value)}`}>
         {Array.from({length: CODE_LENGTH}).map((_, i) => (
           <View key={i} style={styles.cell}>
-            <Text style={styles.cellText}>{value[i] ?? ''}</Text>
+            <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.cellText}>{value[i] ?? ''}</Text>
           </View>
         ))}
       </View>
@@ -38,18 +45,19 @@ export function CodeInput({value, onDigit, onDelete, onClear}: Props) {
         </View>
       ))}
       <View style={styles.row}>
-        <Key label="모두 지움" a11y="전부 지우기" onPress={onClear} />
+        <Key label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={20} />
         <Key label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
-        <Key label="지움" a11y="한 칸 지우기" onPress={onDelete} />
+        <Key label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={24} />
       </View>
     </View>
   );
 }
 const styles = StyleSheet.create({
-  cells: {flexDirection: 'row', justifyContent: 'center', marginBottom: 12},
-  cell: {width: 48, height: 64, borderWidth: 3, borderColor: color.line, borderRadius: radius.chip, backgroundColor: color.card, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center'},
-  cellText: {fontSize: 32, color: color.ink, fontWeight: 'bold'},
-  row: {flexDirection: 'row', justifyContent: 'center'},
-  key: {minWidth: 96, minHeight: 64, margin: 4, borderRadius: radius.card, backgroundColor: color.card, borderWidth: 2, borderColor: color.line, alignItems: 'center', justifyContent: 'center'},
-  keyText: {fontSize: 24, color: color.ink, fontWeight: 'bold'},
+  cells: {flexDirection: 'row', gap: 8, marginBottom: 16},
+  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
+  cellText: {fontSize: 34, color: color.ink, fontWeight: 'bold'},
+  row: {flexDirection: 'row', gap: 8, marginBottom: 8},
+  key: {flex: 1, minHeight: size.codeBox, borderRadius: radius.card, backgroundColor: color.card, borderWidth: 3, borderColor: color.line, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
+  keyPressed: {backgroundColor: color.actionSoft, borderColor: color.action},
+  keyText: {color: color.ink, fontWeight: 'bold', textAlign: 'center'},
 });

@@ -168,7 +168,7 @@
 ## 2026-11-17 디자인 시스템 E-최소 앱 적용(공용 UI·어르신 코스/계정 화면)
 - 글꼴: tokens-v3 fontCandidate가 라이선스 미확인이라 **시스템 글꼴 유지**(tokens.ts font 값 undefined, 교체 시 값만 변경)
 - 한국어 줄바꿈: iOS는 lineBreakStrategyIOS="hangul-word". Android는 RN 0.88 코어에 lineBreakWordStyle(phrase) 연결이 없어(ReactAndroid에 LineBreakConfig 0건) **어절 안 글자 사이에 U+2060(단어 결합자)을 넣어 띄어쓰기에서만 줄바꿈**(ui/koreanText.ts). 버린 안: 네이티브 모듈 추가(출시 일정), 그대로 둠(단어 중간 줄바꿈 F1). 실기기 TalkBack 읽기·긴 어절 강제 줄바꿈은 미확인
-- 글자 확대 상한 maxFontSizeMultiplier 1.5(tokens-v3 제안값). OPERATING의 어르신 200% 점검은 150%로 고정 렌더됨 — 상한을 올릴지는 결정 필요
+- 글자 확대 상한(리드 결정, 리뷰 반영): 본문 2.0, 하단 고정 버튼·큰 제목(28 이상)·번호 칸만 1.5. 하단 고정 영역은 화면 40% 이하로 막고 넘치면 영역 안에서 스크롤. WJ는 NFC 후 인접 한글 음절 사이에만(멱등, 이모지·영문·숫자 보존), Android Text20은 원문을 화면 읽기 라벨로. Android 키보드 회피는 behavior=padding(edgeToEdge)
 - 표준 화면 틀: Screen({top, bottom}) — 하단은 ScrollView 밖 형제라 겹치지 않음. 기존 Screen({children}) 호출은 그대로 동작
 - 코스 홈 하단 큰 버튼 글자는 시안의 "이어서 하기" 대신 지금 단계 이름("사진 보기" 등): 문구 파일에 "이어서 하기"가 없고, 무엇을 하는지 바로 보임. 라이터 확인 필요
 - inkTitle(#4E2F14)은 승인 대기라 토큰만 두고 화면 글자는 ink 사용

@@ -9,7 +9,8 @@
     "역할 선택(P0)",
     "카카오 로그인",
     "로그인 중",
-    "로그인 실패"
+    "로그인 실패",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "큰 버튼",
@@ -19,16 +20,17 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C1",
    "file": "C1_relation.dc.html",
    "states": [
     "기본(부모님)",
-    "다른 호칭",
+    "할머니를 고른 상태(닫힌 목록 7개)",
     "만드는 중",
-    "실패"
+    "실패",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "큰 버튼",
@@ -37,16 +39,17 @@
     "안내 박스(오류)"
    ],
    "tempCopy": [],
-   "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "unverified": "호칭은 닫힌 목록 7개만. 맞는 이름이 없으면 부모님 안내(6절 확정). 가족 만들기는 별도 화면 없이 자동이라고 가정",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C2",
    "file": "C2_code.dc.html",
    "states": [
-    "기본",
+    "기본(번호 1개)",
     "복사됨",
-    "글자 150%"
+    "글자 150%",
+    "기간이 지남·새로 만들기"
    ],
    "components": [
     "큰 버튼",
@@ -58,7 +61,7 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C2",
@@ -74,15 +77,17 @@
     "상단 바"
    ],
    "tempCopy": [],
-   "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "unverified": "빌드 1 제외(번호 여러 개 관리 뺌, 번호 1개만). 보관용, 다른 화면에서 링크 없음",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)",
+   "build1": "빌드 1 제외"
   },
   {
    "id": "C3",
    "file": "C3_connect.dc.html",
    "states": [
     "연결 대기",
-    "연결됨"
+    "연결됨",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "큰 버튼",
@@ -91,8 +96,8 @@
     "상단 바"
    ],
    "tempCopy": [],
-   "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "unverified": "연결됨: '연결됐어요 / 고른 답을 보여 줄지는 {호칭}께서 정해요 / 보여 주시면 앨범에서 볼 수 있어요'(6절 확정)",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C4",
@@ -101,7 +106,8 @@
     "기본(11월 16일)",
     "날짜 어제 이전",
     "빈",
-    "동의 거부"
+    "동의 거부",
+    "연결 끊김(배너 + 최근 답 카드 유지, 응원 버튼 없음)"
    ],
    "components": [
     "큰 버튼",
@@ -113,7 +119,7 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C4",
@@ -133,8 +139,8 @@
     "하단 탭 2개"
    ],
    "tempCopy": [],
-   "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "unverified": "응원은 6절 확정 4개만: 사랑해요, 오늘도 좋은 하루예요 / 덕분에 하루가 따뜻해요 / 늘 고마워요 / 오늘도 편안한 하루 보내세요(새 키 제안 thanks_always·peaceful_day)",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C5",
@@ -143,7 +149,8 @@
     "기본",
     "빈",
     "오류",
-    "로딩"
+    "로딩",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "하단 탭 2개",
@@ -154,15 +161,15 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C6",
    "file": "C6_paid_sheet.dc.html",
    "states": [
-    "3지선다 고르기 전",
-    "연 선택",
-    "신청 완료"
+    "기본: 가격 3안 + 소식 받기",
+    "누른 뒤: 토스트 + 관심 남김(비활성)",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "시트",
@@ -170,8 +177,8 @@
     "선택 행"
    ],
    "tempCopy": [],
-   "unverified": "가격은 [가격] 자리표시. '소식 받기'는 관심 표시만(푸시 동의 미포함, 사용자 결정 확정)",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "unverified": "가격은 [가격] 자리표시. 소식 받기는 관심 표시만(결제·연락처·푸시 동의 없음). 누른 뒤 토스트 '관심을 남겼어요. 지금은 결제되지 않아요'(6절 확정)",
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C7",
@@ -179,7 +186,8 @@
    "states": [
     "기본",
     "부르는 이름 시트",
-    "바꿨어요 토스트"
+    "바꿨어요 토스트",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "상단 바",
@@ -190,7 +198,7 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C8",
@@ -198,7 +206,8 @@
    "states": [
     "기본",
     "지우는 중",
-    "실패"
+    "실패",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "상단 바",
@@ -208,7 +217,7 @@
    ],
    "tempCopy": [],
    "unverified": "자녀가 남는 경우(내 계정만)와 마지막 자녀 두 변형. 정책 문구는 가정",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C8",
@@ -217,7 +226,8 @@
     "입력 전",
     "입력 맞음",
     "사전 조회 실패·입력 전(가장 강한 경고+입력칸 유지)",
-    "사전 조회 실패·입력 완료"
+    "사전 조회 실패·입력 완료",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "상단 바",
@@ -227,14 +237,15 @@
    ],
    "tempCopy": [],
    "unverified": "자녀가 남는 경우(내 계정만)와 마지막 자녀 두 변형. 정책 문구는 가정",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   },
   {
    "id": "C9",
    "file": "C9_done.dc.html",
    "states": [
     "child",
-    "family"
+    "family",
+    "글자 150% 대표 보드"
    ],
    "components": [
     "큰 버튼",
@@ -243,14 +254,19 @@
    ],
    "tempCopy": [],
    "unverified": "",
-   "confirmedCopy": "docs/team/copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "docs/team/copy-v3-confirmed.md 1~2·5·6절(6절 3차 확정 최우선) 반영(2026-11-17)"
   }
  ],
- "links": "C0→C1→C2→C3→C4⇄C5→C6, C4/C5→C7→C8→C9→C0. 부모님 트랙 파일로는 링크 없음(href=#).",
+ "links": "C0→C1→C2→C3→C4⇄C5→C6, C4 연결 끊김→C2, C4/C5→C7→C8→C9→C0. C2_codes는 링크 없음(빌드 1 제외). 부모님 트랙 파일로는 href=#.",
  "tossNote": "토스에서는 상단 바 생략: 상단 바를 그리는 화면(C0 로그인·C1~C9)은 토스 내비게이션 바(56px)가 대신한다. 별도 변형 아트보드는 만들지 않음.",
  "serviceName": "가화만사성",
  "tabs": [
   "앨범",
   "지난 답"
- ]
+ ],
+ "build1Excluded": [
+  "C2_codes.dc.html"
+ ],
+ "qa": "docs/design/v3/_qa/2026-11-17-child.md",
+ "fontScaleRule": "버튼·탭·상단 바·시트 머리·토스트 글자는 최대 1.5배(tokens maxFontSizeMultiplier 1.5 제안), 본문은 200%까지 커지고 본문만 스크롤"
 }

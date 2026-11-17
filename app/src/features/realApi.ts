@@ -1,11 +1,11 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {OfflineError, ServerError} from './types';
 import type {
-  Api, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
+  Api, ChildState, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
 
 export interface RealApi extends Api {
-  // 로컬 테스트용 이메일 가입(실제 자녀 로그인은 카카오로 대체 예정)
+  // 통합 테스트용 이메일·비밀번호 가입(앱의 자녀 로그인은 메일 인증번호: sendEmailCode/verifyEmailCode)
   signUpChild(email: string, password: string): Promise<void>;
 }
 
@@ -57,18 +57,60 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       }
       return {scope: data.scope};
     },
-    async restoreSession() {
+    async sendEmailCode(email) {
+      const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true}});
+      if (error) {
+        if (error.status === 429 || error.code === 'over_email_send_rate_limit') {
+          throw new ServerError('send_email_code', 'rate_limited', String(error.status ?? ''));
+        }
+        if (error.code === 'email_address_invalid' || error.code === 'validation_failed') {
+          throw new ServerError('send_email_code', 'invalid_email', error.code);
+        }
+        fail('send_email_code', error);
+      }
+    },
+    async verifyEmailCode(email, code) {
+      const {error} = await sb.auth.verifyOtp({email, token: code, type: 'email'});
+      if (error) {
+        if (error.code === 'otp_expired' || error.status === 403) {
+          throw new ServerError('verify_email_code', 'otp_expired', error.code);
+        }
+        fail('verify_email_code', error);
+      }
+    },
+    async getChildState(): Promise<ChildState> {
+      const {data, error} = await sb.rpc('child_summary');
+      if (error) {
+        if (isRaised(error, 'child_required')) return {kind: 'no_family'}; // 자녀 프로필(가족)이 아직 없음
+        fail('child_summary', error);
+      }
+      const linked = (data.parents ?? []).length > 0;
+      let code: {code: string; expiresAt: string} | null = null;
+      if (!linked) {
+        // 아직 쓰지 않은 가입 번호(재연결 번호 제외) 중 가장 늦게 끝나는 것 1개
+        const {data: row, error: ce} = await sb
+          .from('invite_codes')
+          .select('code, expires_at')
+          .is('used_at', null)
+          .is('target_profile_id', null)
+          .gt('expires_at', new Date().toISOString())
+          .order('expires_at', {ascending: false})
+          .limit(1)
+          .maybeSingle();
+        if (ce) fail('invite_codes', ce);
+        code = row ? {code: row.code, expiresAt: row.expires_at} : null;
+      }
+      return {kind: 'family', parentTitle: data.parent_title ?? '부모님', linked, code};
+    },
+    async whoAmI() {
       const {data, error} = await sb.auth.getSession();
       if (error) fail('세션 확인', error);
-      if (!data.session) return 'unlinked';
-      const {data: p, error: pe} = await sb
-        .from('profiles')
-        .select('id')
-        .eq('user_id', data.session.user.id)
-        .eq('role', 'parent')
-        .maybeSingle();
+      const user = data.session?.user;
+      if (!user) return 'none';
+      if (!user.is_anonymous) return 'child';
+      const {data: p, error: pe} = await sb.from('profiles').select('id').eq('user_id', user.id).eq('role', 'parent').maybeSingle();
       if (pe) fail('프로필 조회', pe);
-      return p ? 'linked' : 'unlinked';
+      return p ? 'parent' : 'none';
     },
     async createFamily(): Promise<CreateFamilyResult> {
       const {data, error} = await sb.rpc('create_family');

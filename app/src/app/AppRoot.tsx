@@ -5,7 +5,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import type {Api, StepName, TodayContent} from '../features/types';
 import {SessionContext} from './session';
 import {ParentStack} from './ParentStack';
-import {ChildTabs} from './ChildTabs';
+import {ChildStack} from './ChildStack';
+import {RoleSelect} from '../features/link/RoleSelect';
 import {BigButton} from '../ui/BigButton';
 import {Screen} from '../ui/Screen';
 import {Text20} from '../ui/Text20';
@@ -15,11 +16,12 @@ import {errorMessage} from '../features/course/useFinishStep';
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
 
-// 역할(mock)에 따라 어르신 스택 / 자녀 탭 분기. 실제 역할은 서버 연동 단계에서 profiles.role 로 대체.
-// restore: 시작 시 서버에서 연결 여부를 확인해 첫 화면을 정한다(real 모드).
-export function AppRoot({api, role, restore = false}: {api: Api; role: Role; restore?: boolean}) {
+// 역할에 따라 어르신 스택 / 자녀 스택 분기. role 을 주지 않으면 첫 화면에서 역할을 고른다(P0·C0).
+// restore: 시작 시 서버에서 이 기기 상태(연결된 어르신 / 로그인한 자녀 / 없음)를 확인해 첫 화면을 정한다(real 모드).
+export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; restore?: boolean}) {
   const [content, setContent] = useState<TodayContent | null | undefined>(undefined);
-  const [start, setStart] = useState<Start>(restore && role === 'parent' ? 'loading' : 'Connect');
+  const [who, setWho] = useState<Role | null | 'loading'>(role ?? (restore ? 'loading' : null));
+  const [start, setStart] = useState<Start>(restore && role !== 'child' ? 'loading' : 'Connect');
   const [tick, setTick] = useState(0);
   const contentRef = useRef(content);
   contentRef.current = content;
@@ -45,14 +47,25 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
   }, [api]);
 
   useEffect(() => {
-    if (!(restore && role === 'parent')) {
+    if (!restore || role === 'child') {
       return;
     }
     let alive = true;
     api
-      .restoreSession()
-      .then(r => alive && setStart(r === 'linked' ? 'CourseHome' : 'Connect'))
-      .catch(() => alive && setStart('offline'));
+      .whoAmI()
+      .then(w => {
+        if (!alive) {
+          return;
+        }
+        // 역할이 지정돼 있으면(어르신 전용 실행) 그 역할을 유지하고 첫 화면만 정한다
+        setWho(role ?? (w === 'none' ? null : w));
+        setStart(w === 'parent' ? 'CourseHome' : 'Connect');
+      })
+      .catch(() => {
+        if (alive) {
+          setStart('offline');
+        }
+      });
     return () => {
       alive = false;
     };
@@ -98,20 +111,17 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
       },
       syncError,
       clear: () => setContent(undefined),
+      resetRole: () => {
+        setContent(undefined);
+        setStart('Connect');
+        setWho(null);
+      },
     }),
     [api, content, syncError, sync],
   );
 
   let body: React.ReactNode;
-  if (role === 'child') {
-    body = <ChildTabs />;
-  } else if (start === 'loading') {
-    body = (
-      <Screen>
-        <Text20>{appCopy.loading}</Text20>
-      </Screen>
-    );
-  } else if (start === 'offline') {
+  if (start === 'offline') {
     body = (
       <Screen>
         <Text20 size={24} weight="bold">{offlineMessage.title}</Text20>
@@ -121,10 +131,30 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
           label={offlineMessage.button}
           onPress={() => {
             setStart('loading');
+            if (!role) {
+              setWho('loading');
+            }
             setTick(t => t + 1);
           }}
         />
       </Screen>
+    );
+  } else if (who === 'child') {
+    body = <ChildStack initialRouteName={role === 'child' ? 'Tabs' : 'Gate'} />;
+  } else if (start === 'loading' || who === 'loading') {
+    body = (
+      <Screen>
+        <Text20>{appCopy.loading}</Text20>
+      </Screen>
+    );
+  } else if (who === null) {
+    body = (
+      <RoleSelect
+        onChoose={r => {
+          setStart('Connect');
+          setWho(r);
+        }}
+      />
     );
   } else {
     body = <ParentStack initialRouteName={start} />;

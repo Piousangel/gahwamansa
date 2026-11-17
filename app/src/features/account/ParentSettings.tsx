@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
@@ -6,6 +7,7 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
+import {color, radius} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 
@@ -39,38 +41,57 @@ export function ParentSettings() {
     }
   };
 
+  // 표준 화면 틀: 설정 내용은 본문(스크롤), "돌아가기"만 하단 고정.
   return (
-    <Screen>
-      <Text20 size={24} weight="bold">{t.share_row}</Text20>
-      <Text20>{consented ? t.shared_now : t.not_shared_now}</Text20>
-      {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
-      {confirm === 'stop' ? (
-        <>
-          <Text20 size={26} weight="bold">{t.stop_title}</Text20>
-          <Text20>{t.stop_body}</Text20>
-          <BigButton label={t.keep} onPress={() => setConfirm('none')} />
-          <BigButton variant="secondary" label={t.stop} disabled={busy} onPress={() => run(() => api.withdrawConsent(), false, t.stopped)} />
-        </>
-      ) : confirm === 'resume' ? (
-        <>
-          <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
-          <BigButton label={t.resume_yes} disabled={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
-          <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
-        </>
-      ) : consented ? (
-        <BigButton variant="secondary" label={t.stop} onPress={() => setConfirm('stop')} />
-      ) : (
-        <BigButton label={t.resume} onPress={() => setConfirm('resume')} />
-      )}
-      {error ? (
-        <>
-          <Text20 size={24} weight="bold">{error.title}</Text20>
-          <Text20>{error.body}</Text20>
-        </>
-      ) : null}
-      <BigButton variant="secondary" label={t.delete_row} onPress={() => navigation.navigate('DeleteAccount')} />
-      <Text20>{t.delete_hint}</Text20>
-      <BigButton variant="secondary" label={t.back} onPress={() => navigation.goBack()} />
+    <Screen
+      top={
+        <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>
+          {copy.settings.open}
+        </Text20>
+      }
+      bottom={<BigButton variant="secondary" label={t.back} onPress={() => navigation.goBack()} />}>
+      <View style={styles.section}>
+        <Text20 size={24} weight="bold">{t.share_row}</Text20>
+        <Text20>{consented ? t.shared_now : t.not_shared_now}</Text20>
+        {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
+        {confirm === 'stop' ? (
+          <View style={styles.confirm}>
+            <Text20 size={26} weight="bold">{t.stop_title}</Text20>
+            <Text20>{t.stop_body}</Text20>
+            <BigButton label={t.keep} onPress={() => setConfirm('none')} />
+            <BigButton variant="secondary" label={t.stop} loading={busy} onPress={() => run(() => api.withdrawConsent(), false, t.stopped)} />
+          </View>
+        ) : confirm === 'resume' ? (
+          <View style={styles.confirm}>
+            <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
+            <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
+            <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
+          </View>
+        ) : consented ? (
+          <BigButton variant="secondary" label={t.stop} onPress={() => setConfirm('stop')} />
+        ) : (
+          <BigButton label={t.resume} onPress={() => setConfirm('resume')} />
+        )}
+        {error ? (
+          <View style={styles.error} accessibilityLiveRegion="polite">
+            <Text20 size={24} weight="bold" style={styles.errorTitle}>{error.title}</Text20>
+            <Text20>{error.body}</Text20>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.section}>
+        <BigButton variant="danger" label={t.delete_row} onPress={() => navigation.navigate('DeleteAccount')} />
+        <Text20 style={styles.sub}>{t.delete_hint}</Text20>
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {paddingBottom: 8},
+  section: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 16, gap: 12},
+  confirm: {backgroundColor: color.noticeSoft, borderRadius: radius.card, borderWidth: 4, borderColor: color.action, padding: 14, gap: 12},
+  error: {backgroundColor: color.dangerSoft, borderRadius: radius.card, borderWidth: 3, borderColor: color.dangerInk, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
+  errorTitle: {color: color.dangerInk},
+  sub: {color: color.inkSub},
+});

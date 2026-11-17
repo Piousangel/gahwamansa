@@ -1,10 +1,11 @@
 import React, {useState} from 'react';
-import {Image, StyleSheet} from 'react-native';
+import {Image, StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
+import {color, shadow} from '../../ui/tokens';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
@@ -12,7 +13,7 @@ import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
 export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
-  const {finish, error} = useFinishStep();
+  const {finish, error, busy} = useFinishStep();
   const [imageFailed, setImageFailed] = useState(false);
   const {content} = useSession();
   const photo = content?.photo;
@@ -26,22 +27,31 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
     }
   };
   return (
-    <Screen>
-      {photo.image_url.startsWith('pending://') || imageFailed ? (
-        <AssetPlaceholder name="photo-day1" width={300} height={260} label={imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder} />
-      ) : (
-        <Image source={{uri: photo.image_url}} style={styles.photo} accessibilityLabel={photo.caption} onError={() => setImageFailed(true)} />
-      )}
-      {showImage ? <Text20>{appCopy.ai_photo_label}</Text20> : null}
-      <Text20 size={32}>{photo.caption}</Text20>
-      <Text20>{appCopy.photo_look}</Text20>
+    <Screen
+      bottom={
+        error ? <StepError error={error} onRetry={go} /> : <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
+      }>
+      <View style={styles.polaroid}>
+        {photo.image_url.startsWith('pending://') || imageFailed ? (
+          <AssetPlaceholder name="photo-day1" width={272} height={236} label={imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder} />
+        ) : (
+          <Image source={{uri: photo.image_url}} style={styles.photo} accessibilityLabel={photo.caption} onError={() => setImageFailed(true)} />
+        )}
+        <Text20 size={32} style={styles.caption}>{photo.caption}</Text20>
+      </View>
+      {showImage ? <Text20 style={styles.sub}>{appCopy.ai_photo_label}</Text20> : null}
+      <Text20 size={22}>{appCopy.photo_look}</Text20>
       {photo.recall_questions.map(q => (
-        <Text20 key={q} size={24}>{q}</Text20>
+        <Text20 key={q} size={24} weight="bold">{q}</Text20>
       ))}
-      <BigButton label={copy.course.next.photo} onPress={go} />
-      <StepError error={error} onRetry={go} />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({photo: {width: 300, height: 260}});
+// 폴라로이드(명세 §6) 최소 적용: 흰 틀·안쪽 14·lifted 그림자. 기울기·테이프는 장식이라 빌드 1에서 생략.
+const styles = StyleSheet.create({
+  polaroid: {alignSelf: 'center', width: '100%', maxWidth: 300, backgroundColor: color.card, padding: 14, borderRadius: 4, boxShadow: shadow.lifted, gap: 8},
+  photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft, borderRadius: 2},
+  caption: {textAlign: 'center'},
+  sub: {color: color.inkSub},
+});

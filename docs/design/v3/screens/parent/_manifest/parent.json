@@ -1,7 +1,7 @@
 {
  "owner": "어르신 화면 디자이너",
  "date": "2026-11-17",
- "note": "토스에서는 상단 바 생략(상단 52px 비워 둠). 렌더링은 헤드리스 Chrome으로 확인, 리드 확인 전. 임시 문구는 모두 confirmed로 교체(tempCopy 비움). 서비스 이름 가화만사성.",
+ "note": "토스에서는 상단 바 생략(상단 52px 비워 둠). 렌더링은 헤드리스 Chrome으로 확인, 리드 확인 전. 임시 문구는 모두 confirmed로 교체(tempCopy 비움). 서비스 이름 가화만사성. 2차 수정(2026-11-17): 저장소 docs/design/v3 보관본 기준.",
  "screens": [
   {
    "id": "P0",
@@ -9,7 +9,8 @@
    "states": [
     "복원 중",
     "복원 오류(인터넷)",
-    "150%"
+    "150%",
+    "200%"
    ],
    "components": [
     "bubble",
@@ -21,7 +22,10 @@
    "unchecked": [
     "처음 실행의 역할 선택은 자녀 담당 C0"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round3": [
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P1",
@@ -38,7 +42,9 @@
     "busy",
     "offline",
     "번호가 없어요 도움",
-    "150%"
+    "150%",
+    "not_parent_device",
+    "200%"
    ],
    "components": [
     "code-input",
@@ -50,7 +56,15 @@
    "unchecked": [
     "잠금 남은 시간 표시 방식"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "not_parent_device 보드 추가"
+   ],
+   "round3": [
+    "번호 칸 숫자 최대 40px(200%에서 칸 넘침 수정)",
+    "제목 강제 줄바꿈 제거",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P2",
@@ -60,7 +74,8 @@
     "처리 중",
     "실패",
     "거부 후 안내",
-    "150%"
+    "150%",
+    "200%"
    ],
    "components": [
     "notice",
@@ -70,7 +85,12 @@
    "unchecked": [
     "둘째 줄은 서버가 daily_sessions를 닫을 때만 사실"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round3": [
+    "거부 후 안내 \"고른 답은 저장되지 않아요\"",
+    "150%·200%에서 해님 옆 제목이 좁으면 줄을 바꿈",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P3",
@@ -86,7 +106,9 @@
     "오프라인",
     "동의 거부",
     "150% 1/3",
-    "150% 3/3"
+    "150% 3/3",
+    "연결 끊김(상단 한 줄, ../common/P14_disconnected.dc.html 링크)",
+    "200%"
    ],
    "components": [
     "bubble",
@@ -102,7 +124,16 @@
     "3/3 하단 버튼 없음",
     "오프라인·거부 상태는 본문 높이 때문에 말풍선 생략"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "연결 끊김 보드 추가",
+    "\"N일 연속\" 제거 → \"이번 주 도장\""
+   ],
+   "round3": [
+    "동의 거부 줄 \"고른 답은 저장되지 않아요\"",
+    "본문 자식 flex-shrink 0(200% 날짜 겹침 수정)",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P4",
@@ -113,7 +144,9 @@
     "준비 중",
     "불러오기 실패",
     "기록 실패",
-    "150%"
+    "150%",
+    "연결 끊김(상단 한 줄, ../common/P14_disconnected.dc.html 링크)",
+    "200%"
    ],
    "components": [
     "polaroid",
@@ -125,7 +158,14 @@
    "unchecked": [
     "사진은 샘플 일러스트, AI 사진 표기 정책 미정"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "연결 끊김 보드 추가"
+   ],
+   "round3": [
+    "질문 번호 원 크기 확대 비율 적용",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P5",
@@ -137,7 +177,9 @@
     "저장 중",
     "저장 실패",
     "동의 거부",
-    "150%"
+    "150%",
+    "연결 끊김(상단 한 줄, ../common/P14_disconnected.dc.html 링크)",
+    "200%"
    ],
    "components": [
     "select-card",
@@ -146,7 +188,14 @@
    ],
    "tempCopy": [],
    "unchecked": [],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "연결 끊김 보드 추가"
+   ],
+   "round3": [
+    "동의 거부 \"고른 답은 저장되지 않아요\"(\"대신\" 삭제)",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P6",
@@ -156,7 +205,9 @@
     "쓰는 중",
     "완료",
     "기록 실패",
-    "150%"
+    "150%",
+    "연결 끊김(상단 한 줄, ../common/P14_disconnected.dc.html 링크)",
+    "200%"
    ],
    "components": [
     "notice",
@@ -166,16 +217,23 @@
    "unchecked": [
     "획 따라가기는 글자 채움 시뮬레이션"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "연결 끊김 보드 추가"
+   ],
+   "round3": [
+    "150%·200%에서 쓰기 칸을 안내 문구보다 위로",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P7",
    "file": "P7_done.dc.html",
    "states": [
-    "5일 연속",
-    "첫 도장",
-    "동의 거부",
-    "150%"
+    "도장 찍힘",
+    "이번 주 첫 도장",
+    "150%",
+    "200%"
    ],
    "components": [
     "stamp-row",
@@ -183,7 +241,14 @@
    ],
    "tempCopy": [],
    "unchecked": [],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "연속 문구 제거, 동의 거부 보드 삭제(차이 없어짐)"
+   ],
+   "round3": [
+    "제목·도장·문구를 한 묶음으로 가운데 배치",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P8",
@@ -191,7 +256,8 @@
    "states": [
     "응원 1개",
     "여러 개",
-    "150%"
+    "150%",
+    "200%"
    ],
    "components": [
     "sheet-dialog",
@@ -201,7 +267,11 @@
    "unchecked": [
     "cheers 일부는 '엄마' 고정 문구라 제외"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round3": [
+    "응원 예시를 3차 확정 4개 목록에서 사용",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P9",
@@ -211,7 +281,8 @@
     "2차",
     "지우는 중",
     "실패",
-    "150%"
+    "150%",
+    "200%"
    ],
    "components": [
     "notice",
@@ -220,35 +291,47 @@
    ],
    "tempCopy": [],
    "unchecked": [
-    "어르신이 지우면 자녀 화면 답도 삭제된다는 가정(confirmed 표)"
+    "확인 상자 보드는 아래 화면 버튼까지 4개로 세어짐(활성 2개)"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "2차 확인은 확인 상자"
+   ],
+   "round3": [
+    "1단계 \"되돌릴 수 없어요\" 라벨·문장 삭제, 2단계 상자 \"정말 모두 지울까요? / 되돌릴 수 없어요\"에서만",
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P10",
    "file": "P10_deleted.dc.html",
    "states": [
     "완료",
-    "150%"
+    "150%",
+    "200%"
    ],
    "components": [
     "button"
    ],
    "tempCopy": [],
    "unchecked": [],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round3": [
+    "200% 대표 보드 추가"
+   ]
   },
   {
    "id": "P13",
    "file": "P13_settings.dc.html",
    "states": [
-    "나누는 중",
-    "철회 확인",
-    "철회 완료",
-    "나누지 않는 중",
-    "다시 동의 확인",
-    "다시 동의 완료",
-    "150%"
+    "보여 주는 중",
+    "그만 보여 주기 확인",
+    "그만 보여 준 뒤",
+    "보여 주지 않는 중",
+    "다시 보여 주기 확인",
+    "다시 보여 준 뒤",
+    "150%",
+    "200%"
    ],
    "components": [
     "notice",
@@ -258,10 +341,18 @@
    ],
    "tempCopy": [],
    "unchecked": [
-    "철회 시 지금까지 고른 답은 지움(사용자 결정, 서버 구현됨)을 대화상자에 반영"
+    "확인 상자 보드는 아래 화면 버튼까지 4개로 세어짐(활성 2개)"
    ],
-   "confirmedCopy": "copy-v3-confirmed.md 반영(2026-11-17)"
+   "confirmedCopy": "copy-v3-confirmed.md §6 3차 확정 반영(2026-11-17)",
+   "round2": [
+    "보여 주기·모두 지우기로 재구성"
+   ],
+   "round3": [
+    "모두 지우기를 하단 구분선 아래 위험색 텍스트 링크(64 터치)로 낮춤",
+    "200% 대표 보드 추가"
+   ]
   }
  ],
- "serviceName": "가화만사성"
+ "serviceName": "가화만사성",
+ "qa": "docs/design/v3/_qa/2026-11-17-parent.md"
 }

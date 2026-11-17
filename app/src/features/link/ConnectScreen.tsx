@@ -7,32 +7,31 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {CodeInput} from '../../ui/CodeInput';
+import {CodeEntry} from './CodeEntry';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
-import {canSubmit, clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
 import {copy, reasonToMessage, Message} from '../../copy/copy';
 
 export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams, 'Connect'>) {
-  const {api} = useSession();
-  const [code, setCode] = useState('');
+  const {api, resetRole} = useSession();
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
 
-  const submit = async () => {
+  const submit = async (code: string): Promise<boolean> => {
     setBusy(true);
     try {
       const res = await api.redeemInviteCode(code);
       if (res.ok) {
         navigation.navigate('Consent');
-      } else {
-        setError(reasonToMessage(res.reason));
-        setReason(res.reason);
-        if (res.reason === 'invalid') setCode('');
+        return true;
       }
+      setError(reasonToMessage(res.reason));
+      setReason(res.reason);
+      return res.reason !== 'invalid'; // 틀린 번호면 입력을 비운다
     } catch (e) {
       setReason(null);
       setError(errorMessage(e));
+      return true;
     } finally {
       setBusy(false);
     }
@@ -53,18 +52,14 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
               setError(null);
               if (reason === 'already_linked') {
                 navigation.navigate('Consent');
+              } else if (reason === 'not_parent_device') {
+                resetRole(); // "처음 화면에서 다시 골라 주세요"
               }
             }} />
         </View>
       ) : (
         <>
-          <CodeInput
-            value={code}
-            onDigit={d => setCode(c => inputDigit(c, d))}
-            onDelete={() => setCode(deleteOne)}
-            onClear={() => setCode(clearAll())}
-          />
-          <BigButton label={copy.connect.button} disabled={!canSubmit(code) || busy} onPress={submit} />
+          <CodeEntry submitLabel={copy.connect.button} busy={busy} onSubmit={submit} />
           <BigButton variant="secondary" label={copy.connect.view_course} onPress={() => navigation.navigate('CourseHome')} />
         </>
       )}

@@ -47,14 +47,24 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
   };
 
   return (
-    <Screen>
+    <Screen
+      bottom={
+        error ? (
+          <StepError error={error} onRetry={confirm} />
+        ) : (
+          <BigButton
+            label={copy.course.next.question}
+            disabled={!choice}
+            disabledReason={copy.question.need_choice}
+            loading={saving}
+            onPress={confirm}
+          />
+        )
+      }>
       <Text20 size={32} weight="bold">{q.prompt ?? appCopy.question_title}</Text20>
-      <Text20>{appCopy.question_hint}</Text20>
-      <SelectCard label={q.option_a} selected={choice === 'A'} onPress={() => setChoice('A')} />
-      <SelectCard label={q.option_b} selected={choice === 'B'} onPress={() => setChoice('B')} />
-      <BigButton label={copy.course.next.question} disabled={!choice} onPress={confirm} />
-      {!choice ? <Text20>{copy.question.need_choice}</Text20> : null}
-      <StepError error={error} onRetry={confirm} />
+      <Text20 size={22}>{appCopy.question_hint}</Text20>
+      <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
+      <SelectCard label={q.option_b} selected={choice === 'B'} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
     </Screen>
   );
 }

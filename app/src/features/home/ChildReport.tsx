@@ -1,7 +1,7 @@
 import React from 'react';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {ChildParams} from '../../app/ChildTabs';
+import type {ChildParams} from '../../app/ChildStack';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {DeleteLink} from '../account/DeleteLink';

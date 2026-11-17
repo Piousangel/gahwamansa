@@ -5,7 +5,7 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {color, radius} from '../../ui/tokens';
+import {color, FONT_SCALE_MAX_BODY, radius} from '../../ui/tokens';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import type {DeleteScope} from '../types';
 import {errorMessage} from '../course/useFinishStep';
@@ -66,15 +66,38 @@ export function DeleteAccountScreen({role}: Props) {
 
   const confirmEnabled = !busy && (!strong || typed.trim() === dc.type_word);
 
+  // 표준 화면 틀: 경고 내용은 본문(스크롤), 안전한 "그만둘래요"(주)와 위험 외곽선 버튼은 하단 고정.
+  // 실패하면 하단에 오류 패널 + "다시 하기"(위험 외곽선, 같은 지우기를 다시 시도)를 둔다.
+  const dangerButton = !child ? (
+    // 어르신: 설정의 "모두 지우기"가 첫 단계라 여기서는 한 번만 확인한다(2차 확정 P9)
+    <BigButton variant="danger" label={dp.yes} loading={busy} onPress={run} />
+  ) : stage === 1 ? (
+    <BigButton variant="danger" label={dc.danger} disabled={scope === null} onPress={() => setStage(2)} />
+  ) : (
+    <BigButton variant="danger" label={dc.danger} disabled={!confirmEnabled} loading={busy} onPress={run} />
+  );
+  const dock = (
+    <>
+      {failed ? (
+        <View style={styles.fail} accessibilityLiveRegion="polite">
+          <Text20 size={24} weight="bold" style={styles.failTitle}>{child ? dc.fail : dp.fail_title}</Text20>
+          {child ? null : <Text20>{dp.fail_body}</Text20>}
+        </View>
+      ) : null}
+      <BigButton label={child ? dc.cancel : dp.cancel} onPress={() => navigation.goBack()} />
+      {failed ? <BigButton variant="danger" label={failed.button} loading={busy} onPress={run} /> : dangerButton}
+    </>
+  );
+
   return (
-    <Screen>
+    <Screen bottom={dock}>
       {child && scope === null ? (
         <Text20>{appCopy.loading}</Text20>
       ) : child ? (
         <>
           {strong ? (
             <View style={styles.box}>
-              <Text20 size={24} weight="bold">{withTitle(dc.last_title, title)}</Text20>
+              <Text20 size={24} weight="bold" style={styles.dangerText}>{withTitle(dc.last_title, title)}</Text20>
               <Text20 size={24} weight="bold">{withTitle(dc.last_body, title)}</Text20>
             </View>
           ) : (
@@ -87,46 +110,32 @@ export function DeleteAccountScreen({role}: Props) {
         </>
       ) : (
         <>
-          <Text20 size={26} weight="bold">{dp.title}</Text20>
+          <Text20 size={28} weight="bold" accessibilityRole="header">{dp.title}</Text20>
           <Text20 size={24}>{dp.body}</Text20>
         </>
       )}
 
-      {stage === 2 ? (
-        strong ? (
-          <>
-            <Text20>{dc.type_hint}</Text20>
-            <TextInput accessibilityLabel="확인 글자 입력" value={typed} onChangeText={setTyped} style={styles.input} />
-          </>
-        ) : null
-      ) : null}
-
-      <BigButton label={child ? dc.cancel : dp.cancel} onPress={() => navigation.goBack()} />
-      {!child ? (
-        // 어르신: 설정의 "모두 지우기"가 첫 단계라 여기서는 한 번만 확인한다(2차 확정 P9)
-        <BigButton variant="secondary" label={dp.yes} disabled={busy} onPress={run} />
-      ) : stage === 1 ? (
-        <BigButton variant="secondary" label={dc.danger} disabled={scope === null} onPress={() => setStage(2)} />
-      ) : (
-        <BigButton
-          variant="secondary"
-          label={dc.danger}
-          disabled={!confirmEnabled}
-          onPress={run}
-        />
-      )}
-      {failed ? (
+      {stage === 2 && strong ? (
         <>
-          <Text20 size={24} weight="bold">{child ? dc.fail : dp.fail_title}</Text20>
-          {child ? null : <Text20>{dp.fail_body}</Text20>}
-          <BigButton variant="secondary" label={failed.button} onPress={run} />
+          <Text20>{dc.type_hint}</Text20>
+          <TextInput
+            accessibilityLabel="확인 글자 입력"
+            value={typed}
+            onChangeText={setTyped}
+            maxFontSizeMultiplier={FONT_SCALE_MAX_BODY}
+            style={styles.input}
+          />
         </>
       ) : null}
     </Screen>
   );
 }
 
+// 위험 박스(명세 §8 danger): 색만이 아니라 굵은 외곽선 + 굵은 제목 문구로 구분
 const styles = StyleSheet.create({
-  box: {borderWidth: 4, borderColor: color.actionDark, backgroundColor: color.actionSoft, borderRadius: radius.card, padding: 16, marginBottom: 12},
-  input: {minHeight: 64, fontSize: 28, borderWidth: 3, borderColor: color.line, borderRadius: radius.chip, backgroundColor: color.card, paddingHorizontal: 12, color: color.ink},
+  box: {borderWidth: 4, borderColor: color.dangerInk, backgroundColor: color.dangerSoft, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 8},
+  dangerText: {color: color.dangerInk},
+  fail: {borderWidth: 3, borderColor: color.dangerInk, backgroundColor: color.dangerSoft, borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
+  failTitle: {color: color.dangerInk},
+  input: {minHeight: 64, fontSize: 24, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, paddingHorizontal: 16, color: color.ink},
 });
