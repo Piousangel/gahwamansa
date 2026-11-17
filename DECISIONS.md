@@ -300,7 +300,7 @@
 ## 2026-11-17 환경 분리 구현 방식 (인프라 줄, 리드 채택)
 - 설정 주입: Gradle이 app/env/<flavor>.env(공개 값만) → 리소스·BuildConfig·src/lib/env.generated.ts(gitignore). react-native-config는 RN 0.88 호환 미확인이라 버림. 비밀값 형태 감지 시 빌드 실패
 - 서명: ~/.gradle/gradle.properties의 BUMOJASIK_UPLOAD_* 4개(없으면 debug 서명 + 경고)
-- 버전: 1.0.0, versionCode = git 커밋 수 → 출시 빌드는 main에서만
+- 버전: 1.0.0, versionCode = git 커밋 수(실패 시 빌드 실패) → 출시 빌드는 main에서만, app/android/release-versions.txt 출시 기록보다 커야 함
 - DB 반영: scripts/db-push.sh 가 env의 ref를 --remote로, dry-run 후 환경 이름·ref 재입력 확인, production은 스키마 백업 후 push(실행은 사용자)
 - npm run android = stagingDebug
 
@@ -310,3 +310,4 @@
 - 완료감: 단계 체크 모션, P7 도장 "쾅" 1.4초(건너뛰기, 시스템 촉각 1회, 나무 도장 소리, 효과음 토글), 칭찬·연속·하트 없음
 - 디자인 리듬: StepRow·줄 높이·패딩·간격 규칙(SUMMARY D), "오늘의 코스" 제목 제거
 - 우선순위: ① 리듬 수정·연결 핵심·서버 기록 컬럼·미연결 문구 ② 완료감 ③ 설치 경로 자동 채움 ④ 호칭 미리보기 ⑤ 지난 날 화면
+- 카카오 staging 키: env 별도 슬롯, 사용자가 카카오 콘솔에 staging 네이티브 키 추가 전까지 두 앱 동시 설치 금지(RELEASE.md)
