@@ -13,7 +13,7 @@ export type ChildParent = {
   shared: boolean; // 답을 나누는 중인가
   connected: boolean; // false = 연결이 풀림(어르신 폰 교체·삭제 등). 응원을 보낼 수 없다
   latest: LatestAnswer | null;
-  // 고른 답에 맞춘 첫마디 한 문장(기능 회의 B3). ASSUMED(0027): child_summary parents[].latest.starter, 없으면 null
+  // 고른 답에 맞춘 첫마디 한 문장(기능 회의 B3, 서버 0027 child_summary parents[].latest.starter). 없으면 null → 줄 숨김
   starter: string | null;
 };
 export type ChildSummary = {
@@ -107,7 +107,8 @@ export interface Api {
   fetchChildSummary(): Promise<ChildSummary>;
   setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>; // 가족 기본 호칭(연결 전)
   // 어르신 한 분의 호칭: set_parent_title_for(p_parent, p_title)(0019)
-  setParentTitleFor(parentId: string, title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'invalid_target'}>;
+  // duplicate_title(0028): 같은 가족 다른 어르신이 이미 그 호칭으로 보임
+  setParentTitleFor(parentId: string, title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'invalid_target' | 'duplicate_title'}>;
   // C5 지난 답: child_answer_history()(0021)
   fetchAnswerHistory(): Promise<ParentHistory[]>;
   // 응원 보내기: send_cheer(p_parent, p_key)(0020). 어르신 한 분에게

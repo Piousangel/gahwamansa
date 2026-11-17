@@ -73,7 +73,10 @@ export function ChildSettings() {
     try {
       const r = editing.parentId ? await api.setParentTitleFor(editing.parentId, picked) : await api.setParentTitle(picked);
       if (!r.ok) {
-        throw new Error('invalid_title');
+        // 서버도 같은 호칭을 막는다(0028 duplicate_title). 앱이 먼저 막지만 다른 기기에서 바뀐 경우 시트 안에 알린다
+        setModalError(r.reason === 'duplicate_title' ? s.name_taken : copy.errors.server.title);
+        load();
+        return;
       }
       setEditing(null);
       show({text: s.name_changed});

@@ -278,7 +278,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
         latest: p.shared && p.latest
           ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
           : null,
-        starter: p.shared ? (p.latest?.starter ?? null) : null, // ASSUMED(0027) 기능 회의 B3
+        starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
       }));
       const first = parents[0];
       return {
@@ -296,7 +296,8 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async setParentTitleFor(parentId, title) {
       const {data, error} = await sb.rpc('set_parent_title_for', {p_parent: parentId, p_title: title});
       if (error) fail('set_parent_title_for', error);
-      return data.ok ? {ok: true} : {ok: false, reason: data.reason === 'invalid_target' ? 'invalid_target' : 'invalid_title'};
+      const reason = data.reason === 'invalid_target' || data.reason === 'duplicate_title' ? data.reason : 'invalid_title';
+      return data.ok ? {ok: true} : {ok: false, reason};
     },
     // TODO(계약 검증기): ARCHITECTURE §5 contracts 런타임 검증이 생기면 아래 세 매핑을 그 검증기로 통과시킨다
     async fetchAnswerHistory(): Promise<ParentHistory[]> {

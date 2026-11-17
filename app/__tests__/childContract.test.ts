@@ -30,6 +30,7 @@ test('fake: 어르신 여러 명이면 호칭·연결 상태를 어르신별로,
   ]);
   expect(await api.setParentTitleFor(s.parents[0].parentId, '어머니')).toEqual({ok: true});
   expect(await api.setParentTitleFor('nobody', '엄마')).toEqual({ok: false, reason: 'invalid_target'});
+  expect(await api.setParentTitleFor(s.parents[0].parentId, '아빠')).toEqual({ok: false, reason: 'duplicate_title'}); // 0028
   expect((await api.fetchChildSummary()).parents[0].title).toBe('어머니');
 });
 

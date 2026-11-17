@@ -310,6 +310,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         return {ok: false, reason: 'invalid_title'};
       }
       const p = many.find(x => x.parentId === parentId);
+      if (p && many.some(x => x.parentId !== parentId && x.title === title)) {
+        return {ok: false, reason: 'duplicate_title'}; // 0028
+      }
       if (p) {
         p.title = title;
       } else if (!opts.parents && parentId === 'parent-1') {
