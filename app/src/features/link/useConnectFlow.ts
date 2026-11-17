@@ -4,8 +4,8 @@ import type {Api} from '../types';
 import type {EventName, EventProps} from '../../api/contract/events';
 import {AUTO_CHECK_MS, connectReducer, initialConnect, shouldAutoCheck} from './connectMachine';
 
-// 번호가 밖에서 들어온 경로(ease-and-joy A②). link = App Links(…/c#번호), referrer = 설치 직후 Install Referrer
-export type Prefill = {code: string; source: 'link' | 'referrer'};
+// 번호가 밖에서 들어온 경로(ease-and-joy A②). app_link = App Links(…/c#번호), referrer = 설치 직후 Install Referrer
+export type Prefill = {code: string; source: 'app_link' | 'referrer'};
 
 // P1·P1c 흐름 훅: 6자리를 다 쓰면 300ms 뒤 peek(번호를 쓰지 않음) → 확인 화면 → [이 번호로 연결하기]에서만 redeem.
 // 늦게 온 응답은 순번으로 버린다. 이벤트에 번호 값은 넣지 않는다.
@@ -37,8 +37,8 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
       return;
     }
     prefilled.current = true;
-    const source = prefill.source === 'link' ? 'app_link' : 'referrer';
-    track(api, prefill.source === 'link' ? 'link_opened' : 'referrer_found', prefill.source === 'link' ? {source} : undefined);
+    const source = prefill.source;
+    track(api, source === 'app_link' ? 'link_opened' : 'referrer_found', source === 'app_link' ? {source} : undefined);
     track(api, 'code_prefilled', {source});
   }, [api, prefill]);
 

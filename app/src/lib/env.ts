@@ -21,8 +21,6 @@ export type AppEnv = {
   VERSION_NAME: string; // 빌드가 없으면 ''
   VERSION_CODE: number | null;
   GIT_SHA: string;
-  // 공유 메시지 링크 주소(https://<도메인>/c). 도메인이 정해지기 전에는 비워 둔다 → 메시지에서 링크 줄을 뺀다
-  SHARE_LINK_BASE: string;
 };
 
 export const DEFAULT_ENV: AppEnv = {
@@ -37,7 +35,6 @@ export const DEFAULT_ENV: AppEnv = {
   VERSION_NAME: '',
   VERSION_CODE: null,
   GIT_SHA: '',
-  SHARE_LINK_BASE: '',
 };
 
 const ENV_NAMES: readonly string[] = ['local', 'staging', 'production'];
@@ -100,7 +97,8 @@ export function getAppEnv(): AppEnv {
   return cached;
 }
 
-// 공유 메시지 링크(…/c#번호). 주소가 없거나 https 가 아니면 null
+// 공유 메시지 링크 https://{APP_LINK_HOST}/c#번호(리드 결정 N1: 도메인 원본은 APP_LINK_HOST 하나). 도메인이 없으면 null
 export function appShareLink(code: string): string | null {
-  return shareLink(getAppEnv().SHARE_LINK_BASE, code);
+  const host = getAppEnv().APP_LINK_HOST;
+  return host ? shareLink(`https://${host}/c`, code) : null;
 }

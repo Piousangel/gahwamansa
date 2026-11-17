@@ -25,7 +25,7 @@ type InviteNative = {
   readStore(): Promise<string | null>;
   writeStore(value: string | null): Promise<void>;
 };
-export type InviteBanner = {visible: boolean; code: string | null};
+export type InviteBanner = {visible: boolean; code: string | null; source: PendingInvite['source'] | null};
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 const native = (): Partial<InviteNative> | undefined =>
@@ -69,7 +69,7 @@ export async function readInstallReferrerOnce(): Promise<{invite: PendingInvite;
   try {
     const r = await mod.getReferrerOnce();
     const code = r ? codeFromInstallReferrer(r.referrer, r.clickTs, nowSec()) : null;
-    return code && r ? {invite: {code, source: 'install_referrer'}, clickTs: r.clickTs} : null;
+    return code && r ? {invite: {code, source: 'referrer'}, clickTs: r.clickTs} : null;
   } catch {
     return null;
   }

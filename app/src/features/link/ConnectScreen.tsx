@@ -17,6 +17,7 @@ import {formatCode} from '../../ui/codeInputLogic';
 import {BELOW_LINE_H, KEY_MIN, keypadKeyHeight} from './keypadFit';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
+import {consumeInvite} from '../../lib/linkSources';
 import type {ConnectState, FailKind} from './connectMachine';
 
 // 안내 패널 문구: 번호 문제는 기존 확정 문구(5절, copy-v3 11-3 "P1c 만료·사용됨" 재사용), 잠김은 rate_limited, 인터넷·서버는 공통
@@ -51,7 +52,26 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const back = fromCourse ? () => navigation.goBack() : resetRole;
   // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
   const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
-  const {state, edit, redeem, other, retry} = useConnectFlow(api, route.params?.prefill);
+  const prefill = route.params?.prefill;
+  const flow = useConnectFlow(api, prefill);
+  const {state, edit, redeem, retry} = flow;
+  // 미리 채운 번호는 한 번 쓰면 기기에서 지운다(연결됨·쓸 수 없는 번호·다른 번호 쓰기). 띠도 함께 사라진다
+  const prefillDone =
+    !!prefill &&
+    (state.kind === 'ok' ||
+      (state.kind === 'failed' && (state.reason === 'expired' || state.reason === 'used' || state.reason === 'not_parent_device' || state.reason === 'already_linked')) ||
+      (state.kind === 'idle' && state.inline === 'invalid' && state.code === prefill.code));
+  useEffect(() => {
+    if (prefillDone) {
+      consumeInvite().catch(() => {});
+    }
+  }, [prefillDone]);
+  const other = () => {
+    if (prefill && state.kind !== 'redeeming') {
+      consumeInvite().catch(() => {});
+    }
+    flow.other();
+  };
 
   // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
   //   1단계 안심 줄 숨김 → 2단계 제목 28→22 → 3단계 링크 두 개를 이전 바 줄로 → 4단계 키 64 + 본문 스크롤

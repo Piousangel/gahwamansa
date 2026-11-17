@@ -172,7 +172,7 @@ test('밖에서 들어온 번호(prefill)는 기다리지 않고 바로 확인�
   const {useConnectFlow} = require('../src/features/link/useConnectFlow');
   const api = createFakeApi({parentTitle: '아빠'});
   const redeem = jest.spyOn(api, 'redeemInviteCode');
-  const {result} = renderHook(() => useConnectFlow(api, {code: '123456', source: 'link'}));
+  const {result} = renderHook(() => useConnectFlow(api, {code: '123456', source: 'app_link'}));
   await waitFor(() => expect(result.current.state).toEqual({kind: 'confirm', code: '123456', title: '아빠'}));
   expect(redeem).not.toHaveBeenCalled();
 });
@@ -192,7 +192,7 @@ test('L1: 밖에서 들어온 번호가 6자리 숫자가 아니면 무시한다
   const {useConnectFlow} = require('../src/features/link/useConnectFlow');
   const api = createFakeApi();
   const peek = jest.spyOn(api, 'peekInviteCode');
-  const {result} = renderHook(() => useConnectFlow(api, {code: '12a456', source: 'link'}));
+  const {result} = renderHook(() => useConnectFlow(api, {code: '12a456', source: 'app_link'}));
   await act(async () => {
     await new Promise<void>(r => setTimeout(() => r(), 50));
   });
@@ -205,7 +205,7 @@ test('0029 퍼널: 링크로 들어온 번호는 link_opened{source}·code_prefi
   const {useConnectFlow} = require('../src/features/link/useConnectFlow');
   const api = createFakeApi();
   const log = jest.spyOn(api, 'logEvent');
-  renderHook(() => useConnectFlow(api, {code: '123456', source: 'link'}));
+  renderHook(() => useConnectFlow(api, {code: '123456', source: 'app_link'}));
   await waitFor(() => expect(log).toHaveBeenCalledWith('code_prefilled', {source: 'app_link'}));
   expect(log).toHaveBeenCalledWith('link_opened', {source: 'app_link'});
   expect(JSON.stringify(log.mock.calls)).not.toContain('123456');

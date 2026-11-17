@@ -18,7 +18,6 @@ type Props = {
   groupRef?: RefObject<React.ComponentRef<typeof View> | null>;
 };
 
-const KEY_RADIUS = 14; // 동결 시안 값(토큰에 없는 크기, 리드 결정 대기)
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
 // 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
   rowFitted: {marginBottom: 6},
   // 칸 = 채울 자리: 옅은 면 + 굵은 아래 선. 지금 쓸 칸은 굵은 테두리(action, 대비 7.05)와 흰 면으로 강조
   // 시안 P1_connect_v4: 높이 68·반경 12·아래 선 3
-  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 3, borderColor: color.line, borderRadius: radius.chip, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
+  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 3, borderColor: color.line, borderRadius: radius.codeCell, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
   // 지금 쓸 칸: noticeSoft 면 + 테두리 4(action) + 고정 커서 막대(깜박임 없음)
   cellNow: {borderWidth: 3, borderBottomWidth: 3, borderColor: color.action, backgroundColor: color.noticeSoft},
   cursor: {width: 3, height: 34, backgroundColor: color.ink},
@@ -83,7 +82,7 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', gap: 8, marginBottom: 8},
   // 키 = 볼록(누르는 곳): 흰 면 + 테두리 3(line) + 옅은 그림자, 최소 64(DECISIONS 실기기 규칙, QA P1#9). 눌림은 actionSoft
   // 시안 P1_connect_v4: 반경 14·테두리 2(line)
-  key: {flex: 1, minHeight: Math.max(64, size.codeBox), borderRadius: KEY_RADIUS, backgroundColor: color.card, borderWidth: 2, borderColor: color.line, boxShadow: '0px 2px 0px rgba(116,72,33,0.18)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
+  key: {flex: 1, minHeight: Math.max(64, size.codeBox), borderRadius: radius.keypadKey, backgroundColor: color.card, borderWidth: 2, borderColor: color.line, boxShadow: '0px 2px 0px rgba(116,72,33,0.18)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
   keyPressed: {backgroundColor: color.actionSoft, boxShadow: 'none'},
   keyText: {color: color.inkTitle, fontWeight: 'bold', textAlign: 'center'},
 });

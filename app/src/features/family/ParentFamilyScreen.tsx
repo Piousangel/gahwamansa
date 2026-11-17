@@ -111,15 +111,17 @@ export function ParentFamilyScreen() {
     <View style={styles.flex}>
       <Screen top={top}>
         {notice ? <Banner kind="success" text={notice} onHidden={() => setNotice(null)} /> : null}
-        <Text20 size={24} weight="bold" style={styles.title}>{f.summary.split('{n}').join(String(data.family.length))}</Text20>
+        <Text20 size={22} style={styles.title}>{f.summary.split('{n}').join(String(data.family.length))}</Text20>
         <View style={styles.list}>
           {data.family.map(m => {
             const date = familyDateText(f.row_date, m.connectedDate);
             return (
               <View key={m.seq} testID="family-row" style={styles.row} accessible accessibilityLabel={`${f.row}, ${date}`}>
-                <Icon name="icon-family" size={28} color={color.action} />
+                <View style={styles.rowIcon}>
+                  <Icon name="icon-family" size={26} color={color.ink} />
+                </View>
                 <View style={styles.flex}>
-                  <Text20 weight="bold">{f.row}</Text20>
+                  <Text20 size={24} weight="bold" style={styles.title}>{f.row}</Text20>
                   <Text20 style={styles.sub}>{date}</Text20>
                 </View>
               </View>
@@ -127,30 +129,34 @@ export function ParentFamilyScreen() {
           })}
         </View>
         <Text20 style={styles.sub}>{f.add_hint}</Text20>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${f.stop_row}, ${f.stop_sub}`}
-          onPress={() => {
-            setSheetError(null);
-            setSheet(true);
-          }}
-          style={({pressed}) => [styles.row, styles.stop, pressed ? styles.pressed : null]}>
-          <View style={styles.flex}>
-            <Text20 weight="bold">{f.stop_row}</Text20>
-            <Text20 style={styles.sub}>{f.stop_sub}</Text20>
-          </View>
-          <Icon name="icon-chevron-right" size={24} color={color.inkSub} />
-        </Pressable>
+        {/* 시안: 위 구분선 + 아래 구분선 사이 한 줄, 앞 X 아이콘·뒤 화살표 */}
+        <View style={styles.stopWrap}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${f.stop_row}, ${f.stop_sub}`}
+            onPress={() => {
+              setSheetError(null);
+              setSheet(true);
+            }}
+            style={({pressed}) => [styles.stop, pressed ? styles.pressed : null]}>
+            <Icon name="icon-close" size={24} color={color.inkTitle} />
+            <View style={styles.flex}>
+              <Text20 weight="bold" style={styles.title}>{f.stop_row}</Text20>
+              <Text20 style={styles.sub}>{f.stop_sub}</Text20>
+            </View>
+            <Icon name="icon-chevron-right" size={22} color={color.inkSub} />
+          </Pressable>
+        </View>
       </Screen>
       <BottomSheet
         testID="family-stop-sheet"
         visible={sheet}
         title={s.title}
-        body={s.hint}
-        closeLabel={s.cancel}
+        body={consented ? s.hint : s.hint_one}
+        closeLabel={s.close}
         onClose={() => setSheet(false)}
         error={sheetError}
-        primary={{label: s.cancel, onPress: () => setSheet(false)}}>
+        secondary={{label: s.cancel, onPress: () => setSheet(false)}}>
         <View style={styles.options}>
           {consented ? <Option label={s.share} sub={s.share_sub} onPress={stopSharing} disabled={busy} /> : null}
           <Option label={s.delete} sub={s.delete_sub} onPress={toDelete} disabled={busy} danger />
@@ -160,6 +166,7 @@ export function ParentFamilyScreen() {
   );
 }
 
+// 갈래 카드(시안): 흰 면·테두리 2(line)·반경 22, 제목 24(모두 지우기만 위험색)·보조 20, 뒤 화살표
 function Option({label, sub, onPress, disabled, danger}: {label: string; sub: string; onPress: () => void; disabled?: boolean; danger?: boolean}) {
   return (
     <Pressable
@@ -168,9 +175,12 @@ function Option({label, sub, onPress, disabled, danger}: {label: string; sub: st
       accessibilityState={{disabled: !!disabled}}
       disabled={disabled}
       onPress={onPress}
-      style={({pressed}) => [styles.option, danger ? styles.optionDanger : null, pressed ? styles.pressed : null]}>
-      <Text20 size={22} weight="bold" style={danger ? styles.danger : null}>{label}</Text20>
-      <Text20 style={styles.sub}>{sub}</Text20>
+      style={({pressed}) => [styles.option, pressed ? styles.pressed : null]}>
+      <View style={styles.flex}>
+        <Text20 size={24} weight="bold" style={danger ? styles.danger : styles.title}>{label}</Text20>
+        <Text20>{sub}</Text20>
+      </View>
+      <Icon name="icon-chevron-right" size={22} color={color.inkSub} />
     </Pressable>
   );
 }
@@ -179,12 +189,17 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   title: {color: color.inkTitle},
   sub: {color: color.inkSub},
-  list: {gap: 10},
-  row: {flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: size.touchMin, backgroundColor: color.card, borderRadius: radius.card, padding: 16},
-  stop: {marginTop: 8},
+  // 시안 P16: 목록 간격 8, 행 최소 80·패딩 12/16·반경 22·흰 면, 아이콘 원 48(actionSoft)
+  list: {gap: 8},
+  row: {flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 80, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: color.card, borderRadius: radius.card},
+  rowIcon: {width: 48, height: 48, borderRadius: 24, backgroundColor: color.actionSoft, alignItems: 'center', justifyContent: 'center'},
+  stopWrap: {marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: color.lineSoft},
+  stop: {flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: size.touchMin, paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: color.lineSoft},
   pressed: {opacity: 0.7},
-  options: {gap: 12, paddingVertical: 8},
-  option: {minHeight: size.touchMin, padding: 16, borderRadius: radius.card, borderWidth: 3, borderColor: color.line, backgroundColor: color.card, gap: 4},
-  optionDanger: {borderColor: color.dangerInk},
+  options: {gap: 14, paddingVertical: 4},
+  option: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingRight: 16, paddingLeft: 20,
+    borderRadius: radius.card, borderWidth: 2, borderColor: color.line, backgroundColor: color.card,
+  },
   danger: {color: color.dangerInk},
 });

@@ -21,10 +21,10 @@ export type ParentParams = {
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 
-export function ParentStack({initialRouteName = 'Connect'}: {initialRouteName?: keyof ParentParams}) {
+export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRouteName?: keyof ParentParams; prefill?: Prefill}) {
   return (
     <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{headerShown: false}}>
-      <Stack.Screen name="Connect" component={ConnectScreen} />
+      <Stack.Screen name="Connect" component={ConnectScreen} initialParams={prefill ? {prefill} : undefined} />
       <Stack.Screen name="Consent" component={ConsentScreen} />
       <Stack.Screen name="CourseHome" component={CourseHome} />
       <Stack.Screen name="PhotoStep" component={PhotoStep} />

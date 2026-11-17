@@ -118,8 +118,6 @@ def loadAppEnv = { String flavor ->
     }
     if (m.APP_ENV != flavor) throw new GradleException("${f.name}: APP_ENV=${m.APP_ENV} 가 flavor(${flavor})와 달라요")
     if (!(m.API_MODE in ["fake", "real"])) throw new GradleException("${f.name}: API_MODE 는 fake 또는 real")
-    // 선택 값: 비어 있으면 링크 줄 없음. 있으면 https 주소만(형식이 틀려 출시 빌드에서 링크 줄이 조용히 빠지지 않게, 리뷰 L6)
-    if (m.SHARE_LINK_BASE && !(m.SHARE_LINK_BASE ==~ /^https:\/\/[^\s#?]+$/)) throw new GradleException("${f.name}: SHARE_LINK_BASE 는 https://<도메인>/c 형식(#·?·공백 없이)")
     if (!(m.KAKAO_NATIVE_APP_KEY ==~ /[0-9a-f]{32}/)) throw new GradleException("${f.name}: KAKAO_NATIVE_APP_KEY 형식(32자리 16진수)이 아니에요")
     // 값 형식 허용 목록(리뷰 L1): APK 로 나가는 Supabase 키 칸은 publishable 키만(레거시 JWT·service_role 차단), URL 은 ref 와 일치
     if (!(m.SUPABASE_PROJECT_REF ==~ /[a-z0-9-]+/)) throw new GradleException("${f.name}: SUPABASE_PROJECT_REF 형식이 아니에요")
@@ -207,8 +205,6 @@ def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost -
         VERSION_NAME: versionName,
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
-        // 선택 값(없으면 빈 칸): 공유 메시지 링크 주소. 도메인이 정해지면 env 파일에 SHARE_LINK_BASE=https://<도메인>/c
-        SHARE_LINK_BASE: e.SHARE_LINK_BASE ?: "",
     ]
     def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
     generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +

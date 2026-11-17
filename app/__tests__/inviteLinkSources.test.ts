@@ -93,15 +93,15 @@ describe('codeFromInstallReferrer: Play referrer 값', () => {
 describe('기기 저장 상태(리뷰 H1·M2): 만료 시각과 함께 저장, 쓰면·만료되면 삭제, 처리한 시작 링크 무시', () => {
   const now = 2_000_000_000;
   const link: PendingInvite = {code: '111111', source: 'app_link'};
-  const ref: PendingInvite = {code: '222222', source: 'install_referrer'};
+  const ref: PendingInvite = {code: '222222', source: 'referrer'};
 
   test('처음엔 띠 없음', () =>
-    expect(familyCodeBanner(EMPTY_INVITE_STORE, now)).toEqual({visible: false, code: null}));
+    expect(familyCodeBanner(EMPTY_INVITE_STORE, now)).toEqual({visible: false, code: null, source: null}));
 
   test('받으면 만료 시각과 함께 저장되고 띠에 번호', () => {
     const s = applyInvite(EMPTY_INVITE_STORE, link, {nowSec: now});
     expect(s.pending).toEqual({...link, expiresAt: now + INVITE_KEEP_SEC});
-    expect(familyCodeBanner(s, now)).toEqual({visible: true, code: '111111'});
+    expect(familyCodeBanner(s, now)).toEqual({visible: true, code: '111111', source: 'app_link'});
   });
 
   test('referrer 는 Play 클릭 시각 + 7일까지만', () => {
@@ -119,7 +119,7 @@ describe('기기 저장 상태(리뷰 H1·M2): 만료 시각과 함께 저장, �
   test('저장 → 재시작(파싱) 후 같은 번호가 다시 나온다', () => {
     const s = applyInvite(EMPTY_INVITE_STORE, ref, {nowSec: now});
     const back = parseInviteStore(serializeInviteStore(s), now + 60);
-    expect(familyCodeBanner(back, now + 60)).toEqual({visible: true, code: '222222'});
+    expect(familyCodeBanner(back, now + 60)).toEqual({visible: true, code: '222222', source: 'referrer'});
   });
 
   test('consumed 면 번호를 지운다(같은 객체 아님 → 저장 갱신)', () => {
@@ -164,8 +164,8 @@ describe('기기 저장 상태(리뷰 H1·M2): 만료 시각과 함께 저장, �
 });
 
 test('분석 이벤트에는 번호 값이 없다(출처만)', () => {
-  const ev = inviteAnalyticsEvent({code: '987654', source: 'install_referrer'});
-  expect(ev).toEqual({name: 'invite_code_prefilled', params: {source: 'install_referrer'}});
+  const ev = inviteAnalyticsEvent({code: '987654', source: 'referrer'});
+  expect(ev).toEqual({name: 'code_prefilled', params: {source: 'referrer'}});
   expect(JSON.stringify(ev)).not.toMatch(/\d{6}/);
 });
 
@@ -218,7 +218,7 @@ describe('네이티브 연결(앱 전용 저장소·Install Referrer·Linking)',
       .mockRejectedValueOnce(new Error('x'));
     nm.InviteModule = {getReferrerOnce};
     await expect(readInstallReferrerOnce()).resolves.toEqual({
-      invite: {code: '123456', source: 'install_referrer'},
+      invite: {code: '123456', source: 'referrer'},
       clickTs: 0,
     });
     await expect(readInstallReferrerOnce()).resolves.toBeNull();
