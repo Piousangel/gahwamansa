@@ -50,9 +50,10 @@
 | 0027 | 첫마디 한 줄: content_questions.starter_a/b + child_summary latest.starter(고른 쪽) | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
 | 0028 | daily_sessions 콘텐츠 id·parent_history·peek_invite_code·연결 성공 알림 큐·get_today_content answered_label·호칭 중복 방지 | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
 | 0029 | log_event 연결 퍼널(link_opened·referrer_found·code_prefilled, source 값 목록)·P6 result(matched·kept·skipped) | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
-| 0030~0031 | 푸시 토큰 RPC·발송 스케줄(notification_queue 소비, 번호는 작성 시점의 다음 연속 번호) | 예정 | 11/26 | P1 |
+| 0030 | parent_family_list(어르신 P16 연결된 가족: 순번·연결 시각만) | 로컬 적용·pgTAP 통과 | 11/24 | P1 |
+| 0031~0032 | 푸시 토큰 RPC·발송 스케줄(notification_queue 소비, 번호는 작성 시점의 다음 연속 번호) | 예정 | 11/26 | P1 |
 | 이후 | 테스트 중 수정분 | — | 수시 | P2 12/09·P3 12/16(평일) |
-- prod 반영 P1 = 비공개 업로드 직전 1회(0001~0031 + 시드·사진, 푸시 포함), 이후 P2·P3 묶음. 실행은 사용자(09 §5), 팀은 직전 dry-run 출력·백업 덤프 확인.
+- prod 반영 P1 = 비공개 업로드 직전 1회(0001~0032 + 시드·사진, 푸시 포함), 이후 P2·P3 묶음. 실행은 사용자(09 §5), 팀은 직전 dry-run 출력·백업 덤프 확인.
 - 번호 규칙(ARCHITECTURE.md): 빈칸 예약 없이 연속 번호. 0024~0026은 원래 0026~0028로 썼다가 연속 번호로 당김(11-17).
 
 ## 3. 시간표 (처리량 16~24h/일 가정, 팀 주말 작업 / 사용자·실기기는 평일 월·수·금)
