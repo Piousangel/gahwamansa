@@ -25,6 +25,8 @@ insert into public.content_questions (id, day_index, option_a, option_b, prompt)
   ('8c000000-0000-0000-0000-000000000005', 5, 'a', 'b', 'p5');
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions) values
   (1, 'u', 'c1', 'k', '{x,y}'), (2, 'u', 'c2', 'k', '{x,y}'), (5, 'u', 'c5', 'k', '{x,y}');
+-- 0026부터 커서 기준: 어제 2일차를 열었으면 오늘은 구멍(3·4)을 건너뛴 5일차
+update public.profiles set content_seq = 2, content_seq_date = public.kst_today() - 1 where id = '8b300000-0000-0000-0000-0000000000a1';
 insert into public.invite_codes (code, family_id, created_by) values ('811111', '8f100000-0000-0000-0000-000000000001', '8b100000-0000-0000-0000-0000000000c1');
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
@@ -65,7 +67,7 @@ select is((select count(*)::int from public.invite_codes where family_id = '8f20
 
 -- 9~10. 콘텐츠 번호에 구멍(1,2,5)이 있어도 존재하는 날 중에서 고른다(시작 2일 후 -> 세 번째 = 5일)
 select pg_temp.act_as('83000000-0000-0000-0000-0000000000a1', true);
-select is((public.get_today_content()) ->> 'day_index', '5', '번호에 구멍이 있어도 존재하는 날 중에서 고른다');
+select is((public.get_today_content()) ->> 'day_index', '5', '번호에 구멍이 있어도 존재하는 다음 날을 고른다(커서)');
 select is((public.get_today_content()) -> 'photo' ->> 'caption', 'c5', '사진이 null이 아니다');
 
 -- 11~12. 답변 이력: 어제 한 답은 오늘의 답으로 보이지 않고, 오늘 새로 답하면 이력이 남는다

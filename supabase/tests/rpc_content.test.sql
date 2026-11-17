@@ -20,6 +20,8 @@ insert into public.content_questions (id, day_index, option_a, option_b, prompt)
   ('6c000000-0000-0000-0000-000000000003', 3, 'q3a', 'q3b', 'p3');
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions) values
   (1, 'u1', 'cap1', 'k1', array['r1a', 'r1b']), (2, 'u2', 'cap2', 'k2', array['r2a', 'r2b']), (3, 'u3', 'cap3', 'k3', array['r3a', 'r3b']);
+-- 0026부터 오늘 콘텐츠는 어르신별 커서로 정한다: 어제 1일차를 열었으면 오늘은 2일차
+update public.profiles set content_seq = 1, content_seq_date = public.kst_today() - 1 where id = '6b000000-0000-0000-0000-0000000000a1';
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -31,7 +33,7 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 
 -- 1~4. 어르신의 오늘 콘텐츠: 시작 4일 후, 3일분이면 2일차. 아직 답하지 않았다.
 select pg_temp.act_as('61000000-0000-0000-0000-0000000000a1', true);
-select is((public.get_today_content()) ->> 'day_index', '2', '시작 4일 후 콘텐츠 3일분이면 2일차다');
+select is((public.get_today_content()) ->> 'day_index', '2', '어제 1일차를 열었으면 오늘은 2일차다(커서)');
 select is((public.get_today_content()) -> 'photo' ->> 'caption', 'cap2', '2일차 사진 설명을 돌려준다');
 select is((public.get_today_content()) -> 'question' ->> 'id', '6c000000-0000-0000-0000-000000000002', '2일차 질문 id를 돌려준다');
 select is((public.get_today_content()) ->> 'answered_choice', null, '아직 답하지 않았으면 answered_choice는 null이다');
