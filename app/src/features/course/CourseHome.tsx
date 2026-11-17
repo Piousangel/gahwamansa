@@ -5,46 +5,46 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {appCopy, copy, offlineMessage} from '../../copy/copy';
-import {DeleteLink} from '../account/DeleteLink';
+import {appCopy, CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
+import {errorMessage} from './useFinishStep';
 import type {StepName} from '../types';
 
-const STEPS: {step: StepName; label: string; route: 'PhotoStep' | 'QuestionStep' | 'HangulStep'}[] = [
-  {step: 'photo', label: '사진 보기', route: 'PhotoStep'},
-  {step: 'question', label: '질문 고르기', route: 'QuestionStep'},
-  {step: 'hangul', label: '글씨 쓰기', route: 'HangulStep'},
+const c = copy.course;
+const STEPS: {step: StepName; route: 'PhotoStep' | 'QuestionStep' | 'HangulStep'}[] = [
+  {step: 'photo', route: 'PhotoStep'},
+  {step: 'question', route: 'QuestionStep'},
+  {step: 'hangul', route: 'HangulStep'},
 ];
 
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
-  const {api, done, streak, content, consented, applyConsent} = useSession();
-  const [consentError, setConsentError] = useState(false);
-  const {failed, retry} = useLoadTodayContent();
-  const all = done.length === 3;
+  const {api, done, content, consented, setConsented, syncError, sync} = useSession();
+  const [consentError, setConsentError] = useState<Message | null>(null);
+  useLoadTodayContent();
   const consentNow = async () => {
-    setConsentError(false);
+    setConsentError(null);
     try {
-      await api.giveConsent();
-      applyConsent();
-    } catch {
-      setConsentError(true);
+      await api.giveConsent(CONSENT_VERSION);
+      setConsented(true);
+    } catch (e) {
+      setConsentError(errorMessage(e));
     }
   };
-  const current = STEPS.find(s => !done.includes(s.step));
-  if (failed) {
+  // 아직 아무것도 못 받았는데 실패: 오류만 보여 준다(오프라인/서버 오류 문구가 다름)
+  if (content === undefined && syncError) {
     return (
       <Screen>
-        <Text20 size={30} weight="bold">오늘의 코스</Text20>
-        <Text20 size={24} weight="bold">{offlineMessage.title}</Text20>
-        <Text20>{offlineMessage.body}</Text20>
-        <BigButton variant="secondary" label={offlineMessage.button} onPress={retry} />
+        <Text20 size={30} weight="bold">{c.title}</Text20>
+        <Text20 size={24} weight="bold">{syncError.title}</Text20>
+        <Text20>{syncError.body}</Text20>
+        <BigButton variant="secondary" label={syncError.button} onPress={sync} />
       </Screen>
     );
   }
   if (content === undefined) {
     return (
       <Screen>
-        <Text20 size={30} weight="bold">오늘의 코스</Text20>
+        <Text20 size={30} weight="bold">{c.title}</Text20>
         <Text20>{appCopy.loading}</Text20>
       </Screen>
     );
@@ -52,42 +52,59 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   if (content === null || !content.photo || !content.question) {
     return (
       <Screen>
-        <Text20 size={30} weight="bold">오늘의 코스</Text20>
+        <Text20 size={30} weight="bold">{c.title}</Text20>
         <Text20 size={24} weight="bold">{appCopy.no_content.title}</Text20>
         <Text20>{appCopy.no_content.body}</Text20>
-        <BigButton variant="secondary" label={appCopy.no_content.button} onPress={retry} />
+        <BigButton variant="secondary" label={appCopy.no_content.button} onPress={sync} />
       </Screen>
     );
   }
+  const preview = !content.linked;
+  const all = done.length === 3;
+  const current = STEPS.find(s => !done.includes(s.step));
   return (
     <Screen>
-      <Text20 size={30} weight="bold">오늘의 코스</Text20>
-      {all ? (
+      {preview ? (
         <>
-          <Text20 size={24}>{copy.praise[0]}</Text20>
-          <Text20>{`${streak}일 연속 해냈어요`}</Text20>
-          <Text20>{appCopy.course_done_today}</Text20>
+          <Text20 weight="bold">{c.disconnected_banner}</Text20>
+          <BigButton variant="secondary" label={c.write_code} onPress={() => navigation.popTo('Connect')} />
         </>
       ) : null}
-      {!consented ? (
+      <Text20 size={30} weight="bold">{c.title}</Text20>
+      {syncError ? (
+        <>
+          <Text20 size={24} weight="bold">{syncError.title}</Text20>
+          <BigButton variant="secondary" label={syncError.button} onPress={sync} />
+        </>
+      ) : null}
+      {all ? (
+        <>
+          <Text20 size={24} weight="bold">{copy.done.title}</Text20>
+          <Text20>{copy.done.body}</Text20>
+        </>
+      ) : done.length === 0 ? (
+        <Text20>{c.greeting}</Text20>
+      ) : null}
+      {!consented && !preview ? (
         <>
           <Text20>{copy.consent.title}</Text20>
           <BigButton variant="secondary" label={copy.consent.accept} onPress={consentNow} />
-          {consentError ? <Text20>{offlineMessage.title}</Text20> : null}
+          {consentError ? <Text20>{consentError.title}</Text20> : null}
         </>
       ) : null}
       {STEPS.map(s => {
-        const isDone = done.includes(s.step);
-        const isNow = current?.step === s.step;
-        if (isDone) return <Text20 key={s.step} size={24}>{`${s.label} - 했어요`}</Text20>;
-        if (isNow) {
-          return (
-            <BigButton key={s.step} label={`${s.label} (지금 할 차례)`} onPress={() => navigation.navigate(s.route)} />
-          );
+        const label = c.step[s.step];
+        if (done.includes(s.step)) {
+          return <Text20 key={s.step} size={24}>{`${label} - ${c.status.done}`}</Text20>;
         }
-        return <Text20 key={s.step} size={24}>{`${s.label} - 기다려요`}</Text20>;
+        if (current?.step === s.step) {
+          return <BigButton key={s.step} label={`${label} (${c.status.now})`} onPress={() => navigation.navigate(s.route)} />;
+        }
+        return <Text20 key={s.step} size={24}>{`${label} - ${c.status.later}`}</Text20>;
       })}
-      <DeleteLink label={copy.settings.open} minHeight={64} onPress={() => navigation.navigate('Settings')} />
+      {preview ? null : (
+        <BigButton variant="secondary" label={copy.settings.open} onPress={() => navigation.navigate('Settings')} />
+      )}
     </Screen>
   );
 }

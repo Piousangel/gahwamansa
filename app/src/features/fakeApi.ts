@@ -1,4 +1,4 @@
-import {OfflineError} from './types';
+import {OfflineError, ServerError} from './types';
 import {ChildSummary, PARENT_TITLES} from './types';
 import type {Api, RedeemResult, StepName, TodayContent} from './types';
 import type {FailReason} from '../copy/copy';
@@ -26,7 +26,7 @@ export type FakeOptions = {
   realImage?: boolean; // 실제 사진 URL(자리표시 아님)
   questionNull?: boolean; // 번호 구멍으로 question 이 null
   consented?: boolean; // 서버에 이미 동의한 상태
-  linked?: boolean; // 이미 연결된 기기
+  linked?: boolean; // 처음부터 연결된 기기(아니면 번호 입력 전까지 미연결 열람 모드)
   completedSteps?: StepName[]; // 오늘 이미 끝낸 단계
   streak?: number;
   failRecord?: number; // recordSessionStep 이 처음 N번 실패
@@ -34,7 +34,6 @@ export type FakeOptions = {
   failPreview?: boolean; // deleteScopePreview 실패
   failDelete?: number; // deleteMyAccount 가 처음 N번 실패
   parentTitle?: string; // 자녀 홈 호칭(기본 부모님)
-  shared?: boolean; // 어르신이 답을 나누는 중인가(기본: 동의 여부)
   latest?: ChildSummary['latest']; // 자녀에게 보일 최근 답(미지정이면 저장한 답에서 만든다)
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
@@ -46,6 +45,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   let consented = opts.consented ?? false;
   let parentTitle = opts.parentTitle ?? '부모님';
   let savedLabel: string | null = null;
+  let linked = opts.linked ?? false;
   let failDelete = opts.failDelete ?? 0;
   let failRecord = opts.failRecord ?? 0;
   let failChildHome = opts.failChildHome ?? 0;
@@ -60,7 +60,10 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return String(100000 + issued * 7).slice(0, 6);
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
-      if (code === '123456') return {ok: true, family_id: 'fam-1', profile_id: 'parent-1'};
+      if (code === '123456') {
+        linked = true;
+        return {ok: true, family_id: 'fam-1', profile_id: 'parent-1'};
+      }
       const reason = FAIL_CODES[code] ?? 'invalid';
       return reason === 'rate_limited'
         ? {ok: false, reason, retry_after_sec: 600}
@@ -82,9 +85,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return {scope: opts.deleteScope ?? 'parent'};
     },
     async restoreSession() {
-      return opts.linked ? 'linked' : 'unlinked';
+      return linked ? 'linked' : 'unlinked';
     },
-    async giveConsent() {
+    async giveConsent(_version: string) {
       consented = true;
     },
     async getTodayContent(): Promise<TodayContent | null> {
@@ -97,13 +100,17 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         day_index: idx + 1,
         photo: {caption: c.caption, image_url: opts.realImage ? `https://example.test/day-${idx + 1}.jpg` : `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
         question: opts.questionNull ? null : {id: `q-${idx + 1}`, option_a: c.a, option_b: c.b, prompt: opts.promptNull ? null : c.prompt},
-        answered_choice: answered,
-        consented,
-        completed_steps: [...steps],
-        streak: steps.size === 3 ? Math.max(1, baseStreak) : baseStreak,
+        answered_choice: linked ? answered : null,
+        consented: linked && consented,
+        completed_steps: linked ? [...steps] : [],
+        streak: !linked ? 0 : steps.size === 3 ? Math.max(1, baseStreak) : baseStreak,
+        linked,
       };
     },
     async saveAnswer({choice}) {
+      if (!consented) {
+        throw new ServerError('save_answer', 'consent_required', 'P0001'); // 서버와 같게
+      }
       answered = choice;
       const c = FAKE_CONTENT[((opts.day ?? 1) - 1) % FAKE_CONTENT.length];
       savedLabel = choice === 'A' ? c.a : c.b;
@@ -122,7 +129,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
         failChildHome -= 1;
         throw new OfflineError('offline');
       }
-      const shared = opts.shared ?? (opts.latest ? true : consented);
+      const shared = consented;
       const latest =
         opts.latest !== undefined
           ? opts.latest

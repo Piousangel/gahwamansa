@@ -10,7 +10,8 @@ import {Text20} from '../ui/Text20';
 import {copy} from '../copy/copy';
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+export type ChildParams = {Tabs: undefined; DeleteAccount: undefined; DeleteDone: undefined; Login: undefined};
+const Stack = createNativeStackNavigator<ChildParams>();
 
 function Tabs() {
   return (

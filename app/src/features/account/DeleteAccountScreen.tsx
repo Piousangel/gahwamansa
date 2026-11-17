@@ -12,7 +12,7 @@ import {errorMessage} from '../course/useFinishStep';
 
 type Props = {role: 'parent' | 'child'};
 
-// 단계별 경고. "그만둘래요"가 주 버튼. 어르신: 지우기 -> 한 번 더 확인. 자녀: 계정 지우기 -> (마지막 자녀면 '지우기' 입력) -> 계정 지우기.
+// 단계별 경고. "그만둘래요"가 주 버튼. 어르신: 확인 1번(설정의 모두 지우기가 앞 단계). 자녀: 계정 지우기 -> (마지막 자녀면 '지우기' 입력) -> 계정 지우기.
 export function DeleteAccountScreen({role}: Props) {
   const navigation = useNavigation();
   const {api, clear} = useSession();
@@ -98,23 +98,19 @@ export function DeleteAccountScreen({role}: Props) {
             <Text20>{dc.type_hint}</Text20>
             <TextInput accessibilityLabel="확인 글자 입력" value={typed} onChangeText={setTyped} style={styles.input} />
           </>
-        ) : child ? null : (
-          <Text20 size={26} weight="bold">{dp.ask}</Text20>
-        )
+        ) : null
       ) : null}
 
       <BigButton label={child ? dc.cancel : dp.cancel} onPress={() => navigation.goBack()} />
-      {stage === 1 ? (
-        <BigButton
-          variant="secondary"
-          label={child ? dc.danger : dp.start}
-          disabled={child && scope === null}
-          onPress={() => setStage(2)}
-        />
+      {!child ? (
+        // 어르신: 설정의 "모두 지우기"가 첫 단계라 여기서는 한 번만 확인한다(2차 확정 P9)
+        <BigButton variant="secondary" label={dp.yes} disabled={busy} onPress={run} />
+      ) : stage === 1 ? (
+        <BigButton variant="secondary" label={dc.danger} disabled={scope === null} onPress={() => setStage(2)} />
       ) : (
         <BigButton
           variant="secondary"
-          label={child ? dc.danger : dp.yes}
+          label={dc.danger}
           disabled={!confirmEnabled}
           onPress={run}
         />

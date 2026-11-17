@@ -17,5 +17,8 @@ export const offlineMessage: Message = copy.errors.offline;
 // 라이터 확정 문구는 copy.ko.json 의 app 키. 키가 없어 임시로 둔 문구는 없음.
 export const appCopy = copy.app;
 
+// 지금 화면에 보이는 동의 문구의 버전. consent 문구가 바뀌면 올린다(서버 형식 ^v[0-9]{1,3}$).
+export const CONSENT_VERSION = 'v2';
+
 // 호칭({호칭})을 채운다. 조사는 붙이지 않는 구조라 단순 치환이면 된다.
 export const withTitle = (text: string, title: string) => text.split('{호칭}').join(title);

@@ -53,7 +53,8 @@ export function ChildHome() {
     return () => sub.remove();
   }, [load]);
 
-  if (error) {
+  // 받은 답이 없을 때만 오류 화면. 이미 받은 답이 있으면 그대로 두고 오류 줄만 덧붙인다.
+  if (error && !info) {
     return (
       <Screen>
         <Text20 size={24} weight="bold">{error.title}</Text20>
@@ -66,6 +67,12 @@ export function ChildHome() {
   return (
     <Screen>
       <Text20 size={24} weight="bold">{`${info?.parentTitle ?? '부모님'}${c.title_suffix}`}</Text20>
+      {error ? (
+        <>
+          <Text20 weight="bold">{error.title}</Text20>
+          <BigButton variant="secondary" label={error.button} onPress={load} />
+        </>
+      ) : null}
       {loading && !info ? (
         <Text20>{appCopy.loading}</Text20>
       ) : info && !info.shared ? (

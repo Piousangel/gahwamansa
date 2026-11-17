@@ -6,7 +6,7 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {useSession} from '../../app/session';
-import {appCopy} from '../../copy/copy';
+import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
@@ -18,7 +18,7 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
   }
   const go = async () => {
     if (await finish('hangul')) {
-      navigation.navigate('CourseHome');
+      navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
     }
   };
   return (
@@ -26,7 +26,7 @@ export function HangulStep({navigation}: NativeStackScreenProps<ParentParams, 'H
       <Text20 size={36} weight="bold">{content.photo.keyword}</Text20>
       <Text20>{appCopy.hangul_hint}</Text20>
       <AssetPlaceholder name="writing-guide" width={300} height={200} />
-      <BigButton label="다 썼어요" onPress={go} />
+      <BigButton label={copy.course.next.hangul} onPress={go} />
       <StepError error={error} onRetry={go} />
     </Screen>
   );

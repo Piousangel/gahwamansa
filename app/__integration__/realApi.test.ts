@@ -86,11 +86,23 @@ test('어르신은 오늘의 콘텐츠를 받는다(사진·질문)', async () =
   expect(c!.question!.prompt).toEqual(expect.any(String));
   expect(c!.photo!.recall_questions).toHaveLength(2);
   expect(c!.answered_choice).toBeNull();
+  expect(c!.linked).toBe(true);
   expect(c!.consented).toBe(false);
   expect(c!.completed_steps).toEqual([]);
   expect(c!.streak).toBe(0);
   state.questionId = c!.question!.id;
   state.optionB = c!.question!.option_b;
+});
+
+test('세션 없는 첫 실행(새로 설치한 기기)도 익명 로그인 후 미연결 열람으로 코스를 받는다', async () => {
+  const fresh = createSupabase(SUPABASE_URL, SUPABASE_KEY);
+  expect((await fresh.auth.getSession()).data.session).toBeNull();
+  const c = await createRealApi(fresh).getTodayContent();
+  expect(c).not.toBeNull();
+  expect(c!.linked).toBe(false);
+  expect(c!.consented).toBe(false);
+  expect(c!.question!.id).toEqual(expect.any(String));
+  expect((await fresh.auth.getSession()).data.session).not.toBeNull();
 });
 
 test('자녀가 get_today_content 를 부르면 parent_required', async () => {
@@ -105,7 +117,7 @@ test('동의 전 답변 저장은 거부된다(consent_required)', async () => {
 });
 
 test('동의 후 save_answer 성공, 같은 질문에 다시 답하면 갱신된다', async () => {
-  await parent.giveConsent();
+  await parent.giveConsent('v2');
   expect((await parent.getTodayContent())!.consented).toBe(true);
   await parent.saveAnswer({questionId: state.questionId!, choice: 'A'});
   expect((await parent.getTodayContent())!.answered_choice).toBe('A');
@@ -154,11 +166,16 @@ test('동의 철회하면 저장된 답이 지워지고 자녀에게는 shared=f
   expect(sum.latest).toBeNull();
 });
 
-test('어르신이 삭제하면 scope parent, 이후 get_today_content 는 실패', async () => {
+test('어르신이 삭제하면 scope parent, 이후 그 기기는 새 익명 세션의 미연결 열람이 된다', async () => {
   expect((await parent.deleteScopePreview()).scope).toBe('parent');
   const r = await parent.deleteMyAccount();
   expect(r.scope).toBe('parent');
-  await expect(parent.getTodayContent()).rejects.toThrow();
+  // 삭제 후 로그아웃 -> 다음 열람은 새 익명 세션으로 시작한다(예전 기록·동의는 보이지 않음)
+  const after = await parent.getTodayContent();
+  expect(after!.linked).toBe(false);
+  expect(after!.answered_choice).toBeNull();
+  const uid = (await parentClient.auth.getUser()).data.user?.id;
+  expect(uid).not.toBe(state.parentUid);
 });
 
 test('자녀가 둘이면 child, 혼자면 family(미리보기와 삭제 결과 일치)', async () => {

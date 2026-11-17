@@ -8,7 +8,7 @@ export const errorMessage = (e: unknown): Message => (isOffline(e) ? offlineMess
 // 단계 완료: 서버가 기록을 인정해야 완료 표시한다. 실패하면 false 와 오류 문구를 돌려주고 진행하지 않는다.
 // 소요 시간은 화면에 들어온 시각부터 잰 초(0~7200).
 export function useFinishStep() {
-  const {api, applyStep} = useSession();
+  const {api, applyStep, content} = useSession();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
@@ -16,6 +16,11 @@ export function useFinishStep() {
   const finish = async (step: StepName): Promise<boolean> => {
     if (busy) {
       return false;
+    }
+    if (content && !content.linked) {
+      // 미연결 열람: 서버에 기록하지 않고 화면에서만 다음 단계로
+      applyStep(step, 0);
+      return true;
     }
     setBusy(true);
     setError(null);

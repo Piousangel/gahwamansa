@@ -5,30 +5,30 @@ import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {copy, Message} from '../../copy/copy';
+import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
-  const {api, refresh, applyConsent} = useSession();
+  const {api, sync, syncError, setConsented} = useSession();
   const [declined, setDeclined] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Message | null>(null);
 
   // 서버가 이미 동의한 상태면 이 화면을 건너뛴다(서버 상태와 어긋나는 '싫어요'를 막는다).
+  // 확인이 실패하면 세션의 syncError 로 알리되 고르기는 그대로 할 수 있다.
   useEffect(() => {
     let alive = true;
-    refresh()
-      .then(c => {
-        if (alive && c?.consented) {
-          navigation.navigate('CourseHome');
-        }
-      })
-      .catch(() => {});
+    sync().then(c => {
+      if (alive && c?.consented) {
+        navigation.navigate('CourseHome');
+      }
+    });
     return () => {
       alive = false;
     };
-  }, [refresh, navigation]);
+  }, [sync, navigation]);
 
+  const shown = error ?? syncError; // 동의 저장 실패가 우선, 없으면 상태 확인 실패
   const accept = async () => {
     if (busy) {
       return;
@@ -36,8 +36,8 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
     setBusy(true);
     setError(null);
     try {
-      await api.giveConsent();
-      applyConsent();
+      await api.giveConsent(CONSENT_VERSION);
+      setConsented(true);
       navigation.navigate('CourseHome');
     } catch (e) {
       setError(errorMessage(e));
@@ -54,7 +54,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
         <Text20 size={28} weight="bold">{copy.consent.declined_notice}</Text20>
         <Text20>{copy.consent.declined_detail}</Text20>
         <Text20>{copy.consent.declined_reassure}</Text20>
-        <BigButton label="알겠어요" onPress={() => navigation.navigate('CourseHome')} />
+        <BigButton label={copy.consent.declined_button} onPress={() => navigation.navigate('CourseHome')} />
       </Screen>
     );
   }
@@ -65,10 +65,10 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
         <Text20 key={t} size={22}>{t}</Text20>
       ))}
       <Text20>{copy.consent.reassure}</Text20>
-      {error ? (
+      {shown ? (
         <>
-          <Text20 size={24} weight="bold">{error.title}</Text20>
-          <Text20>{error.body}</Text20>
+          <Text20 size={24} weight="bold">{shown.title}</Text20>
+          <Text20>{shown.body}</Text20>
         </>
       ) : null}
       <BigButton label={copy.consent.accept} disabled={busy} onPress={accept} />

@@ -6,8 +6,9 @@ import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
-import {appCopy} from '../../copy/copy';
+import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
+import {isServerError} from '../types';
 import {errorMessage, useFinishStep} from './useFinishStep';
 
 export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
@@ -26,19 +27,19 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
     setError(null);
     try {
       // 동의한 경우에만 답변 저장. 거부 시 보기만 하고 저장 함수는 호출하지 않는다.
-      if (consented) {
+      if (consented) { // 미연결 열람은 consented=false 로 온다
         try {
           await api.saveAnswer({questionId: q.id, choice});
         } catch (e) {
           // 서버가 동의가 없다고 하면 저장 없이 그대로 진행한다(보기만 하는 흐름). 그 밖의 실패는 알린다.
-          if (!(e instanceof Error && e.message.includes('consent_required'))) {
+          if (!isServerError(e, 'consent_required')) {
             setError(errorMessage(e));
             return;
           }
         }
       }
       if (await finish('question')) {
-        navigation.navigate('CourseHome');
+        navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
       }
     } finally {
       setSaving(false);
@@ -51,8 +52,8 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
       <Text20>{appCopy.question_hint}</Text20>
       <SelectCard label={q.option_a} selected={choice === 'A'} onPress={() => setChoice('A')} />
       <SelectCard label={q.option_b} selected={choice === 'B'} onPress={() => setChoice('B')} />
-      <BigButton label="정했어요" disabled={!choice} onPress={confirm} />
-      {!choice ? <Text20>하나를 골라 주세요</Text20> : null}
+      <BigButton label={copy.course.next.question} disabled={!choice} onPress={confirm} />
+      {!choice ? <Text20>{copy.question.need_choice}</Text20> : null}
       <StepError error={error} onRetry={confirm} />
     </Screen>
   );

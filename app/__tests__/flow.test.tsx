@@ -7,7 +7,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 test('Connect -> Consent -> CourseHome 이동', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답이 자녀분께 보여요'));
+  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByText('오늘의 코스'));
 });
@@ -23,7 +23,7 @@ async function doAllSteps() {
   await waitFor(() => screen.getByText('마을 입구 나무'));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press(/질문 고르기/);
+  await press(/둘 중 고르기/);
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
@@ -31,7 +31,7 @@ async function doAllSteps() {
   await press(/글씨 쓰기/);
   await waitFor(() => screen.getByText('나무'));
   await press('다 썼어요');
-  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요. 잘하셨어요'));
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
 }
 
 test('동의하면 답변이 저장되고 3단계 완료 처리가 호출된다', async () => {

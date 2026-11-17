@@ -65,6 +65,7 @@ export function ConnectScreen({navigation}: NativeStackScreenProps<ParentParams,
             onClear={() => setCode(clearAll())}
           />
           <BigButton label={copy.connect.button} disabled={!canSubmit(code) || busy} onPress={submit} />
+          <BigButton variant="secondary" label={copy.connect.view_course} onPress={() => navigation.navigate('CourseHome')} />
         </>
       )}
     </Screen>

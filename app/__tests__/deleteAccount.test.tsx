@@ -10,18 +10,16 @@ import {press, toHomeConsented} from '../testUtils/flow';
 async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
   await press('설정');
-  await press('기록 지우기');
-  await waitFor(() => screen.getByText('고른 답과 기록을 지울까요?'));
+  await press('모두 지우기');
+  await waitFor(() => screen.getByText('모두 지울까요?'));
 }
 
-test('어르신: 첫 확인만으로는 삭제하지 않고 두 번째 확인에서 지운다', async () => {
+test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 화면의 모두 지우기에서 지운다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openParentDelete(api);
-  await press('지우기');
   expect(del).not.toHaveBeenCalled();
-  await waitFor(() => screen.getByText('정말 지울까요?'));
-  await press('네, 지울게요');
+  await press('모두 지우기');
   expect(del).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('모두 지웠어요'));
   // 스택 초기화: 이전 화면이 남아 있지 않다
@@ -42,8 +40,7 @@ test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => 
 test('삭제 실패는 지워지지 않았음을 알리고 다시 할 수 있다', async () => {
   const api = createFakeApi({consented: true, failDelete: 1});
   await openParentDelete(api);
-  await press('지우기');
-  await press('네, 지울게요');
+  await press('모두 지우기');
   await waitFor(() => screen.getByText('지우는 중에 문제가 생겼어요'));
   expect(screen.queryByText('모두 지웠어요')).toBeNull();
   await press('다시 하기');
@@ -58,7 +55,7 @@ test('어르신 삭제 화면의 버튼은 64 이상, 글자는 20 이상', asyn
       expect(s.minHeight).toBeGreaterThanOrEqual(64);
     }
   }
-  const t = StyleSheet.flatten(screen.getByText('고른 답과 기록을 지울까요?').props.style);
+  const t = StyleSheet.flatten(screen.getByText('모두 지울까요?').props.style);
   expect(t.fontSize).toBeGreaterThanOrEqual(20);
 });
 

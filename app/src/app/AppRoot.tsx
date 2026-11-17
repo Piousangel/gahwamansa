@@ -9,7 +9,8 @@ import {ChildTabs} from './ChildTabs';
 import {BigButton} from '../ui/BigButton';
 import {Screen} from '../ui/Screen';
 import {Text20} from '../ui/Text20';
-import {appCopy, offlineMessage} from '../copy/copy';
+import {appCopy, offlineMessage, Message} from '../copy/copy';
+import {errorMessage} from '../features/course/useFinishStep';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -23,10 +24,24 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
   const contentRef = useRef(content);
   contentRef.current = content;
 
-  const refresh = useCallback(async () => {
-    const c = await api.getTodayContent();
-    setContent(c);
-    return c;
+  // 서버에서 오늘 상태를 다시 불러오는 유일한 경로. 실패는 syncError 하나로 알리고(오프라인/서버 오류 구분),
+  // 화면은 이전 값을 유지한다. 성공하면 새 값을, 실패하면 undefined 를 돌려준다.
+  const [syncError, setSyncError] = useState<Message | null>(null);
+  const sync = useCallback(async (): Promise<TodayContent | null | undefined> => {
+    try {
+      const next = await api.getTodayContent();
+      // 미연결 열람은 단계를 서버에 기록하지 않으므로, 같은 날 다시 불러와도 화면에서 한 단계를 지우지 않는다.
+      setContent(prev =>
+        next && !next.linked && prev && !prev.linked && prev.day_index === next.day_index
+          ? {...next, completed_steps: prev.completed_steps}
+          : next,
+      );
+      setSyncError(null);
+      return next;
+    } catch (e) {
+      setSyncError(errorMessage(e));
+      return undefined;
+    }
   }, [api]);
 
   useEffect(() => {
@@ -50,11 +65,11 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
     }
     const sub = AppState.addEventListener('change', s => {
       if (s === 'active' && contentRef.current !== undefined) {
-        refresh().catch(() => {});
+        sync();
       }
     });
     return () => sub.remove();
-  }, [role, refresh]);
+  }, [role, sync]);
 
   const value = useMemo(
     () => ({
@@ -63,7 +78,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
       consented: content?.consented ?? false,
       done: content?.completed_steps ?? [],
       streak: content?.streak ?? 0,
-      refresh,
+      sync,
       applyStep: (step: StepName, streak: number) =>
         setContent(c =>
           c
@@ -74,11 +89,17 @@ export function AppRoot({api, role, restore = false}: {api: Api; role: Role; res
               }
             : c,
         ),
-      applyWithdraw: () => setContent(c => (c ? {...c, consented: false, answered_choice: null} : c)),
+      setConsented: (v: boolean) => {
+        if (contentRef.current) {
+          setContent(c => (c ? {...c, consented: v, answered_choice: v ? c.answered_choice : null} : c));
+        } else {
+          sync(); // 콘텐츠가 없으면(null·불러오는 중) 동의 상태를 서버에서 다시 받는다
+        }
+      },
+      syncError,
       clear: () => setContent(undefined),
-      applyConsent: () => setContent(c => (c ? {...c, consented: true} : c)),
     }),
-    [api, content, refresh],
+    [api, content, syncError, sync],
   );
 
   let body: React.ReactNode;

@@ -14,6 +14,7 @@ function expectNoPressure() {
 
 test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준다', async () => {
   const api = createFakeApi({
+    consented: true,
     parentTitle: '엄마',
     latest: {prompt: '더 좋아하는 계절은요?', choiceLabel: '가을', answeredDate: '2020-11-16'},
   });
@@ -26,19 +27,19 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
 });
 
 test('답이 없으면 안내 한 줄만 보여 준다', async () => {
-  render(<AppRoot api={createFakeApi({parentTitle: '아빠', shared: true, latest: null})} role="child" />);
+  render(<AppRoot api={createFakeApi({consented: true, parentTitle: '아빠', latest: null})} role="child" />);
   await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
   expectNoPressure();
 });
 
 test('어르신이 답을 나누지 않으면 그렇게 알린다', async () => {
-  render(<AppRoot api={createFakeApi({shared: false})} role="child" />);
+  render(<AppRoot api={createFakeApi({consented: false})} role="child" />);
   await waitFor(() => screen.getByText('답을 나누지 않는 중이에요'));
   expectNoPressure();
 });
 
 test('조회 실패는 오류 상태이고 다시 불러올 수 있다', async () => {
-  render(<AppRoot api={createFakeApi({failChildHome: 1, shared: true, latest: null})} role="child" />);
+  render(<AppRoot api={createFakeApi({failChildHome: 1, consented: true, latest: null})} role="child" />);
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
 });
@@ -55,7 +56,7 @@ test('fake: 호칭은 닫힌 목록만, 철회하면 저장된 답이 사라진�
   expect(await api.setParentTitle('엄마')).toEqual({ok: true});
   expect(await api.setParentTitle('사장님')).toEqual({ok: false, reason: 'invalid_title'});
   expect((await api.fetchChildSummary()).parentTitle).toBe('엄마');
-  await api.giveConsent();
+  await api.giveConsent('v2');
   await api.saveAnswer({questionId: 'q-1', choice: 'A'});
   expect((await api.fetchChildSummary()).latest?.choiceLabel).toBe('봄');
   await api.withdrawConsent();

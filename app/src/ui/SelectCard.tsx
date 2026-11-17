@@ -1,6 +1,7 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text} from 'react-native';
 import {color, radius} from './tokens';
+import {copy} from '../copy/copy';
 
 type Props = {label: string; selected: boolean; onPress: () => void};
 
@@ -13,7 +14,7 @@ export function SelectCard({label, selected, onPress}: Props) {
       onPress={onPress}
       style={[styles.card, selected ? styles.on : styles.off]}>
       <Text style={styles.label}>{label}</Text>
-      {selected ? <Text style={styles.badge}>골랐어요</Text> : null}
+      {selected ? <Text style={styles.badge}>{copy.question.chosen}</Text> : null}
     </Pressable>
   );
 }

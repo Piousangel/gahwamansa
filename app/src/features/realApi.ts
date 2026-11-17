@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {OfflineError} from './types';
+import {OfflineError, ServerError} from './types';
 import type {
   Api, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
@@ -9,21 +9,33 @@ export interface RealApi extends Api {
   signUpChild(email: string, password: string): Promise<void>;
 }
 
-const OFFLINE_RE = /network request failed|failed to fetch|fetch failed|timeout|timed out|offline|ECONN|ENOTFOUND/i;
 type SbError = {message: string; code?: string; status?: number; name?: string};
+// 서버가 응답한 오류에는 Postgres 코드가 붙는다. 코드가 없는 실패만 네트워크 문제 후보로 본다
+// (fetch 실패는 supabase-js 가 코드 없이 TypeError 메시지로 감싼다).
+const NETWORK_RE = /network request failed|failed to fetch|fetch failed|timed? ?out|ECONN|ENOTFOUND/i;
 const looksOffline = (e: SbError) =>
-  OFFLINE_RE.test(e.message) || e.status === 0 || e.name === 'AuthRetryableFetchError';
+  !e.code && (e.status === 0 || e.name === 'AuthRetryableFetchError' || NETWORK_RE.test(e.message));
+// 서버가 raise 한 예외 이름과 정확히 같은지(P0001 + 메시지 일치)
+const isRaised = (e: SbError, reason: string) => e.code === 'P0001' && e.message === reason;
 
 function fail(what: string, error: SbError): never {
-  const e = looksOffline(error)
+  throw looksOffline(error)
     ? new OfflineError(`${what}: ${error.message}`)
-    : new Error(`${what}: ${error.message}`);
-  (e as Error & {code?: string}).code = error.code;
-  throw e;
+    : new ServerError(what, error.message, error.code);
 }
 
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 export function createRealApi(sb: SupabaseClient): RealApi {
+  // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
+  // 못 읽었으면(오프라인) 새 익명 사용자를 만들지 않는다.
+  const ensureSession = async () => {
+    const {data, error} = await sb.auth.getSession();
+    if (error) throw new OfflineError(`세션 확인: ${error.message}`);
+    if (!data.session) {
+      const {error: e} = await sb.auth.signInAnonymously();
+      if (e) fail('익명 로그인', e);
+    }
+  };
   return {
     async signUpChild(email, password) {
       const {error} = await sb.auth.signUp({email, password});
@@ -69,25 +81,44 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       return data as string;
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
-      const {data: s, error: se} = await sb.auth.getSession();
-      // 세션을 못 읽은 것과 세션이 없는 것은 다르다. 못 읽었으면 새 익명 사용자를 만들지 않는다.
-      if (se) throw new OfflineError(`세션 확인: ${se.message}`);
-      if (!s.session) {
-        const {error: e} = await sb.auth.signInAnonymously();
-        if (e) fail('익명 로그인', e);
-      }
+      await ensureSession();
       const {data, error} = await sb.rpc('redeem_invite_code', {p_code: code});
       if (error) fail('redeem_invite_code', error);
       return data as RedeemResult;
     },
-    async giveConsent() {
-      const {error} = await sb.rpc('give_consent');
+    async giveConsent(version) {
+      const {error} = await sb.rpc('give_consent', {p_version: version});
       if (error) fail('give_consent', error);
     },
     async getTodayContent(): Promise<TodayContent | null> {
+      // 처음 설치한 기기는 세션이 없다. anon 은 RPC 권한이 없으므로 먼저 익명 로그인한다(서버 권한은 열지 않음).
+      await ensureSession();
       const {data, error} = await sb.rpc('get_today_content');
-      if (error) fail('get_today_content', error);
-      return (data ?? null) as TodayContent | null;
+      if (error) {
+        // 프로필이 없는(연결이 풀린) 기기는 미연결 열람 모드로 코스만 보여 준다.
+        // 서버는 프로필 없음도 parent_required 로 알려 주어 자녀와 구분되지 않는다. preview_content 가
+        // 프로필 유무를 판정하므로(있으면 linked_use_get_today_content) 그 경우 원래 오류를 그대로 올린다.
+        if (isRaised(error, 'parent_required') || isRaised(error, 'no_profile')) {
+          const {data: pv, error: pe} = await sb.rpc('preview_content');
+          if (pe) {
+            if (isRaised(pe, 'linked_use_get_today_content')) fail('get_today_content', error);
+            fail('preview_content', pe);
+          }
+          if (!pv) return null;
+          return {
+            day_index: pv.day_index,
+            photo: pv.photo,
+            question: pv.question,
+            answered_choice: null,
+            consented: false,
+            completed_steps: [],
+            streak: 0,
+            linked: false,
+          };
+        }
+        fail('get_today_content', error);
+      }
+      return data ? ({...data, linked: true} as TodayContent) : null;
     },
     async saveAnswer({questionId, choice}) {
       const {error} = await sb.rpc('save_answer', {p_question: questionId, p_choice: choice});

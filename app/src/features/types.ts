@@ -25,17 +25,29 @@ export type TodayContent = {
   consented: boolean;
   completed_steps: StepName[];
   streak: number;
+  // false = 미연결 열람(preview_content). 답·기록을 저장하지 않는다.
+  linked: boolean;
 };
 
 // 인터넷 문제(연결 실패·시간 초과)를 다른 서버 오류와 구분하기 위한 오류
 export class OfflineError extends Error {}
 export const isOffline = (e: unknown): boolean => e instanceof OfflineError;
 
+// 서버가 응답한 오류. code 는 Postgres 오류 코드(예: P0001 = raise exception, 42501 = 권한 없음),
+// reason 은 서버가 raise 한 예외 이름(예: 'consent_required'). 판별은 부분 문자열이 아니라 이 둘로 한다.
+export class ServerError extends Error {
+  constructor(what: string, public reason: string, public code?: string) {
+    super(`${what}: ${reason}`);
+  }
+}
+export const isServerError = (e: unknown, reason: string): boolean =>
+  e instanceof ServerError && e.code === 'P0001' && e.reason === reason;
+
 export interface Api {
   createFamily(): Promise<CreateFamilyResult>;
   issueInviteCode(targetProfileId?: string | null): Promise<string>;
   redeemInviteCode(code: string): Promise<RedeemResult>;
-  giveConsent(): Promise<void>;
+  giveConsent(version: string): Promise<void>; // 동의한 문구 버전(CONSENT_VERSION)
   // 시작 시 복원: 이 기기가 이미 어르신으로 연결돼 있는지
   // 앱 데이터 삭제(delete_my_account) 후 로그아웃까지. scope 는 서버가 알려 준다.
   // 삭제 전 범위 조회(delete_scope_preview). 삭제는 하지 않는다.

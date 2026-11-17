@@ -7,7 +7,7 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {AssetPlaceholder} from '../../ui/assets/AssetPlaceholder';
 import {useSession} from '../../app/session';
-import {appCopy} from '../../copy/copy';
+import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
 
@@ -22,7 +22,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
   const showImage = !photo.image_url.startsWith('pending://') && !imageFailed;
   const go = async () => {
     if (await finish('photo')) {
-      navigation.navigate('CourseHome');
+      navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
     }
   };
   return (
@@ -38,7 +38,7 @@ export function PhotoStep({navigation}: NativeStackScreenProps<ParentParams, 'Ph
       {photo.recall_questions.map(q => (
         <Text20 key={q} size={24}>{q}</Text20>
       ))}
-      <BigButton label="다 봤어요" onPress={go} />
+      <BigButton label={copy.course.next.photo} onPress={go} />
       <StepError error={error} onRetry={go} />
     </Screen>
   );

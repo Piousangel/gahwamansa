@@ -3,7 +3,7 @@ import {AppState} from 'react-native';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {OfflineError} from '../src/features/types';
+import {OfflineError, ServerError} from '../src/features/types';
 import {createRealApi} from '../src/features/realApi';
 import {enterCode, press, toHome, toHomeConsented} from '../testUtils/flow';
 
@@ -18,7 +18,7 @@ test('동의 저장이 실패하면 오류 문구를 보여 주고 다시 누를
   jest.spyOn(api, 'giveConsent').mockRejectedValueOnce(new OfflineError('x'));
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답이 자녀분께 보여요'));
+  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('좋아요');
@@ -65,7 +65,7 @@ async function toQuestion(api: ReturnType<typeof createFakeApi>) {
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press(/질문 고르기/);
+  await press(/둘 중 고르기/);
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
 }
@@ -82,7 +82,7 @@ test('답변 저장이 실패하면 알리고 진행하지 않는다', async () 
 
 test('저장 거부(consent_required)는 저장 없이 진행한다', async () => {
   const api = createFakeApi({consented: true});
-  jest.spyOn(api, 'saveAnswer').mockRejectedValueOnce(new Error('save_answer: consent_required'));
+  jest.spyOn(api, 'saveAnswer').mockRejectedValueOnce(new ServerError('save_answer', 'consent_required', 'P0001'));
   const rec = jest.spyOn(api, 'recordSessionStep');
   await toQuestion(api);
   await press('정했어요');
@@ -102,7 +102,7 @@ test('Connect: 오프라인과 기타 오류는 다른 문구', async () => {
 });
 
 test('already_linked 버튼은 코스로 이동한다', async () => {
-  render(<AppRoot api={createFakeApi({consented: true})} role="parent" />);
+  render(<AppRoot api={createFakeApi({consented: true, linked: true})} role="parent" />);
   await enterCode('444444');
   await waitFor(() => screen.getByText('이미 연결돼 있어요'));
   await press('사진 보기');
@@ -143,7 +143,7 @@ test('photo 또는 question 이 null 이면 빈 상태 화면', async () => {
 });
 
 test('자녀 홈 조회 실패는 오류 상태이고 다시 불러올 수 있다', async () => {
-  render(<AppRoot api={createFakeApi({failChildHome: 1, shared: true, latest: null})} role="child" />);
+  render(<AppRoot api={createFakeApi({failChildHome: 1, consented: true, latest: null})} role="child" />);
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
   await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
