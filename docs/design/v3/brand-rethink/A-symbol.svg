@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img"><title>가화만사성 A안 · 해 뜨는 우리 집 (유지·보완) 심볼</title><g transform="rotate(-5 32 32)">
+    <rect x="11" y="5" width="42" height="54" rx="3" fill="#fff" stroke="#4E2F14" stroke-width="3.5" stroke-linejoin="round"/>
+    <rect x="15" y="9" width="34" height="31" rx="1" fill="#F1E4D4"/>
+    <path d="M42.50 21.00L45.50 21.00M39.42 28.42L41.55 30.55M32.00 31.50L32.00 34.50M24.58 28.42L22.45 30.55M21.50 21.00L18.50 21.00M24.58 13.58L22.45 11.45M32.00 10.50L32.00 7.50M39.42 13.58L41.55 11.45" fill="none" stroke="#F59E0B" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="32" cy="21" r="7" fill="#FFC93C" stroke="#4E2F14" stroke-width="2.8"/>
+    <path d="M15 40 L15 35.5 Q23 34.5 32 29.5 Q41 34.5 49 35.5 L49 40 Z" fill="#4E2F14"/>
+  </g></svg>
