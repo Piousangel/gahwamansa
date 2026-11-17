@@ -65,10 +65,38 @@ test('예전 해+폴라로이드 리소스는 없고, 스테이징 변형은 아
   expect(fs.existsSync(`${__dirname}/../src/ui/assets/symbol-sun-polaroid.svg`)).toBe(false);
 });
 
-test('앱 안 심볼은 평면판(symbol-flat.svg)과 같은 그림', () => {
-  const {BRAND_SYMBOL_XML} = require('../src/ui/assets/brandSymbol');
-  const flat = fs.readFileSync(brand('symbol-flat.svg'), 'utf8').trim();
-  expect(BRAND_SYMBOL_XML).toBe(flat);
+// 사용자 피드백("D안이랑 좀 달라졌지"): 앱 안도 평면판이 아니라 D안 3D 그대로(네이티브 스플래시와 같은 그림)
+test('앱 안 심볼은 D안 3D PNG(164: 대기·이동, 40: 워드마크 옆), 브랜드 폴더 렌더와 같은 파일, 평면판은 쓰지 않는다', () => {
+  for (const n of ['symbol-3d-164', 'symbol-3d-40']) {
+    for (const sfx of ['', '@2x', '@3x']) {
+      expect(same(`${__dirname}/../src/ui/assets/${n}${sfx}.png`, brand(`png/${n}${sfx}.png`))).toBe(true);
+    }
+  }
+  const src = fs.readFileSync(`${__dirname}/../src/ui/assets/brandSymbol.tsx`, 'utf8');
+  expect(src).not.toMatch(/symbol-flat|SvgXml/);
+});
+
+test('BrandSymbol: 40 이하면 40 PNG, 그보다 크면 164 PNG', () => {
+  const {BrandSymbol} = require('../src/ui/assets/brandSymbol');
+  const {render: r} = require('@testing-library/react-native');
+  const pick = (size: number) => {
+    const {getByTestId, unmount} = r(<BrandSymbol size={size} />);
+    const node = getByTestId('brand-symbol', {includeHiddenElements: true});
+    const out = {src: node.props.source, style: node.props.style};
+    unmount();
+    return out;
+  };
+  expect(pick(40).src).toBe(require('../src/ui/assets/symbol-3d-40.png'));
+  expect(pick(164).src).toBe(require('../src/ui/assets/symbol-3d-164.png'));
+  expect(pick(164).style).toMatchObject({width: 164, height: 164});
+});
+
+test('대기 화면 심볼은 네이티브 스플래시와 같은 크기·자리(288 캔버스의 64상자 → 164dp, 중심이 2dp 위)', () => {
+  const {SPLASH_SYMBOL, SPLASH_LIFT} = require('../src/app/SplashOverlay');
+  expect(SPLASH_SYMBOL).toBe(164);
+  expect(SPLASH_LIFT).toBe(2);
+  const gen = fs.readFileSync(brand('_src/gen.mjs'), 'utf8');
+  expect(gen).toContain('place("3d", 62, 60, 164)'); // 디자이너 생성기의 스플래시 배치가 바뀌면 이 값도 함께
 });
 
 test('JS 첫 화면이 그려지면(루트 onLayout) 네이티브 스플래시를 한 번만 걷는다', async () => {
@@ -94,7 +122,7 @@ test('복원 대기 화면은 "잠시만요" 글자 대신 심볼만, 2초가 �
   expect(screen.getByText('잠시만요')).toBeTruthy();
 });
 
-test('첫 실행: 가운데 심볼(128)이 워드마크 옆(40)으로 날아간다(450ms, 네이티브 드라이버)', () => {
+test('첫 실행: 가운데 심볼(164)이 워드마크 옆(40)으로 날아간다(450ms, 네이티브 드라이버)', () => {
   const timing = jest.spyOn(Animated, 'timing');
   const onDone = jest.fn();
   render(<SplashOverlay win={{width: 360, height: 780}} target={{x: 24, y: 60, size: 40}} mode="full" onDone={onDone} />);

@@ -5,7 +5,9 @@ import type {MotionMode} from '../features/link/useReduceMotion';
 import type {SplashTarget} from './splash';
 import {color} from '../ui/tokens';
 
-export const SPLASH_SYMBOL = 128;
+// 네이티브 스플래시(splash_icon: 288dp 캔버스에 심볼 64상자를 164dp, 상자 중심이 캔버스 중심보다 2dp 위)와 같은 크기·자리
+export const SPLASH_SYMBOL = 164;
+export const SPLASH_LIFT = 2;
 const STD = Easing.bezier(0.4, 0, 0.2, 1);
 const SAFETY_MS = 1000; // 목표 위치를 못 받으면 1초 뒤 그냥 걷는다
 
@@ -55,7 +57,7 @@ export function SplashOverlay({
   }, [mode, target, move, fade]);
 
   const left = (win.width - SPLASH_SYMBOL) / 2;
-  const top = (win.height - SPLASH_SYMBOL) / 2;
+  const top = (win.height - SPLASH_SYMBOL) / 2 - SPLASH_LIFT;
   const k = target ? target.size / SPLASH_SYMBOL : 1;
   // scale 은 가운데 기준이라 목표 중심으로 옮긴다
   const dx = target ? target.x + target.size / 2 - (left + SPLASH_SYMBOL / 2) : 0;
@@ -81,11 +83,11 @@ export function SplashOverlay({
 export function SplashHold({win, slowText}: {win: {width: number; height: number}; slowText: React.ReactNode | null}) {
   return (
     <View testID="splash-hold" style={[StyleSheet.absoluteFill, styles.paper]}>
-      <View style={[styles.abs, {left: (win.width - SPLASH_SYMBOL) / 2, top: (win.height - SPLASH_SYMBOL) / 2}]}>
+      <View style={[styles.abs, {left: (win.width - SPLASH_SYMBOL) / 2, top: (win.height - SPLASH_SYMBOL) / 2 - SPLASH_LIFT}]}>
         <BrandSymbol size={SPLASH_SYMBOL} />
       </View>
       {slowText ? (
-        <View style={[styles.slow, {top: (win.height + SPLASH_SYMBOL) / 2 + 24}]}>{slowText}</View>
+        <View style={[styles.slow, {top: (win.height + SPLASH_SYMBOL) / 2 - SPLASH_LIFT + 24}]}>{slowText}</View>
       ) : null}
     </View>
   );

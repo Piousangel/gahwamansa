@@ -3,7 +3,7 @@ import {NativeModules} from 'react-native';
 
 // 스플래시 이어가기(SPL_A, docs/design/v3/splash/NOTES-splash.md).
 // 1) 네이티브 스플래시: JS 첫 화면이 그려지면 한 번 걷는다(네이티브 쪽 3초 안전장치는 MainActivity).
-// 2) 첫 화면 심볼 이동: 실행당 한 번, 가운데 128 심볼이 첫 화면 워드마크 옆 40 자리로 날아간다.
+// 2) 첫 화면 심볼 이동: 실행당 한 번, 가운데 164 심볼(네이티브 스플래시와 같은 크기)이 첫 화면 워드마크 옆 40 자리로 날아간다.
 export type SplashTarget = {x: number; y: number; size: number};
 
 let hidden = false;
