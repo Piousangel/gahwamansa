@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {AccessibilityInfo, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
 import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -29,40 +29,66 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
   const topPad = Math.max(space.topSafeMin, insets.top + space.md);
 
-  // 본문이 넘치고 아직 끝까지 내리지 않았으면 아래 페이드(QA B4: 가려진 내용이 있다는 표시)
-  const [box, setBox] = useState({view: 0, content: 0, y: 0});
-  const more = box.view > 0 && box.content - box.view - box.y > 4;
+  // 본문이 넘치고 아직 끝까지 내리지 않았으면 아래 페이드(QA B4). 측정값은 ref, 화면은 boolean 이 바뀔 때만 다시 그린다
+  const box = useRef({view: 0, content: 0, y: 0});
+  const [more, setMore] = useState(false);
+  const measure = (next: Partial<typeof box.current>) => {
+    const b = (box.current = {...box.current, ...next});
+    const m = b.view > 0 && b.content - b.view - b.y > 4;
+    setMore(prev => (prev === m ? prev : m));
+  };
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const {contentOffset, contentSize, layoutMeasurement} = e.nativeEvent;
-    setBox({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
+    measure({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
   };
 
-  // 화면 제목(먼저 알린 머리글: 위 고정 영역 → 본문 순서)에 접근성 포커스. 화면당 한 번(마운트 때)
-  const title = useRef<unknown>(null);
-  const register = useCallback((node: unknown) => {
-    if (!title.current) {
-      title.current = node;
-    }
-  }, []);
+  // 화면 제목에 접근성 포커스(R2): 위 고정 영역 → 본문 순서로 지금 마운트된 첫 머리글. 화면 읽기가 켜져 있을 때만, 화면당 한 번(마운트 때)
+  const tops = useRef<unknown[]>([]);
+  const bodies = useRef<unknown[]>([]);
+  const registerIn = (list: React.RefObject<unknown[]>) => (node: unknown) => {
+    list.current.push(node);
+    return () => {
+      list.current = list.current.filter(n => n !== node);
+    };
+  };
+  const registerTop = useRef(registerIn(tops)).current;
+  const registerBody = useRef(registerIn(bodies)).current;
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (title.current) {
-        try {
-          AccessibilityInfo.sendAccessibilityEvent(title.current as never, 'focus'); // 호스트 요소 ref 를 바로 받는 API
-        } catch {
-          // 포커스는 보조 기능: 실패해도 화면은 그대로
+    let alive = true;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then(on => {
+        if (!on || !alive) {
+          return;
         }
+        t = setTimeout(() => {
+          const node = tops.current[0] ?? bodies.current[0];
+          if (node) {
+            try {
+              AccessibilityInfo.sendAccessibilityEvent(node as never, 'focus'); // 호스트 요소 ref 를 바로 받는 API
+            } catch {
+              // 포커스는 보조 기능: 실패해도 화면은 그대로
+            }
+          }
+        }, TITLE_FOCUS_MS);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      if (t) {
+        clearTimeout(t);
       }
-    }, TITLE_FOCUS_MS);
-    return () => clearTimeout(t);
+    };
   }, []);
 
   // KAV: Android 도 padding. edgeToEdgeEnabled=true 라 adjustResize 로 창이 줄지 않을 수 있다.
   // (창이 실제로 줄면 KAV 가 겹친 높이를 0으로 계산해 두 번 밀리지 않는다.)
   return (
-    <ScreenTitleContext.Provider value={register}>
+    <ScreenTitleContext.Provider value={registerBody}>
       <KeyboardAvoidingView style={styles.bg} behavior="padding">
-        <View testID="screen-top" style={[styles.top, {paddingTop: topPad}]}>{top}</View>
+        <View testID="screen-top" style={[styles.top, {paddingTop: topPad}]}>
+          <ScreenTitleContext.Provider value={registerTop}>{top}</ScreenTitleContext.Provider>
+        </View>
         <View style={styles.body}>
           <ScrollView
             testID="screen-body"
@@ -71,11 +97,8 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={64}
             onScroll={onScroll}
-            onLayout={e => {
-              const h = e.nativeEvent.layout.height;
-              setBox(b => (b.view === h ? b : {...b, view: h}));
-            }}
-            onContentSizeChange={(_w, h) => setBox(b => (b.content === h ? b : {...b, content: h}))}
+            onLayout={e => measure({view: e.nativeEvent.layout.height})}
+            onContentSizeChange={(_w, h) => measure({content: h})}
             contentContainerStyle={[styles.bodyPad, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}
           </ScrollView>

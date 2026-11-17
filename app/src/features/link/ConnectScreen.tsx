@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {errorMessage} from '../course/useFinishStep';
 import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -18,7 +19,10 @@ import {copy, reasonToMessage, Message} from '../../copy/copy';
 export function ConnectScreen({navigation, route}: NativeStackScreenProps<ParentParams, 'Connect'>) {
   const {api, resetRole} = useSession();
   // 코스 홈·설정에서 "번호 쓰기"로 왔으면 이전은 그 화면으로, 처음 화면에서 왔으면 역할 선택으로(QA B2)
-  const back = route.params?.from === 'course' ? () => navigation.goBack() : resetRole;
+  const fromCourse = route.params?.from === 'course';
+  const back = fromCourse ? () => navigation.goBack() : resetRole;
+  // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
+  const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
@@ -52,7 +56,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     try {
       const res = await api.redeemInviteCode(code);
       if (res.ok) {
-        navigation.navigate('Consent');
+        toConsent();
         return;
       }
       setError(reasonToMessage(res.reason));
@@ -70,7 +74,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const onErrorButton = () => {
     setError(null);
     if (reason === 'already_linked') {
-      navigation.navigate('Consent');
+      toConsent();
     } else if (reason === 'not_parent_device') {
       resetRole(); // "처음 화면에서 다시 골라 주세요"
     }
@@ -80,7 +84,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const links = (
     <View testID="connect-links" style={styles.links}>
       <TextLink label={copy.connect.no_code_link} touch={64} onPress={() => setHelp(h => !h)} />
-      <TextLink label={copy.connect.view_course} touch={64} onPress={() => navigation.navigate('CourseHome')} />
+      <TextLink label={copy.connect.view_course} touch={64} onPress={() => (fromCourse ? navigation.popTo('CourseHome') : navigation.navigate('CourseHome'))} />
     </View>
   );
   // 이전: 역할 선택으로(어르신 스택의 첫 화면). 주 버튼은 하단 고정 영역(내비게이션 바 위).
