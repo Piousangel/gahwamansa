@@ -19,10 +19,10 @@ import {useBootLoading} from '../../app/splash';
 import type {StepName, WeekStamps} from '../types';
 
 const c = copy.course;
-const STEPS: {step: StepName; route: 'PhotoStep' | 'QuestionStep' | 'HangulStep'}[] = [
+const STEPS: {step: StepName; route: 'PhotoStep' | 'QuestionStep' | 'KeyboardStep'}[] = [
   {step: 'photo', route: 'PhotoStep'},
   {step: 'question', route: 'QuestionStep'},
-  {step: 'hangul', route: 'HangulStep'},
+  {step: 'hangul', route: 'KeyboardStep'},
 ];
 
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {

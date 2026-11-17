@@ -96,7 +96,9 @@
     "want_story": "이 사진 보니 옛날 이야기가 듣고 싶어요",
     "stay_healthy": "오늘도 건강하게 보내세요",
     "love_you": "사랑해요, 오늘도 좋은 하루예요",
-    "will_call": "시간 날 때 전화드릴게요"
+    "will_call": "시간 날 때 전화드릴게요",
+    "always_thanks": "늘 고마워요",
+    "comfy_day": "오늘도 편안한 하루 보내세요"
   },
   "push": [
     {
@@ -139,7 +141,6 @@
     "photo_load_failed": "사진이 열리지 않아요. 잠시 뒤에 다시 해요",
     "question_title": "마음에 드는 쪽을 골라 주세요",
     "question_hint": "정답은 없어요. 마음 가는 쪽을 눌러 주세요",
-    "hangul_hint": "틀려도 괜찮아요. 천천히 따라 써 봐요",
     "loading": "잠시만요",
     "ai_photo_label": "AI가 만든 그림",
     "not_real_place": "실제 장소가 아니에요"
@@ -212,7 +213,7 @@
     "step": {
       "photo": "사진 보기",
       "question": "둘 중 고르기",
-      "hangul": "글씨 쓰기"
+      "hangul": "자판으로 쓰기"
     },
     "status": {
       "done": "했어요",
@@ -241,10 +242,36 @@
     "_status": "stamps_a11y 는 임시(라이터 확정 필요)",
     "continue": "이어서 하기"
   },
+  "keyboard": {
+    "_status": "copy-v3-confirmed 10절 확정. card_a11y·photo_a11y 는 시안 P6 v4 읽기 라벨(라이터 확인 전)",
+    "guide": "보이는 낱말을 아래 칸에 써요",
+    "input_label": "낱말 쓰는 칸",
+    "placeholder": "여기를 누르면 자판이 나와요",
+    "sub": "천천히 써 봐요",
+    "need_one": "한 글자만 써도 누를 수 있어요",
+    "matched": "낱말을 다 쓰셨어요",
+    "finish": "마치기",
+    "sheet_title": "낱말을 한 번 더 볼까요?",
+    "retry": "다시 써 볼게요",
+    "finish_as_is": "이대로 마칠게요",
+    "your_word": "쓰신 낱말",
+    "skip": "오늘은 넘어갈게요",
+    "card_a11y": "쓸 낱말, {낱말}, {n} 글자. 자판으로 쓰거나 넘어갈 수 있어요",
+    "count_words": [
+      "한",
+      "두",
+      "세",
+      "네",
+      "다섯",
+      "여섯"
+    ],
+    "photo_a11y": "낱말 사진, AI가 만든 그림"
+  },
   "done": {
     "title": "오늘 코스를 마쳤어요",
     "body": "도장을 찍었어요. 내일 또 만나요",
-    "first_stamp": "오늘 첫 도장을 찍었어요"
+    "first_stamp": "오늘 첫 도장을 찍었어요",
+    "button": "알겠어요"
   },
   "question": {
     "need_choice": "하나를 골라 주세요",
@@ -252,7 +279,8 @@
   },
   "cheer": {
     "title": "가족이 보낸 응원이에요",
-    "button": "알겠어요"
+    "button": "알겠어요",
+    "title_many": "응원이 {n}개 왔어요"
   },
   "disconnected": {
     "parent": {
@@ -355,7 +383,7 @@
     "intro_title": "하루 한 장, 우리 집 앨범",
     "intro": [
       "옛날 사진 보며 추억을 떠올려요",
-      "사진 속 낱말을 따라 써요",
+      "사진 속 낱말을 자판으로 써요",
       "고른 답으로 자녀가 취향을 알아 가요"
     ]
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, screen, fireEvent, waitFor} from '@testing-library/react-native';
+import {act, render, screen, fireEvent, waitFor} from '@testing-library/react-native';
 import {enterCode, press, toHome} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
@@ -29,9 +29,15 @@ async function doAllSteps() {
   await press('정했어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
   await press('이어서 하기');
-  await waitFor(() => screen.getByText('나무'));
-  await press('다 썼어요');
-  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
+  await act(async () => {
+    fireEvent.changeText(screen.getByLabelText('낱말 쓰는 칸'), '나무');
+  });
+  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 2500});
+  await press('마치기');
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요')); // P7
+  await press('알겠어요');
+  await waitFor(() => screen.getByText('오늘의 코스'));
 }
 
 test('동의하면 답변이 저장되고 3단계 완료 처리가 호출된다', async () => {
