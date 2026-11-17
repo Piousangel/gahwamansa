@@ -1,6 +1,6 @@
 -- 0030 테스트 (pgTAP): parent_family_list (P16 연결된 가족). 실행: npx supabase test db
 -- 보호하는 것: 어르신 본인만 부른다, 같은 가족 자녀 계정마다 {seq, connected_at, connected_date}만(이름·이메일·id 없음),
---             연결일 = 어르신과 그 자녀가 둘 다 가족에 있게 된 시각, 다른 가족 자녀는 없다, 심사 가족·연결 전 기기는 빈 목록.
+--             연결일 = 어르신과 그 자녀가 둘 다 가족에 있게 된 시각, 다른 가족 자녀는 없다, 연결 전 기기는 빈 목록, 심사 가족도 정상 목록.
 begin;
 select plan(12);
 
@@ -45,7 +45,7 @@ select ok(position('철수' in public.parent_family_list()::text) = 0 and positi
           and position('7030b000' in public.parent_family_list()::text) = 0, '자녀 이름·이메일·id가 없다');
 
 select pg_temp.act_as('70300000-0000-0000-0000-0000000000a9', true);
-select is(public.parent_family_list() -> 'family', '[]'::jsonb, '심사 가족은 빈 목록');
+select is(jsonb_array_length(public.parent_family_list() -> 'family'), 1, '심사 가족도 정상 목록(심사자가 P16을 볼 수 있게)');
 select pg_temp.act_as('70300000-0000-0000-0000-0000000000e1', true);
 select is(public.parent_family_list(), '{"title": null, "family": []}'::jsonb, '연결 전 기기는 빈 목록');
 select pg_temp.act_as('70300000-0000-0000-0000-0000000000c1', false);
