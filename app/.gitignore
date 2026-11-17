@@ -76,3 +76,11 @@ yarn-error.log
 
 # local secrets / local stack config (not committed)
 src/lib/config.local.ts
+
+# 환경별 설정(docs/team/RELEASE.md): staging.env 와 *.example 만 커밋, production.env 는 사용자 맥에만.
+# env.generated.ts 는 Gradle 이 빌드마다 만든다
+/env/*.env
+!/env/staging.env
+src/lib/env.generated.ts
+# worktree 에서 node_modules 를 심볼릭 링크로 쓸 때(링크는 node_modules/ 디렉터리 패턴에 안 걸림)
+/node_modules

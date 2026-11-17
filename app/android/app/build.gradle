@@ -75,6 +75,57 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 /**
+ * 환경(flavor)별 공개 설정: app/env/<flavor>.env → BuildConfig·리소스·src/lib/env.generated.ts
+ * 설계: docs/plans/09-environments.md(2안, 새 의존성 없음), 사용법: docs/team/RELEASE.md
+ * production.env 가 없으면 production.env.example 로 빌드하고 경고한다(-PrequireRealEnv 면 실패).
+ */
+def appEnvDir = file("../../env")
+def generatedEnvTs = file("../../src/lib/env.generated.ts")
+def requiredEnvKeys = ["APP_ENV", "API_MODE", "SUPABASE_PROJECT_REF", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "KAKAO_NATIVE_APP_KEY", "GOOGLE_WEB_CLIENT_ID"]
+
+def readEnvFile = { File f ->
+    def m = [:]
+    f.eachLine("UTF-8") { line ->
+        def t = line.trim()
+        if (!t || t.startsWith("#")) return
+        def i = t.indexOf("=")
+        if (i <= 0) throw new GradleException("${f}: '키=값' 형식이 아닌 줄: ${t}")
+        m[t.substring(0, i).trim()] = t.substring(i + 1).trim()
+    }
+    return m
+}
+
+def loadAppEnv = { String flavor ->
+    def f = new File(appEnvDir, "${flavor}.env")
+    def placeholder = false
+    if (!f.exists()) {
+        def example = new File(appEnvDir, "${flavor}.env.example")
+        if (project.hasProperty("requireRealEnv") || !example.exists()) {
+            throw new GradleException("app/env/${flavor}.env 가 없어요. ${flavor}.env.example 을 복사해 실제 공개 값을 채워 주세요(docs/team/RELEASE.md).")
+        }
+        f = example
+        placeholder = true
+    }
+    def m = readEnvFile(f)
+    requiredEnvKeys.each { k ->
+        if (!m[k]) throw new GradleException("${f.name}: ${k} 값이 비어 있어요")
+    }
+    // 비밀값 차단: 이 파일들은 APK 안에 그대로 들어간다
+    m.each { k, v ->
+        if (k ==~ /(?i).*(secret|service_role|password).*/ || v.startsWith("sb_secret_")) {
+            throw new GradleException("${f.name}: 비밀값으로 보이는 ${k} 가 있어요. env 파일에는 공개 값만 둡니다.")
+        }
+    }
+    if (m.APP_ENV != flavor) throw new GradleException("${f.name}: APP_ENV=${m.APP_ENV} 가 flavor(${flavor})와 달라요")
+    if (!(m.API_MODE in ["fake", "real"])) throw new GradleException("${f.name}: API_MODE 는 fake 또는 real")
+    if (!(m.KAKAO_NATIVE_APP_KEY ==~ /[0-9a-f]{32}/)) throw new GradleException("${f.name}: KAKAO_NATIVE_APP_KEY 형식(32자리 16진수)이 아니에요")
+    m.SOURCE = f.name
+    m.PLACEHOLDER = placeholder
+    return m
+}
+def appEnvs = [staging: loadAppEnv("staging"), production: loadAppEnv("production")]
+
+/**
  * 버전 규칙(docs/team/RELEASE.md):
  * - versionName = app/package.json 의 version(한 곳에서만 바꾼다)
  * - versionCode = git 커밋 수(git rev-list --count HEAD). 출시는 main 에서만 빌드하므로 계속 커진다.
@@ -95,6 +146,25 @@ def appVersionCode = project.hasProperty("versionCode")
         : (gitOutput(["git", "rev-list", "--count", "HEAD"]) ?: "1").toInteger()
 def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
 
+// 번들 직전에 flavor 에 맞는 TS 설정을 쓴다(공개 값만). 파일은 gitignore
+def writeEnvTs = { Map e, String versionName, int versionCode ->
+    def values = [
+        APP_ENV: e.APP_ENV,
+        API_MODE: e.API_MODE,
+        SUPABASE_PROJECT_REF: e.SUPABASE_PROJECT_REF,
+        SUPABASE_URL: e.SUPABASE_URL,
+        SUPABASE_KEY: e.SUPABASE_PUBLISHABLE_KEY,
+        KAKAO_NATIVE_APP_KEY: e.KAKAO_NATIVE_APP_KEY,
+        GOOGLE_WEB_CLIENT_ID: e.GOOGLE_WEB_CLIENT_ID,
+        VERSION_NAME: versionName,
+        VERSION_CODE: versionCode,
+        GIT_SHA: appGitSha,
+    ]
+    def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
+    generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +
+            "export default ${body};\n", "UTF-8")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -107,10 +177,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
         versionName appVersionName
-        // 카카오 네이티브 앱 키(공개 값)는 src/lib/socialConfig.ts 한 곳에만 둔다. 웹 로그인 복귀 scheme(kakao{키})은 여기서 만든다
-        def socialConfig = file("../../src/lib/socialConfig.ts").text
-        def kakaoKey = (socialConfig =~ /KAKAO_NATIVE_APP_KEY = '([0-9a-f]{32})'/)[0][1]
-        resValue "string", "kakao_scheme", "kakao" + kakaoKey
+    }
+    buildFeatures {
+        buildConfig true
     }
 
     // 환경 분리(09): 두 앱이 한 폰에 같이 설치된다. staging 은 Play 에 올리지 않는다(adb·App Distribution)
@@ -124,6 +193,18 @@ android {
         production {
             dimension "env"
         }
+    }
+    productFlavors.configureEach { flavor ->
+        def e = appEnvs[flavor.name]
+        // 카카오 웹 로그인 복귀 scheme(kakao{네이티브 앱 키}). 키 원본은 app/env/<flavor>.env 한 곳
+        flavor.resValue "string", "kakao_scheme", "kakao" + e.KAKAO_NATIVE_APP_KEY
+        // APK 에서 어떤 환경인지 확인용(aapt2 dump resources 로 보임). 공개 값만
+        flavor.resValue "string", "app_env", e.APP_ENV
+        flavor.resValue "string", "supabase_url", e.SUPABASE_URL
+        flavor.buildConfigField "String", "APP_ENV", "\"${e.APP_ENV}\""
+        flavor.buildConfigField "String", "SUPABASE_URL", "\"${e.SUPABASE_URL}\""
+        flavor.buildConfigField "String", "SUPABASE_PROJECT_REF", "\"${e.SUPABASE_PROJECT_REF}\""
+        flavor.buildConfigField "boolean", "ENV_PLACEHOLDER", "${e.PLACEHOLDER}"
     }
     sourceSets {
         // 스테이징 런처·스플래시(배지 T)는 브랜드 원본 폴더를 직접 연결(복사본을 두지 않음). 앱 이름은 src/staging/res
@@ -151,6 +232,29 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// 변형마다 자기 환경 값을 env.generated.ts 에 쓴다.
+// - 디버그: preBuild 때(Metro 가 이 파일을 읽음)
+// - release: JS 번들 작업 바로 직전(한 번에 두 flavor 를 빌드해도 각자 자기 값으로 번들되게)
+android.applicationVariants.configureEach { variant ->
+    def e = appEnvs[variant.flavorName]
+    def vName = variant.versionName
+    def vCode = variant.versionCode
+    def generate = {
+        if (e.PLACEHOLDER) {
+            logger.warn("경고: app/env/${variant.flavorName}.env 가 없어 ${e.SOURCE}(예시 값)로 빌드합니다. 이 앱은 서버에 붙지 못해요.")
+        }
+        writeEnvTs(e, vName, vCode)
+    }
+    variant.preBuildProvider.configure { doFirst { generate() } }
+    def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
+    tasks.matching { it.name == bundleTask }.configureEach { t ->
+        // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)
+        t.inputs.property("appEnv", e.collectEntries { k, v -> [(k): v.toString()] })
+        t.inputs.property("appVersion", "${vName}/${vCode}/${appGitSha}")
+        t.doFirst { generate() }
     }
 }
 
