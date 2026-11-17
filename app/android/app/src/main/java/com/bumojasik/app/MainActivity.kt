@@ -1,6 +1,8 @@
 package com.bumojasik.app
 
+import android.content.Intent
 import android.os.Bundle
+import com.bumojasik.app.invite.InviteIntent
 import android.os.Handler
 import android.os.Looper
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -34,6 +36,13 @@ class MainActivity : ReactActivity() {
     splash.setKeepOnScreenCondition { !SplashState.ready.get() }
     Handler(Looper.getMainLooper()).postDelayed({ SplashState.ready.set(true) }, SplashState.SAFETY_MS)
     supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
+    // 카톡 초대 링크(/c 페이지 intent:// 버튼): 엑스트라의 번호를 URL 조각으로 옮긴다(JS Linking 이 읽음)
+    InviteIntent.moveCodeExtraToFragment(intent)
     super.onCreate(savedInstanceState)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    InviteIntent.moveCodeExtraToFragment(intent)
+    super.onNewIntent(intent)
   }
 }

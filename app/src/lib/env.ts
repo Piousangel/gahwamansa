@@ -15,6 +15,7 @@ export type AppEnv = {
   SUPABASE_KEY: string; // publishable(또는 로컬 anon) 키. 비밀 키 아님
   KAKAO_NATIVE_APP_KEY: string;
   GOOGLE_WEB_CLIENT_ID: string;
+  APP_LINK_HOST: string; // 카톡 초대 링크 App Links 도메인(env 파일). 빈 값이면 링크로 번호를 받지 않음
   VERSION_NAME: string; // 빌드가 없으면 ''
   VERSION_CODE: number | null;
   GIT_SHA: string;
@@ -28,6 +29,7 @@ export const DEFAULT_ENV: AppEnv = {
   SUPABASE_KEY: '',
   KAKAO_NATIVE_APP_KEY: '',
   GOOGLE_WEB_CLIENT_ID: '',
+  APP_LINK_HOST: '',
   VERSION_NAME: '',
   VERSION_CODE: null,
   GIT_SHA: '',
