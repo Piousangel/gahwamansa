@@ -240,3 +240,12 @@
 - [ ] 웹훅(연결 해제/계정 상태 변경): 카카오가 권고. 탈퇴 연동은 빌드 2 검토
 - 주의: 크롬 비밀번호 자동완성이 Supabase 칸에 이메일·비밀번호를 채움 → 저장 전 반드시 지울 것
 - [ ] 스토어 설명에 'AI로 만든 그림' 고지 1줄, 스토어 스크린샷에 첫 화면을 쓰면 이미지 안에 AI 표기 (첫 화면 D 리뷰)
+
+## 29. 구글 로그인 (2026-11-17 등록, 공개 값만)
+- Google Cloud 프로젝트 gahwa-mansaseong, OAuth 동의 화면 "가화만사성"(외부, 테스트 모드)
+- Android 클라이언트 2개: release(SHA1 40:B2:…:66:CE), debug(dev only, SHA1 5E:8F:…:F6:25)
+- 웹 클라이언트(앱 webClientId·Supabase Client IDs): 818070207841-o75t4oegtkuoliv37mkf78hb1ivesbbp.apps.googleusercontent.com
+- Supabase Google provider: Client IDs에 웹 클라이언트 ID, Enabled. Client Secret은 사용자가 직접 입력·저장
+- [ ] Play 앱 서명 사용 시 Play Console의 "앱 서명 키" SHA-1로 Android 클라이언트 하나 더(출시 전 필수)
+- [ ] 출시 전 OAuth 동의 화면 "앱 게시"(테스트 모드는 등록한 테스트 사용자만 로그인), 개발용 debug 클라이언트는 출시 후 삭제 검토(RN 기본 debug.keystore는 공개 키)
+- [ ] 앱 구현 시 nonce: google-signin이 nonce를 넘기지 못하면 Supabase "Skip nonce checks" 대신 nonce 지원 경로 확인(보안)
