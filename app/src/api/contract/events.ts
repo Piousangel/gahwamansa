@@ -1,4 +1,4 @@
-// 이벤트 계약(서버 0022 log_event). 플랫폼 무관 TS만. 이름·속성 키·값 형식은 서버 화이트리스트(event_prop_ok)와 같아야 한다.
+// 이벤트 계약(서버 0022 log_event + 0029 연결 퍼널). 플랫폼 무관 TS만. 이름·속성 키·값 형식은 서버 화이트리스트(event_prop_ok)와 같아야 한다.
 // 근거: migrations/20261116000022_events.sql, dev-server-notes 3절. 앱은 쓰기만, 글자 내용(입력 낱말 등)은 절대 싣지 않는다.
 
 export const EVENT_NAMES = [
@@ -7,12 +7,15 @@ export const EVENT_NAMES = [
   'consent_shown', 'parent_consent_accepted', 'parent_consent_declined',
   'course_step_completed', 'course_completed', 'child_report_viewed',
   'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
+  // 연결 퍼널(0029, ease-and-joy E). redeem 성공은 parent_code_redeemed. 번호 값은 어떤 속성에도 넣지 않는다
+  'link_opened', 'referrer_found', 'code_prefilled',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
 /** 속성(최대 8개). 숫자는 0 이상 정수, 문자열은 키별 허용 값만(서버가 다시 검사). */
 export type EventProps = Partial<{
   role_guess: 'parent' | 'child';
+  source: 'app_link' | 'referrer' | 'manual'; // 0029 번호가 들어온 경로
   login_method: 'kakao' | 'google' | 'email';
   purpose: 'parent_code' | 'reconnect' | 'sibling';
   step: 'photo' | 'question' | 'hangul';

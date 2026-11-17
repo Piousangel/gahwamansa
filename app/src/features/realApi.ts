@@ -5,8 +5,10 @@ import {makeNonce, sha256Hex} from '../lib/sha256';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult} from '../api/contract/events';
 import {pairShort} from '../lib/childFormat';
+import {parsePeekResult} from '../api/contract/invite';
+import {parseParentFamily} from '../api/contract/family';
 import type {
-  Api, ChildParent, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
+  Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
 } from './types';
 
@@ -245,6 +247,21 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const {data, error} = await sb.rpc('redeem_invite_code', {p_code: code});
       if (error) fail('redeem_invite_code', error);
       return data as RedeemResult;
+    },
+    async parentFamilyList() {
+      const {data, error} = await sb.rpc('parent_family_list');
+      if (error) fail('parent_family_list', error);
+      const r = parseParentFamily(data);
+      if (!r) throw new ServerError('parent_family_list', 'contract_mismatch');
+      return r;
+    },
+    async peekInviteCode(code): Promise<PeekResult> {
+      await ensureSession();
+      const {data, error} = await sb.rpc('peek_invite_code', {p_code: code});
+      if (error) fail('peek_invite_code', error);
+      const r = parsePeekResult(data); // 계약 밖이면 일반 서버 오류(리뷰 M3)
+      if (!r) throw new ServerError('peek_invite_code', 'contract_mismatch');
+      return r;
     },
     async giveConsent(version) {
       const {error} = await sb.rpc('give_consent', {p_version: version});

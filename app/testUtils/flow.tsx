@@ -17,11 +17,34 @@ export async function pressCourseNext() {
   });
 }
 
-export async function enterCode(code: string) {
+// P1: 6자리를 쓰면 300ms 뒤 저절로 확인("다음" 없음). 맞는 번호면 P1c 확인 화면이 뜨고,
+// confirm=true(기본)면 [이 번호로 연결하기]까지 누른다. 틀린 번호면 확인 화면이 없으니 그대로 돌아온다.
+export async function typeCode(code: string) {
   for (const d of code) {
     fireEvent.press(screen.getByLabelText(`숫자 ${d}`));
   }
-  await press('다음');
+  // 자동 확인 300ms 를 지나게 한다(가짜 타이머를 쓰는 테스트면 시계를 돌리고, 아니면 실제로 기다린다)
+  const fake = typeof (setTimeout as unknown as {clock?: unknown}).clock === 'object';
+  await act(async () => {
+    if (fake) {
+      jest.advanceTimersByTime(350);
+    } else {
+      await new Promise<void>(r => setTimeout(() => r(), 350));
+    }
+  });
+}
+
+// confirm=false: 맞지 않는 번호·실패 패널을 보려는 테스트(확인 화면을 기대하지 않음)
+export async function enterCode(code: string, confirm = true) {
+  await typeCode(code);
+  if (!confirm) {
+    return;
+  }
+  const yes = screen.queryByRole('button', {name: '이 번호로 연결하기'});
+  if (!yes) {
+    throw new Error(`enterCode(${code}): 확인 화면(이 번호로 연결하기)이 없어요. 실패를 보려면 enterCode(code, false)`);
+  }
+  await press('이 번호로 연결하기');
 }
 
 export async function toHome(api: Api, accept = true) {

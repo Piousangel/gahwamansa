@@ -1,3 +1,5 @@
+import {shareLink} from './childFormat';
+
 // 앱 환경 설정(공개 값만). 출처 우선순위(뒤가 앞을 덮음):
 //   1) DEFAULT_ENV: 아무 설정이 없을 때 = 로컬 + fake(서버 없이 화면 개발)
 //   2) env.generated.ts: Android 빌드 때 Gradle 이 app/env/<flavor>.env 로 만든다(gitignore, 직접 고치지 않음)
@@ -93,4 +95,10 @@ export function getAppEnv(): AppEnv {
     cached = resolveAppEnv(generated, local, isDev);
   }
   return cached;
+}
+
+// 공유 메시지 링크 https://{APP_LINK_HOST}/c#번호(리드 결정 N1: 도메인 원본은 APP_LINK_HOST 하나). 도메인이 없으면 null
+export function appShareLink(code: string): string | null {
+  const host = getAppEnv().APP_LINK_HOST;
+  return host ? shareLink(`https://${host}/c`, code) : null;
 }

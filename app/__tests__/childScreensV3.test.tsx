@@ -38,7 +38,7 @@ describe('C3 연결 대기', () => {
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
     expect(screen.queryByTestId('child-tab-bar')).toBeNull(); // 연결 전 탭 바 숨김
     await press('번호 보내기');
-    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('3. 번호 6개를 써요: 123 456')}));
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('\n123 456\n')}));
     expect(share.mock.calls[0][0]).toMatchObject({message: expect.stringContaining('까지 쓸 수 있어요.')});
   });
 
@@ -194,7 +194,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
     await press('늘 고마워요');
-    await waitFor(() => screen.getByText('오늘은 응원을 다 보냈어요. 내일 다시 보낼 수 있어요'));
+    await waitFor(() => screen.getByText('오늘 보낼 수 있는 응원은 다 보냈어요. 내일 다시 보낼 수 있어요'));
     expect(screen.queryByText(/께 보냈어요/)).toBeNull();
   });
 
@@ -211,7 +211,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
     await press('늘 고마워요');
-    await waitFor(() => screen.getByText('엄마께 보냈어요. 다른 분께는 다시 보내 주세요'));
+    await waitFor(() => screen.getByText('엄마께 보냈어요. 나머지 분께는 잠시 뒤에 다시 보내 주세요'));
     await press('다시 하기');
     await waitFor(() => screen.getByText('엄마·아빠께 보냈어요'));
     expect(send.mock.calls.map(c => c[0])).toEqual(['parent-1', 'parent-2', 'parent-2']); // 엄마께 두 번 가지 않음
@@ -379,7 +379,7 @@ describe('C7 설정 v2', () => {
     await press('부르는 이름, 엄마');
     fireEvent.press(within(screen.getByTestId('sheet')).getByText('아빠'));
     expect(screen.getByRole('button', {name: '저장'})).toBeDisabled();
-    expect(screen.getByText('다른 분이 쓰는 이름이에요. 다른 이름을 골라 주세요', {includeHiddenElements: true})).toBeTruthy(); // 이유는 버튼 힌트로 읽힘
+    expect(screen.getByText('같은 이름이 이미 있어요. 다른 이름을 골라 주세요', {includeHiddenElements: true})).toBeTruthy(); // 이유는 버튼 힌트로 읽힘
   });
 
   test('새 폰 연결 번호 → 그 어르신 재연결 번호 화면', async () => {

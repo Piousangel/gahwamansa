@@ -131,7 +131,7 @@ test('코스 사진·설정에 AI 고지', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press('설정');
   await waitFor(() => screen.getByText('앱 정보'));
-  expect(screen.getByText('오늘의 사진은 AI로 만든 그림이에요')).toBeTruthy();
+  expect(screen.getByText('앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요')).toBeTruthy();
 });
 
 test('자녀 쪽(설정 → 앱 정보)에도 AI 고지', async () => {

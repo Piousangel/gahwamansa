@@ -74,7 +74,7 @@ export function ChildSettings() {
       const r = editing.parentId ? await api.setParentTitleFor(editing.parentId, picked) : await api.setParentTitle(picked);
       if (!r.ok) {
         // 서버도 같은 호칭을 막는다(0028 duplicate_title). 앱이 먼저 막지만 다른 기기에서 바뀐 경우 시트 안에 알린다
-        setModalError(r.reason === 'duplicate_title' ? s.name_taken : copy.errors.server.title);
+        setModalError(r.reason === 'duplicate_title' ? copy.relation.name_taken : copy.errors.server.title);
         load();
         return;
       }
@@ -176,7 +176,7 @@ export function ChildSettings() {
         title={rel.title}
         body={rel.hint}
         error={modalError}
-        primary={{label: s.name_save, onPress: saveName, disabled: saving || pickedTaken, disabledReason: pickedTaken ? s.name_taken : undefined}}>
+        primary={{label: s.name_save, onPress: saveName, disabled: saving || pickedTaken, disabledReason: pickedTaken ? copy.relation.name_taken : undefined}}>
         {PARENT_TITLES.map(p => (
           <SelectCard key={p} label={p} selected={picked === p} onPress={() => setPicked(p)} />
         ))}

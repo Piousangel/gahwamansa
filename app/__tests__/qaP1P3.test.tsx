@@ -52,16 +52,17 @@ test('P1#5 제목은 "써 주세요"를 붙여 줄바꿈하고 제목색, P1#6 �
   const title = await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   expect(flat(title).color).toBe(color.inkTitle);
   expect(title.props.textBreakStrategy).toBe('balanced');
-  expect(flat(screen.getByText('틀려도 괜찮아요')).color).toBe(color.inkSub);
+  expect(flat(screen.getByText('6자리를 다 쓰면 바로 확인해요')).color).toBe(color.inkSub); // v4: 칸 아래 안내
 });
 
-test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + 테두리 3 + 최소 64', () => {
+test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + 테두리 2(동결 시안 P1_connect_v4) + 최소 64', () => {
   render(<CodeInput value="1" onDigit={() => {}} onDelete={() => {}} onClear={() => {}} />);
   expect(flat(screen.getByTestId('code-cell-1')).backgroundColor).toBe(color.noticeSoft);
   expect(screen.getByTestId('code-cursor')).toBeTruthy();
   const key = flat(screen.getByLabelText('숫자 5'));
   expect(key.backgroundColor).toBe(color.card);
-  expect(key.borderWidth).toBe(3);
+  expect(key.borderWidth).toBe(2);
+  expect(key.borderRadius).toBe(14);
   expect(key.minHeight as number).toBeGreaterThanOrEqual(64);
 });
 
@@ -81,13 +82,13 @@ test('P1#12 비활성 "다음": 테두리 없음 + 위에 이유 줄', async () 
   expect(reason).toBeTruthy();
 });
 
-test('P1#12 번호 화면: 6칸 미만이면 다음이 비활성, 이유는 화면 읽기 힌트로(키패드 공간 우선)', async () => {
+test('P1 v4 번호 화면: "다음" 버튼 없이 칸 묶음이 몇 자리 썼는지 읽힌다(11-2 #12)', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
+  expect(screen.getByLabelText('연결 번호 6자리 쓰는 칸')).toBeTruthy();
   await act(async () => fireEvent.press(screen.getByLabelText('숫자 1')));
-  const next = screen.getByRole('button', {name: '다음'});
-  expect(next).toBeDisabled();
-  expect(next.props.accessibilityHint).toBe('번호 6개를 모두 써 주세요');
+  expect(screen.queryByRole('button', {name: '다음'})).toBeNull();
+  expect(screen.getByLabelText('연결 번호 6자리, 1자리 썼어요')).toBeTruthy();
 });
 
 test('P1#13·P3 하단 영역 위 1dp 실선 없음', async () => {

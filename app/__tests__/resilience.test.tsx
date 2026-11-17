@@ -97,15 +97,14 @@ test('Connect: 오프라인과 기타 오류는 다른 문구', async () => {
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
-  await press('다시 하기');
   jest.spyOn(api, 'redeemInviteCode').mockRejectedValueOnce(new Error('boom'));
-  await enterCode('123456');
+  await press('다시 하기'); // P1c v4: 같은 번호로 연결을 다시
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
 });
 
 test('already_linked 버튼은 코스로 이동한다', async () => {
   render(<AppRoot api={createFakeApi({consented: true, linked: true})} role="parent" />);
-  await enterCode('444444');
+  await enterCode('444444', false);
   await waitFor(() => screen.getByText('이미 연결돼 있어요'));
   await press('사진 보기'); // errors.already_linked.button
   await waitFor(() => screen.getByTestId('date-line'));

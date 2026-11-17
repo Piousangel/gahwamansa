@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {type RefObject} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {color, FONT_SCALE_MAX, radius, size} from './tokens';
 import {CODE_LENGTH, formatCode} from './codeInputLogic';
@@ -10,11 +10,17 @@ type Props = {
   onClear: () => void;
   /** 칸·키 높이(기본 size.codeBox). 화면이 남은 높이에 맞춰 64~68 로 정한다. */
   keyHeight?: number;
+  /** 칸 묶음 읽기 라벨(문구는 호출부가 copy 에서). 없으면 예전 라벨 */
+  groupLabel?: string;
+  /** 칸 바로 아래 한 줄(안내·확인 중·맞지 않음, 시안 P1_connect_v4) */
+  belowCells?: React.ReactNode;
+  /** 칸 묶음 요소(맞지 않음 때 접근성 포커스를 옮긴다) */
+  groupRef?: RefObject<React.ComponentRef<typeof View> | null>;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
-// 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34("모두 지움" 20, "지움" 24).
+// 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
 function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
   return (
     <Pressable
@@ -29,10 +35,10 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef}: Props) {
   return (
     <View>
-      <View style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessibilityLabel={`입력한 번호 ${formatCode(value)}`}>
+      <View ref={groupRef} style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessible accessibilityLabel={groupLabel ?? `입력한 번호 ${formatCode(value)}`}>
         {Array.from({length: CODE_LENGTH}).map((_, i) => (
           <View key={i} testID={`code-cell-${i}`} style={[styles.cell, keyHeight ? styles.cellFitted : null, i === Math.min(value.length, CODE_LENGTH - 1) && value.length < CODE_LENGTH ? styles.cellNow : null]}>
             {i === value.length && value.length < CODE_LENGTH ? (
@@ -43,6 +49,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight}: Props)
           </View>
         ))}
       </View>
+      {belowCells ? <View style={styles.below}>{belowCells}</View> : null}
       {ROWS.map(r => (
         <View key={r[0]} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
           {r.map(d => (
@@ -51,28 +58,31 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight}: Props)
         </View>
       ))}
       <View style={[styles.row, keyHeight ? styles.rowFitted : null]}>
-        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={20} />
+        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
-        <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={24} />
+        <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
       </View>
     </View>
   );
 }
 const styles = StyleSheet.create({
   cells: {flexDirection: 'row', gap: 8, marginBottom: 16},
-  // 화면에 맞춰 줄일 때(keyHeight 지정): 칸은 보여 주는 곳이라 52 고정, 줄 간격 6(features/link/keypadFit)
-  cellFitted: {minHeight: 52},
+  below: {marginTop: -8, marginBottom: 12},
+  // 화면에 맞춰 줄일 때(keyHeight 지정): 칸 높이는 시안 그대로 68, 줄 간격 6(features/link/keypadFit)
+  cellFitted: {minHeight: size.codeBox},
   cellsFitted: {marginBottom: 12},
   rowFitted: {marginBottom: 6},
   // 칸 = 채울 자리: 옅은 면 + 굵은 아래 선. 지금 쓸 칸은 굵은 테두리(action, 대비 7.05)와 흰 면으로 강조
-  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 4, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
+  // 시안 P1_connect_v4: 높이 68·반경 12·아래 선 3
+  cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 3, borderColor: color.line, borderRadius: radius.codeCell, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
   // 지금 쓸 칸: noticeSoft 면 + 테두리 4(action) + 고정 커서 막대(깜박임 없음)
-  cellNow: {borderWidth: 4, borderBottomWidth: 4, borderColor: color.action, backgroundColor: color.noticeSoft},
+  cellNow: {borderWidth: 3, borderBottomWidth: 3, borderColor: color.action, backgroundColor: color.noticeSoft},
   cursor: {width: 3, height: 34, backgroundColor: color.ink},
   cellText: {fontSize: 34, color: color.ink, fontWeight: 'bold'},
   row: {flexDirection: 'row', gap: 8, marginBottom: 8},
   // 키 = 볼록(누르는 곳): 흰 면 + 테두리 3(line) + 옅은 그림자, 최소 64(DECISIONS 실기기 규칙, QA P1#9). 눌림은 actionSoft
-  key: {flex: 1, minHeight: Math.max(64, size.codeBox), borderRadius: radius.card, backgroundColor: color.card, borderWidth: 3, borderColor: color.line, boxShadow: '0px 2px 0px rgba(116,72,33,0.18)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
+  // 시안 P1_connect_v4: 반경 14·테두리 2(line)
+  key: {flex: 1, minHeight: Math.max(64, size.codeBox), borderRadius: radius.keypadKey, backgroundColor: color.card, borderWidth: 2, borderColor: color.line, boxShadow: '0px 2px 0px rgba(116,72,33,0.18)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
   keyPressed: {backgroundColor: color.actionSoft, boxShadow: 'none'},
   keyText: {color: color.inkTitle, fontWeight: 'bold', textAlign: 'center'},
 });
