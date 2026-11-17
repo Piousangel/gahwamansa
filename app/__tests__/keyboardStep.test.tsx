@@ -105,6 +105,43 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   dismiss.mockRestore();
 });
 
+test('추천 낱말이 조사를 붙여도("나무가") 일치로 본다(칸 전부 체크 + 시트 없음, 리뷰 3)', async () => {
+  await toKeyboardStep();
+  await type('나무가');
+  expect(filled()).toEqual([0, 1]);
+  expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
+  expect(screen.queryByText('낱말을 한 번 더 볼까요?')).toBeNull();
+});
+
+test('조합 중 받침이 붙어도(나 → 남) 첫 칸 체크가 사라지지 않는다(리뷰 4)', async () => {
+  await toKeyboardStep();
+  await type('나');
+  expect(filled()).toEqual([0]);
+  await type('남');
+  expect(filled()).toEqual([0]);
+});
+
+test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴다(명세 P6, 리뷰 5)', async () => {
+  const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  await toKeyboardStep();
+  send.mockClear();
+  announce.mockClear();
+  await type('나무');
+  expect(announce).toHaveBeenCalledTimes(1);
+  expect(announce).toHaveBeenCalledWith('낱말을 다 쓰셨어요');
+  const toFinish = () =>
+    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마치기');
+  await waitFor(() => expect(toFinish()).toBe(true));
+  send.mockRestore();
+  announce.mockRestore();
+});
+
+test('입력칸은 자동완성 저장 제안을 끈다(importantForAutofill="no")', async () => {
+  await toKeyboardStep();
+  expect(input().props.importantForAutofill).toBe('no');
+});
+
 test('입력한 글자는 어떤 API 호출에도 실리지 않는다', async () => {
   const {calls} = await toKeyboardStep();
   await type('나모');

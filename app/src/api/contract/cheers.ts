@@ -35,3 +35,7 @@ export function parseMyCheers(v: unknown): MyCheers | null {
   );
   return ok ? (o as MyCheers) : null;
 }
+
+export function parseMarkCheersRead(v: unknown): MarkCheersReadResult | null {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null;
+}

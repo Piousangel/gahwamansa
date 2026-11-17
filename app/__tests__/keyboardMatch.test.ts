@@ -44,6 +44,15 @@ describe('filledCount: 앞에서부터 같은 음절 수', () => {
   test('목표보다 길게 써도 목표 칸 수를 넘지 않는다', () => {
     expect(filledCount('가을에', '가을')).toBe(2);
   });
+  test('조합 중 받침이 붙는 순간에도 칸을 유지한다(두벌식 나 → 남 → 나무, 리뷰 4)', () => {
+    expect(filledCount('남', '나무')).toBe(1);
+    expect(filledCount('나무', '나무')).toBe(2);
+    expect(filledCount('바구닉', '바구니')).toBe(3);
+  });
+  test('받침 유지는 마지막 음절에만(이미 다음 음절로 넘어간 자리는 그대로 판정)', () => {
+    expect(filledCount('남무', '나무')).toBe(0);
+    expect(filledCount('가읆', '가을')).toBe(1); // 겹받침(ㄻ)은 자모 하나라 품지 않음: 채우지 않을 뿐
+  });
 });
 
 describe('isMatch', () => {
@@ -53,7 +62,19 @@ describe('isMatch', () => {
     expect(isMatch(NFD_GAEUL, '가을')).toBe(true);
     expect(isMatch('가으', '가을')).toBe(false);
     expect(isMatch('가울', '가을')).toBe(false);
-    expect(isMatch('가을에', '가을')).toBe(false);
+  });
+  test('추천 낱말이 붙인 1~2음절 조사는 무시하고 일치로 본다(리뷰 3, 리드 추천안)', () => {
+    expect(isMatch('나무가', '나무')).toBe(true);
+    expect(isMatch('가을에', '가을')).toBe(true);
+    expect(isMatch('나무에서', '나무')).toBe(true);
+    expect(isMatch('라디오를', '라디오')).toBe(true);
+    expect(isMatch(' 나무가 ', '나무')).toBe(true);
+  });
+  test('조사가 아니거나 3음절 이상 남으면 일치가 아니다', () => {
+    expect(isMatch('나무꾼', '나무')).toBe(false);
+    expect(isMatch('나무들에게서', '나무')).toBe(false);
+    expect(isMatch('나무ㄱ', '나무')).toBe(false);
+    expect(isMatch('너무가', '나무')).toBe(false);
   });
   test('목표가 비어 있으면 일치로 보지 않는다', () => {
     expect(isMatch('', '')).toBe(false);

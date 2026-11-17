@@ -27,6 +27,8 @@ const TITLE_A11Y = k.step_a11y.split('{단계}').join(copy.course.step.hangul).s
 export const MATCH_HOLD_MS = 1500;
 /** 이 시간이 지나거나 "다 썼어요"를 두 번 누르면 '오늘은 넘어갈게요'를 또렷하게(시안 v4 노트). */
 export const SKIP_STRONG_MS = 20000;
+/** 일치 알림 뒤 '마치기'로 접근성 포커스를 옮기는 지연. */
+const FOCUS_FINISH_MS = 300;
 
 type Phase = 'writing' | 'sheet' | 'matched';
 
@@ -40,6 +42,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const {content, done} = useSession();
   const {fontScale} = useWindowDimensions();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const finishRef = useRef<React.ComponentRef<typeof Pressable>>(null);
   const [text, setText] = useState('');
   const [phase, setPhase] = useState<Phase>('writing');
   const [attempts, setAttempts] = useState(0); // "다 썼어요"를 누른 수(이벤트 attempts 정의)
@@ -69,7 +72,17 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
       return undefined;
     }
     const t = setTimeout(() => setCanFinish(true), MATCH_HOLD_MS);
-    return () => clearTimeout(t);
+    // 명세 P6: 자판 닫힘 → 알림 1회 → 포커스 '마치기'(비활성이어도 포커스는 가능, 1.5초 뒤 활성).
+    // 입력칸이 숨겨지며 TalkBack 포커스가 사라지지 않게 알림 직후 옮긴다.
+    const f = setTimeout(() => {
+      if (finishRef.current) {
+        AccessibilityInfo.sendAccessibilityEvent(finishRef.current, 'focus');
+      }
+    }, FOCUS_FINISH_MS);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(f);
+    };
   }, [phase]);
 
   const photo = content?.photo;
@@ -111,7 +124,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
     setPhase('writing');
     inputRef.current?.focus();
   };
-  // TODO(이벤트 0022): hangul_done {matched, attempts, skipped} 만 보낸다(글자 내용 금지). events RPC 가 생기면 연결.
+  // TODO(이벤트 0022 log_event): course_step_completed {step:'hangul', result:'matched'|'as_is'|'skipped', attempt_no}
+  //   (서버 화이트리스트 이름·속성 키, 값은 영문 소문자 토큰). 글자 내용은 절대 보내지 않는다.
   // 마치기·이대로 마칠게요·넘어갈게요는 모두 같은 "단계 완료" 기록이다(평가하지 않음).
   const complete = async () => {
     setPhase(p => (p === 'sheet' ? 'writing' : p));
@@ -128,7 +142,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const dock = error ? (
     <StepError error={error} onRetry={complete} />
   ) : phase === 'matched' ? (
-    <BigButton label={k.finish} disabled={!canFinish} loading={busy} onPress={complete} />
+    <BigButton buttonRef={finishRef} label={k.finish} disabled={!canFinish} loading={busy} onPress={complete} />
   ) : (
     <>
       <BigButton
@@ -177,7 +191,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
         {/* TODO(읽어주기): 오디오 스파이크 결론 뒤 '읽어 주세요'(글자 버튼, 화면 읽기 켜짐이면 숨김 R16)를 이 자리에 */}
       </View>
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
-      <View style={phase === 'matched' && !error ? styles.hidden : styles.inputWrap}>
+      <View style={phase === 'matched' ? styles.hidden : styles.inputWrap}>
         {/* 보이는 이름표는 입력칸 라벨과 같아 두 번 읽지 않게 숨김 */}
         {open ? null : (
           <Text20 size={20} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
@@ -194,6 +208,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
           onFocus={() => setKbOpen(true)}
           onBlur={() => setKbOpen(false)}
           editable={phase === 'writing'}
+          importantForAutofill="no" // 자동완성 서비스가 글자 저장을 제안하지 않게(정책: 글자 미저장)
           // autoCorrect 는 지정하지 않는다: Android 에서 false 는 추천 줄까지 꺼서 "기기 설정 그대로"와 어긋남(리뷰 B).
           // TODO(QA 실기기): 삼성 천지인·두벌식·Gboard 에서 추천 낱말·자동 띄어쓰기·조합 깨짐 확인
           // TODO(QA 실기기): 입력칸은 본문 자리 그대로(자판 위로 옮기면 다시 그려져 비제어 입력이 지워짐).

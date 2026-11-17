@@ -43,8 +43,15 @@ test('확정 목록(6절) 밖의 키는 보여 주지 않는다(재촉·건강 �
   expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2', 'cheer-3', 'cheer-4']); // 확인한 묶음 전체
 });
 
-test('보여 줄 응원이 없으면 대화상자도, 읽음 처리도 없다', async () => {
+test('보여 줄 수 없는 키만 오면 대화상자 없이 조용히 읽음 처리(매번 다시 받지 않게, 리뷰 9)', async () => {
   const {mark, get} = await home({cheers: ['no_such_key']});
+  await waitFor(() => expect(get).toHaveBeenCalled());
+  await waitFor(() => expect(mark).toHaveBeenCalledWith(['cheer-1']));
+  expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull();
+});
+
+test('응원이 없으면 대화상자도 읽음 처리도 없다', async () => {
+  const {mark, get} = await home({});
   await waitFor(() => expect(get).toHaveBeenCalled());
   expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull();
   expect(mark).not.toHaveBeenCalled();

@@ -28,7 +28,17 @@ export function CheerDialog({api, enabled}: {api: Api; enabled: boolean}) {
     let alive = true;
     api
       .getMyCheers()
-      .then(r => alive && setBatch(r.cheers))
+      .then(r => {
+        if (!alive) {
+          return;
+        }
+        if (r.cheers.length > 0 && !r.cheers.some(c => isCheerKey(c.message_key))) {
+          // 보여 줄 수 없는 키만 왔으면 조용히 읽음 처리(매번 다시 받지 않게)
+          api.markCheersRead(r.cheers.map(c => c.id)).catch(() => {});
+          return;
+        }
+        setBatch(r.cheers);
+      })
       .catch(() => {});
     return () => {
       alive = false;
