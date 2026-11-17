@@ -238,3 +238,8 @@
 - 스테이징과 프로덕션을 분리한다(서버 프로젝트·앱 빌드·외부 로그인 설정·데이터). 현재 원격 eigocuecmaapxnmhttwj는 개발 테스트 데이터가 섞여 있어 분리 설계에서 역할을 정한다. 설계: docs/plans/09-environments.md
 - 운영 백오피스(콘텐츠 사진·질문 관리, 사용자 문의·삭제 요청, 지표)는 앱 완성 후 착수. 백로그에 등록
 - 원격 반영: 사용자가 0016·0017 db push 실행(11-17)
+
+## 2026-11-17 운영 결정 (사용자 "그래")
+- 로컬 개발 DB(127.0.0.1:54322)에 마이그레이션 적용·pgTAP 실행은 리드가 상시 수행 가능. 원격(staging·production) 반영은 사용자가 직접
+- 환경 분리(09) 3건 "예": 현재 원격 eigocuecmaapxnmhttwj = staging, staging 앱은 Play 밖 배포(adb·App Distribution), production은 새 Supabase Pro(서울, 일 1회 백업 7일 보관)
+- 실기기 확인 일정은 평일 월·수·금 가정(변경 시 사용자 알림)
