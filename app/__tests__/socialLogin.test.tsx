@@ -187,13 +187,15 @@ test('계정 지우기: 카카오 자녀면 카카오 연결 끊기 + SDK 로그
   expect(calls).toEqual(['unlink', 'sdk:kakao', 'supabase']);
 });
 
-test('카카오 키는 socialConfig.ts 한 곳: 안드로이드 scheme 은 빌드가 그 값으로 만든다(strings.xml 에 키 없음)', () => {
+test('카카오 키는 환경 파일(app/env/<flavor>.env) 한 곳: 안드로이드 scheme 은 빌드가 그 값으로 만든다(strings.xml·TS 에 키 없음)', () => {
   const fs: {readFileSync(f: string, e: 'utf8'): string} = require('fs');
   const xml = fs.readFileSync(`${__dirname}/../android/app/src/main/res/values/strings.xml`, 'utf8');
   expect(xml).not.toMatch(/kakao[0-9a-f]{32}/);
+  expect(fs.readFileSync(`${__dirname}/../src/lib/socialConfig.ts`, 'utf8')).not.toMatch(/[0-9a-f]{32}/);
+  expect(fs.readFileSync(`${__dirname}/../env/staging.env`, 'utf8')).toMatch(/^KAKAO_NATIVE_APP_KEY=[0-9a-f]{32}$/m);
   const gradle = fs.readFileSync(`${__dirname}/../android/app/build.gradle`, 'utf8');
-  expect(gradle).toContain('src/lib/socialConfig.ts');
-  expect(gradle).toContain('resValue "string", "kakao_scheme"');
+  expect(gradle).toContain('file("../../env")');
+  expect(gradle).toContain('resValue "string", "kakao_scheme", "kakao" + e.KAKAO_NATIVE_APP_KEY');
   const manifest = fs.readFileSync(`${__dirname}/../android/app/src/main/AndroidManifest.xml`, 'utf8');
   expect(manifest).toContain('android:scheme="@string/kakao_scheme"');
 });

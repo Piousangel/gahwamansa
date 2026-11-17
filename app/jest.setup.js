@@ -3,6 +3,17 @@ jest.mock("react-native-safe-area-context", () =>
   require("react-native-safe-area-context/jest/mock").default,
 );
 
+// 환경 설정: 빌드가 만든 env.generated.ts·개인 config.local.ts 가 맥에 있든 없든 테스트는 같은 값(fake + 공개 키 형식)으로 돈다
+jest.mock('./src/lib/env.generated', () => ({
+  default: {
+    APP_ENV: 'local',
+    API_MODE: 'fake',
+    KAKAO_NATIVE_APP_KEY: '00000000000000000000000000000000',
+    GOOGLE_WEB_CLIENT_ID: 'test-web-client.apps.googleusercontent.com',
+  },
+}), {virtual: true});
+jest.mock('./src/lib/config.local', () => ({default: {}}), {virtual: true});
+
 // 네이티브 소셜 로그인 모듈 모킹(실기기 로그인은 리드가 확인)
 jest.mock('@react-native-kakao/core', () => ({initializeKakaoSDK: jest.fn(() => Promise.resolve())}));
 jest.mock('@react-native-kakao/user', () => ({

@@ -3,6 +3,7 @@
 --             입력 검증, 오늘의 콘텐츠 순환(행 수 기준)
 begin;
 select plan(15);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -18,6 +19,8 @@ insert into public.profiles (id, user_id, family_id, role, consented_at, course_
 -- 콘텐츠 3일분 (순환 테스트용: 행 수 N=3)
 insert into public.content_questions (day_index, option_a, option_b) values (1, 'a', 'b'), (2, 'c', 'd'), (3, 'e', 'f');
 insert into public.content_photos (day_index, image_url, caption, keyword) values (1, 'x', 'x', 'x'), (2, 'x', 'x', 'x'), (3, 'x', 'x', 'x');
+-- 0024부터 커서 기준: 어제 1일차를 열었으면 오늘은 2일차
+update public.profiles set content_seq = 1, content_seq_date = public.kst_today() - 1 where id = '5b000000-0000-0000-0000-0000000000a1';
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -72,7 +75,7 @@ select is(public.parent_streak('5b000000-0000-0000-0000-0000000000a2', public.ks
 
 -- 14. 오늘의 콘텐츠 번호: 시작 후 4일째, 콘텐츠 3일분이면 (4 mod 3)+1 = 2
 select pg_temp.act_as('51000000-0000-0000-0000-0000000000a1', true);
-select is((select public.my_day_index()), 2, '콘텐츠 행 수 기준으로 순환한다');
+select is((select public.my_day_index()), 2, '커서 다음 콘텐츠가 오늘이다');
 
 -- 15. 로그인 전(anon)은 실행할 수 없다
 reset role;
