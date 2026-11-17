@@ -66,18 +66,24 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ### give_consent(p_version text default 'v1') / withdraw_consent()  (0019 변경)
 - `v2` 그대로 보내면 된다(재동의 게이트 없음). 버전이 바뀌면 동의 시각 갱신 + 이력. 같은 버전 반복은 아무것도 안 함.
 - 이력 `consent_events(action given|withdrawn, version, at)`은 앱이 읽지 못한다(증빙, 서비스 역할만). 계정 지우기 때 함께 지워짐.
+- **정책 결정 필요(리뷰 L4)**: 어르신 본인 삭제·마지막 자녀의 가족 삭제 때 동의 증빙도 cascade로 지워진다. "모두 지워져요" 약속과는 맞지만 증빙 보관 목적과 충돌한다. 남길지(가명화해 일정 기간 보관) 정책·법무가 정해 DECISIONS에 기록할 것. 지금 구현은 함께 삭제. 파기 배치(0023)는 동의 이력을 건드리지 않는다.
 
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
 - 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result`.
 - 속성 키(최대 8개, 이 목록만): `role_guess, app_version, install_source, login_method, purpose, ttl_hours, reason, attempt_no, consent_version, step, day_index, duration_sec, tts_used, is_first, days_since_connect, channel, result, message_key`.
-- 값: 숫자·참거짓·영문 소문자 토큰 `^[a-z0-9][a-z0-9_.-]{0,31}$`만. 한글·띄어쓰기·중첩 불가. 예: `app_version:"1.0.0"`, 빌드 번호는 `"1.0.0-12"`.
-- `{ok:true}` | `{ok:false, reason:'invalid_name'|'invalid_props'}`(예외 아님 → 계측 실패가 화면을 막지 않음). 가족·역할은 서버가 채움. 프로필 없는 기기(설치 직후 익명 로그인)도 기록 가능.
-- 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록, 14개월 파기.
+- 값은 키별 형식만(리뷰 L2, 문장 차단):
+  - 숫자(0 이상 정수): `ttl_hours, attempt_no, day_index, duration_sec, days_since_connect` / 참거짓: `tts_used, is_first`
+  - `role_guess` parent·child / `login_method` kakao·google·email / `purpose` parent_code·reconnect·sibling / `step` photo·question·hangul
+  - `reason` expired·used·locked·invalid·rate_limited·busy·already_linked·not_parent_device / `channel` kakao·sms·copy·share_sheet·other / `result` granted·denied
+  - `message_key` 응원 키 4개 / `consent_version` `v2` 형식 / `app_version` `1.0.0` 또는 `1.0.0-12` / `install_source` 영문 소문자·숫자 1~16자
+- `{ok:true}` | `{ok:false, reason:'invalid_name'|'invalid_props'|'rate_limited'|'no_user'}`(예외 아님 → 계측 실패가 화면을 막지 않음). 가족·역할은 서버가 채움. 프로필 없는 기기(설치 직후 익명 로그인)도 기록 가능.
+- 호출 상한: 기기(인증 uid의 sha256 가명키)당 24시간 200건(가정값). 지워진 계정의 남은 토큰은 `no_user`. 보관 14개월(0023 배치).
+- 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
 - `purge_expired_data(p_now default now())`(0023): 답·코스 기록 session_date < 오늘-30, 응원 31일, 초대 번호 사용·만료 후 30일, 입력 시도 30일. pg_cron `purge-expired-data` 매일 00:10 KST. 원격 반영 시 pg_cron 확장 켜짐 확인.
-- `admin_create_review_family(uuid[])`(0025): 심사 가족(is_review)+만료 없는 재사용 번호. `node supabase/ops/create-review-access.mjs <자녀1> <자녀2>` — 번호는 출력만, Play 콘솔에만 적는다.
+- 심사 접근(0025): `admin_create_review_family(uuid[], p_max_uses=5)` → 심사 가족(is_review)+만료 없는 재사용 번호, **기본 꺼짐**. `admin_set_review_code(family, true|false)`로 심사 제출 때만 켜고, 끝나면 `admin_cleanup_review_family(family)`(심사 어르신 프로필·익명 계정 삭제 + 번호 끔). 연결 수가 max_uses에 닿거나 꺼져 있으면 redeem은 일반 `invalid`. 운영: `node supabase/ops/create-review-access.mjs create|enable|disable|cleanup …` — 번호는 출력만, Play 콘솔에만 적는다.
 - `delete_my_account()`(0026): 마지막 자녀면 가족 어르신의 **익명 인증 계정도 삭제** → 어르신 기기는 다음 실행 때 세션이 무효(앱은 새 익명 로그인 후 첫 화면/미연결 열람으로).
 
 ## 5. 설계 선택과 근거
@@ -86,9 +92,14 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 선택: 어르신별 커서 `profiles.content_seq`(지금 day_index)·`content_seq_date`(연 날짜). 다음 = 커서보다 큰 활성 day_index 중 최소, 없으면 처음으로. 활성 = 사진·질문 모두 있고 `retired_at` 없음.
 - 버린 안: 콘텐츠 seq + 진행일→seq 고정 매핑(진행일이 날짜 차이라 쉰 날도 넘어감 → "놓친 장 없이"와 충돌), get_today_content 안에서 전진(stable 함수에서 쓰기 불가).
 - 이행: 기존 어르신은 이전 공식의 오늘 값으로 커서 고정(반영 순간 '오늘' 불변). day_index 30 상한 제거.
-- 운영 규칙: 새 콘텐츠는 **끝에만** 추가(앞에 끼우면 이미 지나간 어르신은 다음 바퀴에 본다). 게시된 문항·사진 문구·day_index는 트리거로 수정 금지(`content_immutable`), 고칠 땐 새 행 + 옛 행 `retired_at`(되돌리기 불가). `image_url`은 저장 위치라 변경 허용. 시드는 `on conflict do nothing`으로 바꿈.
+- 운영 규칙: 새 콘텐츠는 **끝에만** 추가(앞에 끼우면 이미 지나간 어르신은 다음 바퀴에 본다). 게시된 문항·사진 문구·day_index는 트리거로 수정 금지(`content_immutable`), 고칠 땐 새 행 + 옛 행 `retired_at`(되돌리기 불가). `image_url`은 저장 위치라 변경 허용. **삭제도 금지**(리뷰 M2, before delete 트리거): 지우고 같은 day_index로 다시 넣어 뜻을 바꾸는 우회 차단. 예외는 트랜잭션 한정 `set_config('bumo.allow_content_delete','on',true)`(pgTAP 픽스처·운영자 명시)뿐이고, 파기 배치는 콘텐츠를 지우지 않는다. 시드는 이미 있는 day_index를 건너뛰고 문구가 DB와 다르면 WARNING.
 - 충돌 확인: streak(0005)·my_week_stamps(0016)는 daily_sessions만 봄. 31일 파기(0023)는 커서와 무관(답 존재로 '본 날'을 판정하지 않음). 0019 어르신별 구분과 같은 프로필 단위. `daily_sessions.day_index`에 그날 연 번호 기록.
 ### 기타
 - 연결 끊김 = 어르신 프로필의 user_id가 null(기기 삭제·재설치 후 재연결 전).
 - 0018 무효화 예외: 재사용 번호(reusable)는 새 번호 발급·연결 성공 때 만료되지 않고 사용 처리도 안 된다(심사 가족 전용, 트리거로 강제).
-- 하루 응원 한도 2·이벤트 값 규칙·심사 번호 위험 수용은 가정 — 정책 검토 대상.
+- 하루 응원 한도 2·이벤트 호출 상한 200·이벤트 보관 14개월·심사 번호 상한 5는 가정 — 정책 검토 대상.
+- 숫자 와/과: 읽는 소리 기준(0영·1일·3삼·6육·7칠·8팔은 과). 영문 끝은 와(선택지는 한글 원칙).
+
+## 6. 로컬 적용 기록(리뷰 M3 관련)
+- 리뷰 반영(11-17)은 아직 원격에 없는 0021·0022·0023·0024·0025·0027 파일을 **직접 고쳤다**. 로컬 DB에는 같은 변경분을 파일에서 잘라 만든 델타로 적용했고(데이터 삭제 없음), `migration repair`로 0021~0027 이력 행을 현재 파일 이름으로 다시 기록했다.
+- 따라서 로컬 346→372건 통과는 "지금 DB 상태" 기준이다. 0001→끝 순차 재생 검증은 합칠 때 리드가 `db reset` 후 `test db`로 확인한다(M3).
