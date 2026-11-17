@@ -2,7 +2,6 @@ import React from 'react';
 import {act, fireEvent, render, screen, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {polaroidLayout} from '../src/features/link/polaroidLayout';
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -36,29 +35,6 @@ test('소개는 한 번에 읽힌다(제목. 항목1. 항목2. 항목3)', () => 
   expect(
     screen.getByLabelText('하루 한 장, 우리 집 앨범. 옛날 사진 보며 추억을 떠올려요. 사진 속 낱말을 따라 써요. 고른 답으로 자녀가 취향을 알아 가요'),
   ).toBeTruthy();
-});
-
-test('사진은 보조: 사진 폭은 화면 폭의 50%, 높이는 화면 높이의 22% 이하', async () => {
-  render(<AppRoot api={createFakeApi()} />);
-  await measure(328, 400);
-  const img = screen.getByTestId('intro-photo');
-  const s = Array.isArray(img.props.style) ? Object.assign({}, ...img.props.style) : img.props.style;
-  expect(s.width).toBeLessThanOrEqual(360 * 0.5);
-  expect(s.height).toBeLessThanOrEqual(780 * 0.22);
-});
-
-test('계산: 상한을 주면 상한을 넘지 않고 비율 유지', () => {
-  const l = polaroidLayout(328, 400, 1, {maxPhotoW: 180, maxPhotoH: 171})!;
-  expect(l.photoW).toBeLessThanOrEqual(180);
-  expect(l.photoH).toBeLessThanOrEqual(171);
-  expect(l.photoW).toBeGreaterThan(l.photoH);
-});
-
-test('남는 공간이 부족하면 사진부터 숨기고 소개는 남긴다', async () => {
-  render(<AppRoot api={createFakeApi()} />);
-  await measure(328, 90);
-  expect(screen.queryByTestId('intro-photo')).toBeNull();
-  expect(screen.getByText(INTRO[2], {includeHiddenElements: true})).toBeTruthy();
 });
 
 test('글자 130%: 사진을 먼저 숨기고 소개 3줄은 유지', async () => {

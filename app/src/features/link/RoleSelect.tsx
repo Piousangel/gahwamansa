@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Image, LayoutChangeEvent, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {Image, LayoutChangeEvent, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
 import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {color} from '../../ui/tokens';
@@ -8,7 +8,7 @@ import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {Icon, IconName} from '../../ui/assets/icons';
 import {copy} from '../../copy/copy';
 import {TwoLineButton} from './TwoLineButton';
-import {polaroidLayout, TILT_DEG} from './polaroidLayout';
+import {captionFits, captionFont, PAD, photoSize, TILT_DEG} from './polaroidLayout';
 
 const f = copy.first;
 
@@ -28,13 +28,18 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
   // 소개가 사진보다 중요: 130%면 사진을 먼저 숨기고, 150%면 소개 항목도 숨긴다(제목은 남김)
   const showPhoto = fontScale < 1.3;
   const showItems = fontScale < 1.5;
+  const [captionOk, setCaptionOk] = useState(true);
   const [area, setArea] = useState<{w: number; h: number} | null>(null);
   const onArea = (e: LayoutChangeEvent) => {
     const {width, height} = e.nativeEvent.layout;
+    if (__DEV__) {
+      // 실기기 확인용(개발 빌드만): 남은 영역과 계산된 사진 크기
+      console.log('[first-screen] area', Math.round(width), Math.round(height), 'photo', photoSize(width, height, fontScale), 'win', winW, winH, 'fontScale', fontScale);
+    }
     setArea(a => (a && a.w === width && a.h === height ? a : {w: width, h: height}));
   };
-  const lay =
-    showPhoto && area ? polaroidLayout(area.w, area.h, fontScale, {maxPhotoW: winW * 0.5, maxPhotoH: winH * 0.22}) : null;
+  // 사진은 항상 그린다(숨김은 글자 배율 1.3 이상만). 측정 전에는 기본 크기, 측정되면 실제 남은 영역으로 조정
+  const photo = photoSize(area?.w ?? 0, area?.h ?? 0, fontScale);
   const items = f.intro;
   const ICONS: IconName[] = ['icon-photo', 'icon-pencil', 'icon-family'];
 
@@ -66,29 +71,39 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
           : null}
       </View>
       <View testID="polaroid-area" style={styles.area} onLayout={onArea}>
-        {lay ? (
+        {/* 사진은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}
+        <View testID="polaroid-pinned" style={styles.pinned} pointerEvents="none">
+        {showPhoto && photo ? (
           <View
-            style={[styles.polaroid, {width: lay.frameW, height: lay.frameH}]}
+            style={[styles.polaroid, {width: photo.w + 2 * PAD}]}
             accessible
             accessibilityRole="image"
             accessibilityLabel={f.polaroid_a11y}>
             <Image
               testID="intro-photo"
               source={assetRegistry['intro-photo']!}
-              style={[styles.photo, {width: lay.photoW, height: lay.photoH}]}
+              style={[styles.photo, {width: photo.w, height: photo.h}]}
               resizeMode="cover"
             />
-            <View style={{height: lay.captionH}}>
-              <Text20 style={styles.caption} importantForAccessibility="no">{f.polaroid_caption}</Text20>
-            </View>
+            {/* 캡션은 말줄임 금지: 사진 폭에 맞춘 작은 글자로 한 줄 전체, 안 들어가면(추정 또는 실제 두 줄) 숨김 */}
+            {captionOk && captionFits(f.polaroid_caption, photo.w) ? (
+              <Text
+                importantForAccessibility="no"
+                maxFontSizeMultiplier={1}
+                onTextLayout={e => e.nativeEvent.lines.length > 1 && setCaptionOk(false)}
+                style={[styles.caption, {fontSize: captionFont(photo.w), lineHeight: Math.ceil(captionFont(photo.w) * 1.3)}]}>
+                {f.polaroid_caption}
+              </Text>
+            ) : null}
           </View>
         ) : null}
-        {lay ? (
+        {showPhoto && photo ? (
           // AI 표기: 틀 밖 아래 보조 글자(사진 제목과 구분)
           <Text20 testID="intro-ai-label" importantForAccessibility="no" style={styles.ai}>
             {f.polaroid_ai}
           </Text20>
         ) : null}
+        </View>
       </View>
     </Screen>
   );
@@ -100,11 +115,12 @@ const styles = StyleSheet.create({
   intro: {gap: 6},
   item: {flexDirection: 'row', alignItems: 'center', gap: 8},
   itemText: {flexShrink: 1},
-  // 남은 높이를 차지하고, 그 안 가운데에 폴라로이드(넘치면 잘라 화면 밖으로 나가지 않게)
-  area: {flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
+  // 남은 높이를 차지(사진 크기와 무관하게 재어짐). 사진은 pinned 안 가운데
+  area: {flex: 1, minHeight: 0},
+  pinned: {position: 'absolute', top: 4, bottom: 4, left: 0, right: 0, alignItems: 'center', justifyContent: 'center'},
   // 종이 사진 느낌: 틀 반경 3, 사진 반경 0(QA 첫 화면 #4)
   polaroid: {backgroundColor: color.card, paddingTop: 8, paddingHorizontal: 8, borderRadius: 3, transform: [{rotate: `-${TILT_DEG}deg`}], boxShadow: '0px 4px 10px rgba(92,78,51,0.22)'},
   photo: {borderRadius: 0, backgroundColor: color.paperSoft},
-  caption: {color: color.handwrite, marginTop: 4, textAlign: 'center'},
+  caption: {color: color.handwrite, marginVertical: 4, textAlign: 'center'},
   ai: {color: color.inkSub, marginTop: 4},
 });
