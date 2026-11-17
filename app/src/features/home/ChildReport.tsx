@@ -11,6 +11,7 @@ import {appCopy, copy, withTitle} from '../../copy/copy';
 import {color, radius} from '../../ui/tokens';
 import type {HistoryItem, ParentHistory} from '../types';
 import {formatAnswerDate} from './formatDate';
+import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {useAnswerHistory} from '../../shared/useChildData';
 
 const c = copy.child;
@@ -38,9 +39,9 @@ export function ChildReport() {
   } else if (loading && !info) {
     body = <Text20>{appCopy.loading}</Text20>;
   } else if (!many && list[0] && !list[0].shared) {
-    body = <Text20 style={styles.empty}>{c.not_shared}</Text20>;
+    body = <EmptyState text={c.not_shared} />;
   } else if (!many && !(list[0]?.items.length)) {
-    body = <Text20 style={styles.empty}>{c.no_answer}</Text20>;
+    body = <EmptyState text={c.no_answer} />;
   } else {
     body = (
       <>
@@ -67,6 +68,16 @@ export function ChildReport() {
         </View>
       ) : null}
     </Screen>
+  );
+}
+
+// 빈·보여 주지 않는 중: C4 와 같은 심볼(72) + 가운데 글자(C5_history)
+function EmptyState({text}: {text: string}) {
+  return (
+    <View testID="child-past-empty" style={styles.empty}>
+      <BrandSymbol size={72} />
+      <Text20 style={styles.centerText}>{text}</Text20>
+    </View>
   );
 }
 
@@ -109,7 +120,7 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   center: {alignItems: 'center', gap: 8, paddingTop: 48},
   centerText: {textAlign: 'center'},
-  empty: {textAlign: 'center', paddingVertical: 32},
+  empty: {alignItems: 'center', gap: 8, paddingVertical: 32},
   sub: {color: color.inkSub},
   section: {gap: 8},
   row: {

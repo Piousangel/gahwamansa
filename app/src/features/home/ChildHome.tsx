@@ -16,6 +16,7 @@ import {CHILD_CHEER_KEYS, CheerKey, ChildParent, ChildSummary, isOffline, SendCh
 import {useChildSummary} from '../../shared/useChildData';
 import {useBootLoading} from '../../app/splash';
 import {formatAnswerDate} from './formatDate';
+import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
 
 const c = copy.child;
@@ -161,7 +162,7 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
   if (!p.shared || !p.latest) {
     return (
       <View style={withHeader ? styles.card : styles.plain}>
-        {withHeader ? <Text20 weight="bold" style={styles.sub}>{head}</Text20> : null}
+        {withHeader ? <Text20 weight="bold" style={styles.sub}>{head}</Text20> : <BrandSymbol size={72} />}
         <Text20 style={styles.centerText}>{!p.shared ? c.not_shared : c.no_answer}</Text20>
       </View>
     );
@@ -174,15 +175,15 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
       <Text20 size={72} weight="bold" style={styles.choice}>{p.latest.choiceLabel}</Text20>
       <Text20>{formatAnswerDate(p.latest.answeredDate)}</Text20>
       <View style={styles.stitch} />
-      <Text20 size={24}>{today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old}</Text20>
       {p.starter ? (
-        // 기능 회의 B3: 구분선 아래 명사형 표지 + 한 문장. 값이 없으면 줄 전체를 숨긴다
+        // 기능 회의 B3(C4_starter): 첫마디가 있으면 기본 문장을 대체한다(둘 중 하나만)
         <View testID="child-home-starter" style={styles.starter}>
-          <View style={styles.stitch} />
           <Text20 weight="bold" style={styles.sub}>{h.starter_label}</Text20>
-          <Text20>{p.starter}</Text20>
+          <Text20 size={24}>{p.starter}</Text20>
         </View>
-      ) : null}
+      ) : (
+        <Text20 size={24}>{today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old}</Text20>
+      )}
     </View>
   );
 }

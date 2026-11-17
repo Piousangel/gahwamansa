@@ -30,8 +30,19 @@ export function codeA11y(code: string): string {
   return `${code.slice(0, 3).split('').join(' ')}, ${code.slice(3).split('').join(' ')}`;
 }
 
-// 번호 공유 메시지(C2·C3, 기능 회의 B4): 문구 틀의 {번호} 자리에 3자리씩 띄운 번호를 넣는다.
-export function buildShareMessage(template: string, code: string): string {
+export type ShareLines = {intro: string; step1: string; step2: string; step3: string; until: string; until_days: string; safe: string};
+
+// 번호 공유 메시지(시안 C2_share, 기능 회의 B4): C2 '번호 보내기'·C3 '번호 보내기'가 이 함수 하나로 조립한다.
+// 번호는 3자리씩 띄우고, 기한은 만료 시각을 알면 "{시각}까지", 모르면(막 만든 번호) "7일 동안".
+// TODO(스토어 링크): 출시 주소가 정해지면 1단계 다음 줄에 넣는다.
+export function buildShareMessage(t: ShareLines, code: string, expiry: string | null): string {
   const shown = /^\d{6}$/.test(code) ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
-  return template.split('{번호}').join(shown);
+  return [
+    t.intro,
+    t.step1,
+    t.step2,
+    t.step3.split('{번호}').join(shown),
+    expiry ? t.until.split('{시각}').join(expiry) : t.until_days,
+    t.safe,
+  ].join('\n');
 }

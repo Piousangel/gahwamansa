@@ -38,7 +38,20 @@ describe('C3 연결 대기', () => {
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
     expect(screen.queryByTestId('child-tab-bar')).toBeNull(); // 연결 전 탭 바 숨김
     await press('번호 보내기');
-    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('123 456')}));
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('3. 번호 6개를 써요: 123 456')}));
+    expect(share.mock.calls[0][0]).toMatchObject({message: expect.stringContaining('까지 쓸 수 있어요.')});
+  });
+
+  test('알림 꺼짐이면 알림 한 줄은 3단계 아래(할 일 먼저)', async () => {
+    const notifyMod = require('../src/features/child/useNotifyPermission');
+    jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
+    await openWait(waitApi());
+    const text = JSON.stringify(screen.toJSON());
+    const steps = text.indexOf('이렇게 하시면 돼요');
+    const notify = text.indexOf('연결되면 알려 드릴게요');
+    expect(steps).toBeGreaterThan(-1);
+    expect(notify).toBeGreaterThan(steps);
+    expect(notify).toBeLessThan(text.indexOf('매일 이런 사진과 질문이 가요'));
   });
 
   test('복사하기 → 복사했어요 토스트', async () => {
@@ -113,6 +126,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByTestId('child-home-starter'));
     expect(screen.getByText('이야기 꺼내기')).toBeTruthy();
     expect(screen.getByText('가을 하면 뭐가 떠오르세요?')).toBeTruthy();
+    expect(screen.queryByText('가을 이야기를 해 볼까요?')).toBeNull(); // 기본 문장을 대체(둘 중 하나만)
     unmount();
     render(<AppRoot api={createFakeApi({consented: true, latest})} role="child" />);
     await waitFor(() => screen.getByText('가을 이야기를 해 볼까요?'));
@@ -226,6 +240,7 @@ describe('C5 지난 답', () => {
     await openTab('지난 답');
     await waitFor(() => screen.getByText('답을 나누지 않는 중이에요'));
     expect(screen.queryByTestId('child-past-topic')).toBeNull();
+    expect(within(screen.getByTestId('child-past-empty')).getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy(); // C4 와 같은 심볼(장식)
   });
 
   test('서버 오류: "목록이 열리지 않아요…" + 다시 하기로 다시 불러온다', async () => {

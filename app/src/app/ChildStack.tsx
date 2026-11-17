@@ -20,7 +20,7 @@ export type ChildParams = {
   Gate: undefined;
   Login: undefined;
   Relation: undefined;
-  Code: {code: string; title: string; renewed?: boolean}; // renewed: 지난 번호가 만료돼 새로 받음
+  Code: {code: string; title: string; renewed?: boolean; expiresAt?: string}; // renewed: 지난 번호가 만료돼 새로 받음, expiresAt: 아는 경우 공유 메시지 기한
   Wait: undefined;
   Tabs: undefined;
   Settings: undefined;

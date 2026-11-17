@@ -60,7 +60,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const send = () => {
     if (code) {
-      Share.share({message: buildShareMessage(copy.code.share_message, code.code)}).catch(() => {});
+      Share.share({message: buildShareMessage(copy.code.share, code.code, formatExpiry(code.expiresAt))}).catch(() => {});
     }
   };
   const copyCode = () => {
@@ -139,12 +139,6 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
             <BigButton variant="secondary" label={error.button} onPress={() => check()} />
           </View>
         ) : null}
-        {state && notify.denied ? (
-          <View testID="wait-notify" style={styles.row}>
-            <Text20 style={styles.flex}>{w.notify}</Text20>
-            <SmallButton label={w.notify_button} onPress={notify.open} />
-          </View>
-        ) : null}
         <View style={styles.steps}>
           <Text20 size={24} weight="bold">{w.steps_title}</Text20>
           {w.steps.map((s, i) => (
@@ -165,6 +159,13 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
             </View>
           ))}
         </View>
+        {/* 알림은 보조: 할 일(3단계) 다음 */}
+        {state && notify.denied ? (
+          <View testID="wait-notify" style={styles.row}>
+            <Text20 style={styles.flex}>{w.notify}</Text20>
+            <SmallButton label={w.notify_button} onPress={notify.open} />
+          </View>
+        ) : null}
         <View testID="wait-example" style={styles.example}>
           <View style={styles.exampleHead}>
             <View style={styles.chip}>

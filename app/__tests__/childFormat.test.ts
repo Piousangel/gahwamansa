@@ -19,12 +19,16 @@ test('질문 짧은 형: 받침이면 과, 아니면 와', () => {
   expect(pairShort('곶감', '홍시')).toBe('곶감과 홍시 중');
 });
 
-test('공유 메시지(B4): 설치 3단계 + 3자리씩 띄운 번호 + 7일 + 안심 한 줄', () => {
-  const m = buildShareMessage(copy.code.share_message, '123456');
-  expect(m).toContain('1. Play 스토어에서');
-  expect(m).toContain("2. 앱을 열고 '부모님 휴대폰이에요'를 눌러요");
-  expect(m).toContain('3. 이 번호를 넣어요: 123 456 (7일 동안 쓸 수 있어요)');
-  expect(m).toContain('은행이나 인증 번호가 아니에요');
-  expect(m).not.toContain('{번호}');
-  expect(m).not.toMatch(/사기/);
+test('공유 메시지(C2_share): 설치 3단계 + 3자리씩 띄운 번호 + 기한 + 안심 한 줄', () => {
+  expect(buildShareMessage(copy.code.share, '482915', '11월 24일 오후 3시').split('\n')).toEqual([
+    '가화만사성에서 같이 쓸 번호예요.',
+    '1. Play 스토어에서 가화만사성을 설치해요',
+    "2. 첫 화면에서 '부모님 휴대폰이에요'를 눌러요",
+    '3. 번호 6개를 써요: 482 915',
+    '11월 24일 오후 3시까지 쓸 수 있어요.',
+    '이 앱은 돈이나 은행 번호를 묻지 않아요.',
+  ]);
+  const m = buildShareMessage(copy.code.share, '123456', null); // 막 만든 번호: 기한 시각을 모름
+  expect(m).toContain('7일 동안 쓸 수 있어요.');
+  expect(m).not.toMatch(/\{|사기/);
 });
