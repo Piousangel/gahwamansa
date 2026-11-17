@@ -132,6 +132,31 @@ def loadAppEnv = { String flavor ->
     return m
 }
 def appEnvs = [staging: loadAppEnv("staging"), production: loadAppEnv("production")]
+
+/**
+ * 카톡 초대 링크 App Links 도메인(APP_LINK_HOST, 선택). 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md
+ * - 원본: app/env/<flavor>.env 한 곳. staging 은 별도 서브도메인(같은 도메인을 두 패키지가 검증하면 선택 창)
+ * - production 에 테스트 도메인(.test·.invalid·example.*·localhost 등)이면 빌드 실패
+ * - 로컬 확인용 -PappLinkHostDebug=<도메인>: debug 빌드 타입에만 적용(release·출시 빌드에는 절대 안 들어감)
+ */
+def HOST_RE = /[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+/
+def TEST_HOST_RE = /(?i)(.*\.)?(example\.(com|net|org)|localhost|.*\.(test|invalid|example|localhost|local))/
+def checkLinkHost = { String where, String h ->
+    if (h && !(h ==~ HOST_RE)) throw new GradleException("${where}: APP_LINK_HOST 는 소문자 도메인만(스킴·경로 없이): ${h}")
+    return h ?: ""
+}
+appEnvs.each { name, e -> e.APP_LINK_HOST = checkLinkHost("${name}.env", (e.APP_LINK_HOST ?: "").toString().trim()) }
+if (appEnvs.production.APP_LINK_HOST ==~ TEST_HOST_RE && !appEnvs.production.PLACEHOLDER) {
+    throw new GradleException("production.env: APP_LINK_HOST 에 테스트 도메인(${appEnvs.production.APP_LINK_HOST})은 쓸 수 없어요")
+}
+if (appEnvs.staging.APP_LINK_HOST && appEnvs.staging.APP_LINK_HOST == appEnvs.production.APP_LINK_HOST) {
+    throw new GradleException("APP_LINK_HOST 가 staging 과 production 에서 같아요. staging 은 별도 서브도메인을 써 주세요")
+}
+def appLinkHostDebug = checkLinkHost("-PappLinkHostDebug", (project.findProperty("appLinkHostDebug") ?: "").toString().trim())
+if (appLinkHostDebug) {
+    logger.warn("경고: -PappLinkHostDebug=${appLinkHostDebug} → debug 빌드에만 App Links host 를 덮어씁니다(release 는 env 파일 값)")
+}
+def appLinkPlaceholders = { String h -> [appLinkHost: h ?: "applinks.invalid", appLinksEnabled: h ? "true" : "false"] }
 // 리뷰 M2: 같은 카카오 키면 두 앱이 같은 kakao{키}://oauth 를 받아 한 폰에 같이 설치 시 웹 로그인 복귀가 엉킨다
 if (appEnvs.staging.KAKAO_NATIVE_APP_KEY == appEnvs.production.KAKAO_NATIVE_APP_KEY) {
     logger.warn("경고: staging·production 카카오 네이티브 키가 같아요. 두 앱을 한 폰에 같이 설치하면 카카오 웹 로그인 복귀가 엉킬 수 있어요. staging 키 발급·등록은 docs/team/RELEASE.md '외부 콘솔 등록'.")
@@ -167,7 +192,7 @@ if (project.hasProperty("versionCode")) {
 def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
 
 // 번들 직전에 flavor 에 맞는 TS 설정을 쓴다(공개 값만). 파일은 gitignore
-def writeEnvTs = { Map e, String versionName, int versionCode ->
+def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost ->
     def values = [
         APP_ENV: e.APP_ENV,
         API_MODE: e.API_MODE,
@@ -176,6 +201,7 @@ def writeEnvTs = { Map e, String versionName, int versionCode ->
         SUPABASE_KEY: e.SUPABASE_PUBLISHABLE_KEY,
         KAKAO_NATIVE_APP_KEY: e.KAKAO_NATIVE_APP_KEY,
         GOOGLE_WEB_CLIENT_ID: e.GOOGLE_WEB_CLIENT_ID,
+        APP_LINK_HOST: linkHost,
         VERSION_NAME: versionName,
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
@@ -245,17 +271,9 @@ android {
         flavor.buildConfigField "String", "SUPABASE_URL", "\"${e.SUPABASE_URL}\""
         flavor.buildConfigField "String", "SUPABASE_PROJECT_REF", "\"${e.SUPABASE_PROJECT_REF}\""
         flavor.buildConfigField "boolean", "ENV_PLACEHOLDER", "${e.PLACEHOLDER}"
-        // 카톡 초대 링크 App Links(https://<host>/c#123456). 도메인 미정 → 기본 비활성(activity-alias enabled=false).
-        // 켜기: app/env/<flavor>.env 에 APP_LINK_HOST=<도메인> 또는 -PappLinkHost=<도메인>(로컬 확인용, 모든 flavor)
-        // 스파이크 기록: docs/team/spikes/2026-11-17-install-referrer-applinks.md
-        def linkHost = (project.findProperty("appLinkHost") ?: e.APP_LINK_HOST ?: "").toString().trim()
-        if (linkHost && !(linkHost ==~ /[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+/)) {
-            throw new GradleException("APP_LINK_HOST 는 소문자 도메인만(스킴·경로 없이): ${linkHost}")
-        }
-        flavor.manifestPlaceholders += [
-            appLinkHost    : linkHost ?: "applinks.invalid",
-            appLinksEnabled: linkHost ? "true" : "false",
-        ]
+        // 카톡 초대 링크 App Links(https://<host>/c#123456). 값의 원본은 app/env/<flavor>.env 의 APP_LINK_HOST 한 곳.
+        // 비어 있으면(도메인 미정) activity-alias enabled=false. 로컬 확인용 덮어쓰기는 debug 빌드 타입에만(아래 buildTypes.debug)
+        flavor.manifestPlaceholders += appLinkPlaceholders(e.APP_LINK_HOST)
     }
     sourceSets {
         // 스테이징 런처·스플래시(배지 T)는 브랜드 원본 폴더를 직접 연결(복사본을 두지 않음). 앱 이름은 src/staging/res
@@ -283,6 +301,10 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // 로컬 확인용 App Links host 덮어쓰기(debug 만, 빌드 타입 값이 flavor 값보다 우선)
+            if (appLinkHostDebug) {
+                manifestPlaceholders += appLinkPlaceholders(appLinkHostDebug)
+            }
         }
         release {
             // 업로드 키(사용자 맥에만). 설정이 없으면 위 경고와 함께 debug 키
@@ -307,6 +329,8 @@ android.applicationVariants.configureEach { variant ->
     def vName = variant.versionName
     def vCode = variant.versionCode
     def isRelease = !variant.buildType.debuggable
+    // 매니페스트와 같은 host 를 JS 에도(리뷰 M3: allowedHost 강제). debug 덮어쓰기는 debug 변형에만
+    def linkHost = isRelease ? e.APP_LINK_HOST : (appLinkHostDebug ?: e.APP_LINK_HOST)
     def checkPlaceholder = {
         if (e.PLACEHOLDER) {
             // 리뷰 L2: 예시 값으로 출시 빌드가 조용히 성공하지 않게. 로컬 확인용은 -PallowPlaceholderEnv
@@ -318,7 +342,7 @@ android.applicationVariants.configureEach { variant ->
     }
     def generate = {
         checkPlaceholder()
-        writeEnvTs(e, vName, vCode)
+        writeEnvTs(e, vName, vCode, linkHost)
     }
     // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값 검사만(네이티브 컴파일 전에 일찍 실패)
     variant.preBuildProvider.configure { doFirst { isRelease ? checkPlaceholder() : generate() } }
@@ -327,6 +351,7 @@ android.applicationVariants.configureEach { variant ->
         // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)
         t.inputs.property("appEnv", e.collectEntries { k, v -> [(k): v.toString()] })
         t.inputs.property("appVersion", "${vName}/${vCode}/${appGitSha}")
+        t.inputs.property("appLinkHost", linkHost)
         t.doFirst { generate() }
         if (isRelease) {
             t.finalizedBy(cleanGeneratedAppEnv)

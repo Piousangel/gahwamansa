@@ -3,60 +3,94 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- 번호가 담긴 링크라 검색·미리보기 수집 금지. 조각(#)은 서버로 가지 않지만 페이지 자체도 색인하지 않는다 -->
+<!-- 번호가 담긴 링크라 색인·리퍼러 금지. 미리 보기 제목에 번호·호칭 넣지 않음(정책) -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>가족 연결 - 가화만사성</title>
-<link rel="stylesheet" href="../style.css">
+<title>가화만사성 연결 번호</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Jua&display=swap" rel="stylesheet">
 <style>
-  /* 초안: 어르신이 읽는 페이지. 큰 글자·큰 버튼(최소 56px), 색은 ../style.css 토큰만 */
-  .code{font-size:2.6rem;font-weight:800;letter-spacing:.12em;text-align:center;margin:12px 0;font-variant-numeric:tabular-nums}
-  .btn{display:block;width:100%;min-height:56px;margin:12px 0;padding:14px 16px;border-radius:14px;border:2px solid var(--accent);
-       background:var(--accent);color:var(--bg);font-weight:800;font-size:1.1rem;text-align:center;text-decoration:none}
-  .btn.sub{background:var(--card);color:var(--accent)}
+  /* 동결 시안 docs/design/v3/web/C_page.dc.html 1:1 (390 폭 기준, 색·크기 그대로) */
+  :root{--bg:#F6F3EE;--ink:#4E2F14;--btn:#744821;--sub:#85592F;--line:#E3D5C5;--on-btn:#FFFFFF}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--ink);word-break:keep-all}
+  .page{max-width:480px;min-height:100%;margin:0 auto;display:flex;flex-direction:column}
+  .brand{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .brand svg{display:block;flex-shrink:0}
+  .brand span{font-family:'Jua',sans-serif;font-size:24px;line-height:32px;color:var(--ink)}
+  .body{flex:1;display:flex;flex-direction:column;gap:18px;padding:28px 24px}
+  h1{margin:0;font-family:'Jua',sans-serif;font-weight:400;font-size:28px;line-height:36px;color:var(--ink);text-align:center;text-wrap:balance}
+  .code{font-family:'Jua',sans-serif;font-size:48px;letter-spacing:6px;color:var(--ink);text-align:center;line-height:56px;font-variant-numeric:tabular-nums}
+  .btn{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:72px;padding:8px 20px;border-radius:999px;
+       background:var(--btn);color:var(--on-btn);border:3px solid var(--btn);box-shadow:0 4px 12px rgba(116,72,33,.18);
+       font-family:'Jua',sans-serif;font-size:30px;line-height:38px;text-align:center;text-decoration:none}
+  .note{margin:0;font-size:20px;line-height:30px;font-weight:500;color:var(--sub);text-align:center}
+  .foot{margin-top:auto;padding:16px 20px;font-size:16px;line-height:1.6;color:var(--sub);border-top:1px solid var(--line)}
+  .foot a{color:inherit}
   [hidden]{display:none !important}
 </style>
 </head>
 <body>
-<main>
 <!--
-  초대 링크 안내 페이지 초안 (스파이크 docs/team/spikes/2026-11-17-install-referrer-applinks.md)
-  링크 모양: https://<도메인>/c#123456  — 번호는 URL 조각(#)이라 서버 접근 기록에 남지 않는다.
-  흐름:
-   1) 앱이 있고 App Links 검증됨 → 이 페이지가 열리지 않고 앱이 바로 열림(일반 브라우저). 카톡 인앱 브라우저는 이 페이지를 열 수 있음.
-   2) 이 페이지가 열리면: 번호를 크게 보여 주고
-      - [앱에서 열기]: intent://<도메인>/c?code=번호#Intent;scheme=https;package=…;S.browser_fallback_url=<Play 링크>;end
-        (조각 자리를 #Intent 가 쓰므로 번호는 쿼리로. intent:// 는 서버에 요청되지 않는다. 사용자가 눌러야 동작 — 자동 이동 안 함)
-      - [앱 설치하기]: https://play.google.com/store/apps/details?id=…&referrer=code%3D번호  → 설치 후 첫 실행에 Install Referrer 로 번호 자동 채움
-   3) JS 가 안 돌면: noscript 안내(카톡 메시지의 번호를 직접 입력)
-  TODO(사용자): HOST 를 실제 도메인으로, 배포 위치에 /.well-known/assetlinks.json 함께 올리기
+  카톡 초대 링크 안내 페이지 /c — 초안(배포 전 체크리스트: 스파이크 문서 6절). 시안: docs/design/v3/web/C_page.dc.html
+  링크 https://<도메인>/c#123456 — 번호는 URL 조각(#)이라 서버 접근 기록에 남지 않는다. 이 페이지도 번호를 URL 쿼리에 싣지 않는다.
+  - Android: [가화만사성 앱에서 열기] = intent://<도메인>/c#Intent;scheme=https;package=…;S.code=번호;S.browser_fallback_url=<Play+referrer>;end
+    (조각 자리를 #Intent 가 쓰므로 번호는 엑스트라 S.code → 앱 MainActivity 가 조각으로 옮김). 사용자가 눌러야 동작(자동 이동 안 함).
+    눌렀는데 2.5초 지나도 이 페이지가 그대로면 "설치 전" 화면으로 바꾼다.
+  - 그 밖(또는 앱이 안 열림): [Play 스토어에서 받기] = Play 링크 referrer=code%3D번호 → 설치 후 첫 실행에 Install Referrer 로 번호가 들어감
+  - 번호가 없거나 JS 가 안 돌면: 메시지의 번호를 직접 쓰라는 안내(시안 밖 상태 — 라이터 확인 필요)
+  - 기한 문구는 넣지 않는다(번호 종류마다 서버 만료가 달라 날짜를 단정하지 않음. 기한은 공유 메시지에 있음)
+  TODO(사용자): HOST 를 production.env 의 APP_LINK_HOST 와 같은 값으로(staging 서브도메인 페이지는 PACKAGE 도 .staging)
 -->
-<h1>가족이 연결 번호를 보냈어요</h1>
-
-<div id="has-code" hidden>
-  <p>가화만사성 앱에 이 번호를 넣으면 가족과 연결돼요.</p>
-  <p class="code" id="code" aria-label="연결 번호"></p>
-  <a class="btn" id="open-app" href="#" hidden>앱에서 열기</a>
-  <a class="btn sub" id="install" href="#">앱 설치하기</a>
-  <p class="meta">설치한 뒤 앱을 처음 열면 번호가 미리 채워져 있어요. 안 채워져 있으면 위 번호를 직접 넣어 주세요. 번호는 7일 동안 쓸 수 있어요.</p>
+<div class="page">
+  <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true" style="display:block;flex-shrink:0"><defs>
+  <filter id="ds_c" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dy="2.6" result="b"/><feFlood flood-color="#4E2F14" flood-opacity=".28"/><feComposite in2="b" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="cast_c" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4"/></filter>
+  <linearGradient id="card_c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFDF8"/><stop offset="1" stop-color="#EFE5D6"/></linearGradient>
+  <linearGradient id="sky_c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2C58E"/><stop offset="1" stop-color="#F9E7C8"/></linearGradient>
+  <linearGradient id="hillFar_c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9AE8E"/><stop offset="1" stop-color="#B79A7A"/></linearGradient>
+  <linearGradient id="hillNear_c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9A26C"/><stop offset="1" stop-color="#87804F"/></linearGradient>
+  <linearGradient id="seal_c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA477"/><stop offset="1" stop-color="#EE6640"/></linearGradient>
+  <radialGradient id="sun_c" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#FFF0B8"/><stop offset="1" stop-color="#F59A2A"/></radialGradient>
+  <radialGradient id="vig_c" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="#5A3716" stop-opacity="0"/><stop offset="1" stop-color="#5A3716" stop-opacity="0.35"/></radialGradient>
+  <linearGradient id="sheen_c" x1="0" y1="0" x2="1" y2="1"><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset=".42" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><g filter="url(#ds_c)" transform="translate(4 4.6) scale(0.86)"><g transform="rotate(11 43 21.5)">
+    <rect x="26" y="3.2" width="34" height="41" rx="2.6" fill="#D2BFA8"/>
+    <rect x="26" y="1" width="34" height="41" rx="2.6" fill="url(#card_c)"/>
+    <rect x="26.6" y="1.6" width="32.8" height="39.8" rx="2.2" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/>
+    <clipPath id="ph_c"><rect x="29" y="4" width="28" height="27" rx="1.2"/></clipPath><g clip-path="url(#ph_c)"><rect x="29" y="4" width="28" height="27" fill="url(#sky_c)"/><circle cx="48.04" cy="12.1" r="3.08" fill="url(#sun_c)"/><ellipse cx="46.961999999999996" cy="10.929599999999999" rx="1.1088" ry="0.6160000000000001" fill="#fff" opacity=".65"/><path d="M27.60 20.74 Q34.04 14.80 39.08 18.85 Q44.40 14.26 50.84 19.12 Q54.20 17.50 58.40 18.85 L58.40 32.35 L27.60 32.35 Z" fill="url(#hillFar_c)"/><path d="M27.60 25.60 Q36.00 20.74 44.40 23.98 Q51.40 21.82 58.40 23.44 L58.40 32.35 L27.60 32.35 Z" fill="url(#hillNear_c)"/><path d="M43 27.22 Q43.896 26.884 44.232 26.099999999999998 L46.248000000000005 26.099999999999998 Q46.584 26.884 47.480000000000004 27.22 Z" fill="#6B4A33"/><rect x="43.896" y="27.22" width="2.688" height="1.12" fill="#E9D8BC"/><path d="M46.92 28.3 Q48.04 27.88 48.46 26.900000000000002 L50.98 26.900000000000002 Q51.4 27.88 52.519999999999996 28.3 Z" fill="#6B4A33"/><rect x="48.04" y="28.3" width="3.3600000000000003" height="1.4000000000000001" fill="#E9D8BC"/><path d="M52.8 27.49 Q53.583999999999996 27.195999999999998 53.878 26.509999999999998 L55.641999999999996 26.509999999999998 Q55.936 27.195999999999998 56.72 27.49 Z" fill="#6B4A33"/><rect x="53.583999999999996" y="27.49" width="2.3520000000000003" height="0.9800000000000001" fill="#E9D8BC"/><rect x="29" y="4" width="28" height="27" fill="#D9A15C" opacity="0.14"/><rect x="29" y="4" width="28" height="27" fill="url(#vig_c)"/><rect x="29" y="4" width="28" height="27" fill="url(#sheen_c)"/></g><rect x="29" y="4" width="28" height="27" rx="1.2" fill="none" stroke="#4E2F14" stroke-opacity=".18" stroke-width=".8"/></g><g transform="rotate(-6 24.5 39.5)">
+    <rect x="7" y="21" width="41" height="41" rx="14" fill="#3A1A10" opacity=".38" filter="url(#cast_c)"/>
+    <rect x="4" y="22.2" width="41" height="41" rx="14" fill="#C44F2E"/>
+    <rect x="4" y="19" width="41" height="41" rx="14" fill="url(#seal_c)"/>
+    <rect x="5" y="20" width="39" height="39" rx="13" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.2"/>
+    <g transform="translate(8.51 24.509999999999998) scale(0.31980000000000003)" fill="none" stroke="#C44F2E" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"><path d="M50 5 L53 15"/><path d="M18 19 L15 32"/><path d="M18 20 L82 20 Q85 21 81 31"/><path d="M30 39 L70 39"/><path d="M50 39 Q43 50 24 58"/><path d="M40 52 Q57 55 57 70 Q57 86 49 93 L42 88"/><path d="M50 64 Q40 73 23 79"/><path d="M53 75 Q42 86 22 93"/><path d="M76 54 Q70 61 60 66"/><path d="M58 71 Q70 84 86 93"/></g><g transform="translate(8.51 23.509999999999998) scale(0.31980000000000003)" fill="none" stroke="#FFFAF3" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"><path d="M50 5 L53 15"/><path d="M18 19 L15 32"/><path d="M18 20 L82 20 Q85 21 81 31"/><path d="M30 39 L70 39"/><path d="M50 39 Q43 50 24 58"/><path d="M40 52 Q57 55 57 70 Q57 86 49 93 L42 88"/><path d="M50 64 Q40 73 23 79"/><path d="M53 75 Q42 86 22 93"/><path d="M76 54 Q70 61 60 66"/><path d="M58 71 Q70 84 86 93"/></g>
+    <ellipse cx="14" cy="24" rx="8" ry="2.6" fill="#fff" opacity=".32" transform="rotate(-18 14 24)"/></g></g></svg><span>가화만사성</span></div>
+  <div class="body">
+    <h1>가족이 보낸 연결 번호예요</h1>
+    <div id="has-code" hidden>
+      <div class="code" id="code" aria-label="연결 번호"></div>
+      <div id="state-open" hidden>
+        <a class="btn" id="open-app" href="#"><span>가화만사성 앱에서 열기</span></a>
+        <p class="note">앱이 안 열리면 앱을 켜고 이 번호 6개를 써 주세요</p>
+      </div>
+      <div id="state-install" hidden>
+        <a class="btn" id="install" href="#"><span>Play 스토어에서 받기</span></a>
+        <p class="note">설치하고 열면 이 번호가 들어 있어요. 안 들어 있으면 번호 6개를 써 주세요</p>
+      </div>
+    </div>
+    <div id="no-code" hidden>
+      <a class="btn" id="install-plain" href="#"><span>Play 스토어에서 받기</span></a>
+      <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써 주세요</p>
+    </div>
+    <noscript><p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 가화만사성 앱에 써 주세요</p></noscript>
+  </div>
+  <div class="foot">이 앱은 돈이나 은행 번호를 묻지 않아요 · <a href="../index.html">개인정보 처리방침</a></div>
 </div>
-
-<div id="no-code" hidden>
-  <p>링크에 번호가 없어요. 가족이 보낸 카톡 메시지에 있는 숫자 6자리를 앱에 직접 넣어 주세요.</p>
-  <a class="btn sub" id="install-plain" href="#">앱 설치하기</a>
-</div>
-
-<noscript>
-  <p class="box">가족이 보낸 카톡 메시지에 있는 <strong>숫자 6자리</strong>를 가화만사성 앱에 직접 넣어 주세요.</p>
-</noscript>
-
 <script>
 (function () {
   // ---- 설정(도메인 확정 후 사용자) ----
-  var HOST = 'example.test';             // TODO: 실제 도메인(앱 APP_LINK_HOST 와 같은 값)
-  var PACKAGE = 'com.bumojasik.app';      // production 만 Play 에 있다(staging 은 Play 에 없음)
+  var HOST = 'example.test';             // TODO: production.env 의 APP_LINK_HOST 와 같은 값
+  var PACKAGE = 'com.bumojasik.app';      // Play 에 있는 건 production 뿐
   // ----------------------------------
-
   var PLAY = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
 
   function normalize(raw) {
@@ -69,33 +103,41 @@
     return normalize(h);
   }
   function playUrl(code) {
-    // referrer 값 자체를 한 번 인코딩해 넣는다: referrer=code%3D123456 (Play 가 풀어 앱에 "code=123456" 으로 준다)
+    // referrer 값 자체를 한 번 인코딩: referrer=code%3D123456 (Play 가 풀어 앱에 "code=123456" 으로 준다)
     return code ? PLAY + '&referrer=' + encodeURIComponent('code=' + code) : PLAY;
   }
   function intentUrl(code) {
-    return 'intent://' + HOST + '/c?code=' + code +
-      '#Intent;scheme=https;package=' + PACKAGE +
-      ';S.browser_fallback_url=' + encodeURIComponent(playUrl(code)) + ';end';
+    // 번호는 엑스트라로만(쿼리에 싣지 않음: intent 를 못 읽는 웹뷰가 https 로 바꿔 로드해도 서버 기록에 번호가 없게)
+    return 'intent://' + HOST + '/c#Intent;scheme=https;package=' + PACKAGE +
+      ';S.code=' + code + ';S.browser_fallback_url=' + encodeURIComponent(playUrl(code)) + ';end';
   }
+  function show(id) { document.getElementById(id).hidden = false; }
+  function hide(id) { document.getElementById(id).hidden = true; }
 
   var code = readCode();
-  var isAndroid = /Android/i.test(navigator.userAgent);
   if (!code) {
-    document.getElementById('no-code').hidden = false;
+    show('no-code');
     document.getElementById('install-plain').href = PLAY;
     return;
   }
-  document.getElementById('has-code').hidden = false;
-  // 번호는 textContent 로만(조각 값은 사용자 입력 — HTML 로 넣지 않는다). 읽기 좋게 3·3
+  show('has-code');
+  // 번호는 textContent 로만(조각 값은 외부 입력 — HTML 로 넣지 않는다). 읽기 좋게 3·3
   document.getElementById('code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
   document.getElementById('install').href = playUrl(code);
-  if (isAndroid) {
-    var open = document.getElementById('open-app');
-    open.href = intentUrl(code);
-    open.hidden = false;
+  if (!/Android/i.test(navigator.userAgent)) {
+    show('state-install');
+    return;
   }
+  var open = document.getElementById('open-app');
+  open.href = intentUrl(code);
+  show('state-open');
+  open.addEventListener('click', function () {
+    // 앱으로 넘어가면 페이지가 가려진다. 2.5초 뒤에도 보이면 설치 전으로 본다
+    setTimeout(function () {
+      if (document.visibilityState === 'visible') { hide('state-open'); show('state-install'); }
+    }, 2500);
+  });
 })();
 </script>
-</main>
 </body>
 </html>

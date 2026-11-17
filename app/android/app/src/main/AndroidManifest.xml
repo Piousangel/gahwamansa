@@ -25,9 +25,10 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
-      <!-- 카톡 초대 링크 https://<host>/c#123456 → MainActivity(번호는 URL 조각, JS 가 Linking 으로 읽음).
-           도메인 미정이라 기본 비활성(appLinksEnabled=false): 비활성 alias 의 intent-filter 는 등록·검증되지 않는다.
-           host 는 build.gradle 의 APP_LINK_HOST / -PappLinkHost. 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md -->
+      <!-- 카톡 초대 링크 https://<host>/c#123456 → MainActivity(번호는 URL 조각, JS 가 Linking 으로 읽고 APP_LINK_HOST 와 대조).
+           도메인 미정이면 비활성(appLinksEnabled=false): 비활성 alias 는 인텐트 해석에서 빠진다. 단 도메인 검증 목록에는
+           applinks.invalid 가 올라가 실패(1024)로 남는다 — 무해(에뮬레이터 API 35 확인, 스파이크 문서 3절).
+           host 원본은 app/env/<flavor>.env 의 APP_LINK_HOST(로컬 확인은 debug 한정 -PappLinkHostDebug). 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md -->
       <activity-alias
         android:name=".InviteLinkActivity"
         android:targetActivity=".MainActivity"
