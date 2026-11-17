@@ -236,7 +236,7 @@
 - Android 패키지 com.bumojasik.app, 키 해시 출시용·개발용 2개 등록, 카카오 로그인 ON, OpenID Connect ON
 - 동의항목: 닉네임 선택 동의(목적 "자녀 회원의 앱 내 이름 표시"), 이메일은 권한 없음(비즈 앱 아님) — 결정대로
 - Supabase Kakao provider: Client ID 칸에 "REST API 키,네이티브 앱 키"(네이티브 SDK ID 토큰의 aud가 네이티브 앱 키라 둘 다 허용, 실기기 로그인으로 확인 필요), Allow users without an email ON
-- [ ] 클라이언트 시크릿: 사용자가 카카오에서 생성해 Supabase에 직접 입력 후 Save
+- [x] 클라이언트 시크릿: 사용자가 Supabase에 직접 입력·저장(11-17), Kakao provider Enabled 확인
 - [ ] 웹훅(연결 해제/계정 상태 변경): 카카오가 권고. 탈퇴 연동은 빌드 2 검토
 - 주의: 크롬 비밀번호 자동완성이 Supabase 칸에 이메일·비밀번호를 채움 → 저장 전 반드시 지울 것
 - [ ] 스토어 설명에 'AI로 만든 그림' 고지 1줄, 스토어 스크린샷에 첫 화면을 쓰면 이미지 안에 AI 표기 (첫 화면 D 리뷰)
