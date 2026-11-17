@@ -19,7 +19,7 @@ test('응원 1개: 해님(하트 없음)·"가족이 보낸 응원이에요"·�
   const {mark} = await home({cheers: ['love_you']});
   await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
   expect(screen.getByText('사랑해요, 오늘도 좋은 하루예요')).toBeTruthy();
-  expect(screen.getByTestId('sun-smile', {includeHiddenElements: true})).toBeTruthy();
+  expect(screen.getByTestId('cheer-dialog')).toBeTruthy(); // U0 Dialog(해님 없음)
   expect(screen.queryByText('고마워요')).toBeNull(); // 빌드 1 버튼은 "알겠어요"(5절)
   await press('알겠어요');
   await waitFor(() => expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull());
@@ -30,7 +30,7 @@ test('응원 여러 개: "응원이 3개 왔어요" + 글 3줄', async () => {
   await home({cheers: ['love_you', 'warm_day', 'thanks_always']});
   await waitFor(() => screen.getByText('응원이 3개 왔어요'));
   for (const t of ['사랑해요, 오늘도 좋은 하루예요', '덕분에 하루가 따뜻해요', '늘 고마워요']) {
-    expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText(new RegExp(t))).toBeTruthy(); // 본문 한 덩어리, 줄마다 한 문장
   }
 });
 
@@ -61,7 +61,7 @@ test('응원을 못 받아 와도 코스 홈은 그대로(조용히)', async () 
   const {get} = await home({cheers: ['love_you'], failCheers: true});
   await waitFor(() => expect(get).toHaveBeenCalled());
   expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull();
-  expect(screen.getByRole('button', {name: '이어서 하기'})).toBeTruthy();
+  expect(screen.getByTestId('screen-dock')).toBeTruthy(); // 코스 홈 하단 버튼 그대로
 });
 
 test('읽음 처리가 실패해도 대화상자는 닫힌다(다음에 다시 보임)', async () => {

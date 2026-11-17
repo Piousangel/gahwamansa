@@ -31,10 +31,13 @@ const XML = {
   
   <path d="M9 5l7 7-7 7"/>
 </svg>`,
-  // bold/icon-check.svg(굵은 변형 3.5): P6 맞은 음절 칸·일치 표시
-  'icon-check': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="완료">
-  <path d="M5 12.5l4.5 4.5L19 7"/>
-</svg>`,
+  // U0 공용 컴포넌트(시트 닫기·배너·말풍선 읽어 주기)
+  'icon-close': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  'icon-warning': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5l8 14.5H4z"/><path d="M12 10v4"/><path d="M12 16.5h.01"/></svg>`,
+  'icon-wifi-off': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.13 15.4A5 5 0 0 1 14.87 15.4"/><path d="M6.55 11.72A9.5 9.5 0 0 1 17.45 11.72"/><path d="M3.97 8.03A14 14 0 0 1 20.03 8.03"/><path d="M12 19.5h.01"/><path d="M4 4l16 16"/></svg>`,
+  'icon-check': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`,
+  'icon-info': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8.2h.01"/><path d="M12 12v4"/></svg>`,
+  'icon-speaker': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5h3l4-3.5v12l-4-3.5H6z"/><path d="M16.18 8.82A4.5 4.5 0 0 1 16.18 15.18"/></svg>`,
 } as const;
 export type IconName = keyof typeof XML;
 

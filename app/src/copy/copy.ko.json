@@ -82,7 +82,7 @@
     }
   },
   "praise": [
-    "오늘 코스를 마쳤어요. 잘하셨어요",
+    "오늘 코스를 마쳤어요",
     "사진도 보고 글씨도 쓰셨어요",
     "오늘도 와 주셔서 고마워요",
     "고른 답이 잘 전해졌어요",
@@ -233,12 +233,14 @@
       "토",
       "일"
     ],
-    "stamps_a11y": "이번 주 도장 {n}개",
-    "_status": "stamps_a11y 는 임시(라이터 확정 필요)",
+    "stamps_a11y": "이번 주 도장, {요일} 찍었어요",
+    "stamps_a11y_none": "이번 주 도장",
+    "step_a11y": "{name}, 3단계 중 {n}단계",
+    "_status": "stamps_a11y·stamps_a11y_none·step_a11y 는 임시(talkback-spec 형식, 라이터 확정 필요)",
     "continue": "이어서 하기"
   },
   "keyboard": {
-    "_status": "copy-v3-confirmed 10절 확정. card_a11y·photo_a11y·step_a11y 는 시안 P6 v4·TalkBack 명세 읽기 라벨(라이터 확인 전)",
+    "_status": "copy-v3-confirmed 10절 확정. card_a11y·photo_a11y 는 시안 P6 v4·TalkBack 명세 읽기 라벨(라이터 확인 전). 단계 제목 읽기는 course.step_a11y",
     "guide": "보이는 낱말을 아래 칸에 써요",
     "input_label": "낱말 쓰는 칸",
     "placeholder": "여기를 누르면 자판이 나와요",
@@ -252,7 +254,6 @@
     "your_word": "쓰신 낱말",
     "skip": "오늘은 넘어갈게요",
     "card_a11y": "쓸 낱말, {낱말}, {n} 글자. 자판으로 쓰거나 넘어갈 수 있어요",
-    "step_a11y": "{단계}, {전체}단계 중 {n}단계",
     "count_words": [
       "한",
       "두",

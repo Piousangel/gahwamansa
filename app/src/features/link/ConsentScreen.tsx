@@ -15,13 +15,14 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Message | null>(null);
 
+  // 동의 화면은 코스 홈으로 바뀐다(replace): 뒤로가기로 동의 화면이 다시 나오지 않게(리뷰 ③)
   // 서버가 이미 동의한 상태면 이 화면을 건너뛴다(서버 상태와 어긋나는 '싫어요'를 막는다).
   // 확인이 실패하면 세션의 syncError 로 알리되 고르기는 그대로 할 수 있다.
   useEffect(() => {
     let alive = true;
     sync().then(c => {
       if (alive && c?.consented) {
-        navigation.navigate('CourseHome');
+        navigation.replace('CourseHome');
       }
     });
     return () => {
@@ -39,7 +40,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
     try {
       await api.giveConsent(CONSENT_VERSION);
       setConsented(true);
-      navigation.navigate('CourseHome');
+      navigation.replace('CourseHome');
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -51,7 +52,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   if (declined) {
     return (
-      <Screen bottom={<BigButton label={copy.consent.declined_button} onPress={() => navigation.navigate('CourseHome')} />}>
+      <Screen bottom={<BigButton label={copy.consent.declined_button} onPress={() => navigation.replace('CourseHome')} />}>
         <Text20 size={28} weight="bold">{copy.consent.declined_notice}</Text20>
         <Text20>{copy.consent.declined_detail}</Text20>
         <Text20>{copy.consent.declined_reassure}</Text20>

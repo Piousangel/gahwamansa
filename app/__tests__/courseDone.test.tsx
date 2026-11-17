@@ -1,5 +1,5 @@
 import {screen, waitFor} from '@testing-library/react-native';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {kstWeekdayIndex} from '../src/features/course/stamps';
 
@@ -8,28 +8,34 @@ async function finishCourse(opts: FakeOptions = {}, prepare?: (api: ReturnType<t
   const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question'], ...opts});
   prepare?.(api);
   await toHomeConsented(api);
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   return api;
 }
 const today = kstWeekdayIndex();
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
 test('이번 주 첫 도장: 해님(하트 없음)·제목·도장 줄(오늘 칸)·"오늘 첫 도장을 찍었어요"', async () => {
   await finishCourse();
-  const sun = screen.getByTestId('sun-done', {includeHiddenElements: true});
-  expect(sun.props.xml).not.toContain('M34 90C30'); // state-done 의 작은 하트 경로
+  // 해님은 U0 sun-happy(하트 없음). 그림 문자열에 하트 경로(state-done·sun-cheer)가 없다
+  const svgs = screen.UNSAFE_root.findAll(n => typeof n.props?.xml === 'string');
+  expect(svgs.length).toBeGreaterThan(0);
+  for (const s of svgs) {
+    expect(s.props.xml).not.toContain('M34 90C30');
+  }
   await waitFor(() => screen.getByText('오늘 첫 도장을 찍었어요'));
-  expect(screen.getByLabelText('이번 주 도장 1개')).toBeTruthy();
+  expect(screen.getByLabelText(`이번 주 도장, ${WEEKDAYS[today]} 찍었어요`)).toBeTruthy();
   expect(screen.getAllByTestId(`stamp-on-${today}`, {includeHiddenElements: true}).length).toBeGreaterThan(0);
   expect(screen.queryByText(/연속|잘하셨|최고/)).toBeNull(); // 숫자 연속·칭찬 없음
 });
 
 test('이번 주 다른 날에도 찍었으면 "도장을 찍었어요. 내일 또 만나요"', async () => {
-  await finishCourse({weekDone: [today === 0 ? 1 : 0]});
+  const other = today === 0 ? 1 : 0;
+  await finishCourse({weekDone: [other]});
   await waitFor(() => screen.getByText(/도장을 찍었어요\.\s*내일 또 만나요/));
-  expect(screen.getByLabelText('이번 주 도장 2개')).toBeTruthy();
+  expect(screen.getByLabelText(`이번 주 도장, ${[WEEKDAYS[other], WEEKDAYS[today]].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b)).join(' ')} 찍었어요`)).toBeTruthy();
   expect(screen.queryByText('오늘 첫 도장을 찍었어요')).toBeNull();
 });
 
@@ -46,5 +52,5 @@ test('알겠어요 → 코스 홈(다 마친 상태)', async () => {
   await press('알겠어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
   expect(screen.getByText('오늘 코스를 마쳤어요')).toBeTruthy(); // 코스 홈의 완료 줄
-  expect(screen.queryByRole('button', {name: '이어서 하기'})).toBeNull();
+  expect(screen.queryByTestId('screen-dock')).toBeNull(); // 다 마쳐서 다음 단계 버튼 없음
 });

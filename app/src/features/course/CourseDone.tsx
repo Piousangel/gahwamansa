@@ -10,8 +10,7 @@ import {BigButton} from '../../ui/BigButton';
 import {copy} from '../../copy/copy';
 import {StampRow} from './StampRow';
 import {kstWeekdayIndex, stampsFromDates} from './stamps';
-import {SunDone} from './sunArt';
-import {useFocusOnOpen} from './a11yFocus';
+import {Sun} from '../../ui/assets/sun';
 import type {WeekStamps} from '../types';
 
 const d = copy.done;
@@ -37,7 +36,6 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       alive = false;
     };
   }, [api, linked]);
-  const titleRef = useFocusOnOpen(); // R2: 첫 포커스는 제목(해님 그림은 장식이라 읽지 않음)
   const toHome = () => navigation.popTo('CourseHome');
   useBackAction(toHome);
 
@@ -50,10 +48,12 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   return (
     <Screen bottom={<BigButton label={d.button} onPress={toHome} />}>
       <View style={styles.center}>
-        <SunDone />
-        <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={d.title}>
-          <Text20 size={32} weight="bold" style={styles.text}>{d.title}</Text20>
+        {/* 완료 해님(U0 sun-happy, 하트 없음, 장식이라 읽지 않음). 말풍선은 쓰지 않는다(시안 P7) */}
+        <View style={styles.sun}>
+          <Sun art="sun-happy" size={88} />
         </View>
+        {/* 제목 포커스(R2)는 Screen 이 머리글을 받아 처리 */}
+        <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
         {days ? <StampRow days={days} todayIdx={todayIdx} appearIdx={todayIdx} /> : null}
         {body ? (
           <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>
@@ -66,4 +66,5 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
 const styles = StyleSheet.create({
   center: {flexGrow: 1, alignItems: 'stretch', justifyContent: 'center', gap: 16},
   text: {textAlign: 'center', alignSelf: 'center'},
+  sun: {alignItems: 'center'},
 });

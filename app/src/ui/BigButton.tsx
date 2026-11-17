@@ -30,7 +30,10 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
   return (
     <View testID="big-button" style={styles.wrap}>
       {disabled && disabledReason ? (
-        <Text20 style={styles.reason}>{disabledReason}</Text20>
+        // TalkBack R8: 이유는 버튼 힌트로 읽으니 이 줄은 중복으로 읽지 않는다
+        <Text20 style={styles.reason} importantForAccessibility="no" accessibilityElementsHidden>
+          {disabledReason}
+        </Text20>
       ) : null}
       <Pressable
         ref={buttonRef}

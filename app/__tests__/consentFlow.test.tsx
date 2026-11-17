@@ -1,18 +1,18 @@
 import {fireEvent, screen, waitFor} from '@testing-library/react-native';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press, toHome, toHomeConsented} from '../testUtils/flow';
+import {press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 async function runCourse() {
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));

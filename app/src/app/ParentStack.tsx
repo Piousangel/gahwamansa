@@ -12,7 +12,7 @@ import {KeyboardStep} from '../features/course/KeyboardStep';
 import {CourseDone} from '../features/course/CourseDone';
 
 export type ParentParams = {
-  Connect: undefined; Consent: undefined; CourseHome: undefined;
+  Connect: {from?: 'course'} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: undefined; QuestionStep: undefined; KeyboardStep: undefined; CourseDone: undefined;
   Settings: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 // @types/node 가 없어 필요한 부분만 선언한다(jest 는 node 에서 돈다)
 declare const __dirname: string;
@@ -54,16 +54,16 @@ test('주요 화면을 돌아도 개발용 자리표시 상자가 없다', async
 test('코스 단계(사진 준비 중·한글)에도 개발용 자리표시가 없다', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   noDevBox();
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('사진을 준비하고 있어요'));
   noDevBox();
   await press('다 봤어요');
   await waitFor(() => screen.getByText('오늘의 코스'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByLabelText(/^쓸 낱말, 나무/));
   noDevBox();
 });

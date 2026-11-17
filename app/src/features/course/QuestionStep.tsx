@@ -1,4 +1,6 @@
 import React, {useState} from 'react';
+import {View} from 'react-native';
+import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -51,7 +53,12 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
 
   return (
     <Screen
-      top={<BackBar course onBack={toCourseHome} />}
+      top={
+        <>
+          <BackBar course onBack={toCourseHome} />
+          <StepHeader name={copy.course.step.question} n={2} />
+        </>
+      }
       bottom={
         error ? (
           <StepError error={error} onRetry={confirm} />
@@ -67,8 +74,11 @@ export function QuestionStep({navigation}: NativeStackScreenProps<ParentParams, 
       }>
       <Text20 size={32} weight="bold">{q.prompt ?? appCopy.question_title}</Text20>
       <Text20 size={22}>{appCopy.question_hint}</Text20>
-      <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
-      <SelectCard label={q.option_b} selected={choice === 'B'} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
+      {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9) */}
+      <View testID="choice-group" accessibilityRole="radiogroup">
+        <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
+        <SelectCard label={q.option_b} selected={choice === 'B'} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
+      </View>
     </Screen>
   );
 }

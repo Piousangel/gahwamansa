@@ -6,7 +6,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {CONSENT_VERSION} from '../src/copy/copy';
-import {press, toHome, toHomeConsented} from '../testUtils/flow';
+import {press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 
 async function previewHome(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} role="parent" />);
@@ -19,17 +19,17 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   const save = jest.spyOn(api, 'saveAnswer');
   const rec = jest.spyOn(api, 'recordSessionStep');
   await previewHome(api);
-  expect(screen.queryByRole('button', {name: '설정'})).toBeNull();
+  expect(screen.getByRole('button', {name: '설정'})).toBeTruthy(); // 미연결에도 설정 입구는 보인다(QA B3·시안 P3)
   expect(screen.queryByRole('button', {name: '좋아요'})).toBeNull();
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
@@ -63,11 +63,11 @@ test('앱은 동의로 알고 있으나 서버가 거부하면(consent_required)
   await toHomeConsented(api);
   await api.withdrawConsent(); // 다른 경로로 서버 동의가 풀린 상황
   const save = jest.spyOn(api, 'saveAnswer');
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
@@ -111,7 +111,7 @@ test('포그라운드 재조회 실패는 알리고 다시 할 수 있다(코스
   jest.spyOn(api, 'getTodayContent').mockRejectedValueOnce(new Error('boom'));
   await fire();
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
-  expect(screen.getByRole('button', {name: '이어서 하기'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: '사진 보기'})).toBeTruthy(); // 코스는 유지(주 버튼 = 지금 단계)
   await press('다시 하기');
   await waitFor(() => expect(screen.queryByText('잠깐 문제가 생겼어요')).toBeNull());
 });

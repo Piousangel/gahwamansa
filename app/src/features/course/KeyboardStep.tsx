@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {AccessibilityInfo, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View} from 'react-native';
+import {Image, Keyboard, Pressable, StyleSheet, TextInput, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
@@ -7,28 +7,25 @@ import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, FONT_SCALE_MAX, radius, shadow} from '../../ui/tokens';
+import {Dialog} from '../../ui/Dialog';
+import {announce, useScreenReader} from '../../ui/a11y';
+import {focusLater} from '../../ui/screenTitle';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {useFinishStep} from './useFinishStep';
-import {useFocusOnOpen, useScreenReader} from './a11yFocus';
+import {StepHeader} from './StepHeader';
 import {filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
 import type {StepName} from '../types';
 
 const k = copy.keyboard;
 const STEP_ORDER: StepName[] = ['photo', 'question', 'hangul'];
-const STEP_IDX = STEP_ORDER.indexOf('hangul') + 1;
-const STEP_NO = `${STEP_IDX} / ${STEP_ORDER.length}`;
-// 명세 R4: 제목 줄은 "자판으로 쓰기, 3단계 중 3단계" 한 덩어리
-const TITLE_A11Y = k.step_a11y.split('{단계}').join(copy.course.step.hangul).split('{전체}').join(String(STEP_ORDER.length)).split('{n}').join(String(STEP_IDX));
 // '읽어 주세요'(PX_read_aloud): 오디오 스파이크(공용 줄) 결론 전까지 자리(낱말 카드 안)만 두고 그리지 않는다(빈 버튼 노출 금지).
 /** 일치 뒤 "낱말을 다 쓰셨어요"를 최소한 보여 주는 시간(시안: 1.5초 이상, 이동은 마치기로만). */
 export const MATCH_HOLD_MS = 1500;
 /** 이 시간이 지나거나 "다 썼어요"를 두 번 누르면 '오늘은 넘어갈게요'를 또렷하게(시안 v4 노트). */
 export const SKIP_STRONG_MS = 20000;
-/** 일치 알림 뒤 '마치기'로 접근성 포커스를 옮기는 지연. */
-const FOCUS_FINISH_MS = 300;
 
 type Phase = 'writing' | 'sheet' | 'matched';
 
@@ -52,7 +49,6 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
   const [imageFailed, setImageFailed] = useState(false);
   // 화면 읽기 켜짐: 자판 입력이 어려운 사용자의 대체 경로라 '넘어갈게요'를 처음부터 또렷하게(명세 P6 9번)
   const reader = useScreenReader();
-  const titleRef = useFocusOnOpen(); // R2: 첫 포커스는 제목
 
   useEffect(() => {
     const t = setTimeout(() => setLateSkip(true), SKIP_STRONG_MS);
@@ -74,14 +70,10 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
     const t = setTimeout(() => setCanFinish(true), MATCH_HOLD_MS);
     // 명세 P6: 자판 닫힘 → 알림 1회 → 포커스 '마치기'(비활성이어도 포커스는 가능, 1.5초 뒤 활성).
     // 입력칸이 숨겨지며 TalkBack 포커스가 사라지지 않게 알림 직후 옮긴다.
-    const f = setTimeout(() => {
-      if (finishRef.current) {
-        AccessibilityInfo.sendAccessibilityEvent(finishRef.current, 'focus');
-      }
-    }, FOCUS_FINISH_MS);
+    const cancelFocus = focusLater(() => finishRef.current);
     return () => {
       clearTimeout(t);
-      clearTimeout(f);
+      cancelFocus();
     };
   }, [phase]);
 
@@ -102,7 +94,7 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
     Keyboard.dismiss(); // 칭찬이 자판에 가려지지 않게 먼저 내린다
     setKbOpen(false);
     setPhase('matched');
-    AccessibilityInfo.announceForAccessibility(k.matched);
+    announce(k.matched); // R11: 1회
   };
   const onChangeText = (t: string) => {
     setText(t); // 읽기만 한다. TextInput 에 되돌려 넣지 않는다
@@ -167,12 +159,8 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
       top={
         <>
           <BackBar course onBack={toCourseHome} />
-          {hideTitle ? null : (
-            <View ref={titleRef} style={styles.titleRow} accessible accessibilityRole="header" accessibilityLabel={TITLE_A11Y}>
-              <Text20 size={28} weight="bold" style={styles.title}>{copy.course.step.hangul}</Text20>
-              <Text20 weight="bold" style={styles.stepNo}>{STEP_NO}</Text20>
-            </View>
-          )}
+          {/* 제목 포커스(R2)는 StepHeader 가 Screen 에 등록한다. 150% 이상 + 자판 열림이면 숨김(리드 결정) */}
+          {hideTitle ? null : <StepHeader name={copy.course.step.hangul} n={3} />}
         </>
       }
       bottom={dock}>
@@ -231,13 +219,17 @@ export function KeyboardStep({navigation}: NativeStackScreenProps<ParentParams, 
       ) : open ? null : (
         <Text20 style={styles.sub}>{k.sub}</Text20>
       )}
-      <RetrySheet
+      {/* 다른 낱말로 "다 썼어요": 어르신 대화상자(U0 Dialog, 어르신은 아래 시트 대신 Dialog). 뒤로가기 = 다시 써 볼게요 */}
+      <Dialog
         visible={phase === 'sheet'}
-        cells={cells}
-        filled={filled}
-        written={normalizeWord(text)}
-        onRetry={retry}
-        onFinish={complete}
+        title={k.sheet_title}
+        body={`${k.your_word} ${normalizeWord(text)}`}
+        actions={[
+          {label: k.retry, onPress: retry},
+          {label: k.finish_as_is, onPress: complete},
+        ]}
+        onBack={retry}
+        testID="kb-retry"
       />
     </Screen>
   );
@@ -285,43 +277,8 @@ function SkipLink({label, disabled, onPress}: {label: string; disabled?: boolean
   );
 }
 
-// "다 썼어요"를 다른 낱말로 눌렀을 때의 아래 시트. 바깥·뒤로가기는 "다시 써 볼게요"와 같다.
-// TODO(공용 시트): 다른 줄이 만드는 공용 BottomSheet 가 나오면 교체.
-function RetrySheet({visible, cells, filled, written, onRetry, onFinish}: {
-  visible: boolean; cells: string[]; filled: number; written: string; onRetry: () => void; onFinish: () => void;
-}) {
-  const titleRef = useFocusOnOpen(visible); // R12: 첫 포커스는 시트 제목
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onRetry} statusBarTranslucent>
-      <View style={styles.scrimWrap}>
-        <Pressable style={styles.scrim} onPress={onRetry} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-        <View style={styles.sheet} accessibilityViewIsModal>
-          <View style={styles.grip} />
-          {/* 글자 200%에서도 버튼까지 닿게 시트 안에서 스크롤 */}
-          <ScrollView bounces={false} contentContainerStyle={styles.sheetBody}>
-            <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={k.sheet_title}>
-              <Text20 size={28} weight="bold" style={styles.title}>{k.sheet_title}</Text20>
-            </View>
-            <View style={styles.sheetCard}>
-              <WordCells cells={cells} filled={filled} big />
-              <View style={styles.written}>
-                <Text20>{k.your_word}</Text20>
-                <Text20 size={28} weight="bold" style={styles.title}>{written}</Text20>
-              </View>
-            </View>
-            <BigButton label={k.retry} onPress={onRetry} />
-            <BigButton variant="secondary" label={k.finish_as_is} onPress={onFinish} />
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
-  titleRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 12, paddingBottom: 8},
   title: {color: color.inkTitle},
-  stepNo: {color: color.ink},
   card: {backgroundColor: color.card, borderRadius: radius.card, padding: 14, gap: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 18},
   figure: {alignItems: 'center', gap: 2},
   thumb: {width: 96, backgroundColor: color.card, paddingTop: 5, paddingHorizontal: 5, paddingBottom: 12, boxShadow: shadow.soft, transform: [{rotate: '-2deg'}]},
@@ -341,11 +298,4 @@ const styles = StyleSheet.create({
   sub: {color: color.ink},
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},
   matchedIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: color.doneSoft, alignItems: 'center', justifyContent: 'center'},
-  scrimWrap: {flex: 1, justifyContent: 'flex-end'},
-  scrim: {...StyleSheet.absoluteFill, backgroundColor: shadow.scrim},
-  sheet: {maxHeight: '88%', backgroundColor: color.paper, boxShadow: shadow.sheet, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingTop: 12, paddingHorizontal: 24, paddingBottom: 28},
-  sheetBody: {gap: 8},
-  grip: {alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: color.lineGhost, marginBottom: 4},
-  sheetCard: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 18, gap: 12},
-  written: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'center', columnGap: 8},
 });

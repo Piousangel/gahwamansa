@@ -4,7 +4,7 @@ import {render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {kstDateLine, stampsFromDates} from '../src/features/course/stamps';
-import {press} from '../testUtils/flow';
+import {press, pressCourseNext} from '../testUtils/flow';
 
 test('날짜 줄: KST 기준 "11월 20일 금요일"', () => {
   expect(kstDateLine(new Date('2026-11-20T01:00:00Z'))).toBe('11월 20일 금요일');
@@ -67,7 +67,7 @@ test('오늘 코스를 마치면 도장 줄을 다시 불러온다', async () =>
   render(<AppRoot api={api} role="parent" restore />);
   await waitFor(() => screen.getByText('이번 주 도장'));
   const n = week.mock.calls.length;
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));

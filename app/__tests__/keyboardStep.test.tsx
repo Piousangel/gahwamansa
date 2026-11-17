@@ -1,7 +1,7 @@
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AccessibilityInfo, Keyboard} from 'react-native';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import type {Api} from '../src/features/types';
@@ -39,7 +39,7 @@ function recordingApi(opts: FakeOptions) {
 async function toKeyboardStep(opts: FakeOptions = {}) {
   const r = recordingApi({linked: true, consented: true, completedSteps: ['photo', 'question'], ...opts});
   await toHomeConsented(r.api);
-  await press('이어서 하기');
+  await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
   return r;
 }
@@ -58,7 +58,7 @@ test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자. 자판으로 쓰거나 넘어갈 수 있어요')).toBeTruthy();
   expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
-  expect(screen.getByText('한 글자만 써도 누를 수 있어요')).toBeTruthy();
+  expect(screen.getByText('한 글자만 써도 누를 수 있어요', {includeHiddenElements: true})).toBeTruthy(); // 이유 줄은 힌트로 읽어 중복 읽기 숨김(R8)
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeDisabled();
   expect(screen.getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
   expect(screen.queryByTestId('kb-skip-strong')).toBeNull();
@@ -156,8 +156,7 @@ test('다른 낱말로 "다 썼어요": 시트(낱말·쓰신 낱말), 다시 �
   await type('나모');
   await press('다 썼어요');
   expect(screen.getByText('낱말을 한 번 더 볼까요?')).toBeTruthy();
-  expect(screen.getByText('쓰신 낱말')).toBeTruthy();
-  expect(screen.getByText('나모')).toBeTruthy();
+  expect(screen.getByText('쓰신 낱말 나모')).toBeTruthy();
   expect(screen.queryByText(/한 글자가 달라요|틀/)).toBeNull();
   await press('다시 써 볼게요');
   expect(screen.queryByText('낱말을 한 번 더 볼까요?')).toBeNull();
