@@ -3,7 +3,10 @@
 -- child_summary.latest.starter = 어르신이 고른 쪽 문장만(없으면 null). 고르지 않은 쪽은 주지 않는다. 키 추가만이라 하위 호환.
 -- starter는 답의 뜻을 바꾸지 않아 0024 수정 금지 트리거 대상이 아니다(라이터가 나중에 채울 수 있음).
 
-alter table public.content_questions add column starter_a text, add column starter_b text;
+-- 길이 60자 이하(한 줄, 리뷰 L6). 빈 문자열은 금지(없으면 null).
+alter table public.content_questions
+  add column starter_a text check (char_length(starter_a) between 1 and 60),
+  add column starter_b text check (char_length(starter_b) between 1 and 60);
 
 -- 0021 정의 + latest.starter
 create or replace function public.child_summary() returns jsonb

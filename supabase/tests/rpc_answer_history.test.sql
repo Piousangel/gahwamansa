@@ -3,7 +3,8 @@
 --             동의한 어르신 것만(철회하면 즉시 0개), 본인 가족만. 개수·빈 날 집계는 주지 않는다.
 --             연결이 끊긴 어르신은 connected=false로 구분된다.
 begin;
-select plan(20);
+select plan(23);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -87,6 +88,11 @@ set local role anon;
 select throws_ok($$ select public.child_answer_history() $$, '42501', null, 'anon은 child_answer_history를 실행하지 못한다');
 reset role;
 select is((select count(*)::int from public.answers where parent_id = '75b00000-0000-0000-0000-0000000000a1'), 60, '목록 조회는 저장된 답을 지우지 않는다(노출만 제한)');
+
+-- 와/과: 마지막 글자의 받침으로(숫자는 읽는 소리로) 정한다(리뷰 L3)
+select is(public.choice_pair_prompt('3', '4'), '3과 4 중', '숫자 3(삼)은 받침이 있어 과');
+select is(public.choice_pair_prompt('2', '5'), '2와 5 중', '숫자 2(이)는 받침이 없어 와');
+select is(public.choice_pair_prompt('10', '20'), '10과 20 중', '10(십)은 받침이 있어 과');
 
 select * from finish();
 rollback;

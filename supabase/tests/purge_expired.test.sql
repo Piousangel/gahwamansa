@@ -3,7 +3,7 @@
 --             초대 번호는 사용·만료 후 30일, 번호 입력 시도 기록은 30일이 지나면 지운다. 경계 안쪽은 남긴다.
 --             앱(authenticated·anon)은 파기 함수를 실행하지 못한다.
 begin;
-select plan(14);
+select plan(17);
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('77000000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false),
@@ -32,6 +32,13 @@ insert into public.invite_codes (code, family_id, created_by, expires_at, used_a
   ('770002', '77f00000-0000-0000-0000-000000000001', '77b00000-0000-0000-0000-0000000000c1', now() - interval '31 days', null),
   ('770003', '77f00000-0000-0000-0000-000000000001', '77b00000-0000-0000-0000-0000000000c1', now() - interval '29 days', null),
   ('770004', '77f00000-0000-0000-0000-000000000001', '77b00000-0000-0000-0000-0000000000c1', now() + interval '3 days', null);
+-- 이벤트: 14개월 지난 것(지움, 가족 없는 기기 것 포함), 13개월(남김) / 동의 이력은 파기 대상 아님
+insert into public.events (ts, family_id, actor_role, name) values
+  (now() - interval '15 months', '77f00000-0000-0000-0000-000000000001', 'parent', 'course_completed'),
+  (now() - interval '15 months', null, 'none', 'app_first_open'),
+  (now() - interval '13 months', '77f00000-0000-0000-0000-000000000001', 'parent', 'course_completed');
+insert into public.consent_events (parent_id, family_id, action, version, at) values
+  ('77b00000-0000-0000-0000-0000000000a1', '77f00000-0000-0000-0000-000000000001', 'given', 'v1', now() - interval '3 years');
 -- 입력 시도: 31일 전(지움), 29일 전(남김)
 insert into public.redeem_attempts (uid, ok, at) values
   ('77000000-0000-0000-0000-0000000000a1', false, now() - interval '31 days'),
@@ -63,6 +70,9 @@ select is((select array_agg(message_key) from public.cheers where to_parent = '7
 select is((select array_agg(code::text order by code) from public.invite_codes where family_id = '77f00000-0000-0000-0000-000000000001'),
           array['770003', '770004'], '초대 번호: 사용·만료 후 30일 지난 것만 지운다');
 select is((select count(*)::int from public.redeem_attempts where uid = '77000000-0000-0000-0000-0000000000a1'), 1, '입력 시도: 30일 지난 것만 지운다');
+select is((select count(*)::int from public.events where family_id = '77f00000-0000-0000-0000-000000000001'), 1, '이벤트: 14개월 지난 것만 지운다');
+select is((select count(*)::int from public.events where family_id is null and ts < now() - interval '14 months'), 0, '가족 없는 기기의 오래된 이벤트도 지운다');
+select is((select count(*)::int from public.consent_events where parent_id = '77b00000-0000-0000-0000-0000000000a1'), 1, '동의 이력(증빙)은 파기 배치가 건드리지 않는다');
 select is((public.purge_expired_data() ->> 'answers')::int, 0, '두 번 돌려도 더 지울 것이 없다(멱등)');
 
 -- 기준 시각을 넘겨 경계 계산을 고정해 시험한다: 하루 뒤에는 30일 전 회차도 지워진다

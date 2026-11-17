@@ -4,6 +4,7 @@
 --             동의·버전 변경·철회가 이력(consent_events)에 남고, 이력은 앱에서 직접 읽을 수 없다
 begin;
 select plan(27);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values

@@ -1,6 +1,7 @@
 -- 코드 리뷰(2026-11-17) 반영 테스트: redeem 멱등·재연결 코드 탈취 방지·24시간 만료·코드 5개 상한 교체·콘텐츠 번호 구멍·답변 이력 보존
 begin;
 select plan(15);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values

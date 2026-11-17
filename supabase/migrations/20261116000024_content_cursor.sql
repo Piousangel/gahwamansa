@@ -13,7 +13,7 @@
 --   답 존재로 "본 날"을 판정하지 않으므로 31일 파기(0023)와 충돌하지 않는다. streak·week_stamps는 daily_sessions만 봐서 무관.
 -- 운영 규칙: 새 콘텐츠는 끝(가장 큰 day_index 뒤)에만 추가. 구멍 메우기·앞쪽 끼우기 금지(이미 지나간 어르신은 다음 바퀴에 본다).
 --   게시된 문항(prompt·option_a/b)·사진(caption·keyword·recall_questions)·day_index는 수정 금지(트리거). 고칠 땐 새 행 + 옛 행 retired_at.
---   사진 image_url은 저장 위치라 변경 허용(scripts/photos/upload-photos.mjs). 행 삭제는 막지 않는다(답이 달린 문항은 FK가 막음).
+--   사진 image_url은 저장 위치라 변경 허용(scripts/photos/upload-photos.mjs). 행 삭제도 막는다(아래 content_delete_guard).
 -- 이행: 기존 어르신은 이전 공식의 오늘 값으로 커서를 채우고 날짜=오늘 → 반영 순간 '오늘'이 바뀌지 않는다.
 
 alter table public.content_photos drop constraint content_photos_day_index_check,
@@ -60,6 +60,23 @@ create trigger content_questions_immutable before update on public.content_quest
   for each row execute function public.content_immutable_guard();
 create trigger content_photos_immutable before update on public.content_photos
   for each row execute function public.content_immutable_guard();
+
+-- 삭제도 금지(리뷰 M2: 지우고 같은 day_index로 다시 넣어 뜻을 바꾸는 우회 차단). 고칠 땐 retired_at만.
+-- 예외: 트랜잭션 한정 설정 bumo.allow_content_delete = 'on'(pgTAP 픽스처·운영자가 명시적으로 켤 때만).
+--       앱(authenticated)은 원래 콘텐츠 쓰기 권한·정책이 없다. 파기 배치(0023)는 콘텐츠를 지우지 않아 예외가 필요 없다.
+create function public.content_delete_guard() returns trigger
+language plpgsql set search_path = ''
+as $$
+begin
+  if coalesce(current_setting('bumo.allow_content_delete', true), '') <> 'on' then
+    raise exception 'content_immutable: published content cannot be deleted, set retired_at instead';
+  end if;
+  return old;
+end $$;
+create trigger content_questions_no_delete before delete on public.content_questions
+  for each row execute function public.content_delete_guard();
+create trigger content_photos_no_delete before delete on public.content_photos
+  for each row execute function public.content_delete_guard();
 
 -- ---- 커서 ----
 -- p_after 다음 활성 콘텐츠(없으면 처음으로). 콘텐츠가 없으면 null.

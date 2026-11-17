@@ -2,7 +2,8 @@
 -- 보호하는 것: child_summary.latest.starter는 어르신이 고른 쪽 문장만 준다(고르지 않은 쪽은 없음),
 --             다른 가족 자녀에게는 보이지 않는다, 문장이 아직 없으면 null이다.
 begin;
-select plan(3);
+select plan(4);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -38,6 +39,9 @@ select is((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'starter', 
 select is((public.child_summary()) -> 'parents' -> 1 -> 'latest' -> 'starter', 'null'::jsonb, '문장이 없으면 starter는 null');
 select pg_temp.act_as('7b100000-0000-0000-0000-0000000000c2', false);
 select is(position('이야기 들려주세요' in (public.child_summary())::text), 0, '다른 가족 자녀에게는 starter가 보이지 않는다');
+
+reset role;
+select throws_ok($$ update public.content_questions set starter_a = repeat('가', 61) where day_index = 2 $$, '23514', null, '첫마디 문장은 60자를 넘을 수 없다');
 
 select * from finish();
 rollback;

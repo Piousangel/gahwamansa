@@ -3,6 +3,7 @@
 --             동의 전·철회 후에는 자녀 요약이 비어 있다, 철회하면 저장된 답이 지워진다, 호칭은 닫힌 목록만
 begin;
 select plan(22);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values

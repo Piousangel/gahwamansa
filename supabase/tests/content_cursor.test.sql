@@ -4,7 +4,8 @@
 --             새 콘텐츠는 끝에 붙어 차례가 오면 나온다, 은퇴한 콘텐츠는 건너뛴다, day_index 30 상한 없음,
 --             게시된 문항·사진 문구는 고칠 수 없다(과거 답의 뜻 보존). 가족·남의 커서는 서로 영향 없음.
 begin;
-select plan(28);
+select plan(32);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -111,6 +112,13 @@ select throws_like($$ update public.content_questions set option_a = 'x' where d
 select throws_like($$ update public.content_photos set caption = 'x' where day_index = 2 $$, '%content_immutable%', '게시된 사진 설명·낱말은 고칠 수 없다');
 select lives_ok($$ update public.content_photos set image_url = 'https://cdn/2.jpg' where day_index = 2 $$, '사진 주소(저장 위치)는 바꿀 수 있다');
 select throws_like($$ update public.content_questions set retired_at = null where day_index = 1 $$, '%content_immutable%', '은퇴를 되돌릴 수 없다');
+
+-- ---- 삭제+재삽입 우회 차단(리뷰 M2) ----
+select set_config('bumo.allow_content_delete', 'off', true);
+select throws_like($$ delete from public.content_photos where day_index = 3 $$, '%content_immutable%', '게시된 사진은 지울 수 없다(지우고 다시 넣어 뜻 바꾸기 차단)');
+select throws_like($$ delete from public.content_questions where day_index = 3 $$, '%content_immutable%', '게시된 문항은 지울 수 없다(답이 파기돼 FK가 풀려도)');
+select is((select caption from public.content_photos where day_index = 3), 'c3', '삭제 시도 뒤에도 사진 설명은 그대로다');
+select is(public.purge_expired_data(now() + interval '400 days') ->> 'answers', '0', '파기 배치는 콘텐츠를 지우지 않고 그대로 돈다');
 
 select * from finish();
 rollback;

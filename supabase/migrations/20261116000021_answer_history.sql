@@ -5,14 +5,18 @@
 -- 연결 끊김 = 어르신 프로필은 있으나 user_id가 비어 있음(기기 삭제·재설치 뒤 재연결 전). 카드는 유지하고 앱이 응원 버튼을 감춘다.
 -- 30일 창: session_date >= kst_today() - 29 (오늘 포함 30일). 저장된 답 자체는 0023 파기 배치가 지운다.
 
--- "A와 B 중": 앞 낱말 끝 글자에 받침이 있으면 '과', 없거나 한글이 아니면 '와'
+-- "A와 B 중": 앞 낱말 끝 글자에 받침이 있으면 '과', 없으면 '와'.
+-- 한글 음절은 코드값(44032~55203)으로 판정(정렬 규칙 비의존). 숫자는 읽는 소리로: 0영·1일·3삼·6육·7칠·8팔은 받침 있음
+-- (10·20처럼 0으로 끝나면 십·백으로 읽혀도 받침 있음). 영문 등 그 밖은 '와'(콘텐츠 선택지는 한글이 원칙).
 create function public.choice_pair_prompt(p_a text, p_b text) returns text
 language sql immutable set search_path = ''
 as $$
   select p_a || case
-    when right(p_a, 1) between '가' and '힣' and (ascii(right(p_a, 1)) - 44032) % 28 <> 0 then '과 '
+    when ascii(right(p_a, 1)) between 44032 and 55203 and (ascii(right(p_a, 1)) - 44032) % 28 <> 0 then '과 '
+    when right(p_a, 1) in ('0', '1', '3', '6', '7', '8') then '과 '
     else '와 ' end || p_b || ' 중'
 $$;
+revoke execute on function public.choice_pair_prompt(text, text) from public, anon;
 
 create or replace function public.child_summary() returns jsonb
 language plpgsql stable security definer set search_path = ''

@@ -3,6 +3,7 @@
 --             입력 검증, 오늘의 콘텐츠 순환(행 수 기준)
 begin;
 select plan(15);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만, 마지막에 rollback)
 
 insert into auth.users (id, aud, role, is_anonymous) values

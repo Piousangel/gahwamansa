@@ -3,6 +3,7 @@
 --             같은 질문에 다시 답해도(콘텐츠 순환) 오류 없이 갱신, 동의 없는 저장 거부, 입력 검증
 begin;
 select plan(15);
+select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions; -- 시드와 무관하게 동작(이 트랜잭션 안에서만)
 
 insert into auth.users (id, aud, role, is_anonymous) values
