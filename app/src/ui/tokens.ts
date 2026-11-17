@@ -11,7 +11,7 @@ const v3 = {
   disabledBg: '#ECE8E3', disabledInk: '#6B5C4A', tape: '#EADBC4',
   done: '#166534', doneInk: '#14532D', doneSoft: '#CDEBDD',
   danger: '#B91C1C', dangerInk: '#991B1B', dangerSoft: '#FEE2E2',
-  sky: '#CFE6F7', sun: '#FFC93C', sunRay: '#F59E0B', blush: '#FF9E7A',
+  sky: '#CFE6F7', sun: '#FFC93C', sunRay: '#F59E0B', blush: '#FF9E7A', brandSealDeep: '#C44F2E',
   accentSun: '#FFE29A', accentPeach: '#FFD6C2', // 첫 화면 소개 아이콘 원(장식)
 } as const;
 
