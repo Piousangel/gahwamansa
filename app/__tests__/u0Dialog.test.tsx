@@ -71,7 +71,7 @@ describe('Dialog(어르신 대화상자)', () => {
     render(
       <Dialog
         visible
-        irreversible
+        warningLabel="조심하세요"
         title="내 기록을 지울까요?"
         body="지우면 되돌릴 수 없어요"
         actions={[
@@ -99,7 +99,7 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(gap).toBeGreaterThanOrEqual(12);
   });
 
-  test('경고 칩은 되돌릴 수 없는 행동일 때만(irreversible): 로그아웃 같은 확인엔 없음', () => {
+  test('경고 칩은 되돌릴 수 없는 행동일 때만(warningLabel): 로그아웃 같은 확인엔 없음', () => {
     render(
       <Dialog
         visible

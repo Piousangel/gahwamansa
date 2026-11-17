@@ -11,7 +11,7 @@ const base = {
 
 describe('BottomSheet(자녀 아래 시트)', () => {
   test('닫혀 있으면 그리지 않는다', () => {
-    render(<BottomSheet visible={false} {...base} onClose={() => {}} />);
+    render(<BottomSheet closeLabel="닫기" visible={false} {...base} onClose={() => {}} />);
     expect(screen.queryByText(base.title)).toBeNull();
   });
 
@@ -19,7 +19,7 @@ describe('BottomSheet(자녀 아래 시트)', () => {
     const onClose = jest.fn();
     const later = jest.fn();
     render(
-      <BottomSheet visible {...base} onClose={onClose} primary={{label: '사전 신청하기', onPress: () => {}}} secondary={{label: '다음에 볼게요', onPress: later}} />,
+      <BottomSheet closeLabel="닫기" visible {...base} onClose={onClose} primary={{label: '사전 신청하기', onPress: () => {}}} secondary={{label: '다음에 볼게요', onPress: later}} />,
     );
     fireEvent.press(screen.getByRole('button', {name: '닫기'}));
     fireEvent.press(screen.getByTestId('sheet-scrim', {includeHiddenElements: true}));
@@ -30,7 +30,7 @@ describe('BottomSheet(자녀 아래 시트)', () => {
   });
 
   test('닫기·버튼 터치 56 이상, 제목·버튼 글자 배율 1.5', () => {
-    render(<BottomSheet visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}}} />);
+    render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}}} />);
     for (const b of screen.getAllByRole('button')) {
       const s = StyleSheet.flatten(b.props.style);
       expect(s.minHeight).toBeGreaterThanOrEqual(56);
@@ -43,7 +43,7 @@ describe('BottomSheet(자녀 아래 시트)', () => {
 
   test('글자 최소 20(자녀도 같은 기준, impl-drift #5): 제목 24, 본문·버튼·이유 20', () => {
     render(
-      <BottomSheet visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}, disabled: true, disabledReason: '이메일을 먼저 써 주세요'}} />,
+      <BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}, disabled: true, disabledReason: '이메일을 먼저 써 주세요'}} />,
     );
     expect(StyleSheet.flatten(screen.getByText(base.title).props.style).fontSize).toBe(24);
     expect(StyleSheet.flatten(screen.getByText(base.body).props.style).fontSize).toBe(20);
@@ -53,7 +53,7 @@ describe('BottomSheet(자녀 아래 시트)', () => {
 
   test('모달이라 뒤 화면을 읽지 않고, 열리면 포커스가 제목으로', () => {
     const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
-    render(<BottomSheet visible {...base} onClose={() => {}} />);
+    render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} />);
     expect(screen.getByTestId('sheet-panel').props.accessibilityViewIsModal).toBe(true);
     act(() => screen.UNSAFE_getByType(Modal).props.onShow?.());
     expect(spy).toHaveBeenCalledWith(expect.anything(), 'focus');
@@ -64,9 +64,9 @@ describe('BottomSheet(자녀 아래 시트)', () => {
     jest.useFakeTimers();
     const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
     const opener = {current: {tag: 'opener'}};
-    render(<BottomSheet visible {...base} onClose={() => {}} returnFocusRef={opener} />);
+    render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} returnFocusRef={opener} />);
     spy.mockClear();
-    screen.rerender(<BottomSheet visible={false} {...base} onClose={() => {}} returnFocusRef={opener} />);
+    screen.rerender(<BottomSheet closeLabel="닫기" visible={false} {...base} onClose={() => {}} returnFocusRef={opener} />);
     act(() => jest.advanceTimersByTime(300));
     expect(spy).toHaveBeenCalledWith(opener.current, 'focus');
     spy.mockRestore();
@@ -74,14 +74,14 @@ describe('BottomSheet(자녀 아래 시트)', () => {
   });
 
   test('R8: 비활성 버튼은 이유를 힌트로 읽는다', () => {
-    render(<BottomSheet visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}, disabled: true, disabledReason: '이메일을 먼저 써 주세요'}} />);
+    render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} primary={{label: '사전 신청하기', onPress: () => {}, disabled: true, disabledReason: '이메일을 먼저 써 주세요'}} />);
     const b = screen.getByRole('button', {name: '사전 신청하기'});
     expect(b.props.accessibilityState).toEqual(expect.objectContaining({disabled: true}));
     expect(b.props.accessibilityHint).toBe('이메일을 먼저 써 주세요');
   });
 
   test('R5: 핸들은 장식이라 읽지 않는다', () => {
-    render(<BottomSheet visible {...base} onClose={() => {}} />);
+    render(<BottomSheet closeLabel="닫기" visible {...base} onClose={() => {}} />);
     expect(screen.getByTestId('sheet-handle', {includeHiddenElements: true}).props.importantForAccessibility).toBe('no');
   });
 });

@@ -25,6 +25,8 @@ type Props = {
   secondary?: SheetAction;
   /** X·밖 누르기·안드로이드 뒤로 */
   onClose: () => void;
+  /** X 버튼 읽는 이름(예: "닫기"). ui/ 는 문구를 모르므로 호출부가 copy 에서 넘긴다 */
+  closeLabel: string;
   /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼) */
   returnFocusRef?: RefObject<unknown>;
   testID?: string;
@@ -36,7 +38,7 @@ type Props = {
  * Android 는 Modal 이 별도 창이라 바깥 화면을 읽지 않는다(iOS 는 accessibilityViewIsModal).
  * 모션: 불투명도만 300ms(위치 이동 없음, 동작 줄이기면 바로).
  */
-export function BottomSheet({visible, title, body, children, primary, secondary, onClose, returnFocusRef, testID}: Props) {
+export function BottomSheet({visible, title, body, children, primary, secondary, onClose, closeLabel, returnFocusRef, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   useReturnFocus(visible, returnFocusRef);
   const insets = useSafeAreaInsets();
@@ -70,7 +72,7 @@ export function BottomSheet({visible, title, body, children, primary, secondary,
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="닫기"
+              accessibilityLabel={closeLabel}
               onPress={onClose}
               style={({pressed}) => [styles.close, pressed ? styles.pressedSoft : null]}>
               <Icon name="icon-close" size={28} color={color.inkTitle} />
@@ -124,7 +126,7 @@ function SheetButton({action, kind}: {action: SheetAction; kind: 'primary' | 'se
 
 const styles = StyleSheet.create({
   root: {flex: 1, justifyContent: 'flex-end'},
-  scrim: {...StyleSheet.absoluteFill, backgroundColor: 'rgba(78,47,20,0.58)'},
+  scrim: {...StyleSheet.absoluteFill, backgroundColor: color.scrim},
   panel: {
     backgroundColor: color.card, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet,
     paddingHorizontal: 20, paddingTop: 10, gap: 12, maxHeight: '90%', boxShadow: shadow.lifted,

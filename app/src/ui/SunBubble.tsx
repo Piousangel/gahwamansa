@@ -20,8 +20,8 @@ type Props = {
   moment: HanimMoment;
   /** 기본: 첫 만남·완료 88, 오류 56. 오류는 걱정 표정이 56 이상에만 있어 40을 줘도 56으로 그린다. */
   size?: SunSize;
-  /** 주면 말풍선 오른쪽 아래에 "읽어 주세요" 글자 버튼(아이콘+글자, 높이 64)을 붙인다. 화면 읽기가 켜져 있으면 숨김(TalkBack R16, 소리 겹침). */
-  onReadAloud?: () => void;
+  /** 주면 말풍선 오른쪽 아래에 글자 버튼(아이콘+글자 예: "읽어 주세요", 높이 64)을 붙인다. 글자는 호출부가 copy 에서. 화면 읽기가 켜져 있으면 숨김(TalkBack R16, 소리 겹침). */
+  readAloud?: {label: string; onPress: () => void};
   testID?: string;
 };
 
@@ -45,7 +45,7 @@ export function hanimTextIssues(text: string): Array<'heart' | 'praise' | 'tooLo
   return out;
 }
 
-export function SunBubble({text, moment, size, onReadAloud, testID}: Props) {
+export function SunBubble({text, moment, size, readAloud, testID}: Props) {
   const s = drawSize(moment, size ?? (moment === 'error' ? 56 : 88));
   const art = hanimArt(moment, s);
   const screenReader = useScreenReader();
@@ -73,17 +73,17 @@ export function SunBubble({text, moment, size, onReadAloud, testID}: Props) {
             {text}
           </Text20>
         </View>
-        {onReadAloud && !screenReader ? (
+        {readAloud && !screenReader ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="읽어 주세요"
-            onPress={onReadAloud}
+            accessibilityLabel={readAloud.label}
+            onPress={readAloud.onPress}
             style={({pressed}) => [styles.read, pressed ? styles.readPressed : null]}>
             <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Icon name="icon-speaker" size={28} color={color.action} />
             </View>
             <Text20 size={22} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.readText}>
-              읽어 주세요
+              {readAloud.label}
             </Text20>
           </Pressable>
         ) : null}

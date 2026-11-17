@@ -24,6 +24,7 @@ export const color = {
   disabled: v3.disabledBg,
   handwrite: v3.ink,
   placeholder: '#FFF59D', // 개발용 라벨 박스(출시 전 에셋으로 교체)
+  scrim: 'rgba(78,47,20,0.58)', // tokens-v3 scrim: 대화상자·시트 뒤 어두운 배경
 } as const;
 
 // 외부 브랜드 색(카카오·구글 로그인 버튼 가이드). 우리 토큰이 아니라 각 회사 가이드 값을 그대로 쓴다.
