@@ -136,3 +136,9 @@
 - 맥락: Gemini 웹 앱 생성 이미지에는 우하단에 눈에 보이는 별 모양 마크가 붙음(직접 확인). 사용자가 워터마크 없는 결과를 원함. 사용자는 API 결제를 다른 세션에서 이미 완료했다고 알림
 - 선택: Gemini API로 스크립트 생성(scripts/photos/gen-photo.mjs, prompts.json 14장). 키는 사용자가 편집기로 .env.local에 직접 입력(채팅·터미널 금지, .gitignore 처리됨). 눈에 보이지 않는 SynthID는 공식 문서상 모든 생성물에 포함되며 제거하지 않음, 눈에 보이는 마크의 API 부착 여부는 문서에 없어 첫 생성 결과로 확인(미확인). 출처 표시를 지우는 가공(잘라내기 포함)은 하지 않고, 앱 안에 "AI가 만든 그림" 표기를 넣는다
 - 한계(미확인): 모델 ID(gemini-nano-banana-2.1)·요청 형식(Interactions API, Api-Revision 2026-05-20)은 문서 요약 기준, 장당 가격·무료 한도·상업 이용 약관은 문서에서 확인 못 함(사용자 확인 필요)
+
+## 2026-11-17 서버 0012~0014 기록(검토 지적 반영)
+- 0012 child_privacy: 자녀는 answers·daily_sessions 직접 읽기 불가, child_summary()(계획서의 child_today_summary 이름 대신)·withdraw_consent()·set_parent_title()(계획서의 set_display_name 대신, 호칭은 가족 단위 parent_title), give_consent(p_version)
+- 0013 content_photos_bucket: 공개 읽기 JPEG 버킷, 쓰기는 서비스 키만
+- 0014 privacy_review_fixes(독립 보안 검토 반영): 응원은 받는 어르신만 직접 읽기(자녀가 read_at으로 참여 여부를 알 수 있던 구멍), 프로필은 가족 확인용 컬럼만 직접 읽기, consent_withdrawn_at 삭제, 동의 버전 형식 검증, 저장·철회 행 잠금. pgTAP 148/148, 앱 통합 16/16
+- 검토 처리 전체: docs/team/reviews/2026-11-17-RESPONSE.md
