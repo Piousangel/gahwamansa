@@ -1,10 +1,10 @@
-import React, {useRef} from 'react';
+import React, {useRef, type RefObject} from 'react';
 import {Animated, Modal, ScrollView, StyleSheet, View} from 'react-native';
 import {color, font, radius} from './tokens';
 import {Text20} from './Text20';
 import {BigButton} from './BigButton';
 import {Icon} from './assets/icons';
-import {focusOn} from './a11y';
+import {focusOn, useReturnFocus} from './a11y';
 import {useFadeIn} from './useFadeIn';
 
 export type DialogAction = {
@@ -13,6 +13,9 @@ export type DialogAction = {
   /** 맨 위(첫 번째)가 안전한 주 버튼. 기본: 첫 번째 primary, 나머지 secondary. */
   kind?: 'primary' | 'secondary' | 'danger';
   loading?: boolean;
+  /** TalkBack R8: 비활성이면 이유를 버튼 위 글자 + 힌트로 */
+  disabled?: boolean;
+  disabledReason?: string;
 };
 
 type Props = {
@@ -25,16 +28,19 @@ type Props = {
   tone?: 'normal' | 'danger';
   /** 안드로이드 뒤로. 없으면 맨 위(안전한) 선택지를 누른 것과 같다. */
   onBack?: () => void;
+  /** TalkBack R12: 닫히면 포커스를 돌려줄 요소(이 대화상자를 연 버튼) */
+  returnFocusRef?: RefObject<unknown>;
   testID?: string;
 };
 
 /**
  * 어르신 대화상자(README §12): 지금 하던 일을 멈추고 꼭 답할 때만, 하루 한 번 이하. 단순 안내는 Banner, 오류는 오류 패널.
  * 접근성: alertdialog + accessibilityViewIsModal(iOS), Android 는 Modal 이 별도 창이라 TalkBack 포커스가 안에 갇힌다.
- * 열리면 포커스가 제목으로. 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
+ * 열리면 포커스가 제목으로, 닫히면 연 버튼으로(TalkBack R12). 열기 모션은 불투명도만 300ms(동작 줄이기면 바로).
  */
-export function Dialog({visible, title, body, actions, tone = 'normal', onBack, testID}: Props) {
-  const titleRef = useRef<View>(null);
+export function Dialog({visible, title, body, actions, tone = 'normal', onBack, returnFocusRef, testID}: Props) {
+  const titleRef = useRef<React.ComponentRef<typeof View>>(null);
+  useReturnFocus(visible, returnFocusRef);
   const {opacity, start} = useFadeIn();
   const danger = tone === 'danger';
 
@@ -80,6 +86,8 @@ export function Dialog({visible, title, body, actions, tone = 'normal', onBack, 
                 label={a.label}
                 onPress={a.onPress}
                 loading={a.loading}
+                disabled={a.disabled}
+                disabledReason={a.disabledReason}
                 variant={a.kind ?? (i === 0 ? 'primary' : 'secondary')}
               />
             ))}

@@ -99,6 +99,33 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(gap).toBeGreaterThanOrEqual(12);
   });
 
+  test('R12: 닫히면 연 버튼으로 포커스가 돌아간다', () => {
+    jest.useFakeTimers();
+    const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+    const opener = {current: {tag: 'opener'}};
+    render(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} returnFocusRef={opener} />);
+    spy.mockClear();
+    screen.rerender(<Dialog visible={false} title="오늘은 여기까지 할까요?" actions={actions()} returnFocusRef={opener} />);
+    act(() => jest.advanceTimersByTime(300));
+    expect(spy).toHaveBeenCalledWith(opener.current, 'focus');
+    spy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  test('R8: 비활성 선택지는 이유를 힌트로, 이유 줄은 중복으로 읽지 않는다', () => {
+    render(
+      <Dialog
+        visible
+        title="오늘은 여기까지 할까요?"
+        actions={[{label: '보내기', onPress: () => {}, disabled: true, disabledReason: '인터넷이 돌아오면 누를 수 있어요'}]}
+      />,
+    );
+    const b = screen.getByRole('button', {name: '보내기'});
+    expect(b.props.accessibilityHint).toBe('인터넷이 돌아오면 누를 수 있어요');
+    const reason = screen.getByText('인터넷이 돌아오면 누를 수 있어요', {includeHiddenElements: true});
+    expect(reason.props.importantForAccessibility).toBe('no');
+  });
+
   test('열고 닫을 때 위치 이동 없이 불투명도만 쓴다', () => {
     render(<Dialog visible title="오늘은 여기까지 할까요?" actions={actions()} />);
     const fade = StyleSheet.flatten(screen.getByTestId('dialog-scrim').props.style);

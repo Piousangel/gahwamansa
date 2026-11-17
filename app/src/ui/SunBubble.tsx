@@ -5,6 +5,7 @@ import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {Sun, SunArt} from './assets/sun';
 import {SunStamp} from './assets/album';
+import {useScreenReader} from './a11y';
 
 /**
  * 해님이 말할 수 있는 때(DECISIONS 11-17 Gemini 회의 권고): 첫 만남·완료·오류뿐.
@@ -19,7 +20,7 @@ type Props = {
   moment: HanimMoment;
   /** 기본: 첫 만남·완료 88, 오류 56. 오류는 걱정 표정이 56 이상에만 있어 40을 줘도 56으로 그린다. */
   size?: SunSize;
-  /** 주면 말풍선 오른쪽 아래에 64x64 "소리로 읽어 주기" 버튼을 붙인다. */
+  /** 주면 말풍선 오른쪽 아래에 64x64 "소리로 읽어 주기" 버튼을 붙인다. 화면 읽기가 켜져 있으면 숨김(TalkBack R16, 소리 겹침). */
   onReadAloud?: () => void;
   testID?: string;
 };
@@ -47,6 +48,7 @@ export function hanimTextIssues(text: string): Array<'heart' | 'praise' | 'tooLo
 export function SunBubble({text, moment, size, onReadAloud, testID}: Props) {
   const s = drawSize(moment, size ?? (moment === 'error' ? 56 : 88));
   const art = hanimArt(moment, s);
+  const screenReader = useScreenReader();
 
   useEffect(() => {
     const issues = hanimTextIssues(text);
@@ -71,7 +73,7 @@ export function SunBubble({text, moment, size, onReadAloud, testID}: Props) {
             {text}
           </Text20>
         </View>
-        {onReadAloud ? (
+        {onReadAloud && !screenReader ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="소리로 읽어 주기"

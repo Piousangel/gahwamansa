@@ -1,6 +1,6 @@
 import React from 'react';
-import {StyleSheet} from 'react-native';
-import {fireEvent, render, screen} from '@testing-library/react-native';
+import {AccessibilityInfo, StyleSheet} from 'react-native';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {SunBubble, hanimTextIssues, hanimArt} from '../src/ui/SunBubble';
 import {FONT_SCALE_MAX_BODY} from '../src/ui/tokens';
 
@@ -49,6 +49,13 @@ describe('SunBubble(해님 말풍선)', () => {
     expect(s.minHeight).toBeGreaterThanOrEqual(64);
     fireEvent.press(btn);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  test('R16: 화면 읽기가 켜져 있으면 읽어 주기 버튼을 숨긴다(소리 겹침)', async () => {
+    const sr = jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValueOnce(true);
+    render(<SunBubble moment="firstMeet" text="오늘의 사진을 천천히 보세요" onReadAloud={() => {}} />);
+    await waitFor(() => expect(screen.queryByRole('button', {name: '소리로 읽어 주기'})).toBeNull());
+    expect(sr).toHaveBeenCalled();
   });
 
   test('읽어 주기가 없으면 말풍선은 누를 수 없다(버튼 0개)', () => {

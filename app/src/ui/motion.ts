@@ -10,7 +10,7 @@ export function useReduceMotion(): boolean {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
     let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled()
+    Promise.resolve(AccessibilityInfo.isReduceMotionEnabled())
       .then(v => alive && setReduce(!!v))
       .catch(() => {});
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', v => setReduce(!!v));
