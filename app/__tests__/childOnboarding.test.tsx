@@ -18,6 +18,7 @@ async function typeDigits(code: string) {
 async function loginAsChild(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
+  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
@@ -37,6 +38,7 @@ test('이메일 형식이 틀리면 보내지 않는다', async () => {
   const send = jest.spyOn(api, 'sendEmailCode');
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
+  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'not-an-email');
   await press('인증번호 받기');
   expect(send).not.toHaveBeenCalled();
@@ -47,6 +49,7 @@ test('틀린 인증번호는 안내한다', async () => {
   const api = createFakeApi();
   render(<AppRoot api={api} />);
   await press(/자녀 휴대폰이에요/);
+  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
   await press('인증번호 받기');
   fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000');

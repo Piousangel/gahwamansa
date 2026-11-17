@@ -80,11 +80,12 @@ test('하단 고정 영역 아래 여백은 16 + inset 이상', async () => {
   const insets = SafeArea.useSafeAreaInsets as jest.Mock;
   const orig = insets.getMockImplementation();
   insets.mockImplementation(() => ({top: 24, bottom: 48, left: 0, right: 0}));
-  render(<AppRoot api={createFakeApi()} />);
+  const {unmount} = render(<AppRoot api={createFakeApi()} />);
   const dock = screen.getByTestId('screen-dock');
   const {StyleSheet} = require('react-native');
   const pad = StyleSheet.flatten((dock.children[0] as unknown as {props: {contentContainerStyle: unknown}}).props.contentContainerStyle);
   expect(pad.paddingBottom).toBeGreaterThanOrEqual(16 + 48);
+  unmount(); // 마운트된 채로 훅 구현을 바꾸면 훅 순서가 달라진다 → 먼저 내린 뒤 되돌림
   insets.mockImplementation(orig);
 });
 

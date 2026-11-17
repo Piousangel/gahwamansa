@@ -168,3 +168,24 @@
 - 확정: 크기·mode·실행당 1회·스크린리더 조건은 모두 정상(로그). 같은 시점에 시작한 소개 줄 애니메이션은 보였고 묶음만 투명 → 차이는 "마운트 시점". 묶음은 영역 측정 커밋에서 처음 마운트되고, 그 커밋의 useEffect 에서 네이티브 드라이버 애니메이션을 바로 시작했다. 새 아키텍처에서 이 시점엔 네이티브 뷰가 아직 붙지 않아 애니메이션 값이 뷰에 적용되지 않고 JS 초기값(opacity 0)이 남았다(소개 줄은 그보다 앞서 마운트돼 있어 정상). 단, 네이티브 내부 동작은 기기에서 직접 계측하지 못한 추론이며, 수정 후 실기기 캡처로 최종 확인 필요.
 - 수정: 묶음 자신의 onLayout(네이티브 뷰가 붙고 배치된 뒤)을 받은 다음에 모션 시작. 중간에 멈추면(finished=false) 끝 상태로 맞춤. 2.5초 안전장치는 남기되 정상 경로에서는 시작 플래그가 먼저 서서 발동하지 않음(테스트로 확인).
 - 테스트: 영역 측정 커밋에서는 묶음 모션 미시작 → 묶음 onLayout 뒤 시작, 정상 경로에서 안전장치 미발동, onLayout 이 안 오면 2.5초 뒤 끝 상태.
+
+## 훅 순서 경고 원인·회귀 방지 (2026-11-17)
+- 원인: 앱 코드가 아니라 테스트. firstScreenIntro 의 하단 여백 테스트가 RoleSelect 를 마운트한 채로 useSafeAreaInsets 모의 구현(useContext 를 쓰지 않는 함수)을 원래 구현(useContext 사용)으로 되돌려, 같은 컴포넌트의 다음 렌더에서 훅 개수가 달라졌다. RoleSelect 의 훅은 모두 무조건·같은 순서(early return 앞)로 호출됨을 확인.
+- 수정: 모의 구현을 바꾼 테스트는 먼저 unmount 한 뒤 되돌림(firstScreenIntro, deviceFeedback). jest.setup 에서 "order of Hooks"/"Rendered more|fewer hooks" console.error 를 throw 로 바꿔 회귀 시 테스트 실패.
+
+## 자녀 소셜 로그인(카카오·구글) 구현 (2026-11-17)
+- 패키지: @react-native-kakao/core·user 3.2.0(peer RN >=0.76, 새 아키텍처 TurboModule), @react-native-google-signin/google-signin 17.0.0(공개판). expo 는 optional peer. js-sha256 은 최신판(1.0.1)이 오늘 배포돼 공급망 위험으로 쓰지 않고 SHA-256 을 직접 구현(src/lib/sha256.ts, 알려진 값 테스트).
+- 흐름: 카카오 login({nonce: sha256(원문)}) → idToken → signInWithIdToken({provider:'kakao', token, nonce: 원문}). 구글 signIn → idToken → signInWithIdToken({provider:'google', token}) (공개판은 nonce 미지원, Skip nonce checks 켜지 않음). 취소(카카오 Cancelled·AccessDenied, 구글 cancelled 응답·SIGN_IN_CANCELLED)는 조용히, 네트워크는 OfflineError, ID 토큰 없음은 no_id_token 오류.
+- nonce 난수: crypto.getRandomValues 있으면 사용, 없으면 Math.random 대체(Hermes 기본 제공 여부 미확인 — 실기기에서 확인 필요).
+- 공개 값: src/lib/socialConfig.ts(카카오 네이티브 키, 구글 웹 클라이언트 ID). 비밀값 없음. 안드로이드: android/build.gradle allprojects 에 카카오 maven, AndroidManifest 에 AuthCodeHandlerActivity(scheme=@string/kakao_scheme, strings.xml 에 kakao{키}, 테스트로 일치 검사). debug 빌드 성공.
+- 화면: 자녀 로그인 첫 단계 = [카카오로 시작하기](노랑 #FEE500/#191919, 시안 C0) → [구글로 시작하기](흰 면·#747775 테두리) → "이메일로 받기"(보조 링크, 기존 인증번호). 이전: 이메일 → 로그인 방법 → 역할 선택. 어르신 연결 폰은 ChildGate 에서 막혀 소셜 화면에 들어가지 않음.
+- 계정 지우기: 카카오로 로그인한 자녀면 카카오 unlink + SDK 로그아웃 + Supabase 로그아웃(구글은 SDK 로그아웃). 별도 "로그아웃" 화면은 아직 없음(자녀 설정 C7 미구현).
+- 남은 것: 카카오·구글 공식 로고 에셋(버튼에 글자만), 문구 choose_title·google·email_link 라이터 확정, Play App Signing 키 해시를 카카오 콘솔·구글 Android 클라이언트에 등록(출시 시), 실기기 로그인 확인.
+
+## nonce 난수: Math.random 대체 제거 (2026-11-17, 리드 지시)
+- react-native-get-random-values 2.0.0(2025-10-22 배포, 정확 고정, TurboModule codegen, peer RN>=0.81)을 index.js 맨 첫 import 로 폴리필. 소셜 패키지 3개도 정확 버전 고정(캐럿 제거).
+- makeNonce 는 crypto.getRandomValues 만 사용(32바이트 hex). 없으면 NoSecureRandomError → 카카오 로그인은 SDK 를 부르지 않고 ServerError(no_secure_random) → 화면 "로그인이 안 됐어요". Math.random 경로 삭제(테스트로 호출 0회 확인). debug 빌드 성공.
+
+## 첫 화면 두 버튼 D2-C (2026-11-17)
+- RoleChoiceButton(첫 화면 전용, 토큰 예외는 이 컴포넌트에만): 부모님 accentSun·자녀 sky 면, 갈색(ink) 테두리 3 + 아래 7, 반경 24, 최소 88, 패딩 12/12/12/16, 제목 26 굵게 inkTitle(26 상한), 둘째 줄 20 ink, 오른쪽 icon-chevron-right 26. 눌림: 면 actionSoft, 아래 두께 3, translateY 4. 손 떼면 바로 이동. 질문 28 ink + 아래 10, 버튼 사이 14. TwoLineButton 삭제. 150/200% 규칙(상한 해제·소개 숨김·전체 스크롤) 유지.
+- 차이: 시안의 › 선 굵기 3.4 → 디자인 시스템 아이콘(2.5) 사용. 굵게 하려면 아이콘 원본 변형 필요(디자이너 확인).

@@ -1,5 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {OfflineError, ServerError} from './types';
+import type {SocialAuth} from './socialAuth';
+import {makeNonce, sha256Hex} from '../lib/sha256';
 import type {
   Api, ChildState, ChildSummary, CreateFamilyResult, RecordStepResult, RedeemResult, StepName, TodayContent,
 } from './types';
@@ -25,7 +27,9 @@ function fail(what: string, error: SbError): never {
 }
 
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
-export function createRealApi(sb: SupabaseClient): RealApi {
+// social: 네이티브 소셜 로그인 모듈(테스트에서 바꿔 끼움). 기본값은 필요할 때 불러온다(통합 테스트(node)는 네이티브 모듈 없이 돈다).
+export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi {
+  const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
   // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
   // 못 읽었으면(오프라인) 새 익명 사용자를 만들지 않는다.
   const ensureSession = async () => {
@@ -50,12 +54,52 @@ export function createRealApi(sb: SupabaseClient): RealApi {
       const {data, error} = await sb.rpc('delete_my_account');
       if (error) fail('delete_my_account', error);
       // 서버는 앱 데이터만 지운다. 인증 계정은 남으므로 이 기기의 세션을 끊는다(실패해도 데이터는 이미 지워짐).
+      // 소셜로 로그인한 자녀면 SDK 세션도 정리하고, 카카오는 연결 끊기(unlink)까지(카카오 정책상 탈퇴 시 권장).
+      try {
+        const {data: s} = await sb.auth.getSession();
+        const provider = s.session?.user.app_metadata?.provider;
+        if (provider === 'kakao' || provider === 'google') {
+          const auth = socialAuth();
+          if (provider === 'kakao') {
+            await auth.unlinkKakao();
+          }
+          await auth.signOut(provider);
+        }
+      } catch {
+        // 무시(데이터는 이미 지워짐)
+      }
       try {
         await sb.auth.signOut();
       } catch {
         // 무시
       }
       return {scope: data.scope};
+    },
+    async signInWithSocial(provider) {
+      if (provider === 'kakao') {
+        // nonce: 카카오에는 원문의 SHA-256 hex, Supabase 에는 원문(서버가 sha256(원문) 과 토큰 nonce 를 비교)
+        let raw: string;
+        try {
+          raw = makeNonce();
+        } catch {
+          throw new ServerError('kakao_login', 'no_secure_random', 'SOCIAL'); // 화면: "로그인이 안 됐어요"
+        }
+        const r = await socialAuth().kakao(sha256Hex(raw));
+        if (r === 'cancelled') {
+          return 'cancelled';
+        }
+        const {error} = await sb.auth.signInWithIdToken({provider: 'kakao', token: r.idToken, nonce: raw});
+        if (error) fail('kakao_id_token', error);
+        return 'ok';
+      }
+      // 구글 공개판은 nonce 미지원: 토큰·요청 둘 다 nonce 없음(서버 검사 통과, Skip nonce checks 불필요)
+      const r = await socialAuth().google();
+      if (r === 'cancelled') {
+        return 'cancelled';
+      }
+      const {error} = await sb.auth.signInWithIdToken({provider: 'google', token: r.idToken});
+      if (error) fail('google_id_token', error);
+      return 'ok';
     },
     async sendEmailCode(email) {
       const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true}});

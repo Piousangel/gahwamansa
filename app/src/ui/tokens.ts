@@ -26,6 +26,12 @@ export const color = {
   placeholder: '#FFF59D', // 개발용 라벨 박스(출시 전 에셋으로 교체)
 } as const;
 
+// 외부 브랜드 색(카카오·구글 로그인 버튼 가이드). 우리 토큰이 아니라 각 회사 가이드 값을 그대로 쓴다.
+export const brand = {
+  kakaoYellow: '#FEE500', kakaoLabel: '#191919', // 카카오 로그인 버튼(시안 C0)
+  googleSurface: '#FFFFFF', googleBorder: '#747775', googleLabel: '#1F1F1F', // 구글 로그인 버튼(라이트)
+} as const;
+
 /** 시스템 글꼴 유지. undefined 면 RN 기본(Android Roboto/Noto CJK, iOS SF/Apple SD Gothic Neo). */
 export const font = {title: undefined, body: undefined, hand: undefined} as const;
 

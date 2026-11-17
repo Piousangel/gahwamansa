@@ -39,6 +39,7 @@ export type FakeOptions = {
   childFamily?: boolean; // 자녀가 이미 가족을 만들었는가(번호 123456 발급된 상태)
   childLinked?: boolean; // 어르신이 이미 연결됐는가
   weekDone?: number[]; // 이번 주(월=0) 이미 마친 요일(오늘 완료는 따로 더함)
+  socialResult?: 'ok' | 'cancelled' | 'offline' | 'fail'; // signInWithSocial 결과(기본 ok)
   failChildHome?: number; // fetchChildHome 이 처음 N번 실패
 };
 
@@ -58,6 +59,19 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
   let childLinked = opts.childLinked ?? false;
   let emailVerified = opts.who === 'child';
   return {
+    async signInWithSocial() {
+      const r = opts.socialResult ?? 'ok';
+      if (r === 'offline') {
+        throw new OfflineError('offline');
+      }
+      if (r === 'fail') {
+        throw new ServerError('social', 'social_failed', 'SOCIAL');
+      }
+      if (r === 'ok') {
+        emailVerified = true; // 로그인한 자녀
+      }
+      return r;
+    },
     async sendEmailCode(email) {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
         throw new ServerError('send_email_code', 'invalid_email', 'validation_failed');

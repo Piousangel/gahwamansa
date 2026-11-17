@@ -6,7 +6,7 @@ import {color} from '../../ui/tokens';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {Icon, IconName} from '../../ui/assets/icons';
 import {copy} from '../../copy/copy';
-import {TwoLineButton} from './TwoLineButton';
+import {RoleChoiceButton} from './RoleChoiceButton';
 import {stackLayout} from './polaroidLayout';
 import {PolaroidStack} from './PolaroidStack';
 import {MotionMode, useMotionMode} from './useReduceMotion';
@@ -104,9 +104,12 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 
   const ask = (
     <>
-      <Text20 size={28} weight="bold" accessibilityRole="header">{f.question}</Text20>
-      <TwoLineButton title={f.parent} sub={f.parent_sub} onPress={() => onChoose('parent')} />
-      <TwoLineButton variant="secondary" title={f.child} sub={f.child_sub} onPress={() => onChoose('child')} />
+      <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.question}>{f.question}</Text20>
+      {/* D2-C: 두 버튼 동등한 양자택일(부모님 노랑·자녀 하늘), 사이 14 */}
+      <View style={styles.choices}>
+        <RoleChoiceButton tone="parent" title={f.parent} sub={f.parent_sub} onPress={() => onChoose('parent')} />
+        <RoleChoiceButton tone="child" title={f.child} sub={f.child_sub} onPress={() => onChoose('child')} />
+      </View>
     </>
   );
   const brand = (
@@ -170,6 +173,8 @@ export function RoleSelect({onChoose}: {onChoose: (role: 'parent' | 'child') => 
 
 const styles = StyleSheet.create({
   head: {gap: 10},
+  question: {color: color.ink, marginBottom: 10},
+  choices: {gap: 14},
   brand: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4},
   wordmark: {color: color.inkTitle},
   intro: {gap: 6},

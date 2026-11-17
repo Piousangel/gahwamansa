@@ -10,6 +10,7 @@ import {color, radius} from '../../ui/tokens';
 import {copy, offlineMessage} from '../../copy/copy';
 import {hasReason, isOffline} from '../types';
 import {OtpField} from './OtpField';
+import {SocialButton} from './SocialButton';
 import {TextLink} from '../link/TextLink';
 
 const t = copy.login;
@@ -24,7 +25,7 @@ export function ChildLogin() {
   const {api, resetRole} = useSession();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [stage, setStage] = useState<'email' | 'code'>('email');
+  const [stage, setStage] = useState<'choose' | 'email' | 'code'>('choose');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [canResend, setCanResend] = useState(false);
@@ -111,10 +112,58 @@ export function ChildLogin() {
   }, []);
   const noteView = note ? <Text20 accessibilityLiveRegion="polite">{note}</Text20> : null;
 
-  if (stage === 'email') {
+  // 소셜 로그인(카카오·구글): 네이티브 SDK → Supabase. 취소는 조용히, 인터넷 문제·그 밖의 실패는 문구로.
+  const social = async (provider: 'kakao' | 'google') => {
+    if (busy) {
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      const r = await api.signInWithSocial(provider);
+      if (r === 'ok') {
+        navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
+      }
+    } catch (e) {
+      setNote(isOffline(e) ? offlineMessage.title : t.failed.title);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const toChoose = useCallback(() => {
+    setStage('choose');
+    setNote(null);
+  }, []);
+
+  if (stage === 'choose') {
+    // 시안 C0 "카카오로 시작해요": 카카오(주) → 구글 → 이메일로 받기(보조 링크). 이전은 역할 선택
     return (
       <Screen
         top={<BackBar onBack={resetRole} />}
+        bottom={
+          <>
+            <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
+            <SocialButton kind="google" label={t.google} disabled={busy} onPress={() => social('google')} />
+            <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
+          </>
+        }>
+        <Text20 size={28} weight="bold">{t.choose_title}</Text20>
+        <Text20>{t.hint}</Text20>
+        {busy ? <Text20 accessibilityLiveRegion="polite">{t.signing_in}</Text20> : null}
+        {note ? (
+          <>
+            <Text20 size={24} weight="bold" accessibilityLiveRegion="polite">{note}</Text20>
+            {note === t.failed.title ? <Text20>{t.failed.body}</Text20> : null}
+          </>
+        ) : null}
+      </Screen>
+    );
+  }
+
+  if (stage === 'email') {
+    return (
+      <Screen
+        top={<BackBar onBack={toChoose} />}
         bottom={<BigButton label={t.send} disabled={busy} onPress={() => send(false)} />}>
         <Text20 size={28} weight="bold">{t.title}</Text20>
         <Text20>{t.hint}</Text20>

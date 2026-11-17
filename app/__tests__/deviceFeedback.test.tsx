@@ -30,6 +30,7 @@ function captureBack() {
 async function toEmail() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/자녀 휴대폰이에요/);
+  await press('이메일로 받기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
 }
 
@@ -41,13 +42,17 @@ async function toOtp() {
 }
 
 test('하단 고정 영역은 안드로이드 내비게이션 바(하단 inset) 위에 놓인다', async () => {
-  (SafeArea.useSafeAreaInsets as jest.Mock).mockReturnValue({top: 24, bottom: 48, left: 0, right: 0});
+  const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+  const orig = insets.getMockImplementation();
+  insets.mockImplementation(() => ({top: 24, bottom: 48, left: 0, right: 0}));
   await toOtp();
   const dock = screen.getByTestId('screen-dock');
   const pad = StyleSheet.flatten(
     (dock.children[0] as unknown as {props: {contentContainerStyle: unknown}}).props.contentContainerStyle as never,
   );
   expect((pad as {paddingBottom: number}).paddingBottom).toBeGreaterThanOrEqual(48);
+  screen.unmount();
+  insets.mockImplementation(orig);
 });
 
 test('인증번호 화면: 자동 확인이라 확인 버튼 없이 다시 받기·다른 이메일이 하단 고정 영역에', async () => {
@@ -90,16 +95,18 @@ test('이전 바: 64 이상, 라벨 "이전 화면으로", 첫 화면에는 없�
   render(<AppRoot api={createFakeApi()} />);
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
   expect(screen.queryByLabelText('이전 화면으로 가기')).toBeNull();
-  await press(/자녀 휴대폰이에요/);
+  await press(/자녀 휴대폰이에요/); // 자녀 로그인 첫 화면(소셜 버튼)
   const back = await waitFor(() => screen.getByLabelText('이전 화면으로 가기'));
   expect(StyleSheet.flatten(back.props.style).minHeight).toBeGreaterThanOrEqual(64);
   await act(async () => fireEvent.press(back));
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
-test('하드웨어 뒤로가기도 이전 바와 같다(자녀 이메일 -> 역할 선택)', async () => {
+test('하드웨어 뒤로가기도 이전 바와 같다(자녀 이메일 -> 로그인 방법 -> 역할 선택)', async () => {
   const back = captureBack();
   await toEmail();
+  await back();
+  await waitFor(() => screen.getByRole('button', {name: '카카오로 시작하기'}));
   await back();
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });

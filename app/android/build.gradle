@@ -18,4 +18,11 @@ buildscript {
     }
 }
 
+// 카카오 SDK 저장소(@react-native-kakao, https://rnkakao.mjstudio.net/docs/install-android)
+allprojects {
+    repositories {
+        maven { url "https://devrepo.kakao.com/nexus/content/groups/public/" }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

@@ -60,6 +60,8 @@ export interface Api {
   deleteScopePreview(): Promise<{scope: DeleteScope}>;
   deleteMyAccount(): Promise<{scope: DeleteScope}>;
   // 자녀 로그인: 메일 인증번호(Supabase OTP 6자리)
+  // 자녀 소셜 로그인(네이티브 SDK ID 토큰 → Supabase signInWithIdToken). 사용자가 닫으면 'cancelled'(조용히)
+  signInWithSocial(provider: 'kakao' | 'google'): Promise<'ok' | 'cancelled'>;
   sendEmailCode(email: string): Promise<void>; // 실패: ServerError reason 'rate_limited' | 'invalid_email' | 기타
   verifyEmailCode(email: string, code: string): Promise<void>; // 실패: reason 'otp_expired'(틀림·만료)
   getChildState(): Promise<ChildState>;
