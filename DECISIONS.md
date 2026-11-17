@@ -355,3 +355,4 @@
 - 공용 파일: tokens.ts는 L4 소유, copy.ko.json은 원본만·새 키는 자기 네임스페이스·기존 키 변경은 라이터만, Stack·AppRoot는 라우트 한 줄만(리드 병합). 합치기 하루 2회(서버→타입→공용→화면→문구→문서)
 - 마이그레이션 잠정: 0032 푸시 토큰, 0033 일일 발송·큐, 0034 이벤트, 0035 보안 후속, 0036 관리자 삭제·감사(병합 시 확정)
 - 팀 확정 D-01~D-20(§5.1): P15 빌드 1 포함, P14 별도 화면 없음, C5 추천은 '곧 유료' 배지만, Crashlytics·AD_ID 제거, consent_events 계정 삭제 시 함께 삭제, 가정값 유지, 일일 푸시 09시, E2E는 Maestro, 효과음 1종·촉각 도장 1회, 포커스 규칙(새로 들어오면 제목·돌아오면 떠날 때 누른 요소), Clipboard RN 코어 유지, R8 끔, 사진 JPEG 150KB 이하, 카카오 unlink 빌드 1, content_payload 빌드 2, db-push ref 구조 유지, season_cue 재생성 빌드 2, 30일 콘텐츠 G-CLOSED 전 필수, 아키텍처 12의 1·3·4단계 W2 전, 오디오 패키지 3종 승인 버전 설치
+- 11-18 staging 확인(읽기 전용): delete_my_account·discard_anonymous_session 소유자 postgres, auth.users 삭제 권한 true. purge-expired-data 실행 기록은 아직 0건(첫 실행 00:10 KST 이후 재확인 필요)
