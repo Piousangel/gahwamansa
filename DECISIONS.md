@@ -358,3 +358,4 @@
 - 11-18 staging 확인(읽기 전용): delete_my_account·discard_anonymous_session 소유자 postgres, auth.users 삭제 권한 true. purge-expired-data 실행 기록은 아직 0건(첫 실행 00:10 KST 이후 재확인 필요)
 - 11-18 CAPTCHA: 출시(빌드 1) OFF, 익명 로그인 한도로 시작. W3 보안 패스에서 남용 신호 보고 재판단(켜면 익명 로그인 앱 작업 필요)
 - 11-18 동결 P3 v4 정정 승인: '오늘 코스 다시 보기' 64+아이콘, 날짜 굵기 700. 번호 화면 안심 줄은 어떤 단계에서도 숨기지 않음(스크롤은 360×640만 허용)
+- 11-18 작업 위치 규칙: 메인 체크아웃(~/Desktop/bumo-jasik)은 항상 main, 브랜치 전환 금지. 레인 작업은 별도 worktree, stash 금지(라이터 브랜치에 리드 병합이 섞인 사고 — main을 빨리감기로 복구, 손실 없음)
