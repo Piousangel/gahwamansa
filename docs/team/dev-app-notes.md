@@ -223,3 +223,9 @@
 - 앱: 호칭 화면은 살아 있는 번호가 있으면 다시 쓴다(호칭은 set_parent_title 로 갱신 — 서버 경로 있음). 대기 화면은 번호가 살아 있으면 "번호 다시 보기", 없을 때만 "새 번호 받기"; 지난 번호가 있었으면(ChildState.hadExpired) "보낸 번호의 기간이 끝났어요", 새로 받은 번호 화면에 "전에 보낸 번호는 이제 쓸 수 없어요".
 - 문구 4개(connect_wait.new_code·get_code("번호 받기", 받은 적 없는 가족)·expired, code.old_invalid)는 임시, 라이터 확인 필요.
 - pgTAP rpc_code_revoke: plan 11→12 수정(단언이 12개였음, 테스트 쪽 실수).
+### 브랜드 심볼 D안 반영(11-17)
+- 런처: design-system/assets/brand/android/res 의 적응형 PNG 레이어(전경·배경·단색) + 레거시 5밀도를 그대로 복사(테스트가 원본과 바이트 비교). 벡터 ic_launcher_foreground.xml·splash_symbol.xml·symbol-sun-polaroid.svg 삭제.
+- 스플래시: windowSplashScreenAnimatedIcon=@drawable/splash_icon(3D 상세판 PNG 5밀도). 바탕은 종이색 고정 유지(브랜드 시트의 다크 #2A211B 는 쓰지 않음 — 기존 결정).
+- 앱 안: brandSymbol.tsx = symbol-flat.svg(BRAND_SYMBOL_XML, 원본과 같은지 테스트). JS 대기 128 → 워드마크 옆 40 이동 그대로.
+- 스테이징 변형(android/staging)은 복사·연결하지 않음(09 환경 분리 때 flavor 에 연결).
+- 확인 필요: 네이티브 스플래시(3D)에서 JS 대기 화면(평면판)으로 넘어갈 때 그림이 바뀌어 보이는지(실기기). 두 판의 크기·위치 정합도 미확인.

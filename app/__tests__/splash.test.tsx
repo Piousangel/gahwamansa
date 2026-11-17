@@ -23,20 +23,52 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test('안드로이드: core-splashscreen 1.2.0 고정, 스플래시 테마(종이색·벡터 심볼), 적응형 런처 아이콘', () => {
+test('안드로이드: core-splashscreen 1.2.0 고정, 스플래시 테마(종이색 + 브랜드 D안 splash_icon PNG)', () => {
   expect(fs.readFileSync(android('build.gradle'), 'utf8')).toContain('androidx.core:core-splashscreen:1.2.0');
   expect(fs.readFileSync(android('src/main/AndroidManifest.xml'), 'utf8')).toContain('android:theme="@style/Theme.App.Starting"');
   const styles = fs.readFileSync(android('src/main/res/values/styles.xml'), 'utf8');
   expect(styles).toContain('<item name="windowSplashScreenBackground">@color/paper</item>');
-  expect(styles).toContain('<item name="windowSplashScreenAnimatedIcon">@drawable/splash_symbol</item>');
+  expect(styles).toContain('<item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>');
   expect(styles).toContain('<item name="postSplashScreenTheme">@style/AppTheme</item>');
-  expect(fs.readFileSync(android('src/main/res/drawable/splash_symbol.xml'), 'utf8')).toContain('android:viewportWidth="288"');
-  const icon = fs.readFileSync(android('src/main/res/mipmap-anydpi-v26/ic_launcher.xml'), 'utf8');
-  expect(icon).toContain('@drawable/ic_launcher_foreground');
-  expect(icon).toContain('@color/paper');
   const main = fs.readFileSync(android('src/main/java/com/bumojasik/app/MainActivity.kt'), 'utf8');
   expect(main).toContain('installSplashScreen()');
   expect(main).toContain('SplashState.SAFETY_MS');
+});
+
+// 브랜드 심볼 D안(살구 인장 '家' + 옛날 사진, DECISIONS 2026-11-17). 원본: design-system/assets/brand
+const DPIS = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
+const brand = (p: string) => `${__dirname}/../../design-system/assets/brand/${p}`;
+const same = (a: string, b: string) => {
+  const r: {readFileSync(f: string): {equals(o: unknown): boolean}} = require('fs');
+  return r.readFileSync(a).equals(r.readFileSync(b));
+};
+
+test('런처 아이콘: 적응형 전경·배경·단색 PNG 레이어 + 레거시 5밀도, 모두 브랜드 원본과 같은 파일', () => {
+  for (const n of ['ic_launcher', 'ic_launcher_round']) {
+    const xml = fs.readFileSync(android(`src/main/res/mipmap-anydpi-v26/${n}.xml`), 'utf8');
+    expect(xml).toContain('@mipmap/ic_launcher_background');
+    expect(xml).toContain('@mipmap/ic_launcher_foreground');
+    expect(xml).toContain('@mipmap/ic_launcher_monochrome');
+  }
+  for (const d of DPIS) {
+    for (const n of ['ic_launcher', 'ic_launcher_round', 'ic_launcher_foreground', 'ic_launcher_background', 'ic_launcher_monochrome']) {
+      expect(same(android(`src/main/res/mipmap-${d}/${n}.png`), brand(`android/res/mipmap-${d}/${n}.png`))).toBe(true);
+    }
+    expect(same(android(`src/main/res/drawable-${d}/splash_icon.png`), brand(`android/res/drawable-${d}/splash_icon.png`))).toBe(true);
+  }
+});
+
+test('예전 해+폴라로이드 리소스는 없고, 스테이징 변형은 아직 연결하지 않는다(09 환경 분리 때)', () => {
+  for (const f of ['src/main/res/drawable/ic_launcher_foreground.xml', 'src/main/res/drawable/splash_symbol.xml', 'src/staging']) {
+    expect(fs.existsSync(android(f))).toBe(false);
+  }
+  expect(fs.existsSync(`${__dirname}/../src/ui/assets/symbol-sun-polaroid.svg`)).toBe(false);
+});
+
+test('앱 안 심볼은 평면판(symbol-flat.svg)과 같은 그림', () => {
+  const {BRAND_SYMBOL_XML} = require('../src/ui/assets/brandSymbol');
+  const flat = fs.readFileSync(brand('symbol-flat.svg'), 'utf8').trim();
+  expect(BRAND_SYMBOL_XML).toBe(flat);
 });
 
 test('JS 첫 화면이 그려지면(루트 onLayout) 네이티브 스플래시를 한 번만 걷는다', async () => {
