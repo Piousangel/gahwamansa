@@ -60,6 +60,7 @@ export type FakeOptions = {
   cheerResult?: SendCheerResult; // sendCheer 결과 고정
   loginMethod?: LoginMethod | null; // 기본 kakao
   failPeek?: boolean; // peekInviteCode 가 오프라인으로 실패
+  familyDates?: string[]; // parentFamilyList 의 연결 날짜(YYYY-MM-DD). 미지정이면 연결돼 있을 때 오늘 1명
   cheers?: string[]; // 어르신에게 온 읽지 않은 응원의 message_key(최신순, 서버 get_my_cheers 와 같게)
   failCheers?: boolean; // getMyCheers 실패
   failMarkRead?: boolean; // markCheersRead 실패
@@ -233,6 +234,13 @@ export function createFakeApi(opts: FakeOptions = {}): Api {
       return reason === 'rate_limited'
         ? {ok: false, reason, retry_after_sec: 600}
         : {ok: false, reason};
+    },
+    async parentFamilyList() {
+      if (!linked) {
+        return {title: null, family: []}; // 연결 전 기기
+      }
+      const dates = opts.familyDates ?? [todayKst()];
+      return {title: parentTitle, family: dates.map((d, i) => ({seq: i + 1, connectedAt: `${d}T00:00:00Z`, connectedDate: d}))};
     },
     async peekInviteCode(code): Promise<PeekResult> {
       if (opts.failPeek) {

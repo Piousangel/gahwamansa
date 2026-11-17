@@ -55,7 +55,7 @@ test('설정에서 동의 철회는 확인 후에만 호출되고 이후 저장�
   await waitFor(() => screen.getByText('가족에게 그만 보여 줄까요?'));
   await press('그만 보여 주기');
   expect(withdraw).toHaveBeenCalledTimes(1);
-  await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요'));
+  await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요')); // 11-8 settings.share.stopped 대체
   await waitFor(() => screen.getByRole('button', {name: '다시 보여 주기'}));
   await press('돌아가기');
   await waitFor(() => screen.getByText('오늘의 코스'));

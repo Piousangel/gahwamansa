@@ -86,6 +86,10 @@ export function ParentSettings() {
             </View>
           ) : null}
         </View>
+        {/* P16 연결된 가족(copy 11-3 settings.family_row): 누구와 연결됐는지 확인·그만두기 */}
+        <View style={styles.section}>
+          <BigButton variant="secondary" label={t.family_row} onPress={() => navigation.navigate('Family')} />
+        </View>
         <View style={styles.section}>
           <BigButton variant="danger" label={t.delete_row} onPress={() => navigation.navigate('DeleteAccount')} />
           <Text20 style={styles.sub}>{t.delete_hint}</Text20>

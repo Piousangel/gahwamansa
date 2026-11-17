@@ -1,6 +1,7 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ConnectScreen} from '../features/link/ConnectScreen';
+import {ParentFamilyScreen} from '../features/family/ParentFamilyScreen';
 import type {Prefill} from '../features/link/useConnectFlow';
 import {ConsentScreen} from '../features/link/ConsentScreen';
 import {CourseHome} from '../features/course/CourseHome';
@@ -16,7 +17,7 @@ export type ParentParams = {
   // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
   Connect: {from?: 'course'; prefill?: Prefill} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: undefined; QuestionStep: undefined; KeyboardStep: undefined; CourseDone: undefined;
-  Settings: undefined; DeleteAccount: undefined; DeleteDone: undefined;
+  Settings: undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 
@@ -31,6 +32,7 @@ export function ParentStack({initialRouteName = 'Connect'}: {initialRouteName?: 
       <Stack.Screen name="KeyboardStep" component={KeyboardStep} />
       <Stack.Screen name="CourseDone" component={CourseDone} />
       <Stack.Screen name="Settings" component={ParentSettings} />
+      <Stack.Screen name="Family" component={ParentFamilyScreen} />
       <Stack.Screen name="DeleteAccount">{() => <DeleteAccountScreen role="parent" />}</Stack.Screen>
       <Stack.Screen name="DeleteDone" component={DeleteDoneScreen} />
     </Stack.Navigator>

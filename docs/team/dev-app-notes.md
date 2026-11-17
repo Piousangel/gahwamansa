@@ -287,3 +287,9 @@
 - H1 6자리 뒤 같은 번호 edit 무시(리듀서·훅), M1 연결 중 이전·다른 번호 쓰기·하드웨어 뒤로 막음, M2 Screen key 로 상태별 재마운트(제목 포커스 R2)·칸 아래 줄은 고정 live region 하나·맞지 않음 때 칸 묶음 포커스, M3 `api/contract/invite.ts` parsePeekResult(계약 밖이면 서버 오류, 호칭 없으면 번호만), M4 키 반경 14·테두리 2, 칸 68·반경 12·아래 선 3, 맞지 않음 경고 아이콘, FS_link 봉투 아이콘(icon-mail).
 - 낮음: prefill 6자리 검사, Gradle SHARE_LINK_BASE 형식 검사, enterCode 확인 버튼 없으면 실패(실패 테스트는 enterCode(code, false)), keyboardStep 은 parent_code_redeemed 만 빼고 전 이벤트 개수·순서 검사, 무의미 단언 제거, TITLE NBSP 이스케이프, locked retryAfterSec 제거.
 - 남김: L5(칸 묶음 accessible 로 칸별 라벨 없어짐 → talkback-spec 표 수정은 디자인·QA 판단), L9 리드 일괄 반영 목록 조정(이 브랜치가 11-5 중 errors.invalid·connect.success·offline.body·ai_notice·login·cheer·name_taken·first.intro[1]·course.step.hangul 을 이미 반영, push[] 폐기만 남음), P1c 실패 시안의 버튼 2개, 키·칸 모양 토큰화(14·12 리드 결정).
+
+### P16 연결된 가족(시안 parent/P16_family, 문구 11-8, 서버 0030)
+- `features/family/ParentFamilyScreen`(설정 → "연결된 가족" 행). 계약 `api/contract/family.ts` parseParentFamily(확정 계약, ASSUMED 없음), realApi `parentFamilyList`.
+- 행: "가족 휴대폰 / {월}월 {일}일에 연결했어요"(자녀 이름 없음), 요약 "가족 {n}명과 연결돼 있어요", 빈 상태 → 번호 쓰기(P1).
+- 그만두기 시트 두 갈래: 그만 보여 주기 = withdraw_consent 바로 실행 + 배너(settings.stopped 11-8 대체문), 모두 지우기 = P9 두 단계 확인으로 이동. 이미 보여 주지 않는 중이면 첫 갈래 숨김. 실패는 시트 안 오류 줄.
+- 판단 필요: 어르신 화면에 BottomSheet(U0 원칙은 어르신=대화상자)를 썼다 — 동결 시안이 갈래별 보조 글 있는 시트라서. 시트 닫기(X) 읽기 이름은 "그만둘래요"(11-8에 닫기 문구 없음).

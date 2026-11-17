@@ -6,6 +6,7 @@ import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult} from '../api/contract/events';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
+import {parseParentFamily} from '../api/contract/family';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -246,6 +247,13 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const {data, error} = await sb.rpc('redeem_invite_code', {p_code: code});
       if (error) fail('redeem_invite_code', error);
       return data as RedeemResult;
+    },
+    async parentFamilyList() {
+      const {data, error} = await sb.rpc('parent_family_list');
+      if (error) fail('parent_family_list', error);
+      const r = parseParentFamily(data);
+      if (!r) throw new ServerError('parent_family_list', 'contract_mismatch');
+      return r;
     },
     async peekInviteCode(code): Promise<PeekResult> {
       await ensureSession();

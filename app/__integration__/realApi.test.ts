@@ -67,10 +67,18 @@ test('P1c: peek_invite_code 는 연결하지 않고 호칭만 준다(0028)', asy
   expect(await parent.whoAmI()).toBe('none'); // 아직 연결 안 됨(어르신 프로필 없음)
 });
 
+test('P16: 연결 전 기기의 parent_family_list 는 빈 목록(0030)', async () => {
+  expect(await parent.parentFamilyList()).toEqual({title: null, family: []});
+});
+
 test('어르신 익명 로그인 -> redeem 성공', async () => {
   const r = await parent.redeemInviteCode(state.code!);
   expect(r).toMatchObject({ok: true, family_id: state.familyId});
   state.parentUid = (await parentClient.auth.getUser()).data.user?.id;
+  // P16: 연결 뒤 가족 1명(자녀 이름 없이 순번·날짜만)
+  const fam = await parent.parentFamilyList();
+  expect(fam.family).toHaveLength(1);
+  expect(fam.family[0]).toEqual({seq: 1, connectedAt: expect.any(String), connectedDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)});
 });
 
 test('같은 기기가 같은 코드를 다시 보내도 ok(응답 유실 대비)', async () => {

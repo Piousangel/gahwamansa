@@ -83,6 +83,7 @@ export const isServerError = (e: unknown, reason: string): boolean =>
 export const hasReason = (e: unknown, reason: string): boolean => e instanceof ServerError && e.reason === reason;
 
 export type {PeekResult} from '../api/contract/invite';
+import type {ParentFamily} from '../api/contract/family';
 import type {PeekResult} from '../api/contract/invite';
 
 export interface Api {
@@ -90,6 +91,8 @@ export interface Api {
   issueInviteCode(targetProfileId?: string | null): Promise<string>;
   redeemInviteCode(code: string): Promise<RedeemResult>;
   peekInviteCode(code: string): Promise<PeekResult>; // 어르신 기기. 연결하지 않는다
+  // P16 연결된 가족(parent_family_list 0030): 어르신 본인만. 자녀 이름 없이 순번·연결 날짜만
+  parentFamilyList(): Promise<ParentFamily>;
   giveConsent(version: string): Promise<void>; // 동의한 문구 버전(CONSENT_VERSION)
   // 앱 데이터 삭제(delete_my_account) 후 로그아웃까지. scope 는 서버가 알려 준다.
   // 삭제 전 범위 조회(delete_scope_preview). 삭제는 하지 않는다.
