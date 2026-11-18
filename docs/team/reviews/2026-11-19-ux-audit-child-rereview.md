@@ -158,7 +158,7 @@
 
 ### 앞 지적 확인
 - **H1(옛 창 높이 판정): 해결.**
-  - 창은 `{h, level}`, 영역은 `{h, level, firstH}`로 기록하고, 판정은 effect 한 곳에서 지금 단계·지금 묶음 높이와 같을 때만 한다(`ConnectScreen.tsx:116, 140-147`).
+  - 창은 `{h, level}`, 영역은 `{h, level, firstH}`로 기록하고, 판정은 effect 한 곳에서 지금 단계·지금 묶음 높이와 같을 때만 한다(`ConnectScreen.tsx:121, 141-163`).
   - onLayout 콜백은 그 커밋을 그린 렌더의 `level`·`firstH`를 들고 있다. 따라서 전환 커밋의 옛 묶음 영역은 판정에서 빠진다.
   - 재현 A가 테스트로 들어갔다(`connectFit.test.tsx` '재현 A').
 - **H2(기본 배치 키패드 높이): 첫 측정은 해결.** 재현 B가 들어갔다. 다만 단계가 올라간 뒤의 비교에 새 틈이 있다(M4).
@@ -175,8 +175,8 @@
 
 #### H3. 3→4단계에서 창 높이가 다시 오지 않아 묶음이 숨은 채 남는다 → 4단계 화면이 빈다
 - 위치:
-  - `ConnectScreen.tsx:116`(`viewH = view.level === level ? view.h : 0`)
-  - `:120`(`measured = !scroll || viewH > 0`)
+  - `ConnectScreen.tsx:121`(`viewH = view.level === level ? view.h : 0`)
+  - `:125`(`measured = !scroll || viewH > 0`)
   - `:255`(`measured ? null : styles.hidden`)
   - `:270-277`(`measured &&` 링크·안내·약관)
 - 3단계와 4단계는 둘 다 하단 고정이 없다. 그래서 스크롤 창(ScrollView) 크기가 같고, onLayout은 크기가 바뀔 때만 오므로 `onViewport`가 다시 불리지 않는다(`dense`는 contentContainer 간격만 바꾼다).
@@ -194,7 +194,7 @@
 ### 중간
 
 #### M4. 단계가 올라가도 키 높이가 같으면 실제 키패드 높이 비교가 빠진다(H2 대응의 틈)
-- 위치: `ConnectScreen.tsx:162`(`pad.level === level && pad.keyH === keyH`)
+- 위치: `ConnectScreen.tsx:160`(`pad.level === level && pad.keyH === keyH`)
 - 키패드 실제 높이는 `keyH`와 폭에만 달려 있고 단계와는 관계없다(`pinned`는 absolute).
 - 그런데 단계가 올라가도 `k`가 같으면(예: 영역이 커져도 68 상한이거나, 늘어난 폭이 4 미만이면) `setKeyH`가 일어나지 않는다. 그러면 키패드 frame이 그대로라 onLayout이 다시 오지 않는다. `pad.level`이 옛 단계로 남아 비교를 건너뛴다.
 - 재현(임시 테스트 C, 411×914):
