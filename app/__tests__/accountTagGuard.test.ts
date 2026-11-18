@@ -12,6 +12,7 @@ const ALLOWED = [
   'features/home/NewConnectionBanner.tsx', 'features/home/PaidSheet.tsx',
   'features/account/DeleteAccountScreen.tsx', 'features/child/ChildSettings.tsx',
   'lib/accountStore.ts', // 주석만
+  'push/pushClient.ts', // AU-04 N1 답·자녀 받기 동의 기억 키(accountStore)
 ].sort();
 
 function walk(dir: string): string[] {

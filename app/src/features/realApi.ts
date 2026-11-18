@@ -9,6 +9,7 @@ import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
 import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
+import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled} from '../api/contract/push';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -92,6 +93,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async deleteMyAccount() {
       const {data, error} = await sb.rpc('delete_my_account');
       if (error) fail('delete_my_account', error);
+      await clearPushToken(); // 서버가 토큰 행을 함께 지웠다(0032). 이 기기 기억만 지운다
       // 서버가 앱 데이터와 함께 본인 인증 계정(소셜 식별 정보 포함)까지 지웠다(0017). 이 기기의 정리만 남는다.
       // 소셜 SDK 세션: 연결된 방법 전체(providers, 자동 합쳐진 경우 포함)를 정리하고, 카카오는 연결 끊기(unlink, 기기 토큰 기준).
       // 기기 토큰이 없으면 unlink 는 조용히 실패한다 → 서버(Admin 키) unlink 는 설계만(TODO). 실패해도 다음 정리는 계속.
@@ -423,6 +425,28 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       const n = parseMarkCheersRead(data);
       if (n === null) throw new ServerError('mark_cheers_read', 'contract_mismatch');
       return n;
+    },
+    // 0032·0036·0037 푸시(계약 api/contract/push.ts)
+    async registerPushToken(token) {
+      const {data, error} = await sb.rpc('register_push_token', {p_token: token, p_platform: 'android'});
+      if (error) fail('register_push_token', error);
+      const r = parseRegisterPushToken(data);
+      if (!r) throw new ServerError('register_push_token', 'contract_mismatch');
+      return r;
+    },
+    async setPushEnabled(enabled) {
+      const {data, error} = await sb.rpc('set_push_enabled', {p_enabled: enabled});
+      if (error) fail('set_push_enabled', error);
+      const r = parseSetPushEnabled(data);
+      if (!r) throw new ServerError('set_push_enabled', 'contract_mismatch');
+      return r;
+    },
+    async myPushSettings() {
+      const {data, error} = await sb.rpc('my_push_settings');
+      if (error) fail('my_push_settings', error);
+      const r = parseMyPushSettings(data);
+      if (!r) throw new ServerError('my_push_settings', 'contract_mismatch');
+      return r;
     },
   };
 }
