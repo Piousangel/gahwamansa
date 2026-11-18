@@ -30,7 +30,7 @@
 | 1 | 이용약관 | **미반영**(`app_info.terms` 키만) | **미반영**(행 없음) | AU-07 TERMS_URL + AP-06·L3 |
 | 2 | 개인정보처리방침 | **미반영** | 행 있음, URL null이라 **숨김** | US-03·AU-07 |
 | 3 | 오픈소스 라이선스 | **미반영** | 키 있음, `OSS_LICENSES_READY=false`라 숨김 | AU-06 |
-| 4 | AI 안내(사진, 부모님은 음악 포함) | **미반영**(`settings.ai_notice`·`app_info.ai_*` 사용처 0) | 반영(`child.app_info.ai_*`) | AP-06 P13 v2 |
+| 4 | AI 안내(사진, 부모님은 음악 포함) | **부분**(정정 11-18: `ParentSettings.tsx:123` "앱 정보" 행 보조 글로 `settings.ai_notice` 사진 고지 있음 — 처음 grep이 `t.` 별칭을 놓침. 음악 고지 `app_info.ai_music`은 BGM과 함께) | 반영(`child.app_info.ai_*`) | AP-06 P13 v2(음악 줄) |
 | 5 | "병원 앱 아님·안부/안전 확인 아님" | **미반영**(`app_info.not_medical` 사용처 0) | 반영(`child.settings.not_safety`) — 단 "병원 앱 아님" 부분 없음 | AP-06, C7은 라이터 판단(약관 제13조 문구와 맞춤) |
 | 6 | 사업자 정보 | **미반영**(`app_info.business_*` 키만) | **미반영** | US-04 값 → AU-07 상수 한 곳 → 두 화면 |
 | 7 | 문의하기 | **미반영** | 행 있음, CONTACT_EMAIL null이라 숨김 | US-04 |

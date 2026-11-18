@@ -55,6 +55,7 @@
 | G-19 | 모니터링 | M | Crashlytics production 수신(의도적 크래시는 staging만), pg_cron 성공 | 콘솔 캡처 |
 | G-20 | 콘텐츠 | M | production 14일분 + 사진 장당 ≤150KB | 15일차 이전 빈 날 0 |
 | G-21 | 실기기 흐름 | M | 원격 2대 E2E 1회(qa.md S1·S4·S7·S13), 키보드 3종(QA-03), 오디오 8항목(QA-04) | 높음 0 |
+| G-22 | 앱 정보 행 숨김 0 (DECISIONS 11-18) | A+M | A: `app/src/lib/appInfo.ts`의 URL·문의·사업자·OSS 값이 null/false 0(`grep -nE "null\|= false" app/src/lib/appInfo.ts`, AU-07 이후 상수 파일 기준). M: production 빌드 P13·C7 앱 정보 캡처 | 약관·방침·OSS·AI 안내·병원 앱 아님·사업자 정보·문의·버전 8행 모두 보임(in-app-notices §3), 값이 게시본과 글자 일치 |
 
 ## 3. G-CLOSED (비공개 테스트 시작) — G-INT 전 행 유지 + 아래
 
