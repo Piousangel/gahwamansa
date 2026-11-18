@@ -3,6 +3,7 @@ import {StyleSheet, View} from 'react-native';
 import {color, radius} from '../../ui/tokens';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
+import {ReadAloud, ttsText} from './ReadAloud';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -25,6 +26,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const {api, consented, content, applyAnswer} = useSession();
   const {finish, error, setError} = useFinishStep();
   const [saving, setSaving] = useState(false);
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
   const q = content?.question;
   if (!q) {
@@ -105,7 +107,9 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         <Text20 size={32} weight="bold" style={styles.value}>{appCopy.question_title}</Text20>
         <Text20 style={styles.hint}>{appCopy.question_hint}</Text20>
       </View>
-      {q.prompt ? <Text20 size={22} weight="bold" style={styles.value}>{q.prompt}</Text20> : null}
+      {q.prompt ? <Text20 size={22} weight="bold" style={[styles.value, reading ? styles.reading : null]}>{q.prompt}</Text20> : null}
+      {/* AP-03 읽어 주기: 질문 바로 아래 가운데. 질문과 두 선택지를 읽는다 */}
+      {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
       {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9) */}
       <View testID="choice-group" accessibilityRole="radiogroup">
         <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
@@ -138,6 +142,7 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
 }
 
 const styles = StyleSheet.create({
+  reading: {textDecorationLine: 'underline', textDecorationColor: color.sky},
   // 시안 P5_P6_review: 선택 칸 최소 높이 100, 고른 칸 오른쪽 체크, 이름표 doneInk
   card: {minHeight: 100, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.select, borderWidth: 2, borderColor: color.line, backgroundColor: color.card, paddingVertical: 16, paddingHorizontal: 20},
   cardText: {flex: 1, gap: 4},

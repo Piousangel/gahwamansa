@@ -286,10 +286,11 @@ test('화면 읽기(TalkBack)가 켜져 있으면 넘어가기를 처음부터 �
   sr.mockImplementation(() => Promise.resolve(false));
 });
 
-test('읽기 라벨: 제목 줄 한 덩어리, 읽어 주세요 빈 버튼 없음', async () => {
+test('읽기 라벨: 제목 줄 한 덩어리, 읽어 주세요는 글자 있는 버튼 하나(AP-03, 빈 버튼 없음)', async () => {
   await toKeyboardStep();
   expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: '읽어 주세요'})).toBeNull();
+  expect(screen.getAllByRole('button', {name: '읽어 주세요'})).toHaveLength(1);
+  expect(screen.getByText('읽어 주세요')).toBeTruthy();
 });
 
 test('P3 단계 행·첫 화면 소개는 "자판으로 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {

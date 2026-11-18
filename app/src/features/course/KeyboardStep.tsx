@@ -17,6 +17,7 @@ import {StepError} from './StepError';
 import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 import {StepHeader} from './StepHeader';
+import {ReadAloud, ttsText} from './ReadAloud';
 import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
 import type {StepName} from '../types';
 
@@ -213,7 +214,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           </View>
         ) : null}
         <WordCells cells={cells} filled={filled} big={!open} />
-        {/* TODO(읽어주기): 오디오 스파이크 결론 뒤 '읽어 주세요'(글자 버튼, 화면 읽기 켜짐이면 숨김 R16)를 이 자리에 */}
+        {/* AP-03 읽어 주기: 낱말 칸 바로 아래. 낱말과 한 글자씩(화면 읽기 켜짐이면 숨김 R16) */}
+        {phase === 'matched' ? null : <ReadAloud text={ttsText.word(word, cells)} />}
       </View>
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
       <View style={phase === 'matched' ? styles.hidden : styles.inputWrap}>
