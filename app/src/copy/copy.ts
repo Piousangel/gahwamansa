@@ -18,7 +18,7 @@ export const offlineMessage: Message = copy.errors.offline;
 export const appCopy = copy.app;
 
 // 지금 화면에 보이는 동의 문구의 버전. consent 문구가 바뀌면 올린다(서버 형식 ^v[0-9]{1,3}$).
-export const CONSENT_VERSION = 'v4'; // v3: 11-17 노출 고지 줄 추가 / v4: 11-19 첫 줄 '최근 한 달', 노출 줄을 체크 목록 밖으로
+export const CONSENT_VERSION = 'v5'; // v3: 11-17 노출 고지 / v4: 11-19 '최근 한 달'·노출 줄 분리 / v5: 11-21 제17조② 5요소(받는 사람·목적·저장 기간·거부해도 사용)
 
 // 호칭({호칭})을 채운다. 조사는 붙이지 않는 구조라 단순 치환이면 된다.
 export const withTitle = (text: string, title: string) => text.split('{호칭}').join(title);
