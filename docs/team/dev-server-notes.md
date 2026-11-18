@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0036) · 2026-11-17
+# 서버 계약 노트 (0019~0038) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -117,7 +117,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 // sb.rpc('set_push_enabled', { p_enabled: true|false }) → { ok: true; enabled: boolean } | { ok: false; reason: 'no_profile' | 'invalid' }
 // sb.rpc('my_push_settings') → { enabled: boolean | null }   // = 실제로 받는 상태(켬 + 받기 시각), 연결 전 기기는 null
 ```
-- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). `false`면 시각이 지워진다. `null`은 `invalid`.
+- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). `false`면 시각이 지워진다. `null`은 `invalid`. 0037부터 이미 받기 시각이 있으면 `true`를 다시 불러도 **처음 시각을 유지**(끄고 다시 켜면 새 시각) — 그래도 앱은 N1에서 사용자가 눌렀을 때만 부르는 것을 원칙으로 한다.
 - 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다.
 - 시스템 알림 권한과는 별개다(권한 거부면 애초에 토큰이 없음). 토큰 해제(`unregister_push_token`)는 로그아웃용.
 
@@ -137,20 +137,29 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
+- **응원 도착·연결 알림(0038, SV-03)**: cron `push-events` 5분마다 → `push_events_kick()`(창 안이고 처리할 응원·연결 큐가 있을 때만) → Edge Function `push-events` → `push_events_claim()`.
+  - N2 응원 도착 → **받는 어르신만**: 처리 안 된 응원(`cheers.notified_at` null)을 어르신별로 묶어 1개면 그 응원 문장, 여러 개면 "응원이 {n}개 왔어요".
+  - N3 연결·재연결 → **그 가족 자녀**(DECISIONS U11: 자녀 즉시 알림은 연결·응원 관련만, 부모님 답 알림 없음). 제목·본문 `{호칭}` = 그 어르신 호칭(없으면 가족 호칭).
+  - 공통 조건: 알림 켬 + 알림 받기 시각(자녀도 앱이 권한 허용 때 `set_push_enabled(true)`를 불러야 함) + 심사 가족 아님 + 토큰. KST 08:00~20:59에만 처리(밤 것은 아침에), 3일 지난 것은 보내지 않고 처리 표시. 선점 즉시 처리 표시(실패해도 재발송 없음).
+  - 문구: 서버가 대상마다 `{설명}`(일일: 그 어르신 오늘 사진 설명, 없으면 `body_fallback`)·`{응원}`·`{n}`·`{호칭}`을 채워 `title`·`body`·`channel`을 준다. 채널 id: daily → `daily`, 응원 → `cheer`, 연결 → `family`(**AU-04가 세 채널을 같은 id로 만든다**, 채널 이름·설명은 copy `push.channel.*`).
+  - 문구 넣기: `node supabase/ops/load-push-copy.mjs --approved`(copy.ko.json `push.*`·`cheers.*` → `push_copy`·`cheer_texts`, 법률 리뷰 뒤, 환경마다). `--dry-run`으로 미리 보기.
+  - 연결 끊김 알림(`push.disconnected`)은 서버에 발생 지점이 없어 빌드 1 범위 밖(필요하면 별도 결정).
+  - Edge 공용 로직은 `supabase/functions/_shared/push.mts`(테스트 `push.test.mts`), 함수 둘 다 secrets 같음.
+- **공유 로컬 DB 규칙(11-18 리드)**: 54322에는 main에 들어간 마이그레이션만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh` 임시 스택에서만 검증한다.
 - 콘텐츠 표 쓰기(0035): authenticated·anon은 insert·update·delete·truncate 권한 자체가 없다. 콘텐츠는 서비스 역할(시드·스크립트)만.
 - 0036: public **모든 표**에서 authenticated·anon의 TRUNCATE·REFERENCES·TRIGGER 회수 + postgres 기본 권한에서도 제거(새 표에 자동 적용). pgTAP이 전 표를 감시.
 - 사진 버킷 `content-photos`: **AI 콘텐츠 사진 전용, 가족 개인 사진 금지**(공개 버킷). JPEG만·2MB. 가족 사진(빌드 2)은 비공개 버킷·RLS로 따로.
 - **일일 푸시(0033, SV-02)**: cron `push-daily` 00:00 UTC(09:00 KST) → `push_daily_kick()`(pg_net) → Edge Function `supabase/functions/push-daily` → FCM HTTP v1.
   - **0036 선점**: 실제 발송은 `push_daily_claim(p_now)`가 대상을 `push_claims(kind, sent_on, profile_id)`에 먼저 선점하고 그 토큰만 돌려준다 — 동시 실행·재시도·기록 실패에도 같은 날 같은 어르신께 한 번만(실패하면 그날 재시도 안 함). `push_daily_targets`는 선점 없는 미리보기(dry-run·운영 확인용).
   - 대상 조건에 0036 `push_consented_at`(N1 받기 시각) 추가.
-  - **0036 오류 처리**: 토큰 삭제는 FCM `UNREGISTERED` 또는 `message.token` 필드 오류일 때만. 401·403·프로젝트 404·토큰 아닌 INVALID_ARGUMENT는 설정 오류 → 그 자리에서 발송 중단, 선점분 failed, `push_runs.note='config_error'`(OAuth 실패는 `oauth_failed`). 서버도 한 실행의 무효가 5개 이상·절반 초과면 토큰을 지우지 않는다(`invalid_ratio_hold`).
+  - **오류 처리(0036, 재검토 R-M1 반영)**: 토큰 삭제는 FCM `UNREGISTERED`·`SENDER_ID_MISMATCH`(다른 프로젝트 토큰)·`message.token` 필드 오류일 때만. 필드 없는·토큰 아닌 INVALID_ARGUMENT/400과 429·5xx는 그 토큰만 failed. 401·403(SENDER_ID_MISMATCH 아님)·프로젝트 404는 설정 오류이며, **서로 다른 토큰 3개 이상**에서 나야 발송을 멈추고 선점분 failed, `push_runs.note='config_error'`(OAuth 실패는 `oauth_failed`) — 토큰 하나로 그날 알림 전체를 막지 못한다. 서버도 한 실행의 무효가 5개 이상·절반 초과면 토큰을 지우지 않는다(`invalid_ratio_hold`).
   - 대상 `push_daily_targets(p_now)`: 연결·동의한 어르신, 알림 켬, 심사 가족 아님, 오늘 코스 안 마침, 오늘 아직 안 보냄, 토큰 있음. KST 08:00~20:59 밖이면 빈 목록.
   - 문구 `push_copy(kind: daily·cheer_arrived·parent_connected·parent_reconnected, title ≤30, body ≤60)`: 라이터 확정(WR-02)·법률 리뷰 뒤 서비스 역할로 넣는다. **비어 있으면 보내지 않는다**(no_copy 기록).
   - 기록 `push_record`: 토큰별 `push_log`(31일) + 실행 요약 `push_runs`(대상·보냄·실패·무효·제외, 13개월). 무효 토큰(UNREGISTERED·INVALID_ARGUMENT)은 즉시 삭제.
   - 메시지: `notification{title, body}` + `android.notification.channel_id = 'daily'`(**AU-04가 같은 id로 채널 생성**) + `data{kind}`. 개인 id·번호 없음.
   - 환경 설정(사용자, staging·production 각각): Vault `project_url`·`push_cron_secret`, Edge Function secrets `PUSH_CRON_SECRET`(같은 값)·`FCM_SERVICE_ACCOUNT`(서비스 계정 JSON), 배포 `npx supabase functions deploy push-daily`. 없으면 kick은 `not_configured`, 서비스 계정이 없으면 함수는 dry-run(대상 수만, 기록 안 함).
   - 확인: `select * from push_runs order by id desc limit 5;`, `select * from net._http_response order by id desc limit 5;`(kick 응답).
-  - 단위 테스트: `node --test supabase/functions/push-daily/lib.test.mts`(Node 23.6+). 실기기 수신은 staging에서(US-10 이후).
+  - 단위 테스트: `node --test supabase/functions/_shared/push.test.mts`(Node 23.6+). 실기기 수신은 staging에서(US-10 이후).
 
 - `notification_queue`(0028): 연결·재연결 성공 시 `kind='parent_connected'`, `payload {parent_id, reconnect}`(번호 값 없음, 심사 가족 제외). 자녀 푸시 발송은 푸시 발송(SV-03, 0033 기반)가 읽고 `sent_at`을 채운다. 30일 지나면 파기 배치가 지운다. 앱 접근 불가.
 - `daily_sessions.photo_id·question_id·word_id`(0028): 그날 받은 콘텐츠. start_today·record_session_step이 채움, 이전 행은 null.
