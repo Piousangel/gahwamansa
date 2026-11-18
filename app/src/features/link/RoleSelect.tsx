@@ -46,7 +46,9 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
   const {height: winH, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
-  const showIntro = fontScale < 1.5; // 150% 이상이면 소개(제목·항목)도 숨겨 버튼을 지킨다
+  // 감사 M4(11-18): 150% 이상·높이 700 미만이면 사진과 기능 3줄은 숨기되 소개 한 줄('하루 한 장, 우리 집 앨범')은 남긴다(시안 qa_D2_C_150).
+  // 반쯤 잘린 줄이 생기지 않게 기능 줄은 통째로 숨긴다
+  const showItems = fontScale < 1.5 && winH >= 700;
   const replay = useRef(firstScreenPlayed).current;
   // 스플래시 심볼이 날아와 앉을 자리: 도착 전에는 진짜 심볼을 숨기고, 워드마크 줄은 위로 떠오르지 않는다(위치가 어긋나지 않게)
   const fromSplash = useRef(flightPending()).current;
@@ -138,6 +140,7 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
     return (
       <Screen scrollEnabled>
         {brand}
+        <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
         {ask}
       </Screen>
     );
@@ -154,9 +157,9 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
       {/* 워드마크~소개는 한 덩어리(시안 FS_D: 제목 위 10, 줄 간격 6). 남는 높이는 사진 영역으로 */}
       <View style={styles.head}>
       {brand}
-      {showIntro ? (
+      {showItems ? (
         <View accessible accessibilityLabel={[f.intro_title, ...f.intro].join('. ')} style={styles.intro}>
-          <Text20 size={24} weight="bold">{f.intro_title}</Text20>
+          <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
           {f.intro.map((t, i) => (
             <Animated.View key={ICONS[i]} style={[styles.item, {opacity: items[i], transform: [{translateX: rise(items[i], -8)}]}]}>
               <Animated.View
@@ -173,7 +176,9 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
             </Animated.View>
           ))}
         </View>
-      ) : null}
+      ) : (
+        <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
+      )}
       </View>
       <View testID="polaroid-area" style={styles.area} onLayout={onArea}>
         {/* 사진 묶음은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}

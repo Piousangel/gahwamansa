@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {LayoutChangeEvent, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {focusLater} from '../../ui/screenTitle';
 import {CommonActions} from '@react-navigation/native';
@@ -17,6 +17,8 @@ import {formatCode} from '../../ui/codeInputLogic';
 import {BELOW_LINE_H, KEY_MIN, keypadKeyHeight} from './keypadFit';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
+import {LegalText} from '../../ui/LegalText';
+import {legalLinks} from '../../shared/legalLinks';
 import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
 import type {Prefill} from './useConnectFlow';
 import type {ConnectState, FailKind} from './connectMachine';
@@ -38,9 +40,9 @@ function groupA11y(code: string): string {
   return code.length === 0 ? g.empty : code.length >= 6 ? g.full : g.partial.split('{n}').join(String(code.length));
 }
 
-// 하단 약관 한 줄(11-1 #1). TODO(⑥a 방침 호스팅): 이용약관·처리방침 주소가 정해지면 두 낱말을 링크로
+// 약관 한 줄(11-1 #1). 감사 M7: 두 낱말은 링크 모양(주소가 정해지면, ⑥a 방침 호스팅)
 function LegalLine() {
-  return <Text20 testID="legal-line" style={styles.legal}>{copy.legal.agree_parent}</Text20>;
+  return <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} />;
 }
 
 // P1 번호 쓰기 v4 + P1c 연결 확인(시안 P1_connect_v4·P1c_confirm, ease-and-joy A④⑤). 문구는 copy-v3 11절 우선.
@@ -89,13 +91,16 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   };
 
   // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
-  //   1단계 제목 28→22 → 2단계 링크 두 개를 이전 바 줄로 → 3단계 키 64 + 본문 스크롤.
-  //   안심 줄은 어느 단계에서도 숨기지 않는다(UX U4). 그래서 360×640 100%(제스처 내비)도 3단계 스크롤이 된다(dev-app-notes 표, 디자인 확인 중)
+  //   1단계 제목 28→22 → 2단계 하단 고정을 없애고 링크 두 개·약관 줄을 키패드 아래 본문 끝으로 → 3단계 키 64 + 본문 스크롤.
+  //   감사 H3·M5(11-18): 하단 고정 약관 줄이 키패드를 가리고(320·360×640), 링크가 제목 위로 올라가던 옛 2단계(이전 바 줄)를 없앴다.
+  //   높이가 부족한 화면(글자 150% 이상 또는 화면 높이 700 미만)은 처음부터 2단계. 안심 줄은 어느 단계에서도 숨기지 않는다(UX U4)
+  const {height: winH, fontScale} = useWindowDimensions();
+  const compact = fontScale >= 1.5 || winH < 700;
   const [keyH, setKeyH] = useState<number | undefined>(undefined);
-  const [level, setLevel] = useState(0);
+  const [level, setLevel] = useState(compact ? 2 : 0);
   const [help, setHelp] = useState(false);
+  const noDock = level >= 2;
   const overflow = level >= 3;
-  const linksOnTop = level >= 2;
   const onArea = (e: LayoutChangeEvent) => {
     if (overflow) {
       return;
@@ -176,21 +181,14 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       key="entry"
       fill={!overflow}
       scrollEnabled={overflow}
-      top={
-        linksOnTop ? (
-          <View style={styles.topRow}>
-            <BackBar onBack={back} />
-            {links}
-          </View>
-        ) : (
-          <BackBar onBack={back} />
-        )
-      }
+      top={<BackBar onBack={back} />}
       bottom={
-        <>
-          {linksOnTop ? null : links}
-          <LegalLine />
-        </>
+        noDock ? undefined : (
+          <>
+            {links}
+            <LegalLine />
+          </>
+        )
       }>
       <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
         {TITLE}
@@ -204,6 +202,13 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
           <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
         </View>
       </View>
+      {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
+      {noDock ? (
+        <>
+          {links}
+          <LegalLine />
+        </>
+      ) : null}
     </Screen>
   );
 }
@@ -248,7 +253,6 @@ const styles = StyleSheet.create({
   area: {flex: 1, minHeight: 0, overflow: 'hidden'},
   pinned: {position: 'absolute', top: 0, left: 0, right: 0},
   links: {flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 24},
-  topRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'},
   title: {color: color.inkTitle},
   sub: {color: color.inkSub},
   invalid: {color: color.dangerInk},

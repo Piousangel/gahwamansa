@@ -28,7 +28,14 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
       accessibilityLabel={a11y}
       onPress={onPress}
       style={({pressed}) => [styles.key, h ? {minHeight: h} : null, pressed ? styles.keyPressed : null]}>
-      <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.keyText, {fontSize: textSize}]}>
+      {/* 감사 M6: '모두 지 / 움'처럼 낱말 중간에서 끊기지 않게 한 줄 고정, 넘치면 줄여 맞춤(최소 20) */}
+      <Text
+        testID={`key-${label}`}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={Math.min(1, 20 / textSize)}
+        maxFontSizeMultiplier={FONT_SCALE_MAX}
+        style={[styles.keyText, {fontSize: textSize}]}>
         {label}
       </Text>
     </Pressable>
