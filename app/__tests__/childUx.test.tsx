@@ -812,9 +812,9 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     expect(line.props.accessibilityLabel).toBe(text);
     expect(line.props.accessibilityActions.map((x: {label: string}) => x.label)).toEqual(['이용약관', '개인정보 처리방침']); // 순서: 문장 → 이용약관 → 처리방침
     fireEvent(line, 'accessibilityAction', {nativeEvent: {actionName: 'link-0'}});
-    expect(onOpen).toHaveBeenCalledWith('https://t.example', '이용약관');
+    expect(onOpen).toHaveBeenCalledWith('https://t.example', '이용약관', 'terms');
     fireEvent.press(screen.getAllByRole('link')[1]);
-    expect(onOpen).toHaveBeenLastCalledWith('https://p.example', '개인정보 처리방침');
+    expect(onOpen).toHaveBeenLastCalledWith('https://p.example', '개인정보 처리방침', 'privacy');
   });
 
   test('C4 호칭 겹침 시트도 같은 격자(막힌 이름 비활성)', async () => {

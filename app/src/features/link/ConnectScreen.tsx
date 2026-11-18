@@ -8,18 +8,18 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen, SCREEN_FADE_H, type ScreenScroll} from '../../ui/Screen';
-import {color, layout, radius, size, space} from '../../ui/tokens';
+import {color, layout, radius} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CodeEntry} from './CodeEntry';
 import {TextLink} from './TextLink';
 import {BackBar} from '../../app/BackBar';
 import {formatCode} from '../../ui/codeInputLogic';
-import {BELOW_LINE_H, KEY_MIN, keypadKeyHeight} from './keypadFit';
+import {firstBlockGuess, keyFor, pickStage, type Stage} from './p1Stage';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
 import {LegalText} from '../../ui/LegalText';
-import {legalLinks} from '../../shared/legalLinks';
+import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
 import type {Prefill} from './useConnectFlow';
 import type {ConnectState, FailKind} from './connectMachine';
@@ -43,7 +43,8 @@ function groupA11y(code: string): string {
 
 // 약관 한 줄(11-1 #1). 감사 M7: 두 낱말은 링크 모양(주소가 정해지면, ⑥a 방침 호스팅)
 function LegalLine() {
-  return <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} />;
+  const open = useLegalOpen(); // 앱 안 웹 화면(재확인 3 M5)
+  return <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} onOpen={open} />;
 }
 
 // P1 번호 쓰기 v4 + P1c 연결 확인(시안 P1_connect_v4·P1c_confirm, ease-and-joy A④⑤). 문구는 copy-v3 11절 우선.
@@ -103,87 +104,59 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   //   - 창 높이(view)는 잰 단계를 함께 기록 → 하단 고정 구성이 바뀐 직후 옛 창 높이로 판정하지 않는다(3단계 건너뜀 방지)
   //   - 키패드 영역(area)은 잰 단계·그때의 묶음 높이를 함께 기록 → 묶음 높이가 바뀌기 전에 잰 영역은 쓰지 않는다
   //   - 키패드 실제 높이(pad)는 그때의 키 높이를 함께 기록 → 같은 키 높이로 잰 값일 때만 영역과 비교('모두 / 지움' 두 줄 실측 대응)
-  const {height: winH, fontScale} = useWindowDimensions();
-  const compact = fontScale >= 1.5 || winH < 700;
-  const startLevel = compact ? 2 : 0;
-  const [keyH, setKeyH] = useState<number | undefined>(undefined);
-  const [level, setLevel] = useState(startLevel);
+  // 리드 결정(11-19, 재확인 3 H4): 단계는 순수 함수 pickStage 가 창 크기·글자 배율·inset·문구 길이로 한 번에 정한다.
+  // onLayout 은 사후 검증뿐 — 그린 뒤 키패드 실제 높이가 영역보다 크면 한 단계만 올린다(최대 1회). 이벤트가 안 와도 멈출 일이 없다.
+  const {height: winH, width: winW, fontScale} = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const input = {
+    windowH: winH,
+    windowW: winW,
+    fontScale,
+    insets: {top: insets.top, bottom: insets.bottom},
+    text: {
+      title: copy.connect.title,
+      safe: copy.safe.money,
+      below: copy.connect.auto_hint,
+      legal: copy.legal.agree_parent,
+      links: [copy.connect.no_code_link, copy.connect.view_course] as [string, string],
+    },
+  };
+  const picked = pickStage(input);
+  const [bump, setBump] = useState<{for: string} | null>(null); // 사후 검증으로 한 단계 올렸는지(판정 입력이 바뀌면 무효)
+  const inputKey = `${winH}|${winW}|${fontScale}|${insets.top}|${insets.bottom}`;
+  const bumped = bump?.for === inputKey;
+  const level = (bumped ? Math.min(4, picked.level + 1) : picked.level) as Stage['level'];
+  const keyH = level === picked.level ? picked.keyH : keyFor(level, input);
   const [help, setHelp] = useState(false);
   const legalInBody = level >= 2;
   const noDock = level >= 3;
   const overflow = level >= 4;
   const scroll = level >= 2;
-  // 본문 창 높이(Screen onViewport). 재확인 2 H3: 창 크기는 단계가 아니라 하단 고정 구성(0 링크+약관 · 1 링크만 · 2 없음)에만 달려 있으므로
-  // 그 구성으로 표시한다. 3·4단계는 구성이 같아 창이 다시 오지 않는다(onLayout 은 크기가 바뀔 때만)
+  const scrollRef = useRef<ScreenScroll>(null);
+  // 첫 화면 묶음 높이(2·3단계, 그리기용): 잰 본문 창이 있으면 그것, 없으면 같은 식으로 어림. 판정에는 쓰지 않는다
   const dockConfig = noDock ? 2 : legalInBody ? 1 : 0;
   const [view, setView] = useState<{h: number; dock: number} | null>(null);
-  const [area, setArea] = useState<{h: number; level: number; firstH: number} | null>(null);
-  const [pad, setPad] = useState<{h: number; keyH: number | undefined} | null>(null);
-  const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScreenScroll>(null);
-  const viewH = view && view.dock === dockConfig ? view.h : 0; // 다른 하단 고정 구성에서 잰 창 높이는 쓰지 않는다
-  // 첫 화면 묶음 높이: 창 − 위 여백 − 아래 흐림(재리뷰 M1: Screen 의 '더 있음' 흐림 28 이 마지막 키 줄을 덮지 않게).
-  // 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
-  const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : 0;
-  // 재확인 2 L7·H3: 묶음을 숨기지 않는다. 이 구성의 창 높이를 기다리는 동안(판정만 미룸)에는 바로 전 묶음 높이,
-  // 한 번도 재지 못한 첫 프레임은 화면 크기로 어림한 높이로 그린다(재리뷰 L1의 높이 0 묶음·겹친 약관 줄도 생기지 않음).
-  // 4단계는 묶음 높이를 쓰지 않는 보통 배치다
-  const lastFirst = useRef(0);
-  if (firstH > 0) {
-    lastFirst.current = firstH;
-  }
-  const topPad = Math.max(space.topSafeMin, insets.top + space.md);
-  const guessDock = noDock ? insets.bottom : 6 + 64 + Math.max(28, 16 + insets.bottom);
-  const guessFirst = Math.max(0, winH - topPad - size.touchMin - FIRST_PAD - SCREEN_FADE_H - guessDock);
-  const shownFirstH = firstH > 0 ? firstH : lastFirst.current > 0 ? lastFirst.current : guessFirst;
-
-  // 창·글자 크기가 바뀌면 처음부터 다시 잰다(재리뷰 L5, 원 L8: 단계가 올라가기만 하던 것)
-  const dimsKey = `${winH}|${fontScale}`;
-  const lastDims = useRef(dimsKey);
-  useEffect(() => {
-    if (lastDims.current !== dimsKey) {
-      lastDims.current = dimsKey;
-      setLevel(startLevel);
-      setKeyH(undefined);
-      setArea(null);
-      setPad(null);
-    }
-  }, [dimsKey, startLevel]);
-
-  useEffect(() => {
-    if (overflow || !area || area.level !== level) {
-      return;
-    }
-    if (scroll && (viewH === 0 || area.firstH !== firstH)) {
-      return; // 이 단계의 창 높이로 정한 묶음에서 잰 영역이 올 때까지 기다린다
-    }
-    const escalate = () => {
-      if (level < 3) {
-        setLevel(level + 1);
-      } else {
-        setKeyH(KEY_MIN);
-        setLevel(4);
-      }
-    };
-    const k = keypadKeyHeight(area.h - BELOW_LINE_H);
-    if (k === null) {
-      escalate();
-    } else if (k !== keyH) {
-      setKeyH(k); // 이 키 높이로 다시 그린 키패드의 실제 높이를 받은 뒤 비교한다
-    } else if (pad && pad.keyH === keyH && pad.h > area.h + 1) {
-      // 재확인 2 M4: 키패드 실제 높이는 키 높이(와 폭)에만 달려 있다 — 단계가 올라가도 같은 키 높이로 잰 값이면 비교한다
-      escalate();
-    }
-  }, [area, pad, level, keyH, overflow, scroll, viewH, firstH]);
-
+  const viewH = view && view.dock === dockConfig ? view.h : 0;
+  const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : firstBlockGuess(level, input);
   const onViewport = (h: number) => setView(v => (v && v.h === h && v.dock === dockConfig ? v : {h, dock: dockConfig}));
+
+  // 사후 검증: 같은 단계·같은 키 높이로 그린 키패드의 실제 높이가 영역보다 크면('모두 / 지움' 두 줄 등) 한 단계만 올린다
+  const area = useRef<{h: number; level: number} | null>(null);
+  const pad = useRef<{h: number; keyH: number} | null>(null);
+  const verify = () => {
+    const a = area.current;
+    const p = pad.current;
+    if (!bumped && !overflow && a && p && a.level === level && p.keyH === keyH && p.h > a.h + 1) {
+      setBump({for: inputKey});
+    }
+  };
   const onArea = (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    setArea({h, level, firstH: scroll && !overflow ? shownFirstH : 0});
+    area.current = {h: e.nativeEvent.layout.height, level};
+    verify();
   };
   const onKeypad = (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    setPad({h, keyH});
+    pad.current = {h: e.nativeEvent.layout.height, keyH};
+    verify();
   };
 
   const ok = state.kind === 'ok';
@@ -266,7 +239,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: shownFirstH} : null, !scroll ? styles.fillFirst : null, ]}>
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: firstH} : null, !scroll ? styles.fillFirst : null, ]}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
         </Text20>
