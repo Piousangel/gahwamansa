@@ -442,3 +442,18 @@
 - O4(법률 확인 필요, L6 레인에 전달): react-android·hermes-android AAR 안에 정적 링크된 C++ 라이브러리(folly·boost·glog·fmt·double-conversion 등)는 POM 에 없어 목록에 없다. Apache-2.0 NOTICE 요구 확인도 안 함 → questions-for-lawyer 한 줄 필요.
 - O5: jest 최신성 실패 메시지에 `npm ci` 안내.
 - L2: 14.0.1(npm latest)을 시험 — RN 0.88.1 새 아키텍처 `assembleStagingDebug` 는 성공(6분 33초)했지만 **tsc 실패**(14.0.1 의 클래스 컴포넌트 타입이 React 19.3 타입과 맞지 않아 WebView props 가 never). 타입을 단언으로 덮는 것보다 새 아키텍처 전용 17.1.0 을 유지(README: RN 0.80+ 새 아키텍처). 250ms 기본 허용은 두 판 모두 있음(M2 관문으로 막음). **실행 확인(로드·뒤로·글자 배율)은 아직** — Web 라우트로 가는 화면이 없어(P13·C7 연결 전) 열 길이 없음 → 연결 때 QA 실기기(안드로이드 9·12·15) 출시 체크 항목.
+
+### Firebase 연결 계획(US-10 와 함께, 설치는 리드 지시 뒤) · 2026-11-18
+**이미 들어간 준비(설치 없이 지금 빌드·동작 그대로)**
+- `src/push/fcmTokenSource.ts`: `createFcmTokenSource()` — `@react-native-firebase/messaging` 을 try 안에서만 require(없으면 null), Firebase 초기화 실패(그 flavor 에 json 없음)도 null. 모듈러 API(getMessaging·getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage). 토큰 요청 때만 `setAutoInitEnabled(true)`. 알림 data 는 `{kind}` 만 남김. 테스트 `fcmTokenSource.test`(가짜 모듈).
+- `pickTokenSource('real')` 는 `FCM_WIRED`(지금 false)일 때만 FCM — **리뷰 M1: P13·C7 끄기 토글이 main 에 들어온 뒤 true**.
+- Gradle: flavor 폴더 `app/android/app/src/<staging|production>/google-services.json` 이 하나라도 있을 때만 `com.google.gms:google-services:4.5.0` classpath + 플러그인 적용, 파일 없는 flavor 는 `process…GoogleServices` 를 끔. 없으면 지금과 같음. `app/android/app/google-services.json`(flavor 밖)은 빌드 실패(섞임 방지). 루트 .gitignore 에 이미 `google-services.json`.
+- `app/firebase.json`: 데이터 수집 기본 끔·메시징 자동 초기화 끔(권한 허용 뒤 첫 토큰 요청 때 켬 — 알림 거부 기기의 설치 ID 생성 최소화, QA-07)·기본 채널 `daily`·전달 지표 BigQuery 끔·알림 위임 끔·설치 ID 메시징 끔.
+
+**설치 순서(리드 지시 뒤, 사용자 콘솔 작업과 같은 날)**
+1. 사용자(US-10): Firebase 프로젝트 2개(staging·prod)에 Android 앱 등록 — 패키지 `com.bumojasik.app.staging`·`com.bumojasik.app`, `google-services.json` 2개를 저장소 밖으로 전달 → `app/android/app/src/staging/`·`src/production/` 에 복사(커밋 금지). FCM 서비스 계정 키 → 각 Supabase secrets `FCM_SERVICE_ACCOUNT`(서버 노트 §4).
+2. `cd app && npm install --save-exact @react-native-firebase/app@27.1.0 @react-native-firebase/messaging@27.1.0`(2026-10-23 배포. 27.1.1 은 11-10 이라 2주 규칙에 걸림). 권장 Android 값: Firebase BoM 35.0.2, google-services 4.5.0, minSdk 24(우리 24).
+3. 병합 매니페스트 확인: messaging 이 `WAKE_LOCK`·`ACCESS_NETWORK_STATE` 권한, 서비스 2개(exported=false), `c2dm` 수신기(exported=true + `c2dm.permission.SEND` 보호)를 더한다. **`AD_ID`·위치 권한이 없어야**(AU-05, 있으면 `tools:node="remove"`). 데이터 보안 양식(LG-05)에 FCM 토큰·Firebase 설치 ID 반영.
+4. `npm run oss`(라이선스 목록 갱신 — release 빌드가 검사), `npm test`, 두 flavor `assembleDebug`·production release.
+5. M1 토글 main 반영 확인 → `FCM_WIRED = true` → staging 실기기 수신(QA-07: 허용·거절·나중에, 08~21 창, 탭 라우팅, 알림 거부 기기의 설치 ID 생성 여부).
+6. 출시 게이트(그때 추가): production release 는 `src/production/google-services.json` 이 없으면 실패하게(지금은 Firebase 전이라 넣지 않음).

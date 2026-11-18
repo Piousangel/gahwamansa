@@ -2,6 +2,24 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Firebase(US-10 뒤): google-services.json 은 flavor 폴더(app/src/<flavor>/, gitignore)에만 둔다. 하나라도 있으면 플러그인을 적용하고,
+// 파일이 없는 flavor 는 processXxxGoogleServices 를 끈다(그 flavor 는 Firebase 없이 빌드 — 앱은 토큰 없음으로 동작, fcmTokenSource).
+// 둘 다 없으면 아무것도 하지 않는다(지금 상태). 저장소 루트·app/ 바로 아래 google-services.json 은 쓰지 않는다(flavor 섞임 방지).
+def googleServicesFlavors = ["staging", "production"].findAll { file("src/${it}/google-services.json").exists() }
+if (googleServicesFlavors) {
+    apply plugin: "com.google.gms.google-services"
+    if (file("google-services.json").exists()) {
+        throw new GradleException("app/android/app/google-services.json 은 쓰지 않아요. app/src/<flavor>/google-services.json 에만 두세요(staging·production 섞임 방지).")
+    }
+    tasks.configureEach { t ->
+        def m = t.name =~ /^process(Staging|Production)(Debug|Release)GoogleServices$/
+        if (m.matches() && !(m.group(1).toLowerCase() in googleServicesFlavors)) {
+            t.enabled = false
+        }
+    }
+    logger.lifecycle("Firebase: google-services.json 있는 flavor = ${googleServicesFlavors.join(', ')}")
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
