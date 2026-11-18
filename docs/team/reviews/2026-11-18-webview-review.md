@@ -91,3 +91,24 @@
 - O5(낮음) jest `ossLicenses.test` 가 node_modules 상태로 다시 만들어 비교하므로 lock 과 다른 node_modules(오래된 설치)에서는 코드와 무관하게 jest 가 실패한다. 실패 메시지에 `npm ci` 안내를 넣을 것.
 
 **AU-06 판정: 승인(웹뷰 판정과 별개).** O1 은 다음 CI 정비 때, O3 는 G-INT 전에 처리.
+
+## 재확인 (3e46fe3 · 49a9e00) · 2026-11-18
+
+| 항목 | 결과 |
+|---|---|
+| 고정 커밋 49a9e00 worktree(`npm ci`) `tsc --noEmit` | 통과 |
+| `jest --maxWorkers=2`(별도 캐시, 통합 제외) 1회 | 90 묶음 / 906 테스트 통과 |
+| 재현 4건 테스트 | `__tests__/appInfo.test.tsx:90-95` 에 `:x@evil`, `:@evil`, `@evil`, `:8443` 이 모두 `block`, `hostOf` 는 null. 132행 `onShouldStartLoadWithRequest`, 147·156행 `onLoadStart`·`onNavigationStateChange` 두 번째 관문도 테스트. jest 는 실제 polyfill URL 로 돈다(목 아님) |
+| polyfill 경계 실측(jest 안에서 `react-native-url-polyfill` 의 URL) | `:443` → port '' (기본 포트, load 정상), 대문자 → 소문자, 끝 점 `host.` → `host.`(불일치 → block), `https:\\evil.test` → evil.test, `%2F@`·탭`@` → 사용자 정보로 분리, 한글 호스트는 그대로(punycode 변환 없음 → 불일치 → block). 모두 안전한 쪽 |
+
+| 번호 | 판정 | 근거 |
+|---|---|---|
+| M1 | **해결** | `new URL()`(polyfill)로 `https:` + 사용자 정보·포트 없음 + hostname 정확 일치만 load |
+| M2 | **해결(남은 위험 낮음)** | 라이브러리가 250ms 시간 초과로 허용해도 `onLoadStart`·`onNavigationStateChange` 에서 다시 판단해 `stopLoading` + 웹뷰를 내리고 오류 줄. 남는 것: 로드 "시작 후" 차단이라 **첫 요청 자체는 이미 나간다**(다른 호스트가 IP·User-Agent·Referer 를 받음, 쿠키·저장소는 꺼져 있어 신원 정보 없음). 응답 내용은 JS→네이티브 왕복 사이 한순간 그려질 수 있으나 곧 웹뷰가 내려가고 JS·브리지가 없어 앱에 닿지 못한다. 이 경로는 (우리 정적 페이지에 다른 호스트 링크·리다이렉트가 있고) + (판단이 250ms 넘게 늦음)이 겹칠 때만이라 받아들일 만하다. 실기기에서는 확인하지 않았다 |
+| L1 | 해결 | 밖으로는 `mailto:`(엄격한 형식)와 호출부가 준 `externalHosts` 만. `isTopFrame` 조건 제거 |
+| L2 | 받아들임 | 14.0.1 은 tsc 실패라 17.1.0 유지 — 실기기 확인을 출시 체크리스트에 |
+| L4 | 해결 | `-PrequireRealEnv`(출시 경로)와 함께면 `-PallowMissingAppInfo` 무시 |
+| O1 | 해결 | 검사를 production release 만으로, POM 조회 실패는 "낡음"과 다른 메시지, 달라진 패키지 이름 5개까지 표시 |
+| url-polyfill | 문제 없음 | 새 의존성이 아니다 — `react-native-url-polyfill` 은 이미 dependencies(`^4.0.0`, lock 4.0.0, 패키지 64KB, 외부 의존 없음)이고 supabase 경로에서 번들에 들어가 있었다. 번들 크기 변화 거의 없음. 범위 지정(`^`)은 다른 의존성처럼 정확 고정으로 바꾸길 권장(낮음) |
+
+**재확인 판정: 합치기 승인.** M1·M2·L1·L4·O1 해결, 남은 것은 차단 전 첫 요청이 나가는 점(낮음)과 url-polyfill 버전 범위(낮음).
