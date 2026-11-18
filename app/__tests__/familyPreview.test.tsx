@@ -1,6 +1,6 @@
 // AP-06 P13 '가족에게 이렇게 보여요'(시안 P13_more, 디자인 확인 11-19 두 상태). 자녀 화면에 실제로 보이는 것(호칭·고른 답·날짜)만.
 import React from 'react';
-import {render, screen, waitFor, within} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import type {HistoryDay} from '../src/api/contract/history';
@@ -70,4 +70,30 @@ test('스와이프 뒤로 자리(iOS 감사 2.4): 지금은 두 플랫폼 모두
   expect(backGestureOptions('ios')).toEqual({});
   expect(stackScreenOptions('android')).toEqual({headerShown: false});
   expect(stackScreenOptions('ios')).toEqual({headerShown: false});
+});
+
+test('리뷰 M2: 불러오기 실패(오프라인)면 빈 상태·기본 호칭을 보이지 않고 오류 줄 + 다시 하기 → 다시 불러오면 정상', async () => {
+  render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', consented: true, parentDays: DAYS, failParentHistory: 1})} role="parent" restore />);
+  await waitFor(() => screen.getByTestId('date-line'));
+  await press('설정');
+  await press('가족에게 이렇게 보여요');
+  const failed = await waitFor(() => screen.getByTestId('preview-failed'));
+  const device = screen.getByTestId('preview-device');
+  expect(within(device).getByText('가족 휴대폰 화면')).toBeTruthy();
+  expect(within(device).queryByTestId('preview-empty')).toBeNull(); // '고른 답이 생기면 여기에 보여요'(답이 없다는 뜻) 금지
+  expect(within(device).queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
+  expect(within(device).queryByText(/부모님의 최근 답|엄마의 최근 답/)).toBeNull();
+  await act(async () => {
+    fireEvent.press(within(failed).getByRole('button'));
+  });
+  await waitFor(() => screen.getByTestId('preview-latest'));
+  expect(screen.getByTestId('preview-latest').props.accessibilityLabel).toBe('엄마의 최근 답, 가을, 2025년 11월 16일');
+});
+
+test('리뷰 M1: 날짜·짧은 질문은 자녀 C4·C5 와 같은 lib 함수(formatAnswerDate·pairShort)', () => {
+  const lib = require('../src/lib/childFormat');
+  const home = require('../src/features/home/formatDate');
+  expect(home.formatAnswerDate).toBe(lib.formatAnswerDate); // 자녀 화면이 쓰는 것과 같은 함수
+  expect(lib.formatAnswerDate('2025-11-16', new Date('2026-11-19T00:00:00Z'))).toBe('2025년 11월 16일');
+  expect(lib.pairShort('산', '바다')).toBe('산과 바다 중');
 });

@@ -3,6 +3,7 @@ const path = require('path');
 
 // 레이어 규칙(ARCHITECTURE 2절, 계획 12 1-3): 지금은 warn 으로 기준선만 잡고, 4단계(AU-10)에서 error 로 올린다.
 // 기준선(2026-11-18, main 9284624): 62건 = features·shared→app 54, 기능 간 7, ui→copy 1(SelectCard).
+// 11-19 예외 +2: features/account/FamilyPreview 의 app/session·app/BackBar(PR #11 리뷰 L1, 설정 파일 분리 — AU-10 에서 함께 옮김).
 // 새 위반을 만들지 않는다(리뷰 체크리스트 9절). 수는 __tests__/layerBaseline.test.ts 가 지킨다(늘면 실패, 줄면 숫자를 내린다).
 const FEATURES_DIR = path.join(__dirname, 'src/features');
 const FEATURES = fs

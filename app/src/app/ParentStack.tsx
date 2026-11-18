@@ -19,7 +19,7 @@ import {CourseDone} from '../features/course/CourseDone';
 import {PushPermissionScreen} from '../push/PushPermissionScreen';
 import {WebScreen, type WebParams} from './WebScreen';
 import {OssScreen} from './OssScreen';
-import {FamilyPreviewScreen} from '../features/account/ParentSettings';
+import {FamilyPreviewScreen} from '../features/account/FamilyPreview';
 import {stackScreenOptions} from '../navigation/stackOptions';
 
 export type ParentParams = {
