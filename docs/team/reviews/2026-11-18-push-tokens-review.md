@@ -125,3 +125,98 @@
 2. 0035(SV-05): M1 TRUNCATE·REFERENCES·TRIGGER 회수 + 전 테이블 pgTAP.
 3. G-INT 전: M5·M6 동의 시각 저장(법률·리드 결정 후), L3 토큰 파기 기준.
 4. 나머지 낮음은 다음 보안 후속 묶음.
+
+---
+
+## D. 0035 보안 후속 (7c9c193, xhigh — 동의 데이터)
+
+### 실행한 검증
+- 임시 스택(`bumo-jasik-sec-review`, db 56322)에 7c9c193 스냅숏 0001~0035 재생 + `supabase test db` → **Files=33, Tests=512, Result: PASS** (security_followups 13개, rpc_redeem 갱신분 포함).
+- 직접 탐침(롤백 트랜잭션): 기존 `v1` 동의 행(consented_at·consent_version='v1') 어르신이 `give_consent('v2')` → 버전 v2·시각 갱신·consent_events `given v2` 1건(0019와 동일 동작). 함수 시그니처는 `give_consent(p_version text)` 하나만 남음(기본값 없음, 오버로드 없음).
+- 앱 확인: `app/src/features/realApi.ts:267`(main 268) `sb.rpc('give_consent', {p_version: version})`, 호출부 `ConsentScreen.tsx:41`·`ParentSettings.tsx`는 `CONSENT_VERSION = 'v2'`(`app/src/copy/copy.ts:21`)를 보냄 → `^v[0-9]{1,3}$` 통과. main·server-l1-launch·다른 앱 브랜치 전부 같음. 통합 테스트(`__integration__/realApi.test.ts:135`, `history.test.ts:34`)도 `'v2'`. 버전 인자 전송은 820714c(11-17)부터.
+
+### 판정: 높음 0 / 중간 1 / 낮음 4 → 병합 가능(중간 D-M1은 staging 반영 전 확인)
+
+### 중간
+**D-M1. staging 반영 시 11-17 이전 APK는 동의가 깨진다(확인 필요)**
+- `give_consent` drop→create로 무인자 호출이 사라짐(PostgREST는 함수 없음 오류). 820714c(2026-11-17) 이전 realApi는 인자 없이 불렀다. staging(현재 0030까지 반영)에 그 이전 빌드를 설치한 테스터 기기가 있으면 0035 push 뒤 어르신 동의 화면에서 서버 오류로 멈춘다.
+- 기존 동의 데이터(profiles.consent_version·consent_events)는 건드리지 않음 — 데이터 호환 문제는 없음(탐침 확인).
+- 권장: staging push 전에 배포된 테스트 APK가 820714c 이후 빌드인지 리드가 확인(아니면 재설치 공지). 출시 전이라 production 영향 없음.
+
+### 낮음
+- **D-L1. 가족 기본 호칭의 `duplicate_title`이 앱에서 일반 오류로 보임**: `realApi.ts:321-323`(main 329-331) `setParentTitle`이 모든 실패를 `invalid_title`로 바꾸고 `types.ts:123` 타입도 `invalid_title`뿐. `ChildSettings.tsx:74`가 parentId 없는 편집에서 이 경로를 쓰면 "호칭이 겹쳐요"(`relation.name_taken`) 대신 `errors.server.title`이 뜬다. 앱이 `taken`으로 먼저 막아 다른 기기 동시 변경 때만 생김. 권장: realApi에서 `duplicate_title` 통과 + 타입 확장(앱 줄), 또는 폐기 예정이므로 ChildSettings가 항상 `_for`를 쓰게. `RelationScreen`(연결 전)은 어르신이 없어 겹침 불가 — 영향 없음.
+- **D-L2. 0035 권한 회수가 content 두 표의 insert·update·delete·truncate만**: REFERENCES·TRIGGER는 남고(실측 t), 앞 절 **M1(device_tokens·answers 등 나머지 public 표 TRUNCATE, 실측 여전히 t)은 미해결**. 권장: M1 권장안(전 테이블 + default privileges 회수, pgTAP 루프)으로 확장.
+- **D-L3. `parent_titles()`는 anon도 실행 가능**(실측 t, 함수 기본 PUBLIC 실행 권한). 상수라 정보 노출 없음. 0031 원칙(anon 실행 불가) 일관성만 — `revoke execute ... from public, anon` 한 줄.
+- **D-L4. 테스트 품질**: 버킷 감시는 설정값만 보고 storage.objects 정책 0개(앱 업로드 불가)는 확인하지 않음 — 정책이 생기면 "개인 사진 금지" 원칙이 깨져도 테스트는 통과. `has_table_privilege` 단언에 references·trigger 미포함. `set_parent_title` 겹침 테스트가 "호칭 있는 어르신만 있을 때(겹침 아님)" 경우를 안 다룸. 다운 파일 `:8`이 truncate까지 다시 부여(원상 복구로는 맞음).
+
+### 확인됨(문제 없음)
+- give_consent 본문은 0019와 동일(역할 검사·형식 검사·`for update`·같은 버전 멱등·이력 기록), 기본값만 제거. 권한 재부여(anon 거부 테스트) ✓, `search_path=''` ✓.
+- set_parent_title 겹침 판정: "호칭 없는 어르신이 있고 다른 어르신이 이미 그 호칭"일 때만 거부 — 기본 호칭이 실제로 보이는 경우와 일치. 가족 행 `for update`로 `_for`와 같은 줄 세우기 ✓. set_parent_title_for 동작은 0028과 동일(목록만 함수로).
+- parent_titles()와 check 제약 대조 테스트 ✓(profiles.parent_title 제약도 같은 목록이나 테스트는 families 제약만 대조 — 참고).
+
+---
+
+## 재검토 — 0036 푸시 리뷰 반영 (ebd2537)
+
+### 실행한 검증
+- 임시 스택(`bumo-jasik-sec-review`)에 ebd2537 스냅숏 **0001→0036 재생** + `supabase test db` → **Files=34, Tests=538, Result: PASS**(push_hardening 신규 포함). `node --test lib.test.mts` → **11/11 pass**. 스택은 끝나고 삭제.
+- 직접 탐침(롤백): ① public 전 표에서 authenticated·anon의 TRUNCATE·REFERENCES·TRIGGER **0건** ② `push_daily_claim` 연속 2회 → 대상 1 → **0**(같은 날 중복 없음) ③ 미연결 익명 계정이 어르신 토큰을 등록 → `no_profile` 반환 + 어르신 행 삭제(M2 의도대로) ④ push_claims·push_daily_claim·push_daily_eligible은 authenticated 권한 없음 ⑤ `classifyFcmError` 실호출: UNREGISTERED(404) → invalid_token, **SENDER_ID_MISMATCH(403) → config_error**, 필드 없는 INVALID_ARGUMENT → config_error.
+
+### 지적별 상태
+| 지적 | 상태 | 근거 |
+|---|---|---|
+| M1 TRUNCATE 등 | **해소** | `0036:15-16` 전 표 회수 + postgres 기본 권한 회수, 탐침 0건 |
+| M2 no_profile 오배달 | **해소** | `0036:38-42` 삭제를 no_profile 검사 앞으로, 탐침 확인. 로그아웃 순서 계약 노트 반영 |
+| M3 대량 토큰 삭제 | **해소(삭제 쪽)** — 단 새 R-M1 참고 | lib `classifyFcmError` UNREGISTERED·message.token만 삭제, `push_record` 대량 무효 보류(`0036:193`) |
+| M4 같은 날 중복 | **해소** | `push_claims` PK 선점 + live 실행은 `push_daily_claim`만 사용, 탐침 확인. 실패 시 그날 재시도 안 함(설계 선택, 수용) |
+| M5·M6 동의 시각 | **해소** | `profiles.push_consented_at` + 대상 조건, 계약 노트 120행(N1에서 `set_push_enabled(true)` 필수) |
+| L2 토큰 유일·경합 | 해소 | 유일 인덱스 + `on conflict (token)`, 5개 정리는 사용자 잠금 뒤 |
+| L3 파기 | 해소 | 270일 토큰·선점 31일 |
+| L6 비교 | 해소 | SHA-256 후 비교 |
+| L8 로그 | 해소 | 파싱 오류 원문 미기록, 오류 메시지 정규화 |
+| L9 null | 해소 | `invalid` |
+| D-L2(0035 권한 범위) | 해소 | M1과 함께 |
+| D-L1 앱 duplicate_title 매핑 · D-L3 parent_titles anon(탐침 여전히 t) · D-M1 staging 이전 APK | **미해결(앱 줄·리드 확인 몫)** | 서버 0036 범위 밖 |
+
+### 새로 생긴 지적
+
+**R-M1(중간). 한 토큰의 SENDER_ID_MISMATCH·필드 없는 INVALID_ARGUMENT가 그날 실행 전체를 중단 → 가입만 하면 누구나 일일 알림을 막을 수 있다**
+- 위치: `supabase/functions/push-daily/lib.mts:43-44`(SENDER_ID_MISMATCH·INVALID_ARGUMENT·400 → config_error), `:115`(첫 config_error에서 `aborted=true`로 나머지 중단), 선점분은 failed로 기록돼 그날 재시도 없음(`0036:201-205`).
+- 재현(논리): 자녀로 가입해 가족을 만들고(전제 낮음) **다른 Firebase 프로젝트의 정상 FCM 토큰**(자기 앱 아무거나에서 얻음, 정규식 통과)을 `register_push_token`으로 등록 → 매일 09시 그 토큰 발송이 403 SENDER_ID_MISMATCH → 실행 중단 → 아직 안 보낸 어르신 전원이 그날 알림을 못 받음. 대상 순서가 profile_id 정렬이라 매일 같은 위치에서 끊긴다. 공격이 아니어도 staging/production flavor 혼동 빌드 한 대로 같은 일이 생긴다.
+- FCM 문서상 SENDER_ID_MISMATCH는 "그 토큰의 발신자가 다르다"는 **토큰 단위** 오류다.
+- 권장: SENDER_ID_MISMATCH → invalid_token(삭제). 필드 없는 INVALID_ARGUMENT·400은 그 토큰만 failed. 실행 중단은 토큰과 무관한 오류(401, 403 PERMISSION_DENIED 중 SENDER_ID_MISMATCH 아님, UNREGISTERED 없는 404)가 **서로 다른 토큰 3개 이상**에서 날 때만. 단위 테스트에 "SENDER_ID_MISMATCH 한 건은 나머지 발송을 막지 않는다" 추가.
+
+**R-L1(낮음). 토큰 삭제 전제가 더 낮아짐**: M2 반영으로 가족 연결 없는 익명 계정(앱 설치 직후 누구나)도 남의 토큰을 알면 그 행을 지울 수 있다(탐침 ③). 토큰 비공개가 유지되는 한 수용. 익명 가입 한도(Auth 체크리스트 #2)가 완충.
+
+**R-L2(낮음). `set_push_enabled(true)`가 호출마다 `push_consented_at`을 now()로 덮어씀**: 최초 동의 시각이 아니라 "마지막으로 켠 시각"이 남는다. 증빙으로는 충분하다고 보지만 법률 체크리스트 #10 ④ 표현("N1 동의 시각")과 맞는지 법률 줄 확인 한 줄. 앱이 앱 시작 때마다 true를 부르지 않게 AU-04에 명시 권장.
+
+### 재검토 판정
+- **0036: 높음 0 / 중간 1(R-M1) / 낮음 2** → 원 지적 M1~M6 모두 해소. **합치기 가능(조건)**: R-M1은 실제 발송을 켜기 전(US-10 Firebase secrets 등록·staging 실기기 발송)에 고칠 것. 지금은 `push_copy`가 비어 있어 발송이 일어나지 않으므로 병합 자체는 막지 않는다.
+- **0035: 높음 0 / 중간 1(D-M1, 리드 확인) / 낮음 4(D-L2 해소, D-L1·D-L3·D-L4 남음)** → 합치기 가능, staging push 전에 테스터 APK가 820714c 이후 빌드인지 확인.
+
+---
+
+## 재검토 2 — 0037 (a46a541)
+
+### 실행한 검증
+- 임시 스택(`bumo-jasik-sec-review`)에 a46a541 스냅숏 **0001→0037 재생** + `supabase test db` → **Files=35, Tests=546, Result: PASS**(push_rereview 신규). `node --test lib.test.mts` → **13/13 pass**. 스택은 끝나고 삭제.
+- 직접 탐침: `classifyFcmError` — SENDER_ID_MISMATCH(403) → **invalid_token**, 필드 없는 INVALID_ARGUMENT(400) → **failed**, UNREGISTERED(404) → invalid_token. `parent_titles()` anon 실행 **f**, authenticated **t**. `set_push_enabled(true)` 반복 호출 시 기존 `push_consented_at`(2026-01-01) **유지**.
+- 다른 부분(app·design·docs)은 같은 브랜치의 main 병합분이라 이번 재검토 범위 밖.
+
+### 지적별 상태
+| 지적 | 상태 | 근거 |
+|---|---|---|
+| R-M1 토큰 하나로 실행 중단 | **해소** | `lib.mts` SENDER_ID_MISMATCH → 그 토큰만 삭제, 토큰이 아닌 400 → 그 토큰만 failed, 중단은 서로 다른 토큰 3개 이상의 401·403(비 SENDER)·404(비 UNREGISTERED)에서만(`CONFIG_ERROR_ABORT_AT=3`). 단위 테스트 79·91행이 "한 개는 안 막음 / 2개 계속 / 3개 중단"을 검증 |
+| R-L2 동의 시각 덮어쓰기 | **해소** | `0037` `coalesce(push_consented_at, now())`, 끄면 null·다시 켜면 새 시각. pgTAP·탐침 확인 |
+| D-L3 parent_titles anon | **해소** | PUBLIC·anon 회수, authenticated 유지 |
+| D-L4 테스트 빈틈 | **해소(서버 쪽)** | 사진 버킷 storage 정책 0개, references 권한 단언 추가 |
+| R-L1 미연결 계정의 토큰 행 삭제 | 수용(변경 없음) | 토큰 비공개 전제 |
+| D-L1 앱 duplicate_title 매핑 · D-M1 820714c 이전 APK | **남음(앱 줄·리드)** | 서버 범위 밖 |
+
+### 남은 관찰(낮음, 조치 선택)
+- 401·403·404가 토큰과 무관하게 나는 진짜 설정 오류일 때 중단까지 최대 3건 + 동시 실행 중인 요청(최대 10개)이 더 나가 failed로 기록된다. 선점분은 그날 재시도하지 않으므로 그날 대상 전원이 놓친다. 설정 오류는 push_runs.note `config_error`로 남으니 운영 알림(실행 요약 확인)만 붙이면 된다.
+- 공격자가 서로 다른 토큰 3개로 401·403(비 SENDER)·404(비 UNREGISTERED)를 일으킬 수 있는 토큰 단위 응답은 알려진 것이 없다 → 이 경로의 남용 가능성은 낮음.
+
+### 재검토 2 판정
+- **0037: 높음 0 / 중간 0 / 낮음 0(관찰 1)** → 푸시 서버 줄(0032~0037) **합치기 가능, 서버 쪽 조건 없음**. R-M1 해소로 실발송 전제 조건도 서버 쪽은 충족.
+- 출시 전 남은 조건은 서버 밖 2건: D-M1(staging push 전 테스터 APK가 820714c 이후 빌드인지 리드 확인), D-L1(앱 `setParentTitle`의 duplicate_title 매핑, 앱 줄).
