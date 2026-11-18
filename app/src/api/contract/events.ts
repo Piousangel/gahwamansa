@@ -7,6 +7,8 @@ export const EVENT_NAMES = [
   'consent_shown', 'parent_consent_accepted', 'parent_consent_declined',
   'course_step_completed', 'course_completed', 'child_report_viewed',
   'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
+  // 0034(서버 L4 추가 중, 같은 철자 임시): B1 사진 크게 보기 {day_index}
+  'photo_zoom_opened',
   // 연결 퍼널(0029, ease-and-joy E). redeem 성공은 parent_code_redeemed. 번호 값은 어떤 속성에도 넣지 않는다
   'link_opened', 'referrer_found', 'code_prefilled',
 ] as const;
