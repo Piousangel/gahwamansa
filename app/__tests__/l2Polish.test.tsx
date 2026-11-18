@@ -3,10 +3,11 @@ import {AccessibilityInfo} from 'react-native';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
+import {StepRow} from '../src/ui/StepRow';
 import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 
 // 로드맵 L2 AP-10·AP-11·AP-12·AP-14 묶음.
 let prefs: Prefs;
@@ -29,6 +30,47 @@ async function home(opts: FakeOptions = {}) {
   await waitFor(() => screen.getByTestId('date-line'));
   return api;
 }
+
+describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 앨범 첫 화면)', () => {
+  test('연결된 코스 홈을 처음 열면 해님 첫 만남 말풍선 "안녕하세요, 해님이에요", 다음부터는 없음', async () => {
+    await home();
+    await waitFor(() => screen.getByText('안녕하세요, 해님이에요'));
+    expect(await prefs.firstGreetingSeen()).toBe(true);
+    screen.unmount();
+    await home();
+    await new Promise<void>(r => setTimeout(() => r(), 30));
+    expect(screen.queryByText('안녕하세요, 해님이에요')).toBeNull();
+  });
+  test('미연결 열람에서는 인사하지 않는다(연결 직후에만)', async () => {
+    render(<AppRoot api={createFakeApi()} />);
+    await press(/부모님 휴대폰이에요/);
+    await press('코스 보기');
+    await waitFor(() => screen.getByTestId('course-strip'));
+    await new Promise<void>(r => setTimeout(() => r(), 30));
+    expect(screen.queryByText('안녕하세요, 해님이에요')).toBeNull();
+    expect(await prefs.firstGreetingSeen()).toBe(false);
+  });
+});
+
+describe('AP-12 지금 행 테이프: 고정 140×28 대신 라벨 뒤를 채우는 내용 크기(패딩 0 12, 높이 = 라벨 줄 높이, 왼쪽 −6)', () => {
+  test('라벨 폭을 재면 테이프가 라벨 폭 + 24, 높이 28', async () => {
+    render(<StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />);
+    await act(async () => {
+      fireEvent(screen.getByTestId('step-now-label'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 110, height: 28}}});
+    });
+    const tape = screen.getByTestId('step-tape', {includeHiddenElements: true});
+    expect(tape.props.width).toBe(134);
+    expect(tape.props.height).toBe(28);
+  });
+  test('글자 200%(줄 높이 56)면 테이프도 라벨 높이를 따른다', async () => {
+    render(<StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />);
+    await act(async () => {
+      fireEvent(screen.getByTestId('step-now-label'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 220, height: 56}}});
+    });
+    const tape = screen.getByTestId('step-tape', {includeHiddenElements: true});
+    expect([tape.props.width, tape.props.height]).toEqual([244, 56]);
+  });
+});
 
 describe('AP-14 테스트 보강', () => {
   test('설정 상태 문장은 행 이름과 함께 한 덩어리로 읽힌다', async () => {

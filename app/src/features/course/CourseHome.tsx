@@ -7,6 +7,8 @@ import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {StepRow} from '../../ui/StepRow';
+import {SunBubble} from '../../ui/SunBubble';
+import {prefs} from '../../lib/prefs';
 import {color, FONT_SCALE_MAX, radius, size} from '../../ui/tokens';
 import {Icon} from '../../ui/assets/icons';
 import {useScreenTitleRef} from '../../ui/screenTitle';
@@ -47,6 +49,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [justDone, setJustDone] = useState<StepName | null>(null);
   const prevDone = useRef<StepName[] | null>(null);
   const afterTransition = useAfterTransition(navigation);
+  const firstGreeting = useFirstGreeting(linked === true);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -158,6 +161,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           <BigButton variant="secondary" label={syncError.button} onPress={sync} />
         </View>
       ) : null}
+      {/* AP-10 해님 첫 인사: 연결된 기기에서 코스 홈(앨범 첫 화면)을 처음 열 때 한 번(첫 만남 말풍선, 해님 말 범위: 첫 만남·완료·오류) */}
+      {firstGreeting ? <SunBubble testID="first-greeting" moment="firstMeet" text={copy.connect.greeting} /> : null}
       <View style={styles.greetGroup}>
         <Text20 size={24} weight="bold" style={styles.title}>{greeting}</Text20>
         {/* 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄 */}
@@ -185,6 +190,30 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       </View>
     </Screen>
   );
+}
+
+// 해님 첫 인사 1회(DECISIONS 11-17 "첫 인사는 어르신 연결 직후 앨범 첫 화면", PM 백로그 D4).
+// 연결된 상태로 처음 열린 코스 홈에서만 보이고, 보인 순간 기기에 기록한다. 이 화면이 떠 있는 동안은 그대로 둔다(다시 그려도 사라지지 않음).
+function useFirstGreeting(linked: boolean): boolean {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!linked) {
+      return undefined;
+    }
+    let alive = true;
+    prefs()
+      .firstGreetingSeen()
+      .then(seen => {
+        if (alive && !seen) {
+          setShow(true);
+          prefs().markFirstGreetingSeen();
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [linked]);
+  return show;
 }
 
 // 화면 제목(R2: Screen 이 첫 포커스로 등록). nodeRef 를 주면 그 요소도 알려 준다(P8 응원 대화상자가 닫힌 뒤 포커스 복귀, R12).

@@ -5,6 +5,7 @@ import {defaultStore, type KeyValueStore} from './kvStore';
 
 const SFX = 'pref_sfx_enabled';
 const SKIP_HINT = 'pref_p7_skip_hint_seen';
+const FIRST_GREETING = 'pref_p3_first_greeting_seen'; // 해님 첫 인사(연결 직후 앨범 첫 화면 1회, DECISIONS 11-17)
 
 export function createPrefs(store: KeyValueStore) {
   const getBool = async (key: string, fallback: boolean): Promise<boolean> => {
@@ -27,6 +28,8 @@ export function createPrefs(store: KeyValueStore) {
     setSfxEnabled: (v: boolean) => setBool(SFX, v),
     skipHintSeen: () => getBool(SKIP_HINT, false),
     markSkipHintSeen: () => setBool(SKIP_HINT, true),
+    firstGreetingSeen: () => getBool(FIRST_GREETING, false),
+    markFirstGreetingSeen: () => setBool(FIRST_GREETING, true),
   };
 }
 export type Prefs = ReturnType<typeof createPrefs>;

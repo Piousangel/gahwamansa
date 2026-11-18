@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Animated, Easing, Pressable, StyleSheet, View} from 'react-native';
 import {useMotionMode} from './motion';
 import {color, radius} from './tokens';
@@ -27,18 +27,19 @@ type Props = {
 // 동작 줄이기면 크기·이동 없이 200ms 페이드만. 진동·소리 없음(단계마다 울리면 남발).
 export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn}: Props) {
   const label = `${title}, ${statusLabel}`;
+  const tape = useTapeSize();
   if (status === 'now') {
     return (
       <View accessible accessibilityLabel={label} style={[styles.row, styles.now]}>
         <View style={styles.labelWrap}>
           {tapeIn ? (
-            <TapeIn />
+            <TapeIn w={tape.w} h={tape.h} />
           ) : (
             <View style={styles.tape}>
-              <Tape testID="step-tape" width={140} height={28} />
+              <Tape testID="step-tape" width={tape.w} height={tape.h} />
             </View>
           )}
-          <Text20 weight="bold" oneLine style={styles.nowLabel}>
+          <Text20 testID="step-now-label" weight="bold" oneLine style={styles.nowLabel} onLayout={tape.onLayout}>
             {statusLabel}
           </Text20>
         </View>
@@ -127,7 +128,21 @@ function JustDoneRow({title, label, statusLabel}: {title: string; label: string;
   );
 }
 
-function TapeIn() {
+// 지금 행 테이프(리뷰 R-CH L2, AP-12): 고정 140×28 이 아니라 라벨 뒤를 내용 크기로 채운다(시안: 패딩 0 12, 높이 28, 왼쪽 −6).
+// 라벨 폭 + 좌우 12, 높이는 라벨 줄 높이(최소 28). 재기 전엔 140×28(100% 글자 기준 값).
+const TAPE_PAD_X = 12;
+const TAPE_MIN_H = 28;
+function useTapeSize() {
+  const [size, setSize] = useState({w: 140, h: TAPE_MIN_H});
+  const onLayout = (e: {nativeEvent: {layout: {width: number; height: number}}}) => {
+    const {width, height} = e.nativeEvent.layout;
+    const next = {w: Math.ceil(width) + TAPE_PAD_X * 2, h: Math.max(TAPE_MIN_H, Math.ceil(height))};
+    setSize(prev => (prev.w === next.w && prev.h === next.h ? prev : next));
+  };
+  return {...size, onLayout};
+}
+
+function TapeIn({w, h}: {w: number; h: number}) {
   const mode = useMotionMode();
   const reduce = mode !== 'full';
   const x = useRef(new Animated.Value(0)).current;
@@ -143,7 +158,7 @@ function TapeIn() {
     <Animated.View
       testID="step-tape-anim"
       style={[styles.tape, {opacity: x, transform: [{rotate: '-2deg'}, {translateX: reduce ? 0 : x.interpolate({inputRange: [0, 1], outputRange: [-8, 0]})}]}]}>
-      <Tape testID="step-tape" width={140} height={28} />
+      <Tape testID="step-tape" width={w} height={h} />
     </Animated.View>
   );
 }
@@ -157,7 +172,7 @@ const styles = StyleSheet.create({
   wait: {backgroundColor: color.card, borderWidth: 2, borderColor: color.line, paddingHorizontal: 18},
   pressed: {opacity: 0.85},
   title: {color: color.inkTitle},
-  labelWrap: {alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: 10},
+  labelWrap: {alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: TAPE_PAD_X - 6}, // 테이프가 왼쪽 −6 에서 시작하므로 글자는 테이프 안쪽 12
   tape: {position: 'absolute', left: -6, top: 0, transform: [{rotate: '-2deg'}]},
   nowLabel: {color: color.actionPressed},
   doneLabel: {color: color.doneInk, fontWeight: 'bold'},
