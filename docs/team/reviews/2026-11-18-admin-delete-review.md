@@ -213,3 +213,36 @@
 ## 참고(조치 불필요)
 - `kakao_unlink_release`는 반복 호출해도 attempts가 0 아래로 내려가지 않는다(greatest). service_role 전용이라 남용 경로는 없다. 키 오류가 30일 넘게 이어지면 큐 행은 적재 후 30일 파기로 사라진다. 이제는 ⑧ `config_error_runs_7d`와 `oldest_waiting`으로 먼저 드러난다.
 - metrics ⑥(푸시 종류별 요약)에 `kakao_unlink` 행이 함께 나온다. 해석할 때 `where kind <> 'kakao_unlink'`를 넣으면 깔끔하다(낮음 미만).
+
+---
+
+# 재검토 5 — 0045 테스터 가족 표시·Q-L1·SV-17 대장·§17 낮음 처리표 · 커밋 32a0d11·cfcb221
+
+- 검증: cfcb221의 `supabase/`·`scripts/`만 꺼내 임시 스택(`bumo-admin-rev5`, 575xx, 공유 54322 미사용)에서 실행. **0001~0045 45개 재생 + 시드 성공, pgTAP Files=45, Tests=690, PASS**(보고 수치와 같음). 끝나고 스택 제거. 추가 재현은 rollback 트랜잭션 안에서 실행.
+
+## 판정: **합치기 가능(조건 없음)**. 높음·중간 0, 낮음 3(문서 2·운영 1)
+
+## 확인
+
+| 항목 | 결과 |
+|---|---|
+| `admin_set_test_family` | service_role만 실행, definer·`search_path=''`, 사유·처리자 필수(0039 `admin_check_args`), null은 `invalid`, 없는 가족은 `not_found`, 감사 `test_family_mark`(가족 id·값) ✅ |
+| families UPDATE 회수 | anon·authenticated·service_role 모두 UPDATE 불가(`is_test` 열 단위도 불가) ✅. service_role 직접 `update families` → `permission denied` ✅ |
+| 기존 경로 영향 | families를 쓰거나 잠그는 함수는 `account_delete_core`·`admin_set_test_family`·`set_parent_title`·`set_parent_title_for`뿐이고 **전부 postgres 소유 definer**다. invoker 함수 중 families를 update하거나 `for update`로 잠그는 것은 **0건**(pg_proc 전수). 재현: 앱 `set_parent_title` → `{ok:true}`, 관리자 삭제(families 행 잠금 포함) → `scope family` ✅. FK `created_by on delete set null`은 RI가 소유자 권한으로 실행하므로 영향 없음 |
+| 운영 절차 영향 | `supabase/ops`·`scripts`·Edge·앱 어디에도 families REST PATCH 없음(grep). 심사 가족 생성·번호 설정도 definer RPC다. Studio(postgres)는 영향 없음. 영향 없음 ✅ |
+| Q-L1 처리자 | `coalesce(nullif(current_setting('role'),'none'), session_user)` → service_role 갱신 시 `service_role`, Studio 갱신 시 `postgres`로 남는 것 재현 ✅. 이 값은 역할 위장이 불가능하다(`role` 설정은 멤버십이 필요) |
+| 지표 SQL | ①~⑤·⑦ 모두 `is_review or is_test` 제외. ⑥은 집계 숫자라 뺄 수 없다고 명시. ⑧은 해당 없음 ✅ |
+| mark-test-family.mjs | 대상 호스트를 ref와 먼저 대조한 뒤에야 조회한다. 출력은 가족 id 끝 4자리뿐이다. 메일·user id·키는 출력하지 않는다. 실패 출력은 RPC 응답 120자(reason만) ✅ |
+| SV-17 대장(§16) | 파일·main 대조: main에 0044까지 있고 0045는 브랜치뿐이다 → 표와 일치 ✅. staging 열은 원격 확인이 불가해 DECISIONS 11-18 기록(0018~0030 반영)과만 맞춤 |
+
+## 낮음
+
+| # | 위치 | 내용 | 권장 |
+|---|---|---|---|
+| T-L1 | dev-server-notes §17 "admin L6" | "06시 점검에 `max_cursor`도 함께 봄(§14)"이라 적혀 있지만, §14-3에는 `remaining_new_days < 7`만 있고 `max_cursor` 언급이 없다 → 처리표와 본문이 어긋남 | §14-3에 "`max_cursor`가 마지막 day_index에 가까우면 한 바퀴 직전" 한 줄 추가 |
+| T-L2 | §17 처리표 범위 | 이 문서 1부 L5(삭제된 어르신 `notification_queue.payload.parent_id`·`redeem_attempts.uid` 30일 잔존)는 "admin L5"로 기록돼 있어 맞다. 2부 C-L6·C-L7과 재검토 3 K-L3은 반영 완료인데 표에 없다(표가 "보류·기록"만 다룬다면 머리말에 그 기준을 한 줄 적기) | 머리말에 "반영 완료 항목은 각 마이그레이션 머리말 참고" 한 줄 |
+| T-L3 | mark-test-family.mjs:4·13 | 테스터 메일을 명령줄 인자로 받으므로 셸 history에 남는다. 출력은 가려도 입력 흔적은 남는다 | `--family` 우선 안내, 또는 메일은 프롬프트(표시 안 함)로 받기. history 지우기 안내도 가능 |
+
+## 참고(조치 불필요)
+- `authenticated`는 families에 INSERT·DELETE 표 권한이 남아 있지만, 쓰기 RLS 정책이 없어(`families_read`만 있음) 실제로는 막힌다. 0045 이전부터 그랬다. 방어를 겹으로 하려면 다음 정리 때 함께 회수하면 된다.
+- `content_runway`는 테스터 가족을 빼지 않는다. 테스터도 실제로 콘텐츠를 소비하므로 재고 판단에는 맞다.
