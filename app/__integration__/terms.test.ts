@@ -1,5 +1,8 @@
 /* 약관 동의 기록(0046·0048)·연결 전 삭제 범위(0049) 통합 테스트(로컬 Supabase). realApi 응답이 계약 검증기를 통과하는지 본다.
- * 선택: SUPABASE_SERVICE_ROLE_KEY 가 있으면 v1 을 먼저 게시해 ok 를, 없으면 게시 여부에 따라 ok 또는 unknown_version 을 확인한다. */
+ * - 정상 경로(기록 → 같은 쌍은 다시 기록 안 함 → 재동의 불필요)는 로컬 시드 supabase/seed_terms_v1.sql(약관·방침 v1 게시)를 전제로 한다.
+ *   공유 DB 에 직접 게시하지 않는다(리뷰 M3). 시드는 `npx supabase db reset` 때 들어간다.
+ *   서비스 키(SUPABASE_SERVICE_ROLE_KEY)가 없으면 게시 여부를 확인할 수 없어 정상 경로를 명시적으로 건너뛴다.
+ * - 게시 여부와 상관없이 my_terms_status(needs_reagree)·삭제 범위 none 은 늘 확인한다. */
 import {createClient} from '@supabase/supabase-js';
 import {loadLocalConfig} from '../src/lib/config';
 import {createSupabase} from '../src/lib/supabase';
@@ -10,23 +13,35 @@ declare const process: {env: Record<string, string | undefined>};
 const {SUPABASE_URL, SUPABASE_KEY} = loadLocalConfig(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-test('어르신 익명 기기(연결 전): 약관 동의 기록 → 같은 쌍은 다시 기록하지 않음, 삭제 범위는 none', async () => {
-  if (serviceKey) {
-    const admin = createClient(SUPABASE_URL, serviceKey, {auth: {persistSession: false}});
-    for (const [kind, v] of [['terms', TERMS_VERSION], ['privacy', PRIVACY_VERSION]]) {
-      await admin.rpc('admin_publish_terms_version', {p_kind: kind, p_version: v, p_reason: 'integration test', p_operator: 'jest'});
-    }
-  }
+async function anonParent() {
   const parent = createRealApi(createSupabase(SUPABASE_URL, SUPABASE_KEY));
   await parent.peekInviteCode('000000'); // 익명 세션을 연다(번호는 틀려도 됨)
-  const first = await parent.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION);
-  if (first.ok) {
-    const again = await parent.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION);
-    expect(again).toEqual({ok: true, recorded: false});
-    expect((await parent.myTermsStatus()).needsReagree).toBe(false);
-  } else {
-    expect(serviceKey).toBeUndefined(); // 게시 버전이 없는 로컬 DB(서비스 키 없이 실행)
-    expect(first.reason).toBe('unknown_version');
+  return parent;
+}
+
+test('게시 여부와 상관없이: 기록 전 my_terms_status 는 재동의 필요, 기록 결과는 계약 모양, 연결 전 삭제 범위는 none', async () => {
+  const parent = await anonParent();
+  expect(await parent.myTermsStatus()).toEqual({needsReagree: true}); // 이 계정은 아직 기록 없음
+  const r = await parent.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION);
+  // 게시돼 있으면 ok, 아니면 unknown_version — 어느 쪽이든 my_terms_status 와 맞아야 한다
+  expect(await parent.myTermsStatus()).toEqual({needsReagree: !r.ok});
+  if (!r.ok) {
+    expect(r.reason).toBe('unknown_version');
   }
   expect(await parent.deleteScopePreview()).toEqual({scope: 'none'});
+});
+
+(serviceKey ? test : test.skip)('정상 경로(시드 v1 게시): 기록 → 같은 쌍은 다시 기록하지 않음 → 재동의 불필요', async () => {
+  // 시드가 들어갔는지 서비스 역할로 읽기만 한다(게시하지 않음)
+  const admin = createClient(SUPABASE_URL, serviceKey as string, {auth: {persistSession: false}});
+  const {data, error} = await admin.from('terms_versions').select('kind, version');
+  expect(error).toBeNull();
+  const published = new Set((data ?? []).map((row: {kind: string; version: string}) => `${row.kind}:${row.version}`));
+  if (!published.has(`terms:${TERMS_VERSION}`) || !published.has(`privacy:${PRIVACY_VERSION}`)) {
+    throw new Error(`로컬 DB 에 약관·방침 ${TERMS_VERSION}·${PRIVACY_VERSION} 이 게시돼 있지 않아요 — supabase/seed_terms_v1.sql 을 넣으려면 npx supabase db reset`);
+  }
+  const parent = await anonParent();
+  expect(await parent.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION)).toEqual({ok: true, recorded: true});
+  expect(await parent.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION)).toEqual({ok: true, recorded: false});
+  expect(await parent.myTermsStatus()).toEqual({needsReagree: false});
 });
