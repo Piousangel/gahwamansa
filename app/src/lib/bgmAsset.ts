@@ -32,7 +32,7 @@ export function bgmPreview(): boolean {
   return preview;
 }
 
-/** 테스트용: 음원이 있는 상태를 흉내 낸다(null 이면 숨김, undefined 면 실제 규칙으로). */
+/** 테스트용: 값 = 그 음원이 있는 상태, null = 숨김, undefined = 실제 규칙(RELEASED·미리 듣기)으로 되돌림(리뷰 L8). */
 export function setBgmAssetForTest(next: number | string | null | undefined) {
-  testOverride = next === null ? undefined : next;
+  testOverride = next;
 }

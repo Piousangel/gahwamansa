@@ -1,23 +1,26 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {AppState, Pressable, StyleSheet, Switch, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
 import {SmallButton} from '../../ui/SmallButton';
 import {color, radius, size} from '../../ui/tokens';
 import {useBusyLatch} from '../../ui/useBusyLatch';
-import {channelEnabled, openNotifySettings, readNotifyPermission} from '../../push/notifyNative';
+import {channelEnabled, openNotifySettings, readNotifyPermission, requestNotifyPermission} from '../../push/notifyNative';
 import type {AndroidPushChannel} from '../../api/contract/push';
-import {pushReceive, setPushReceive} from '../../push/runtime';
+import {parentEnableFromSettings, pushReceive, setPushReceive} from '../../push/runtime';
 import {copy} from '../../copy/copy';
 
 const p = copy.push;
 
 // P13 '알림과 소리'의 알림 행(시안 P13_more v2, AU-04 뒤 법률 규칙 ③: 앱 안에서 알림을 끌 수 있어야 함 — Firebase 연결 전 선행).
 // 빌드 1 결정(리드 11-18): '알림' 한 행, 켬/끔 = 서버 set_push_enabled(받기 시각 기록·삭제, 0036). 종류별 서버 값은 빌드 2.
-// - 휴대폰에서 앱 알림 전체가 꺼짐(권한 거절·차단): 행 대신 '알림 / 휴대폰 설정에서 꺼져 있어요 / [휴대폰 설정 열기]'.
+// - 권한은 둘로 나눈다(l2-appinfo 리뷰 M1): 'denied'(13+ 묻기 전·한 번 거절 — 앱이 다시 물을 수 있음)면 스위치를 그대로 보이고,
+//   켤 때 N1 과 같은 순서(set_push_enabled(true) → 권한 창 → 허용이면 토큰 등록). 'blocked'(다시 묻지 않음·앱 알림 꺼짐)만
+//   행 대신 '알림 / 휴대폰 설정에서 꺼져 있어요 / [휴대폰 설정 열기]'. 켰는데 권한 창 결과가 blocked 면 그때 휴대폰 설정을 연다.
+// - 켜 둔 상태(서버 true)인데 권한이 denied: 행 아래 '알림이 휴대폰 설정에서 꺼져 있어요' + [알려 주세요](권한 창).
 // - 휴대폰에서 채널(오늘의 사진·응원) 하나가 꺼짐: 행 아래에 그 종류 안내 + [휴대폰 설정 열기](그 채널 화면).
 // - 연결 전(프로필 없음, enabled null)에는 그리지 않는다. 휴대폰 설정에서 돌아오면(앱 활성) 다시 읽는다.
 type Kind = 'daily' | 'cheer';
-type State = {enabled: boolean | null; system: 'on' | 'off'; channels: Record<Kind, boolean>} | null;
+type State = {enabled: boolean | null; perm: 'ok' | 'denied' | 'blocked'; channels: Record<Kind, boolean>} | null;
 const KINDS: {ch: Kind; title: string}[] = [
   {ch: 'daily', title: p.channel.daily},
   {ch: 'cheer', title: p.channel.cheer},
@@ -25,9 +28,12 @@ const KINDS: {ch: Kind; title: string}[] = [
 
 export function NotifyRows() {
   const [s, setS] = useState<State>(null);
-  const {busy, begin, end} = useBusyLatch();
+  const {busy, isBusy, begin, end} = useBusyLatch();
+  // 앱 복귀(active) 때 다시 읽는 값이 진행 중인 토글을 덮지 않게(리뷰 L6): 읽기 시작 뒤 토글이 있었으면 그 결과를 버린다
+  const toggles = useRef(0);
   const [failed, setFailed] = useState<string | null>(null); // 켬·끔 실패 한 줄(리뷰 낮음, 어르신은 토스트 대신 행 아래 글)
   const load = useCallback(async () => {
+    const at = toggles.current;
     try {
       // 서버 받기 상태는 push/runtime 의 pushReceive(AU-04 리뷰 M1 API): true·false·null(연결 전)·'offline'
       const [receive, perm, daily, cheer] = await Promise.all([
@@ -36,18 +42,18 @@ export function NotifyRows() {
         channelEnabled('daily'),
         channelEnabled('cheer'),
       ]);
-      if (receive === 'offline') {
-        return; // 읽기 실패: 지난 값 유지(처음이면 그리지 않음)
+      if (receive === 'offline' || isBusy() || at !== toggles.current) {
+        return; // 읽기 실패·토글 중·읽는 사이 토글함: 지난 값 유지(처음이면 그리지 않음)
       }
       setS({
         enabled: receive,
-        system: perm === 'denied' || perm === 'blocked' ? 'off' : 'on',
+        perm: perm === 'blocked' ? 'blocked' : perm === 'denied' ? 'denied' : 'ok',
         channels: {daily: daily !== false, cheer: cheer !== false},
       });
     } catch {
       setS(prev => prev); // 읽기 실패: 지난 값 유지(처음이면 그리지 않음)
     }
-  }, []);
+  }, [isBusy]);
   useEffect(() => {
     load();
     const sub = AppState.addEventListener('change', st => {
@@ -61,23 +67,58 @@ export function NotifyRows() {
   if (!s || s.enabled === null) {
     return null;
   }
-  if (s.system === 'off') {
+  if (s.perm === 'blocked') {
     return <SystemOffRow testID="notify-row-system" title={p.settings_row} onOpen={() => openNotifySettings()} />;
   }
   const toggle = async () => {
     if (!begin()) {
       return;
     }
+    toggles.current += 1;
     const next = !s.enabled;
     setS({...s, enabled: next}); // 바로 보이게, 실패하면 되돌림
     setFailed(null);
     try {
-      // setPushReceive: set_push_enabled + 이 계정 N1 기억('off'면 다시 묻지 않음) + 켜면 권한이 있을 때 토큰 등록(AU-04 M1)
-      const r = await setPushReceive(next);
-      setS(prev => (prev ? {...prev, enabled: r.ok ? r.enabled : !next} : prev));
-      if (!r.ok) {
-        setFailed(r.reason === 'offline' ? copy.errors.offline.title : copy.errors.server.title);
+      // 켜기: set_push_enabled(true) → 권한 창 → 허용이면 토큰 등록(N1 과 같은 순서, 리뷰 M1). 끄기: N1 기억 'off'(다시 묻지 않음)
+      let r;
+      if (next) {
+        const on = await parentEnableFromSettings();
+        r = on.result;
+        if (on.permission === 'blocked') {
+          openNotifySettings(); // 다시 묻지 못하는 상태: 휴대폰 설정에서만 켤 수 있다
+        }
+        if (on.permission) {
+          const perm = on.permission;
+          setS(prev => (prev ? {...prev, perm: perm === 'blocked' ? 'blocked' : perm === 'denied' ? 'denied' : 'ok'} : prev));
+        }
+      } else {
+        r = await setPushReceive(false);
       }
+      const done = r;
+      setS(prev => (prev ? {...prev, enabled: done.ok ? done.enabled : !next} : prev));
+      if (!done.ok) {
+        setFailed(done.reason === 'offline' ? copy.errors.offline.title : copy.errors.server.title);
+      }
+    } catch {
+      // 지금은 runtime 이 예외를 값으로 바꾸지만, 던져도 낙관적 값이 남지 않게(리뷰 L5)
+      setS(prev => (prev ? {...prev, enabled: !next} : prev));
+      setFailed(copy.errors.server.title);
+    } finally {
+      end();
+    }
+  };
+  // 켜 둔 상태인데 권한이 denied(다시 물을 수 있음): 권한 창만 다시 띄운다(blocked 가 되면 위 SystemOffRow 로 바뀐다)
+  const askAgain = async () => {
+    if (!begin()) {
+      return;
+    }
+    toggles.current += 1;
+    try {
+      const perm = await requestNotifyPermission();
+      if (perm === 'granted') {
+        await parentEnableFromSettings(async () => perm); // 서버 값은 그대로 true(0037 처음 시각 유지), 토큰 등록
+      }
+      setS(prev => (prev ? {...prev, perm: perm === 'blocked' ? 'blocked' : perm === 'denied' ? 'denied' : 'ok'} : prev));
     } finally {
       end();
     }
@@ -104,6 +145,12 @@ export function NotifyRows() {
         <Text20 testID="notify-failed" accessibilityLiveRegion="polite" weight="bold" style={styles.failed}>
           {failed}
         </Text20>
+      ) : null}
+      {s.enabled && s.perm === 'denied' ? (
+        <View testID="notify-perm-denied" style={styles.off}>
+          <Text20 accessibilityLiveRegion="polite" style={styles.sub}>{p.system_off.body}</Text20>
+          <SmallButton label={p.permission.yes} onPress={askAgain} />
+        </View>
       ) : null}
       {/* 켜 둔 상태에서 휴대폰 채널이 꺼진 종류만 행 아래에 안내(꺼 둔 상태면 어차피 오지 않으므로 생략) */}
       {s.enabled && offKinds.length > 0 ? (

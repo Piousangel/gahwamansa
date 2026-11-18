@@ -18,7 +18,7 @@ beforeEach(() => {
   setStampFeedbackForTest(() => ({fire: async () => ({sound: false, haptic: false})}));
 });
 afterEach(() => {
-  setBgmAssetForTest(null);
+  setBgmAssetForTest(undefined);
   setBgmPreview(false);
   setPrefsForTest(null);
   setLocalStampsForTest(null);

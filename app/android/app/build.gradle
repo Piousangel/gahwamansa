@@ -182,7 +182,7 @@ def appLinkPlaceholders = { String h -> [appLinkHost: h ?: "applinks.invalid", a
 /**
  * 앱 정보 값(AU-07, 선택·공개 값): 이용약관·방침 URL, 문의 메일, 사업자 정보. 원본 app/env/<flavor>.env, 앱은 src/lib/appInfo.ts.
  * - 형식이 틀리면 빌드 실패(https URL만, 메일, 사업자등록번호 000-00-00000, 글자는 80자 안·따옴표/꺾쇠/줄바꿈 없음)
- * - 빠지면 화면에서 그 행을 숨기고 빌드 경고. production release 는 실패(G-INT "값이 없어 숨겨진 앱 정보 행 0")
+ * - 빠지면 화면에서 그 행이 값 없는 행(개발·staging '[설정 필요]')으로 보이고 빌드 경고. production release 는 실패(G-INT "값이 빈 앱 정보 행 0")
  *   — 확인용 빌드만 -PallowMissingAppInfo
  */
 def APP_INFO_RULES = [
@@ -417,9 +417,9 @@ android.applicationVariants.configureEach { variant ->
         // 리뷰 L4: 출시 경로(build-production.sh 가 늘 주는 -PrequireRealEnv)에서는 -PallowMissingAppInfo 를 무시한다
         def allowMissing = project.hasProperty("allowMissingAppInfo") && !project.hasProperty("requireRealEnv")
         if (variant.flavorName == "production" && isRelease && !e.PLACEHOLDER && !allowMissing) {
-            throw new GradleException("production.env: 앱 정보 값이 없어요(설정 화면에서 숨겨짐): ${missing.join(', ')}. G-INT 전 필수(US-03·US-04). 확인용 빌드만 -PallowMissingAppInfo(출시 경로 -PrequireRealEnv 에서는 무시)")
+            throw new GradleException("production.env: 앱 정보 값이 없어요(설정 화면에서 값 없는 행): ${missing.join(', ')}. G-INT 전 필수(US-03·US-04). 확인용 빌드만 -PallowMissingAppInfo(출시 경로 -PrequireRealEnv 에서는 무시)")
         }
-        logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 숨겨지는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
+        logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 '[설정 필요]'로 보이는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
     }
     def generate = {
         checkPlaceholder()
