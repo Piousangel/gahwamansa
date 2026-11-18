@@ -1,0 +1,1 @@
+-- 0041 되돌리기(수동): push_events_claim·push_events_kick(0038), child_summary(0027) 정의를 다시 실행한다. 표 변경 없음.

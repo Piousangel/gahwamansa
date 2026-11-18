@@ -119,3 +119,68 @@
 - 덮어쓰기·건너뛰기·중간 끼우기·자리표시·빈 문구·처리자 필수·감사(게시)·authenticated 거부는 잘 고정했다.
 - 빠진 것: anon 거부, **authenticated의 `admin_retire_content` 거부**, 은퇴 후 `retired_at`이 실제로 찍혔는지와 은퇴 감사 행, `p_days` null·중복 day, 마지막 활성 날 은퇴 가드(C-M3 반영 시).
 - 게이트 테스트: 경로 이탈·파일 바인딩·중복 행 케이스 없음(C-M2).
+
+---
+
+# 3부. 재검토 — 0041·0042·0043 + SV-12 형제 시나리오 · 커밋 2e02765·00fcffa·4dc5f39·7383c1b
+
+- 검증: 7383c1b의 `supabase/`·`scripts/`만 `git archive`로 꺼내 임시 스택(`bumo-admin-rev3`, 575xx, 공유 54322 미사용)에서 실행. **0001~0043 43개 재생 + 시드 성공, pgTAP Files=43, Tests=668, PASS**(보고 수치와 같음). 단위 테스트(node 26): 게이트 **8/8**, kakao.test **4/4**, push.test **17/17**. 끝나고 스택 제거.
+- 추가 재현은 트랜잭션 안에서 실행하고 rollback으로 되돌렸다(아래 K·A·P 항목).
+
+## 판정: **합치기 가능(조건 1)**. 높음 0, 중간 1(카카오 해제 포기 감시: 첫 production 카카오 로그인 공개 전까지), 나머지는 낮음
+
+## 1·2부 지적 반영 확인
+
+| 지적 | 반영 | 재현·테스트로 확인 |
+|---|---|---|
+| M1 감사 우회 | service_role의 insert·update·delete·truncate와 시퀀스 권한 회수, `purge_expired_data` 미래 시각 거부(`future_now`) | GUC를 켜도 delete·truncate·insert 모두 `permission denied`, 미래 p_now는 `future_now` ✅ |
+| M2 코스 이벤트 | `admin_delete_answers`가 `course_step_completed`·`course_completed`·`photo_zoom_opened`도 지움 | 코스와 무관한 이벤트·다른 어르신 답·응원·동의 이력은 유지(admin_followups) ✅ |
+| M3 테스트 | definer 함수 허용 목록 전역 단언, core 직접 호출 거부, D-05·events·push_log·push_claims·device_tokens·cheers 삭제 단언 | ✅ (특히 허용 목록 테스트가 좋다) |
+| L1 core 직접 호출 | service_role에서도 회수 | `permission denied for function account_delete_core` ✅ |
+| L2 동시 삭제 | `families` 행 `for update`로 줄 세움 | 코드 확인. 잠근 뒤 자녀 존재를 다시 판단하므로 맞음 ✅ |
+| L4 immutable | volatile ✅ | — |
+| C-M1 대상 확인 | `supabase/ops/target-check.mjs`: `app/env/<env>.env` ref ↔ 호스트 대조, production은 호스트 재입력. load-push-copy에도 적용 | 코드 확인 ✅ |
+| C-M2 파일 바인딩 | 검수표 `파일`·`sha256` 칸, 이름은 `day-N.jpg`만, 중복 행 거부 | 게이트 8/8. 경로 이탈 차단 ✅ |
+| C-M3 전부 은퇴 | 은퇴 뒤 활성 날 7일 미만이면 `too_few_active` | ✅ |
+| C-L1·L2·L5·L6·L7 | null 거부·already_retired·인자 순서 (대상, 사유, 처리자) 통일·`v2/day-NN.jpg`·두 표 max | ✅ |
+| C-L3 image_url | 경로 형식·길이 상한 반영. **호스트는 아무거나 통과**(아래 R-L1) | 부분 |
+| C-L4 직접 insert | insert·delete·truncate 회수, update는 사진 주소 갱신용으로 남김 | insert는 거부 ✅. update로 `image_url` 바꾸기는 가능(R-L2) |
+
+## 0042 카카오 연결 끊기(xhigh)
+
+확인한 것(정상):
+- 큐 적재: 공통 함수 안에서 인증 계정을 지우기 **직전에** `auth.identities(provider='kakao').provider_id`를 넣는다. 앱 삭제와 관리자 삭제가 같은 경로를 탄다. 재현 K1에서 카카오 자녀를 관리자 삭제하자 큐 1행이 쌓이고(회원번호, attempts 0) 감사 detail에는 회원번호가 없었다.
+- 권한: claim·record·kick·push_kick은 service_role만 실행할 수 있고 전부 definer, `search_path=''`이다. 큐는 anon·authenticated 접근 불가다. cron `kakao-unlink`는 `*/10`이고 할 일이 있을 때만 Edge를 부른다.
+- Edge: `verify_jwt=false` + `x-cron-secret` 상수시간 비교이고, `safeEqual`은 빈 값이면 false라서 secret이 없을 때 열리지 않는다. 어드민 키는 Authorization 헤더에만 쓰고, 로그·응답에는 요약 숫자만 남는다. 오류 메시지는 80자로 자르고 특수문자를 치환한다. 키가 없으면 선점하지 않아 시도 횟수를 헛되이 쓰지 않는다.
+- 재시도·포기: 선점할 때마다 attempts+1, 다음 시도는 2^n분 뒤(상한 24시간). 10번째 실패를 기록하면 `gave_up_at`이 찍히고 다시 선점되지 않는다(K2: 401을 10번 → gave_up 1, 이틀 뒤 선점도 `[]`). 상태값 이상은 `invalid_status` 예외다. 성공이나 -101·-103이면 행을 바로 지운다.
+- 보관: 포기했거나 30일이 지난 행은 파기 배치가 지운다(K3에서 1행 삭제). 10번 시도는 약 34시간 안에 끝나므로 30일 기한과 충돌하지 않는다. 처리방침의 "30일 내 삭제"와 맞는다.
+
+### R-M1(중간, 조건). 해제를 포기한 회원번호가 아무도 모른 채 30일 뒤 사라진다 — `0042:47-70`, `kakao.mts:9-15`
+- 사실: 어드민 키가 틀렸거나 회수됐으면(401, -401) 모든 항목이 `retry`로 분류된다. 그러면 약 34시간 만에 전부 `gave_up`이 되고, 30일 뒤 파기된다. 포기 건수는 Edge 로그 요약(`gave_up`)에만 남고 운영 점검 절차(06시 루틴, 월 점검)에는 없다.
+- 영향: 카카오 연결 끊기 의무가 조용히 이행되지 않는다. 키 오류 한 번이면 그동안 탈퇴한 사람 전원이 해당된다.
+- 조건(첫 production 카카오 로그인 공개 전까지):
+  - ① 06시 루틴이나 dev-server-notes 월 점검에 `select count(*) from kakao_unlink_queue where gave_up_at is not null`을 넣는다.
+  - ② 401·403(키 문제)은 시도 횟수를 쓰지 않고 그 회차를 중단하도록 바꾸는 것을 권장한다(재현은 K2).
+
+### 낮음(0042)
+
+| # | 파일:줄 | 내용 |
+|---|---|---|
+| K-L1 | 0042 전체 | 해제는 최대 10분 늦게 처리된다. 그 사이 같은 카카오 계정으로 다시 가입하면, 뒤늦은 unlink가 **새 계정의 카카오 연결**을 끊는다(다음 로그인 때 동의를 다시 받음). 영향은 작다. 처리 직전에 같은 provider_id가 `auth.identities`에 다시 있는지 확인하고 건너뛰는 방법 권장 |
+| K-L2 | 0042:21 | service_role이 `kakao_unlink_queue` 전체 DML을 가진다(대기 건을 지울 수 있음). 감사 대상은 아니지만 0043의 정리 방향에 맞추려면 insert·update·truncate 회수 검토 |
+| K-L3 | 운영 | Studio에서 인증 사용자를 직접 지우는 등 공통 함수 밖의 삭제 경로는 큐에 안 들어간다. internal-management-plan §2(Studio 편집은 장애 때만)에 "사용자 삭제는 admin_delete_account로만" 한 줄 추가 권장 |
+
+## 0041(푸시 낮음·connected_date)
+- 문구가 없으면 응원을 소비하지 않고, dry-run이면 1시간 쉬고, 지워진 어르신 큐로는 연결 알림을 보내지 않는 것이 테스트로 고정돼 있다. 문제 없다.
+- `connected_date` = 어르신 프로필 생성일(KST)이다. 어르신 프로필은 redeem 때 만들어지고(0004·0028 insert 위치 확인) 재연결해도 유지되므로 정의와 맞는다. 같은 가족 자녀에게만 보인다(테스트 3). 새로 드러나는 정보는 연결 날짜뿐이라 노출 범위 문제는 없다.
+
+## 0043 남은 낮음
+
+| # | 파일:줄 | 내용 |
+|---|---|---|
+| R-L1 | 0043:64 | `image_url` 정규식이 호스트를 제한하지 않는다. `https://evil.example/storage/v1/object/public/content-photos/v2/day-15.jpg`가 게시됐다(P1). http도 허용된다. vault `project_url`과 접두를 비교하고 https만 허용할 것을 권장. 테스트 "공개 사진 버킷 주소만"도 경로만 검사한다 |
+| R-L2 | 0043:12·18 | service_role이 `content_photos.image_url`을 update로 아무 주소로 바꿀 수 있다(감사 없음, 재현에서 1행 변경). 의도된 예외라고 문서화돼 있다. upload-photos가 끝나면 update도 회수하거나 주소 변경 RPC + 감사로 옮길 것 |
+| R-L3 | 0043:14 | service_role은 `admin_audit` SELECT를 유지한다(월 점검용, 의도). 감사 행에는 uuid 전체가 남는다(1부 L3). 문서 정합 항목은 그대로 열려 있다 |
+
+## SV-12 형제 시나리오(sibling_scenario.test.sql)
+- 두 자녀가 같은 답을 보고, 응원 한도를 따로 쓰고, 미리보기 범위가 child이고, 한 명이 지우면 본인만·마지막이면 가족 전체와 어르신 익명 계정까지 지워지고, 보낸 응원이 함께 지워지는 것까지 종단으로 단언한다. 충분하다.

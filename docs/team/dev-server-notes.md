@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0038) · 2026-11-17
+# 서버 계약 노트 (0019~0043) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -10,6 +10,7 @@
   "parents": [                             // 연결 순서(created_at)대로, 어르신마다 1개
     { "parent_id": "uuid", "title": "엄마",  // 어르신별 호칭, 없으면 가족 호칭
       "connected": true,                   // false = 연결 끊김(프로필은 있고 기기 없음) → 배너, 응원 버튼 숨김
+      "connected_date": "2026-11-12",      // 0041: 처음 연결된 날(KST). 호칭이 겹칠 때 "11월 12일에 연결한 분"처럼 구분(재연결해도 그대로)
       "shared": true,                      // 동의 여부. false면 latest=null
       "latest": { "prompt": "…", "choice_label": "가을", "starter": "가을 이야기 들려주세요", "answered_date": "2026-11-16" } } ] }
 ```
@@ -137,6 +138,27 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
+- **카카오 연결 끊기(0042, SV-06)**: 계정 삭제(앱 `delete_my_account`·관리자 `admin_delete_account` 공통) 때 카카오 회원번호를 `kakao_unlink_queue`에 넣고, cron `kakao-unlink` 10분마다(대기 중일 때만) → Edge Function `kakao-unlink`가 앱 어드민 키로 `POST kapi.kakao.com/v1/user/unlink`.
+  - 성공·이미 해제(-101·-103)는 행 삭제(회원번호 보관 안 함), 실패는 2^n분 뒤 재시도(최대 24시간), 10번 실패하면 `gave_up_at`(운영자 확인) → 30일 뒤 파기.
+  - 환경 설정(사용자, US-12): Edge secrets `KAKAO_ADMIN_KEY`(카카오 앱 어드민 키, 저장소·채팅 금지) + 공용 `PUSH_CRON_SECRET`·Vault 값(푸시와 같음), `npx supabase functions deploy kakao-unlink`. 키가 없으면 선점하지 않는다(시도 횟수 보존).
+  - 확인: `select count(*), min(enqueued_at), max(attempts), count(gave_up_at) from kakao_unlink_queue;` 앱은 할 일 없음(탈퇴는 서버가 처리).
+- **응원·연결 알림 보강(0041)**: 문구가 없는 종류는 cron이 할 일로 세지 않고, 직전 실행이 dry-run이면 1시간 쉰다. 큐의 어르신 프로필이 지워졌으면 연결 알림을 보내지 않는다. 문구 적재 스크립트는 대상 호스트를 보여 주고 환경 이름을 다시 입력받으며(production은 호스트 재입력) 금지어(혜택·무료·할인·유료·이벤트·쿠폰·광고·"다시 오세요")가 있으면 멈춘다. 잠금 화면 내용 숨김(L3)은 앱 AU-04 채널 설정 몫.
+- **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
+  ```sql
+  select public.admin_delete_account('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- {ok, scope: child|parent|family} | {ok:false, reason:'not_found'}
+  select public.admin_delete_answers('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- 어르신 답·코스 기록·코스 이벤트(0043) {ok, answers, sessions, events} | not_found·not_parent
+  ```
+  - 계정 삭제 규칙은 앱 `delete_my_account`와 같은 공통 함수(`account_delete_core`): 자녀가 남으면 본인만, 마지막 자녀면 가족 전체 + 어르신 익명 인증 계정, 대상 인증 계정까지.
+  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관).
+  - 사유·처리자 필수(`reason_required`·`operator_required`). 처리마다 `admin_audit`(처리자·시각·대상·가족·사유) — 대상이 지워져도 남는다. 0043부터 서비스 역할도 감사 표에 쓰기·수정·삭제·비우기 권한이 없고(쓰기는 admin RPC만), 1년 지나면 파기 배치만 지운다. 파기 함수는 미래 기준 시각을 거부(`future_now`). 공통 삭제 함수는 서비스 역할도 직접 못 부른다. 월 1회 점검: `select * from admin_audit where at > now() - interval '1 month' order by at;`
+  - 처리 기한: 목표 7일·상한 10일(DECISIONS 11-17). 본인 확인 방법은 정책 문서 기준(삭제 안내 페이지).
+- **콘텐츠 추가(0040, SV-08)**: `node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason ...]` (`--check`는 게이트만).
+  - 순서: 검수표 `content/review.md` 게이트(검수일·검수자·"글자·사람·현대물건 없음"·"AI 표기"·"실제 장소 아님" 모두 ✅) → 끝에만·빈칸 없이 이어지는지 → **통과해야** 사진 업로드(덮어쓰기 금지, JPEG) → `admin_publish_content`(사진·질문·첫마디 한 번에, 감사 `content_publish`).
+  - 이미 게시된 day_index는 덮어쓰지 않는다(`day_exists`), 중간 끼우기·건너뛰기 거부(`not_append`), 공개 사진 버킷 주소가 아니거나 길이 초과·빈 문구 거부(`invalid_item`). 고칠 땐 새 날 + `select admin_retire_content(<day>, '<사유>', '<처리자>')` — 이미 은퇴면 `already_retired`, 은퇴 뒤 활성 날이 7일보다 적어지면 `too_few_active`.
+  - 서비스 역할은 콘텐츠 표에 직접 insert·delete할 수 없다(0043, 게시는 RPC·감사로만). 사진 주소 갱신만 허용.
+  - 검수표에 `파일`·`sha256` 칸(검수한 사진 파일과 묶음), 사진 이름은 `day-<숫자>.jpg`만, 업로드 경로 `v2/day-NN.jpg`. 대상 확인은 `app/env/<환경>.env`의 `SUPABASE_PROJECT_REF`와 호스트 대조(`supabase/ops/target-check.mjs`, 문구 적재 스크립트도 같음).
+  - 실행 전에 대상 호스트를 보여 주고 환경 이름을 다시 입력받는다(production은 호스트 재입력). 검수표 형식은 `scripts/photos/content-gate.mjs` 머리말. 게이트 테스트 `node --test scripts/photos/content-gate.test.mjs`.
+- **콘텐츠 재고(0039)**: `select * from content_runway;` → `active_days`, `max_cursor`(가장 앞선 어르신 커서, 심사 가족 제외), `remaining_new_days`(그 뒤 남은 새 콘텐츠 날 수). 7일 미만이면 콘텐츠 추가(06시 루틴 경보 PM-07).
 - **응원 도착·연결 알림(0038, SV-03)**: cron `push-events` 5분마다 → `push_events_kick()`(창 안이고 처리할 응원·연결 큐가 있을 때만) → Edge Function `push-events` → `push_events_claim()`.
   - N2 응원 도착 → **받는 어르신만**: 처리 안 된 응원(`cheers.notified_at` null)을 어르신별로 묶어 1개면 그 응원 문장, 여러 개면 "응원이 {n}개 왔어요".
   - N3 연결·재연결 → **그 가족 자녀**(DECISIONS U11: 자녀 즉시 알림은 연결·응원 관련만, 부모님 답 알림 없음). 제목·본문 `{호칭}` = 그 어르신 호칭(없으면 가족 호칭).
@@ -249,3 +271,30 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 16 | Database > Extensions | **pg_cron ON** | 로컬 기본 | ☐ | 0023 파기 배치(db push 전에 켤 것) |
 
 - 다 끝나면 production에서 Advisors(Security) 실행 → 남는 경고가 1(익명 허용, 의도)·13(요금제상 불가 시)뿐인지 확인.
+
+## 10. 이메일 인증번호 재발송 동작 확인 (SV-13, 11-18)
+- 질문: 문구 `login.resent` "이전 번호는 쓸 수 없어요"가 실제 동작과 맞는가.
+- 재현(로컬 스택, GoTrue v2.198.0, config `otp_length 6`·`otp_expiry 600`·`max_frequency 1s`): 같은 메일로 `/auth/v1/otp` 두 번(2초 간격) → 서로 다른 6자리 2개 → **첫 번호 검증 = 403 `otp_expired`**, 두 번째 = 200(세션 발급).
+- 결론: **문구와 동작이 맞다**(재발송하면 이전 번호는 무효). 앱은 첫 번호 입력 시 오는 `otp_expired`를 "번호가 만료됐어요/새 번호로 써 주세요" 계열로 보여 주면 된다(만료와 같은 코드라 구분 불가).
+- 한계: staging·production(호스팅 GoTrue) 버전이 다르면 다를 수 있다 → 출시 전 staging에서 같은 순서로 1회 확인(테스트 메일). 재발송 간격(`max_frequency`)은 호스팅 대시보드 값(기본 60초일 수 있음, 미확인)을 따른다 — 앱의 "다시 보내기" 대기 시간과 맞출 것. 라이터 전달용.
+
+## 11. 스토어 심사 접근 운영 절차 (SV-15)
+대상: Play 콘솔 "앱 액세스"에 적을 심사용 계정·번호. 서버 0025(재사용 번호, 기본 꺼짐·연결 상한 5) + `supabase/ops/create-review-access.mjs`. 실행은 운영자(서비스 키), 번호·계정 값은 저장소·채팅에 남기지 않는다.
+1. **준비(환경마다 1회)**: 대시보드 Authentication > Add user로 심사용 자녀 계정 2개(이메일+비밀번호, 비밀번호 10자 이상 — Auth 체크리스트 #14). 두 user id를 확인한다.
+2. **만들기**: `node supabase/ops/create-review-access.mjs create <자녀1 id> <자녀2 id>` → 대상 호스트·환경 확인 → 심사 가족 id와 6자리 재사용 번호 출력(이때는 **꺼진 상태**).
+   - 자녀 계정 하나로 앱에서 로그인해 호칭을 정해 둔다(심사자가 보는 화면이 자연스럽게).
+3. **콘솔 입력**: Play 콘솔 > 앱 액세스 안내문에 "자녀 계정(이메일·비밀번호)으로 로그인"과 "다른 폰(또는 앱 데이터 삭제 후)에서 '부모님 휴대폰이에요' → 번호 6자리 입력" 두 경로를 적는다. 번호 값은 콘솔에만.
+4. **심사 제출 직전**: `... enable <심사 가족 id>`(번호 켬). 상한 5대까지 연결된다.
+5. **심사 결과가 나오면**: `... cleanup <심사 가족 id>` — 심사 기기의 어르신 프로필·익명 계정 삭제 + 번호 끔. 자녀 계정·가족은 남는다(다음 심사 때 4부터 다시).
+6. 확인: `select is_review, (select count(*) from profiles p where p.family_id = f.id and role = 'parent') parents from families f where id = '<id>';`, 번호 상태 `select disabled_at, max_uses from invite_codes where family_id = '<id>' and reusable;`
+- 주의: 심사 가족은 일일·응원·연결 알림 대상이 아니고(0033·0038) 지표에서도 뺀다(§12). 번호가 새면 `disable` 후 새로 `create`(새 가족). 스크립트는 실행 전 `app/env/<환경>.env` ref와 호스트를 대조한다. 리허설: staging에서 1~5를 1회(리드·사용자). 로컬은 0025 pgTAP(review_access)으로 같은 흐름을 검증한다.
+
+## 12. 지표 SQL (SV-16)
+- `supabase/ops/metrics.sql`: ① 퍼널 1~7단계 ② DAU(역할별)·어르신 코스 연 수 ③ D7 유지(퍼널 8) ④ 연결률 ⑤ 유료 관심(C6, 안별) ⑥ 푸시 종류별 발송·실패·무효·제외·열기 ⑦ 질문별 A/B 비율(응답 20명 미만 숨김). Studio SQL Editor에서 쿼리 하나씩, 맨 위 날짜만 바꿔 실행(읽기 전용).
+- 모두 심사 가족 제외. 보관 기간 때문에 D7·A/B는 최근 31일, 이벤트는 14개월 안에서만 정확. 테스터 제외용 `is_test` 표시는 아직 없다(필요하면 결정 후 추가).
+
+## 13. staging 테스트 가족 정리 (SV-11)
+- `node supabase/ops/cleanup-test-families.mjs --operator <처리자>`(미리보기) → 숫자 확인 후 `--apply`. 대상 호스트·환경 확인(app/env ref 대조), **production이면 멈춤**.
+- 기준: 가족의 모든 자녀가 테스트 도메인 메일(example.test·example.com·example.org·*.test, 앱 개발자 메뉴와 같은 표식). 실제 계정 자녀가 섞인 가족은 건너뛰고 수만 알린다. 메일·id는 출력하지 않는다.
+- 방법: 자녀마다 `admin_delete_account`(공통 삭제 규칙) → 마지막 자녀에서 가족 전체 + 어르신 익명 계정. 처리마다 감사 행(사유 "<환경> 테스트 가족 정리(개발자 메뉴)").
+- 로컬 확인(11-18): 공유 스택에서 미리보기만 실행 — 테스트 가족 7개 식별(통합 테스트가 만든 것), 삭제는 하지 않음. 실제 삭제는 0039 반영된 staging에서 리드·사용자가 1회.

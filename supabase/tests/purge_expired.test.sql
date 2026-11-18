@@ -76,7 +76,8 @@ select is((select count(*)::int from public.consent_events where parent_id = '77
 select is((public.purge_expired_data() ->> 'answers')::int, 0, '두 번 돌려도 더 지울 것이 없다(멱등)');
 
 -- 기준 시각을 넘겨 경계 계산을 고정해 시험한다: 하루 뒤에는 30일 전 회차도 지워진다
-select is((public.purge_expired_data(now() + interval '1 day') ->> 'answers')::int, 1, '하루 뒤 기준이면 다음 회차가 지워진다');
+update public.answers set session_date = public.kst_today() - 31 where parent_id = '77b00000-0000-0000-0000-0000000000a1'; -- 하루 지난 것처럼(0043부터 미래 기준 시각 거부)
+select is((public.purge_expired_data() ->> 'answers')::int, 1, '하루 지나 31일이 된 회차가 지워진다');
 select is((select count(*)::int from public.profiles where family_id = '77f00000-0000-0000-0000-000000000001'), 2, '프로필·가족은 건드리지 않는다');
 
 -- 일 배치 등록

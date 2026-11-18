@@ -71,7 +71,7 @@ select is((select reusable from public.invite_codes where code <> (select r ->> 
             and family_id = (select (r ->> 'family_id')::uuid from rv) limit 1), false, '일반 발급 번호는 재사용이 아니다');
 
 -- 파기 배치도 지우지 않는다
-select public.purge_expired_data(now() + interval '400 days');
+select public.purge_expired_data(); -- 0043부터 미래 기준 시각 거부(재사용 번호는 만료가 infinity라 어느 시각이든 남음)
 select is((select count(*)::int from public.invite_codes where code = (select r ->> 'code' from rv)), 1, '파기 배치가 재사용 번호를 지우지 않는다');
 
 -- 심사 종료 정리: 어르신 프로필·익명 계정 삭제, 번호 끔
