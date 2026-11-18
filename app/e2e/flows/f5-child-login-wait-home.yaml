@@ -1,0 +1,26 @@
+# F5(AU-12 ③) 자녀 로그인 → 번호 → 대기 → 홈. fake API(카카오 성공) + 개발자 메뉴 역할 전환으로 어르신 연결을 흉내.
+# 감사 지점: C3 복사 토스트가 '번호 보내기' 버튼을 덮지 않는지(impl-drift #28) → f5-c3-toast
+# 한계: 역할 전환은 앱을 처음부터 다시 그리므로 C3 '연결됨' 감지 화면은 지나지 않고 C4 로 바로 간다(대기 화면 감지는 jest childWait 테스트 몫).
+appId: com.bumojasik.app.staging
+name: F5 자녀 로그인 → 번호 → 대기 → 홈
+tags:
+  - child
+  - required
+---
+- runFlow:
+    file: ../common/child-to-wait.yaml
+    env:
+      PREFIX: f5
+- takeScreenshot: f5-c3
+- runFlow:
+    when:
+      visible: '복사하기'
+    commands:
+      - tapOn: '복사하기'
+      # Android 13+ 는 시스템이 '복사됨'을 띄우므로 앱 토스트를 생략할 수 있다(AC-08) → 단언 없이 바로 캡처
+      - takeScreenshot: f5-c3-toast
+- runFlow:
+    file: ../common/child-linked-home.yaml
+    env:
+      PREFIX: f5
+- takeScreenshot: f5-c4

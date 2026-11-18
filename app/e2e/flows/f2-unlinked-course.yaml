@@ -1,0 +1,62 @@
+# F2(AU-12 ②) 미연결 열람: 번호 없이 '코스 보기' → 세 단계 → P7 미연결(도장 + 둘째 줄) → P3 미연결 3/3. fake API.
+appId: com.bumojasik.app.staging
+name: F2 미연결 열람 → 코스 완료
+tags:
+  - parent
+  - required
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '부모님 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '코스 보기'
+    timeout: 10000
+- tapOn: '코스 보기'
+- extendedWaitUntil:
+    visible: '번호를 받으면 그때부터 답이 저장돼요'
+    timeout: 10000
+- takeScreenshot: f2-p3-strip
+- tapOn: '사진 보기.*'
+- extendedWaitUntil:
+    visible: '다 봤어요'
+    timeout: 10000
+- tapOn: '다 봤어요'
+- extendedWaitUntil:
+    visible: '둘 중 고르기.*'
+    timeout: 10000
+- tapOn: '둘 중 고르기.*'
+- extendedWaitUntil:
+    visible: '가을'
+    timeout: 10000
+- tapOn: '가을'
+- tapOn:
+    text: '정했어요'
+    # 다음 화면 전환 중 계속 움직이는 요소가 있으면 Maestro 가 안정 대기로 수 분을 쓴다 → 짧게
+    waitToSettleTimeoutMs: 1000
+- extendedWaitUntil:
+    visible: '자판으로 쓰기.*'
+    timeout: 10000
+- tapOn: '자판으로 쓰기.*'
+# 넘어가기 경로(F1 은 쓰기 경로)
+- extendedWaitUntil:
+    visible: '오늘은 넘어갈게요'
+    timeout: 10000
+- tapOn: '오늘은 넘어갈게요'
+- extendedWaitUntil:
+    visible:
+      id: 'p7-stage'
+    timeout: 10000
+- extendedWaitUntil:
+    visible: '.*번호를 받으면 그때부터 고른 답이 가족에게 보여요.*'
+    timeout: 10000
+- takeScreenshot: f2-p7-unlinked
+- tapOn: '알겠어요'
+- extendedWaitUntil:
+    visible: '오늘 코스를 마쳤어요'
+    timeout: 10000
+- takeScreenshot: f2-p3-3of3

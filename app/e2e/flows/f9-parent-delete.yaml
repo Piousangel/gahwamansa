@@ -1,0 +1,44 @@
+# F9(AU-12 ⑤) 삭제: 연결된 어르신 → P13 설정 '모두 지우기' → P9 확인 → 2차 확인 상자 → P10 → 처음으로(어르신은 번호 화면 P1). fake API.
+appId: com.bumojasik.app.staging
+name: F9 어르신 모두 지우기
+tags:
+  - parent
+  - required
+---
+- runFlow:
+    file: ../common/parent-connect.yaml
+    env:
+      PREFIX: f9
+- tapOn: '설정'
+- extendedWaitUntil:
+    visible: '가족에게 답 보여 주기.*'
+    timeout: 10000
+- takeScreenshot: f9-p13
+- scrollUntilVisible:
+    element:
+      id: 'settings-row-delete'
+    direction: DOWN
+- tapOn:
+    id: 'settings-row-delete'
+- extendedWaitUntil:
+    visible: '모두 지울까요\?'
+    timeout: 10000
+- takeScreenshot: f9-p9
+- tapOn:
+    text: '모두 지우기'
+    index: 0
+- runFlow:
+    when:
+      visible: '모두 지울까요\?'
+    commands:
+      - takeScreenshot: f9-p9-confirm2
+      - tapOn: '모두 지우기'
+- extendedWaitUntil:
+    visible: '모두 지웠어요'
+    timeout: 10000
+- takeScreenshot: f9-p10
+- tapOn: '처음으로'
+- extendedWaitUntil:
+    visible: '가족에게 받은.*'
+    timeout: 10000
+- takeScreenshot: f9-after
