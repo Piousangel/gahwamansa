@@ -120,7 +120,7 @@ export function ParentSettings() {
       )}
       <SettingsGroup title={t.group_sound} />
       {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
-      {linked ? <NotifyRows api={api} /> : null}
+      {linked ? <NotifyRows /> : null}
       {bgmAsset() !== null ? <BgmRow /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />

@@ -6,7 +6,7 @@ import {color, radius, size} from '../../ui/tokens';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {channelEnabled, openNotifySettings, readNotifyPermission} from '../../push/notifyNative';
 import type {AndroidPushChannel} from '../../api/contract/push';
-import {isOffline, type Api} from '../types';
+import {pushReceive, setPushReceive} from '../../push/runtime';
 import {copy} from '../../copy/copy';
 
 const p = copy.push;
@@ -23,27 +23,31 @@ const KINDS: {ch: Kind; title: string}[] = [
   {ch: 'cheer', title: p.channel.cheer},
 ];
 
-export function NotifyRows({api}: {api: Api}) {
+export function NotifyRows() {
   const [s, setS] = useState<State>(null);
   const {busy, begin, end} = useBusyLatch();
   const [failed, setFailed] = useState<string | null>(null); // 켬·끔 실패 한 줄(리뷰 낮음, 어르신은 토스트 대신 행 아래 글)
   const load = useCallback(async () => {
     try {
-      const [settings, perm, daily, cheer] = await Promise.all([
-        api.myPushSettings(),
+      // 서버 받기 상태는 push/runtime 의 pushReceive(AU-04 리뷰 M1 API): true·false·null(연결 전)·'offline'
+      const [receive, perm, daily, cheer] = await Promise.all([
+        pushReceive(),
         readNotifyPermission(),
         channelEnabled('daily'),
         channelEnabled('cheer'),
       ]);
+      if (receive === 'offline') {
+        return; // 읽기 실패: 지난 값 유지(처음이면 그리지 않음)
+      }
       setS({
-        enabled: settings.enabled,
+        enabled: receive,
         system: perm === 'denied' || perm === 'blocked' ? 'off' : 'on',
         channels: {daily: daily !== false, cheer: cheer !== false},
       });
     } catch {
       setS(prev => prev); // 읽기 실패: 지난 값 유지(처음이면 그리지 않음)
     }
-  }, [api]);
+  }, []);
   useEffect(() => {
     load();
     const sub = AppState.addEventListener('change', st => {
@@ -68,14 +72,12 @@ export function NotifyRows({api}: {api: Api}) {
     setS({...s, enabled: next}); // 바로 보이게, 실패하면 되돌림
     setFailed(null);
     try {
-      const r = await api.setPushEnabled(next);
+      // setPushReceive: set_push_enabled + 이 계정 N1 기억('off'면 다시 묻지 않음) + 켜면 권한이 있을 때 토큰 등록(AU-04 M1)
+      const r = await setPushReceive(next);
       setS(prev => (prev ? {...prev, enabled: r.ok ? r.enabled : !next} : prev));
       if (!r.ok) {
-        setFailed(copy.errors.server.title);
+        setFailed(r.reason === 'offline' ? copy.errors.offline.title : copy.errors.server.title);
       }
-    } catch (e) {
-      setS(prev => (prev ? {...prev, enabled: !next} : prev));
-      setFailed(isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
     } finally {
       end();
     }
