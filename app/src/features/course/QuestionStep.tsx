@@ -1,8 +1,11 @@
 import React, {useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {color, radius} from '../../ui/tokens';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
+import {ReadAloud, ttsText} from './ReadAloud';
+import {p5Level} from './p5Space';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -25,7 +28,12 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const {api, consented, content, applyAnswer} = useSession();
   const {finish, error, setError} = useFinishStep();
   const [saving, setSaving] = useState(false);
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
+  const {height, fontScale} = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // 공간 단계(감사 H2·디자인 판정 9절): 가용 높이에서 카드 2장과 '정했어요'가 스크롤 없이 보이게 줄인다
+  const level = p5Level(height - insets.top - insets.bottom, fontScale);
   const q = content?.question;
   if (!q) {
     return null;
@@ -93,24 +101,32 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
               label={copy.course.next.question}
               disabled={!choice}
               disabledReason={copy.question.need_choice}
+              reasonHidden={level >= 4}
               loading={saving}
               onPress={confirm}
             />
-            <ToCourseHomeLink onPress={toCourseHome} disabled={saving} />
+            {level < 1 ? <ToCourseHomeLink onPress={toCourseHome} disabled={saving} /> : null}
           </>
         )
       }>
-      {/* AP-08 시안 P5_question: 제목 '마음에 드는 쪽을 골라 주세요'(32) + 보조(20, inkSub) 묶음, 그 아래 질문 문장(22 굵게) */}
-      <View style={styles.titleGroup}>
-        <Text20 size={32} weight="bold" style={styles.value}>{appCopy.question_title}</Text20>
-        <Text20 style={styles.hint}>{appCopy.question_hint}</Text20>
+      {/* 위계(감사 L3·디자인 판정 9절, 모든 크기): 질문이 큰 제목(28) → 지시문(보조 20) → '정답은 없어요…'(0단계만).
+          질문이 없으면 지시문이 제목 자리 */}
+      <View testID="p5-title-group" style={styles.titleGroup}>
+        {q.prompt ? (
+          <Text20 testID="p5-question" size={28} weight="bold" style={[styles.value, reading ? styles.reading : null]}>{q.prompt}</Text20>
+        ) : (
+          <Text20 size={28} weight="bold" style={styles.value}>{appCopy.question_title}</Text20>
+        )}
+        {q.prompt && level < 2 ? <Text20 testID="p5-instruction" style={styles.hint}>{appCopy.question_title}</Text20> : null}
+        {level < 1 ? <Text20 testID="p5-hint" style={styles.hint}>{appCopy.question_hint}</Text20> : null}
       </View>
-      {q.prompt ? <Text20 size={22} weight="bold" style={styles.value}>{q.prompt}</Text20> : null}
-      {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9) */}
+      {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9). 3단계부터 카드 96 */}
       <View testID="choice-group" accessibilityRole="radiogroup">
-        <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
-        <SelectCard label={q.option_b} selected={choice === 'B'} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
+        <SelectCard label={q.option_a} selected={choice === 'A'} compact={level >= 3} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
+        <SelectCard label={q.option_b} selected={choice === 'B'} compact={level >= 3} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
       </View>
+      {/* AP-03 읽어 주기: 카드 아래(공간 예산 밖 — 카드 2장과 버튼이 먼저 보이게). 질문과 두 선택지를 읽는다 */}
+      {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
     </Screen>
   );
 }
@@ -138,6 +154,7 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
 }
 
 const styles = StyleSheet.create({
+  reading: {textDecorationLine: 'underline', textDecorationColor: color.sky},
   // 시안 P5_P6_review: 선택 칸 최소 높이 100, 고른 칸 오른쪽 체크, 이름표 doneInk
   card: {minHeight: 100, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.select, borderWidth: 2, borderColor: color.line, backgroundColor: color.card, paddingVertical: 16, paddingHorizontal: 20},
   cardText: {flex: 1, gap: 4},

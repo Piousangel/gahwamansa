@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useImperativeHandle, useRef, useState} from 'react';
 import {AccessibilityInfo, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
 import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -22,11 +22,18 @@ type Props = {
   fill?: boolean;
   /** 첫 포커스를 제목 대신 이 요소로(예: '다시 정하기'로 연 설정의 확인 제목). 시간 차 없이 한 번만 옮겨 순서가 뒤집히지 않는다(AP-11) */
   initialFocusRef?: React.RefObject<unknown>;
+  /** 본문 스크롤 연결점(감사 M3): 펼친 확인 패널처럼 새로 나타난 영역을 보이게 한다. top·bottom 은 본문 안 y */
+  scrollRef?: React.Ref<ScreenScroll>;
+};
+
+export type ScreenScroll = {
+  /** 본문의 [top, bottom] 구간이 보이도록 필요할 때만 스크롤한다(아래가 가려지면 아래 끝을, 위가 가려지면 위 끝을 맞춤) */
+  showRange(top: number, bottom: number): void;
 };
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, initialFocusRef}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, initialFocusRef, scrollRef}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -43,6 +50,24 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
     const m = b.view > 0 && b.content - b.view - b.y > 4;
     setMore(prev => (prev === m ? prev : m));
   };
+  const bodyScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  useImperativeHandle(
+    scrollRef,
+    () => ({
+      showRange(from: number, to: number) {
+        const {view, y} = box.current;
+        if (view <= 0) {
+          return;
+        }
+        if (to > y + view) {
+          bodyScroll.current?.scrollTo({y: Math.max(0, to - view + space.md), animated: true});
+        } else if (from < y) {
+          bodyScroll.current?.scrollTo({y: Math.max(0, from - space.md), animated: true});
+        }
+      },
+    }),
+    [],
+  );
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const {contentOffset, contentSize, layoutMeasurement} = e.nativeEvent;
     measure({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
@@ -99,6 +124,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
         </View>
         <View style={styles.body}>
           <ScrollView
+            ref={bodyScroll}
             testID="screen-body"
             style={styles.body}
             scrollEnabled={fill ? false : scrollEnabled}

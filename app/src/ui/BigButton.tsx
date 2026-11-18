@@ -16,6 +16,8 @@ type Props = {
   loadingLabel?: string;
   /** 비활성일 때 버튼 아래에 이유를 한 줄로 알린다. */
   disabledReason?: string;
+  /** 공간이 모자라면 비활성 이유 줄을 화면에서 빼고 읽기 힌트로만 둔다(P5 공간 4단계) */
+  reasonHidden?: boolean;
   /** 버튼 아래 설명을 스크린리더가 버튼과 함께 읽도록 */
   accessibilityHint?: string;
   /** 보이는 글과 읽는 말이 다를 때(예: '돌아가기' → "오늘 코스로 돌아가기", copy 11절 3) */
@@ -28,13 +30,13 @@ type Props = {
 
 // 명세 §1: 주 minHeight 72·글자 32, 보조·위험 minHeight 64·글자 26·테두리 3, 반경 36, 고정 height 없음.
 // 눌림은 색만 바뀜(움직임·Android 리플 없음). 위험은 색이 아니라 외곽선(비채움)+문구로 주 버튼과 구분한다.
-export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, accessibilityHint, accessibilityLabel, buttonRef, icon}: Props) {
+export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, reasonHidden, accessibilityHint, accessibilityLabel, buttonRef, icon}: Props) {
   const primary = variant === 'primary';
   const blocked = !!disabled || !!loading;
   const shown = loading ? loadingLabel : label;
   return (
     <View testID="big-button" style={styles.wrap}>
-      {disabled && disabledReason ? (
+      {disabled && disabledReason && !reasonHidden ? (
         // TalkBack R8: 이유는 버튼 힌트로 읽으니 이 줄은 중복으로 읽지 않는다
         <Text20 style={styles.reason} importantForAccessibility="no" accessibilityElementsHidden>
           {disabledReason}

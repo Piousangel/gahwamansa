@@ -5,7 +5,7 @@ import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native'
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
+import {Screen, type ScreenScroll} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
@@ -16,6 +16,8 @@ import {errorMessage} from '../course/useFinishStep';
 import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {NotifyRows} from './NotifyRows';
+import {bgmAsset} from '../../lib/bgmAsset';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -30,6 +32,12 @@ export function ParentSettings() {
   const fromDeclined = route.params?.expand === 'resume' && !consented && linked;
   const [confirm, setConfirm] = useState<Confirm>(fromDeclined ? 'resume' : 'none');
   const resumeTitleRef = useRef<React.ComponentRef<typeof View>>(null);
+  // 감사 M3: 확인 패널이 열리면 패널 끝(실행 버튼)까지 보이게 본문을 스크롤한다(하단 고정 '돌아가기'에 가려지지 않게)
+  const scroll = useRef<ScreenScroll>(null);
+  const showPanel = (e: {nativeEvent: {layout: {y: number; height: number}}}) => {
+    const {y, height} = e.nativeEvent.layout;
+    scroll.current?.showRange(y, y + height);
+  };
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -55,6 +63,7 @@ export function ParentSettings() {
   // 표준 화면 틀: 설정 내용은 본문(스크롤), "돌아가기"만 하단 고정.
   return (
     <Screen
+      scrollRef={scroll}
       initialFocusRef={fromDeclined ? resumeTitleRef : undefined} // '다시 정하기'로 왔으면 첫 포커스는 확인 제목(화면 제목 대신, 순서 보장)
       top={
         <>
@@ -78,14 +87,14 @@ export function ParentSettings() {
           />
           {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
           {confirm === 'stop' ? (
-            <View style={styles.confirm}>
+            <View testID="settings-confirm" style={styles.confirm} onLayout={showPanel}>
               <Text20 size={26} weight="bold">{t.stop_title}</Text20>
               <Text20>{t.stop_body}</Text20>
               <BigButton label={t.keep} onPress={() => setConfirm('none')} />
               <BigButton variant="secondary" label={t.stop} loading={busy} onPress={() => run(() => api.withdrawConsent(), false, t.stopped)} />
             </View>
           ) : confirm === 'resume' ? (
-            <View style={styles.confirm}>
+            <View testID="settings-confirm" style={styles.confirm} onLayout={showPanel}>
               <View ref={resumeTitleRef} accessible accessibilityRole="header" accessibilityLabel={t.resume_confirm}>
                 <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
               </View>
@@ -110,6 +119,9 @@ export function ParentSettings() {
         </View>
       )}
       <SettingsGroup title={t.group_sound} />
+      {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
+      {linked ? <NotifyRows api={api} /> : null}
+      {bgmAsset() !== null ? <BgmRow /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
@@ -137,6 +149,47 @@ export function ParentSettings() {
 // 도장 소리 토글(시안 P7_motion·P13, DECISIONS: 효과음은 도장 소리 하나라 이름 '도장 소리', 기본 켜짐). 이 기기에만 저장.
 // 행 전체가 스위치(터치 64 이상, talkback R10 "도장 소리, 스위치, 켜짐, 도장을 찍을 때 짧은 소리").
 // 저장값을 읽기 전에는 스위치를 그리지 않는다(켜짐→꺼짐 깜빡임 방지).
+// AP-04 '배경 음악' 행(시안 PX_music·P13_more): 기본 꺼짐. 음원(CT-04)이 없으면 행을 그리지 않는다(호출부)
+function BgmRow() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    prefs()
+      .bgmEnabled()
+      .then(v => alive && setOn(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggle = () => {
+    if (on === null) {
+      return;
+    }
+    setOn(!on);
+    prefs().setBgmEnabled(!on);
+  };
+  return (
+    <Pressable
+      testID="bgm-row"
+      accessibilityRole="switch"
+      accessibilityLabel={copy.bgm.settings_row}
+      accessibilityHint={copy.bgm.settings_sub}
+      accessibilityState={{checked: !!on, disabled: on === null}}
+      onPress={toggle}
+      style={({pressed}) => [styles.section, styles.toggleRow, pressed ? styles.pressed : null]}>
+      <View style={styles.toggleText}>
+        <Text20 size={24} weight="bold">{copy.bgm.settings_row}</Text20>
+        <Text20 style={styles.sub}>{copy.bgm.settings_sub}</Text20>
+      </View>
+      {on === null ? null : (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Switch value={on} onValueChange={toggle} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 function SfxRow() {
   const [on, setOn] = useState<boolean | null>(null);
   useEffect(() => {
@@ -185,8 +238,8 @@ function SfxRow() {
 // '가족에게 답 보여 주기' 행: 이름·상태(한 덩어리 글) + 오른쪽 동사 버튼. 보여 주는 중 '그만 보여 주기'(흰 바탕+테두리),
 // 보여 주지 않는 중 '다시 보여 주기'(채움). 누르면 행 아래에 확인을 펼친다(expanded 로 읽힘).
 function ShareRow({consented, expanded, onPress}: {consented: boolean; expanded: boolean; onPress: () => void}) {
-  const {fontScale} = useWindowDimensions();
-  const wide = fontScale >= 2;
+  const {fontScale, width} = useWindowDimensions();
+  const wide = fontScale >= 1.5 || width <= 360; // 감사 M3: 150% 이상 또는 폭 360 이하면 쌓기
   const status = consented ? t.shared_now : t.not_shared_now;
   const verb = consented ? t.stop : t.resume;
   return (

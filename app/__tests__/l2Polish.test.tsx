@@ -7,7 +7,7 @@ import {StepRow} from '../src/ui/StepRow';
 import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
-import {press, pressCourseNext, pressLast, toHomeConsented} from '../testUtils/flow';
+import {confirmDeleteAll, press, pressCourseNext, pressLast, toHomeConsented} from '../testUtils/flow';
 
 // 글자 배율: jest 기본(2)과 같게 두고, 해님 크기 테스트만 바꾼다
 let mockFontScale = 2;
@@ -80,7 +80,7 @@ describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 
     await press('설정');
     await press('모두 지우기');
     await waitFor(() => screen.getByText('모두 지울까요?'));
-    await pressLast('모두 지우기');
+    await confirmDeleteAll();
     await waitFor(() => screen.getByText('모두 지웠어요'));
     await waitFor(async () => expect(await prefs.firstGreetingSeen()).toBe(false));
   });
@@ -214,7 +214,9 @@ describe('AP-14 테스트 보강', () => {
     await press('설정');
     await press('모두 지우기');
     await waitFor(() => screen.getByText('모두 지울까요?'));
-    const btn = screen.getByRole('button', {name: '모두 지우기'});
+    await press('모두 지우기'); // P9 1단계 → 2단계 확인 상자
+    const box = await waitFor(() => screen.getByTestId('delete-confirm2'));
+    const btn = within(box).getByRole('button', {name: '모두 지우기'});
     await act(async () => {
       fireEvent.press(btn);
       fireEvent.press(btn);

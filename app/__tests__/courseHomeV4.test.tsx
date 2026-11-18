@@ -6,7 +6,7 @@ import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
 import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, toHomeConsented, confirmDeleteAll} from '../testUtils/flow';
 import {color} from '../src/ui/tokens';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
 
@@ -239,7 +239,8 @@ describe('미연결', () => {
     fireEvent.press(strip);
     await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   });
-  test('미연결도 도장 줄이 보이고(기기 로컬), 서버 도장 호출은 없다', async () => {
+  test('미연결도 도장 줄이 보이고(기기 로컬, 찍은 날이 있을 때 — 감사 M1), 서버 도장 호출은 없다', async () => {
+    await localStamps().addToday();
     const api = createFakeApi();
     const week = jest.spyOn(api, 'getWeekStamps');
     await preview(api);
@@ -274,10 +275,11 @@ describe('미연결', () => {
     const api = createFakeApi({linked: true, consented: true, weekDone: []});
     const week = jest.spyOn(api, 'getWeekStamps');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByText('이번 주 도장'));
+    await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(async () => expect(await localStamps().read()).toEqual([]));
     expect(week).toHaveBeenCalled();
     expect(screen.queryAllByTestId(/^stamp-on-/, {includeHiddenElements: true})).toHaveLength(0);
+    expect(screen.queryByText('이번 주 도장')).toBeNull(); // 서버 값 0 → 도장 줄 숨김(감사 M1)
   });
 });
 
@@ -362,7 +364,7 @@ describe('기기 도장 정리(낮음)', () => {
     await press('설정');
     await press('모두 지우기');
     await waitFor(() => screen.getByText('모두 지울까요?'));
-    await press('모두 지우기');
+    await confirmDeleteAll();
     await waitFor(() => screen.getByText('모두 지웠어요'));
     await waitFor(async () => expect(await local.read()).toEqual([]));
     setLocalStampsForTest(null);

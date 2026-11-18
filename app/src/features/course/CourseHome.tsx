@@ -20,6 +20,7 @@ import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {useWeekStamps} from './useWeekStamps';
 import {useAfterTransition} from './useAfterTransition';
 import {useReturnFocus} from './useReturnFocus';
+import {useCourseBgm} from './useCourseBgm';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
 import {useBootLoading} from '../../app/splash';
@@ -52,6 +53,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const afterTransition = useAfterTransition(navigation);
   const firstGreeting = useFirstGreeting(linked === true, navigation);
   const {fontScale} = useWindowDimensions();
+  const music = useCourseBgm(); // AP-04: 음원(CT-04)이 없으면 available=false 라 버튼도 없다
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
   const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   useEffect(() => {
@@ -121,7 +123,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const greeting = all
     ? preview
       ? c.done_unlinked
-      : c.done_today
+      : c.done_today.replace('. ', '.\n') // 감사 L1: 마침표 뒤 줄바꿈(어절 중간에서 끊기지 않게)
     : done.length === 1
       ? c.left_two
       : done.length === 2
@@ -134,6 +136,14 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       <View style={styles.headGroup}>
         <View style={styles.titleRow}>
           <Header testID="date-line" label={kstDateLine()} nodeRef={titleRef} />
+          {/* 시안 PX_music: 날짜 → '음악 켜기/끄기'(글자 버튼) → 설정. 200%면 줄바꿈(titleRow wrap) */}
+          {music.available ? (
+            <TextLink
+              label={music.enabled ? copy.bgm.toggle_off : copy.bgm.toggle_on}
+              touch={64}
+              onPress={() => music.setEnabled(!music.enabled)}
+            />
+          ) : null}
           {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
           <TextLink
             label={copy.settings.open}
@@ -214,7 +224,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         {/* 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄 */}
         {all && preview ? <Text20 weight="bold" style={styles.sub}>{c.done_unlinked_sub}</Text20> : null}
       </View>
-      {week ? <StampRow days={stampsFromDates(week.weekStart, week.doneDates)} todayIdx={todayIdx} /> : null}
+      {/* 감사 M1·디자인 판정: 찍은 날이 0이면 도장 줄을 숨긴다(빈 칸 7개는 정보가 없고 '아직'으로 읽힘) */}
+      {week && week.doneDates.length > 0 ? <StampRow days={stampsFromDates(week.weekStart, week.doneDates)} todayIdx={todayIdx} /> : null}
       <View testID="course-steps" style={styles.steps}>
         {STEPS.map(s => {
           const status = done.includes(s.step) ? 'done' : current?.step === s.step ? 'now' : 'wait';

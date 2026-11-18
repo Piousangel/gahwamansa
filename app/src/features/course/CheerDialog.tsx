@@ -1,6 +1,8 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {useIsFocused} from '@react-navigation/native';
 import {Dialog} from '../../ui/Dialog';
+import {audio} from '../../audio';
+import {ReadAloud, ttsText} from './ReadAloud';
 import {copy} from '../../copy/copy';
 import {isCheerKey, type MyCheers} from '../../api/contract/cheers';
 import type {Api} from '../types';
@@ -46,6 +48,9 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
   const lines = batch.flatMap(c => (isCheerKey(c.message_key) ? [copy.cheers[c.message_key]] : []));
   const close = () => {
     setOpen(false);
+    if (audio().isSpeaking()) {
+      audio().stopSpeaking(); // 대화상자를 닫으면 읽기도 멈춘다
+    }
     // 확인한 묶음 전체(모르는 키 포함). 그 사이 새로 온 응원은 다음에 보인다. 실패하면 다음에 다시 보인다
     api.markCheersRead(batch.map(c => c.id)).catch(() => {});
   };
@@ -60,7 +65,9 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
       body={lines.join('\n')}
       actions={[{label: copy.cheer.button, onPress: close}]}
       returnFocusRef={returnFocusRef}
-      testID="cheer-dialog"
-    />
+      testID="cheer-dialog">
+      {/* AP-03 읽어 주기: 응원 문장 바로 아래 */}
+      <ReadAloud text={ttsText.cheer(lines.join(' '))} />
+    </Dialog>
   );
 }
