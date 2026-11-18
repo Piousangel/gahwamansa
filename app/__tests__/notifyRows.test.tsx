@@ -1,4 +1,5 @@
-// P13 알림 행(시안 P13_more v2, 법률 규칙 ③: 앱 안에서 알림 끄기 — Firebase 연결 전 선행). 켬/끔 = set_push_enabled.
+// P13 알림 행(법률 규칙 ③: 앱 안에서 알림 끄기 — Firebase 연결 전 선행).
+// 빌드 1 결정(리드 11-18): '알림' 한 행, 켬/끔 = set_push_enabled. 휴대폰에서 꺼진 채널은 행 아래 안내 + 휴대폰 설정 열기.
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
@@ -15,20 +16,21 @@ async function settings(opts: FakeOptions = {}) {
   await press('설정');
   return api;
 }
+const sw = () => screen.getByRole('switch', {name: '알림'});
 
-test('오늘의 사진·응원 두 행이 켜짐, 누르면 set_push_enabled(false) — 서버 값 하나라 두 행이 함께 꺼짐', async () => {
+test("'알림' 한 행(켜짐), 누르면 set_push_enabled(false), 다시 누르면 true", async () => {
   const api = await settings();
   const set = jest.spyOn(api, 'setPushEnabled');
-  const daily = await waitFor(() => screen.getByRole('switch', {name: '오늘의 사진'}));
-  expect(daily.props.accessibilityState.checked).toBe(true);
-  expect(screen.getByRole('switch', {name: '응원'}).props.accessibilityState.checked).toBe(true);
+  await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
+  expect(sw().props.accessibilityHint).toBe('하루 한 번, 오늘 사진이 오면 알려 드려요');
+  expect(screen.queryByRole('switch', {name: '오늘의 사진'})).toBeNull();
   await act(async () => {
-    fireEvent.press(daily);
+    fireEvent.press(sw());
   });
   expect(set).toHaveBeenCalledWith(false);
-  await waitFor(() => expect(screen.getByRole('switch', {name: '응원'}).props.accessibilityState.checked).toBe(false));
+  await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(false));
   await act(async () => {
-    fireEvent.press(screen.getByRole('switch', {name: '응원'}));
+    fireEvent.press(sw());
   });
   expect(set).toHaveBeenLastCalledWith(true);
 });
@@ -36,35 +38,35 @@ test('오늘의 사진·응원 두 행이 켜짐, 누르면 set_push_enabled(fal
 test('끄기에 실패하면 원래 값으로 돌아간다', async () => {
   const api = await settings();
   jest.spyOn(api, 'setPushEnabled').mockRejectedValueOnce(new Error('x'));
-  const daily = await waitFor(() => screen.getByRole('switch', {name: '오늘의 사진'}));
+  await waitFor(() => sw());
   await act(async () => {
-    fireEvent.press(daily);
+    fireEvent.press(sw());
   });
-  await waitFor(() => expect(screen.getByRole('switch', {name: '오늘의 사진'}).props.accessibilityState.checked).toBe(true));
+  await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
 });
 
-test('앱 알림이 휴대폰에서 꺼짐: 행 하나 "알림 / 휴대폰 설정에서 꺼져 있어요 / 휴대폰 설정 열기"', async () => {
+test('앱 알림이 휴대폰에서 꺼짐: 스위치 대신 "알림 / 휴대폰 설정에서 꺼져 있어요 / 휴대폰 설정 열기"', async () => {
   jest.spyOn(notify, 'readNotifyPermission').mockResolvedValue('blocked');
   const open = jest.spyOn(notify, 'openNotifySettings').mockResolvedValue();
   await settings();
   const row = await waitFor(() => screen.getByTestId('notify-row-system'));
   expect(within(row).getByLabelText('알림, 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
-  expect(screen.queryByRole('switch', {name: '오늘의 사진'})).toBeNull();
+  expect(screen.queryByRole('switch', {name: '알림'})).toBeNull();
   await act(async () => {
     fireEvent.press(within(row).getByRole('button', {name: '휴대폰 설정 열기'}));
   });
   expect(open).toHaveBeenCalledWith();
 });
 
-test('응원 채널만 휴대폰에서 꺼짐: 그 행만 안내 + 그 채널 설정 열기', async () => {
+test('응원 채널만 휴대폰에서 꺼짐: 행 아래 그 종류 안내 + 그 채널 설정 열기', async () => {
   jest.spyOn(notify, 'channelEnabled').mockImplementation(async ch => ch !== 'cheer');
   const open = jest.spyOn(notify, 'openNotifySettings').mockResolvedValue();
   await settings();
-  await waitFor(() => screen.getByRole('switch', {name: '오늘의 사진'}));
-  const cheer = screen.getByTestId('notify-row-cheer');
-  expect(within(cheer).getByLabelText('응원, 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
+  const off = await waitFor(() => screen.getByTestId('notify-off-cheer'));
+  expect(screen.queryByTestId('notify-off-daily')).toBeNull();
+  expect(within(off).getByLabelText('응원, 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
   await act(async () => {
-    fireEvent.press(within(cheer).getByRole('button', {name: '휴대폰 설정 열기'}));
+    fireEvent.press(within(off).getByRole('button', {name: '휴대폰 설정 열기'}));
   });
   expect(open).toHaveBeenCalledWith('cheer');
 });
@@ -76,5 +78,5 @@ test('연결 전 기기(설정 값 없음)는 알림 행이 없다', async () =>
   await waitFor(() => screen.getByTestId('date-line'));
   await press('설정');
   await waitFor(() => screen.getByText('도장 소리'));
-  expect(screen.queryByRole('switch', {name: '오늘의 사진'})).toBeNull();
+  expect(screen.queryByRole('switch', {name: '알림'})).toBeNull();
 });
