@@ -18,6 +18,7 @@ import {color, radius, size} from '../../ui/tokens';
 import {APP_VERSION} from '../../lib/appInfo';
 import {ChildParent, isOffline, LoginMethod, PARENT_TITLES} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 const s = copy.child.settings;
 const rel = copy.relation;
@@ -34,7 +35,7 @@ export function ChildSettings() {
   const [picked, setPicked] = useState('부모님');
   const [saving, setSaving] = useState(false);
   const [logout, setLogout] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [modalError, setModalError] = useState<string | null>(null); // 리뷰 M2: 시트·대화상자 안 오류 줄
   const {show} = useToast();
   const failText = (e: unknown) => (isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
@@ -88,30 +89,30 @@ export function ChildSettings() {
     }
   };
   const newPhoneCode = async (t: Target) => {
-    if (busy) {
+    if (isBusy()) {
       return;
     }
-    setBusy(true);
+    beginBusy();
     try {
       const code = await api.issueInviteCode(t.parentId);
       navigation.navigate('Code', {code, title: t.title});
     } catch (e) {
       show({text: failText(e), kind: 'error', action: {label: copy.errors.offline.button, onPress: () => newPhoneCode(t)}});
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
   const doLogout = async () => {
-    if (busy) {
+    if (isBusy()) {
       return;
     }
-    setBusy(true);
+    beginBusy();
     try {
       await api.signOut();
       setLogout(false);
       resetRole(); // 첫 화면(역할 선택)으로
     } catch (e) {
-      setBusy(false);
+      endBusy();
       setModalError(failText(e)); // 대화상자 안에 알린다
     }
   };

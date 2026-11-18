@@ -4,6 +4,7 @@ import {copy, offlineMessage, Message} from '../../copy/copy';
 import {isOffline, StepName} from '../types';
 import {track} from './track';
 import {localStamps} from '../../lib/localStamps';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 export const errorMessage = (e: unknown): Message => (isOffline(e) ? offlineMessage : copy.errors.server);
 
@@ -13,11 +14,11 @@ export function useFinishStep() {
   const {api, applyStep, content, done} = useSession();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
-  const [busy, setBusy] = useState(false);
+  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
 
   // attemptNo: P6 '다 썼어요'를 누른 수(이벤트 attempt_no). 다른 단계는 주지 않는다.
   const finish = async (step: StepName, attemptNo?: number): Promise<boolean> => {
-    if (busy) {
+    if (isBusy()) {
       return false;
     }
     if (content && !content.linked) {
@@ -29,7 +30,7 @@ export function useFinishStep() {
       applyStep(step, 0);
       return true;
     }
-    setBusy(true);
+    beginBusy();
     setError(null);
     try {
       const sec = Math.min(7200, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
@@ -45,7 +46,7 @@ export function useFinishStep() {
       setError(errorMessage(e));
       return false;
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
   return {finish, error, setError, busy};

@@ -10,6 +10,7 @@ import {color, FONT_SCALE_MAX_BODY, radius} from '../../ui/tokens';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import type {DeleteScope} from '../types';
 import {errorMessage} from '../course/useFinishStep';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 type Props = {role: 'parent' | 'child'};
 
@@ -19,7 +20,7 @@ export function DeleteAccountScreen({role}: Props) {
   const {api, clear} = useSession();
   const [stage, setStage] = useState<1 | 2>(1);
   const [typed, setTyped] = useState('');
-  const [busy, setBusy] = useState(false);
+  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<Message | null>(null);
   const child = role === 'child';
   const dp = copy.delete.parent;
@@ -47,10 +48,10 @@ export function DeleteAccountScreen({role}: Props) {
   const strong = child && scope === 'family';
 
   const run = async () => {
-    if (busy) {
+    if (isBusy()) {
       return;
     }
-    setBusy(true);
+    beginBusy();
     setFailed(null);
     try {
       const r = await api.deleteMyAccount();
@@ -61,7 +62,7 @@ export function DeleteAccountScreen({role}: Props) {
     } catch (e) {
       setFailed(errorMessage(e));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
 

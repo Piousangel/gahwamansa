@@ -16,6 +16,7 @@ import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -37,16 +38,16 @@ export function ParentSettings() {
     return focusLater(() => resumeTitleRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [busy, setBusy] = useState(false);
+  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const versionTap = useAppVersionTaps();
 
   const run = async (action: () => Promise<void>, next: boolean, done: string | null) => {
-    if (busy) {
+    if (isBusy()) {
       return;
     }
-    setBusy(true);
+    beginBusy();
     setError(null);
     try {
       await action();
@@ -56,7 +57,7 @@ export function ParentSettings() {
     } catch (e) {
       setError(errorMessage(e));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
 
