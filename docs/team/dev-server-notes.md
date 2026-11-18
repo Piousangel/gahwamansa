@@ -288,3 +288,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 5. **심사 결과가 나오면**: `... cleanup <심사 가족 id>` — 심사 기기의 어르신 프로필·익명 계정 삭제 + 번호 끔. 자녀 계정·가족은 남는다(다음 심사 때 4부터 다시).
 6. 확인: `select is_review, (select count(*) from profiles p where p.family_id = f.id and role = 'parent') parents from families f where id = '<id>';`, 번호 상태 `select disabled_at, max_uses from invite_codes where family_id = '<id>' and reusable;`
 - 주의: 심사 가족은 일일·응원·연결 알림 대상이 아니고(0033·0038) 지표에서도 뺀다(§12). 번호가 새면 `disable` 후 새로 `create`(새 가족). 스크립트는 실행 전 `app/env/<환경>.env` ref와 호스트를 대조한다. 리허설: staging에서 1~5를 1회(리드·사용자). 로컬은 0025 pgTAP(review_access)으로 같은 흐름을 검증한다.
+
+## 12. 지표 SQL (SV-16)
+- `supabase/ops/metrics.sql`: ① 퍼널 1~7단계 ② DAU(역할별)·어르신 코스 연 수 ③ D7 유지(퍼널 8) ④ 연결률 ⑤ 유료 관심(C6, 안별) ⑥ 푸시 종류별 발송·실패·무효·제외·열기 ⑦ 질문별 A/B 비율(응답 20명 미만 숨김). Studio SQL Editor에서 쿼리 하나씩, 맨 위 날짜만 바꿔 실행(읽기 전용).
+- 모두 심사 가족 제외. 보관 기간 때문에 D7·A/B는 최근 31일, 이벤트는 14개월 안에서만 정확. 테스터 제외용 `is_test` 표시는 아직 없다(필요하면 결정 후 추가).
