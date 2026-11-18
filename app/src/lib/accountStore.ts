@@ -5,9 +5,8 @@ import type {KeyValueStore} from './kvStore';
 
 export const SEEN_PARENTS_KEY = 'seen_parent_ids_v1'; // N3 본 어르신 id 목록
 export const PAID_INTEREST_KEY = 'paid_interest_v1'; // C6 관심 남김
-export const PUSH_PROMPT_KEY = 'push_prompt_v1'; // 어르신 N1 답('yes'·'yes_pending' 서버 미반영·'no'), AU-04
-export const PUSH_CHILD_KEY = 'push_child_on_v1'; // 자녀 권한 허용을 서버(set_push_enabled true)에 알렸음, AU-04
-const ACCOUNT_KEYS = [SEEN_PARENTS_KEY, PAID_INTEREST_KEY, PUSH_PROMPT_KEY, PUSH_CHILD_KEY];
+export const PUSH_PROMPT_KEY = 'push_prompt_v1'; // 어르신 N1·토글 답('yes'·'yes_pending' 서버 미반영·'no'·'off' 앱에서 끔), AU-04
+const ACCOUNT_KEYS = [SEEN_PARENTS_KEY, PAID_INTEREST_KEY, PUSH_PROMPT_KEY];
 
 export const accountKey = (base: string, tag: string) => `${base}:${tag}`;
 

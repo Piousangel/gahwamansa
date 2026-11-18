@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import {useIsFocused} from '@react-navigation/native';
 import {useBgm} from '../../audio';
-import {bgmAsset} from '../../lib/bgmAsset';
+import {bgmAsset, type BgmTrack} from '../../lib/bgmAsset';
 import {prefs} from '../../lib/prefs';
 import {useScreenReader} from '../../ui/a11y';
 
@@ -9,8 +9,8 @@ import {useScreenReader} from '../../ui/a11y';
 // - 음원(CT-04)이 없으면 available=false → 화면은 음악 요소를 그리지 않는다.
 // - 이 화면이 보일 때만 튼다(다른 화면이 위에 쌓이면 멈춤). 판단(무음·화면 읽기·백그라운드·덕킹)은 audio/useBgm·audioPolicy.
 // - 켬/끔은 기기 설정(prefs). 화면에 돌아올 때 다시 읽어 설정 화면에서 바꾼 값이 반영된다.
-export function useCourseBgm() {
-  const asset = bgmAsset();
+export function useCourseBgm(which: BgmTrack) {
+  const asset = bgmAsset(which);
   const focused = useIsFocused();
   const screenReader = useScreenReader();
   const [enabled, setEnabledState] = useState(false);

@@ -432,3 +432,57 @@
 - L3(2단계 읽기 순서 본문 약관 → 하단 고정 링크): 9절 2단계 정의(약관만 본문 끝, 링크는 하단 고정) 그대로라 남는다. 디자인 확인 항목.
 - 약관 링크 주소 작업(⑥a) 때 남은 일: ① 호출부 두 곳(ConnectScreen LegalLine·ChildLogin)에 useInAppWeb onOpen 넘기기 ② 줄 높이 48 이 두 줄 문장 전체에 붙어 60 → 96 → P1 예산·하단 고정 재측정 ③ 밑줄 2px 은 RN 에서 못 정함(디자인 수용 여부).
 - 에뮬레이터 360·320 실측은 리드 배정 뒤(p1-fit.yaml, 스크린샷 판독 기준).
+### AU-07 앱 정보 상수·앱 안 웹 화면 · 2026-11-18 (웹뷰 보안 리뷰 대상)
+- 값: `app/env/<flavor>.env` 공개 값 `TERMS_URL·PRIVACY_URL·CONTACT_EMAIL·BIZ_NAME·BIZ_CEO·BIZ_REG_NO·BIZ_ADDRESS` → Gradle 이 형식 검사·`env.generated.ts` → `lib/appInfo.readAppInfo()`(앱도 형식을 다시 보고 틀리면 숨김). 사업자 정보는 넷 다 있어야 구역을 보임. 버전 `"1.0.0 (n)"`(versionName·versionCode, 개발 실행은 '1.0.0'). 기존 `APP_VERSION·PRIVACY_URL·CONTACT_EMAIL` 내보내기는 호환용으로 유지.
+- 빠진 값: 빌드 경고(매 빌드), production release 는 실패(G-INT), `-PallowMissingAppInfo` 로만 우회. 지금 staging·production 모두 비어 있음(US-03·US-04 대기) → 행이 숨겨짐.
+- `react-native-webview@17.1.0`(정확 고정, 2026-11-04 배포 = 14일). 17.x 는 새 아키텍처 전용·RN 0.80+(README) — RN 0.88 새 아키텍처와 맞음. npm `latest` 태그는 14.0.1(구·신 둘 다)이고 17.x 는 `next` 태그라는 점은 기록해 둔다(빌드·실기기에서 문제가 나면 14.0.1 로 내림). **권한 추가 없음**(라이브러리 매니페스트: Chrome 결제 intent `<queries>` 3개, `${applicationId}.fileprovider`(exported=false)뿐 — 병합 매니페스트 확인).
+- 화면: 라우트 `Web: {target: 'terms'|'privacy'}`(어르신·자녀 스택 한 줄씩) — 파라미터는 주소가 아니라 종류, 주소는 앱 정보 상수에서만. `app/WebScreen`(이전 바 + 제목) + `ui/WebPage`(웹뷰 본문).
+- 웹뷰 설정: `javaScriptEnabled=false`(정적 고지 페이지, site/*.html 스크립트 0), DOM 저장소·쿠키·캐시 끔(`incognito`), 파일 접근 3종 끔, `mixedContentMode=never`, 여러 창 끔, 위치 끔, `originWhitelist=https://*`, 주입 JS·onMessage 없음(브리지 없음). 탐색: 같은 호스트 https 만 안에서, 다른 https·mailto 는 사용자가 누른 것만 휴대폰 앱으로, intent·javascript·file·http 는 막음. 글자: `textZoom` = 휴대폰 글자 배율.
+- 열기: `shared/appLink.openInAppWeb(target, navigate)` — 값 없으면 `unavailable`, 그 주소에 HEAD 4초로 닿지 않으면 `offline`(화면을 열지 않음 → 호출부가 `app_info.link_offline`: 어르신 Banner·자녀 Toast), 닿으면 `navigate(target)`. 로드 실패는 화면 안 한 줄(같은 문구).
+- **연결은 AP-06(P13)·L3(C7) 몫**: 지금 C7 `ChildAppInfo` 는 방침을 외부 브라우저(`Linking.openURL`)로 연다 → `openInAppWeb('privacy', t => navigation.navigate('Web', {target: t}))` 로 바꿀 것.
+
+### AU-06 오픈소스 라이선스 목록·화면 · 2026-11-18
+- 목록 두 개(커밋되는 생성 파일): `src/oss/js.generated.json`(package-lock 출시 의존성 = dev·optional 제외 264개, 각 패키지 LICENSE·COPYING·NOTICE 전문, 같은 전문은 한 번만), `src/oss/android.generated.json`(Gradle `productionReleaseRuntimeClasspath` 의 Maven 모듈 149개 + POM `<licenses>` 이름·주소, 없으면 부모 POM 3단계까지). 프로젝트 모듈(react-native-*)은 JS 목록에 있다.
+  - 전문 파일이 없는 Meta 패키지(@react-native/*·metro·hermes·flow 등, MIT)는 react-native 의 LICENSE 로 채움. 남은 전문 없음 5개는 이름·라이선스만 표시.
+- 만들기: `cd app && npm run oss`(= `oss:js` node 스크립트 + `oss:android` Gradle `generateOssAndroid`). 의존성을 바꾸면 다시 만들어 커밋.
+- 최신성 검사: jest `ossLicenses.test`(JS 목록을 다시 만들어 커밋본과 비교 — npm 의존성을 바꾸고 안 만들면 실패) + **release 빌드 preBuild 가 `verifyOssLicenses`**(Android·JS 둘 다, 낡으면 빌드 실패). 디버그 빌드는 검사하지 않음.
+- 화면: 라우트 `Oss`(어르신·자녀 스택 한 줄씩) `app/OssScreen` — 이전 바·제목(app_info.oss)·안내 한 줄(app_info.oss_intro) + 행(이름 버전·라이선스), 누르면 그 자리에서 전문(없으면 라이선스 주소, 글자로만) 펼침. 목록 파일(약 280KB)은 화면을 열 때 처음 읽는다(`lib/ossLicenses.ossRows`). `appInfo.OSS_LICENSES_READY = true` — P13(AP-06)·C7(L3) 행에서 `navigate('Oss')`.
+- OFL 서체를 번들하면(DZ-08) 서체 3종을 JS 목록 밖에서 따로 넣어야 한다(npm 패키지가 아님) — 그때 `scripts/ossLicenses.js` 에 고정 항목 추가.
+
+### AU-04 리뷰 반영(reviews/2026-11-18-app-push-review.md 낮음 L1~L7 + M1 API) · 2026-11-18
+- **M1(끄기 토글) API**: P13(L2)·C7(L3) 토글은 `push/runtime` 의 `pushReceive()`(서버 my_push_settings: true·false·null 연결 전·'offline') 로 초기값, `setPushReceive(on)`(set_push_enabled, 실패는 `{ok:false, reason:'offline'|'no_profile'|'invalid'}`) 로 바꾼다. 끄면 이 계정 N1 기억이 'off'(다시 묻지 않음·재시도 없음), 켜면 'yes' + 권한이 있으면 토큰 등록. 토큰 해제는 하지 않음(로그아웃용). DECISIONS 11-18: FCM 공급자 병합 전 두 토글이 main 에 있어야 함.
+- L1: N1 '알려 주세요' 뒤 시스템 창이 뜨지 않으면(blocked·unknown) 닫지 않고 `push.system_off.body` + '휴대폰 설정 열기'(앱 알림 설정), '괜찮아요'로 닫기. 창에서 '허용 안함'(denied)은 닫는다. **재노출 규칙**: 이 계정에서 답했으면(yes·no·off) N1 은 다시 뜨지 않는다. 재설치하면 기기 기억이 없어 서버가 false 면 다시 뜬다(누르기 전에는 켜지지 않음). 다시 켜기·휴대폰 꺼짐 안내는 P13.
+- L2(리드 결정): 자녀 받기 동의는 `useNotifyPermission.open`(C3 '알림 켜기'·C7 행)을 **눌렀을 때만** `childNotifyOptIn` — 시스템 창 결과와 상관없이 서버 동의, 허용이면 토큰 등록. 권한이 이미 허용인 기기라도 앱 시작 때는 토큰만 등록한다. `push_child_on_v1` 키 삭제.
+- L3: 어르신 `yes_pending` 재시도는 서버 값 먼저(true 면 기억만 'yes', null 이면 두고, false 면 'yes_pending' 일 때만 다시). 앱에서 끄면 'off' 라 재시도하지 않는다. 자녀 자동 켜기는 L2 로 없어짐. 서버에 '끈 시각'이 없어 재설치 뒤 "안 켬/껐음" 구분은 못 함 — N1 을 다시 보여 줄 뿐 자동으로 켜지 않는다.
+- L4 방침: 연결 전 어르신도 권한이 있으면 토큰 등록을 부른다(서버가 no_profile 이어도 같은 토큰의 다른 계정 행을 지움, 0036 — 해제 못 한 이전 계정 알림 차단). no_profile 은 정상 결과로 무시하고 기기에 저장하지 않는다(로그아웃 해제 대상 아님).
+- L5: 알림 탭을 받을 때의 계정 가명값을 들고 있다가 처리할 때 다르면 버린다(기기 안 비교만, 서버·이벤트로 보내지 않음 — accountTagGuard 에 PushHost 추가). 10분 넘게 처리 못 한 탭도 버린다.
+- L6: 어르신 알림 탭은 진행 중 화면(Connect·Consent·PushPermission·DeleteAccount·DeleteDone)에서는 기다렸다가 그 화면을 떠난 뒤 처리.
+- L7: 자녀 기기에 온 어르신 종류는 버림, 역할 고르기 전 탭 버림, blocked N1, L2·L4·L5·L6 화면 테스트 추가.
+
+### 웹뷰·OSS 리뷰 반영(reviews/2026-11-18-webview-review.md) · 2026-11-18
+- M1: `ui/WebPage.decideNavigation`·`hostOf` 를 URL 파싱으로(react-native-url-polyfill 의 URL — RN 기본 URL 은 hostname 미구현): https + hostname 정확 일치 + username·password·port 비어 있음일 때만 안에서. 재현 3건(`허용:x@evil`·`허용:@evil`·`:8443`) 테스트.
+- M2: 두 번째 관문 — `onLoadStart`·`onNavigationStateChange` 에서 주소를 다시 판단, 아니면 `stopLoading()` + 웹뷰를 내리고 오류 줄. 라이브러리의 250ms 기본 허용(14.0.1·17.1.0 둘 다 `RNCWebViewClient` 에 있음 확인), 서버 리다이렉트·meta refresh 도 여기서 걸린다.
+- L1: 밖으로 보내는 것은 mailto 와 호출부가 준 `externalHosts`(기본 없음)만. 다른 호스트 https 는 막는다(누르지 않은 리다이렉트로 브라우저가 열리지 않게).
+- L4: `-PallowMissingAppInfo` 는 `-PrequireRealEnv`(build-production.sh 출시 경로)와 함께면 무시.
+- L5: `shared/useInAppWeb(navigate)` → `{open(target), busy}` — 확인(최대 4초) 동안 그 행에 진행 표시·두 번 누름 막기. P13·C7 행은 이 훅으로 연결.
+- L6: C7 `ChildAppInfo` 방침 외부 브라우저 열기는 US-03 값 투입과 같은 작업으로 L3 가 `useInAppWeb` 으로 바꿀 것(값이 들어오기 전엔 행이 숨겨져 영향 없음).
+- O1: `verifyOssLicenses` 는 production release 에서만. POM 조회 실패는 "네트워크·저장소 문제" 메시지로 따로, 낡은 목록은 달라진 패키지 몇 개를 찍는다.
+- O3: 전문 없던 런타임 패키지 3개(async-storage·fast-base64-decode·boolbase)는 저장소 LICENSE 원문을 `app/scripts/oss-supplement/` 에 고정(2026-11-18 기본 브랜치), 개발 도구 2개(@react-native/debugger-frontend·fb-dotslash) 제외 → 전문 없는 항목 0.
+- O4(법률 확인 필요, L6 레인에 전달): react-android·hermes-android AAR 안에 정적 링크된 C++ 라이브러리(folly·boost·glog·fmt·double-conversion 등)는 POM 에 없어 목록에 없다. Apache-2.0 NOTICE 요구 확인도 안 함 → questions-for-lawyer 한 줄 필요.
+- O5: jest 최신성 실패 메시지에 `npm ci` 안내.
+- L2: 14.0.1(npm latest)을 시험 — RN 0.88.1 새 아키텍처 `assembleStagingDebug` 는 성공(6분 33초)했지만 **tsc 실패**(14.0.1 의 클래스 컴포넌트 타입이 React 19.3 타입과 맞지 않아 WebView props 가 never). 타입을 단언으로 덮는 것보다 새 아키텍처 전용 17.1.0 을 유지(README: RN 0.80+ 새 아키텍처). 250ms 기본 허용은 두 판 모두 있음(M2 관문으로 막음). **실행 확인(로드·뒤로·글자 배율)은 아직** — Web 라우트로 가는 화면이 없어(P13·C7 연결 전) 열 길이 없음 → 연결 때 QA 실기기(안드로이드 9·12·15) 출시 체크 항목.
+
+### Firebase 연결 계획(US-10 와 함께, 설치는 리드 지시 뒤) · 2026-11-18
+**이미 들어간 준비(설치 없이 지금 빌드·동작 그대로)**
+- `src/push/fcmTokenSource.ts`: `createFcmTokenSource()` — `@react-native-firebase/messaging` 을 try 안에서만 require(없으면 null), Firebase 초기화 실패(그 flavor 에 json 없음)도 null. 모듈러 API(getMessaging·getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage). 토큰 요청 때만 `setAutoInitEnabled(true)`. 알림 data 는 `{kind}` 만 남김. 테스트 `fcmTokenSource.test`(가짜 모듈).
+- `pickTokenSource('real')` 는 `FCM_WIRED`(지금 false)일 때만 FCM — **리뷰 M1: P13·C7 끄기 토글이 main 에 들어온 뒤 true**.
+- Gradle: flavor 폴더 `app/android/app/src/<staging|production>/google-services.json` 이 하나라도 있을 때만 `com.google.gms:google-services:4.5.0` classpath + 플러그인 적용, 파일 없는 flavor 는 `process…GoogleServices` 를 끔. 없으면 지금과 같음. `app/android/app/google-services.json`(flavor 밖)은 빌드 실패(섞임 방지). 루트 .gitignore 에 이미 `google-services.json`.
+- `app/firebase.json`: 데이터 수집 기본 끔·메시징 자동 초기화 끔(권한 허용 뒤 첫 토큰 요청 때 켬 — 알림 거부 기기의 설치 ID 생성 최소화, QA-07)·기본 채널 `daily`·전달 지표 BigQuery 끔·알림 위임 끔·설치 ID 메시징 끔.
+
+**설치 순서(리드 지시 뒤, 사용자 콘솔 작업과 같은 날)**
+1. 사용자(US-10): Firebase 프로젝트 2개(staging·prod)에 Android 앱 등록 — 패키지 `com.bumojasik.app.staging`·`com.bumojasik.app`, `google-services.json` 2개를 저장소 밖으로 전달 → `app/android/app/src/staging/`·`src/production/` 에 복사(커밋 금지). FCM 서비스 계정 키 → 각 Supabase secrets `FCM_SERVICE_ACCOUNT`(서버 노트 §4).
+2. `cd app && npm install --save-exact @react-native-firebase/app@27.1.0 @react-native-firebase/messaging@27.1.0`(2026-10-23 배포. 27.1.1 은 11-10 이라 2주 규칙에 걸림). 권장 Android 값: Firebase BoM 35.0.2, google-services 4.5.0, minSdk 24(우리 24).
+3. 병합 매니페스트 확인: messaging 이 `WAKE_LOCK`·`ACCESS_NETWORK_STATE` 권한, 서비스 2개(exported=false), `c2dm` 수신기(exported=true + `c2dm.permission.SEND` 보호)를 더한다. **`AD_ID`·위치 권한이 없어야**(AU-05, 있으면 `tools:node="remove"`). 데이터 보안 양식(LG-05)에 FCM 토큰·Firebase 설치 ID 반영.
+4. `npm run oss`(라이선스 목록 갱신 — release 빌드가 검사), `npm test`, 두 flavor `assembleDebug`·production release.
+5. M1 토글 main 반영 확인 → `FCM_WIRED = true` → staging 실기기 수신(QA-07: 허용·거절·나중에, 08~21 창, 탭 라우팅, 알림 거부 기기의 설치 ID 생성 여부).
+6. 출시 게이트(그때 추가): production release 는 `src/production/google-services.json` 이 없으면 실패하게(지금은 Firebase 전이라 넣지 않음).

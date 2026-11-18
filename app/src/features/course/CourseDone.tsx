@@ -81,7 +81,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const toHome = () => navigation.popTo('CourseHome');
   // AP-04 첫 완료 1회 권유(시안 PX_music): 연출이 끝난 뒤 '음악을 틀어 드릴까요?' → 들어 볼게요면 켜고 미리 듣기 상자.
   // 음원(CT-04)이 없거나 화면 읽기 켜짐이면 묻지 않는다. 한 번 보이면 다시 묻지 않는다(prefs bgmOffered)
-  const music = useCourseBgm();
+  const music = useCourseBgm('done');
   const [offer, setOffer] = useState<'none' | 'ask' | 'preview'>('none');
   useBackAction(toHome);
 

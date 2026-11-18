@@ -3,7 +3,7 @@ import React from 'react';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
-import {setBgmAssetForTest} from '../src/lib/bgmAsset';
+import {bgmAsset, setBgmAssetForTest, setBgmPreview} from '../src/lib/bgmAsset';
 import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
@@ -18,7 +18,8 @@ beforeEach(() => {
   setStampFeedbackForTest(() => ({fire: async () => ({sound: false, haptic: false})}));
 });
 afterEach(() => {
-  setBgmAssetForTest(null);
+  setBgmAssetForTest(undefined);
+  setBgmPreview(false);
   setPrefsForTest(null);
   setLocalStampsForTest(null);
   setStampFeedbackForTest(null);
@@ -88,4 +89,12 @@ test('P13 "배경 음악" 행: 기본 꺼짐, 누르면 켜짐', async () => {
     fireEvent.press(screen.getByTestId('bgm-row'));
   });
   await waitFor(async () => expect(await prefs.bgmEnabled()).toBe(true));
+});
+
+test('음원 2곡(content/audio → src/assets/bgm): 공개 전에는 null, 개발자 메뉴 미리 듣기면 이 실행 동안 home·done 자산', () => {
+  expect(bgmAsset('home')).toBeNull();
+  expect(bgmAsset('done')).toBeNull();
+  setBgmPreview(true);
+  expect(bgmAsset('home')).not.toBeNull();
+  expect(bgmAsset('done')).not.toBeNull();
 });

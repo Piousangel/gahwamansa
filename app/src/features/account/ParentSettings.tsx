@@ -17,6 +17,7 @@ import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {NotifyRows} from './NotifyRows';
+import {AppInfoRows} from './AppInfoRows';
 import {bgmAsset} from '../../lib/bgmAsset';
 
 const t = copy.settings;
@@ -120,12 +121,12 @@ export function ParentSettings() {
       )}
       <SettingsGroup title={t.group_sound} />
       {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
-      {linked ? <NotifyRows api={api} /> : null}
+      {linked ? <NotifyRows /> : null}
       {bgmAsset() !== null ? <BgmRow /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />
-      {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
-      <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
+      {/* 앱 정보 한 목록(법률 in-app-notices §3, AP-06): 약관·방침(앱 안 웹)·오픈소스·AI·병원 아님·사업자·문의하기 */}
+      <AppInfoRows />
       {/* 버전 줄: staging·개발 빌드에서만 7번 탭 → 개발자 메뉴(devGate). production 은 누르지 않는 글 행(화면 읽기에 '사용 안 함'으로 읽히지 않게) */}
       <SettingsRow
         testID={versionTap ? 'version-tap' : 'version-line'}

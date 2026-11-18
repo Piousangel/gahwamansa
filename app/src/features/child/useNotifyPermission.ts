@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import {AppState, Platform} from 'react-native';
 import {openNotifySettings, readNotifyPermission, requestNotifyPermission} from '../../push/notifyNative';
-import {childPermissionResult} from '../../push/runtime';
+import {childNotifyOptIn} from '../../push/runtime';
 
 export type NotifyState = 'granted' | 'denied' | 'unknown';
 
@@ -21,7 +21,7 @@ export async function readNotifyState(): Promise<NotifyState> {
 }
 
 // C3 "연결되면 알려 드릴게요 · 알림 켜기"·C7 알림 행이 쓰는 상태. denied 일 때만 켜기 안내를 보인다.
-// 허용되면 서버 받기 동의(set_push_enabled true, 0036)·토큰 등록은 push/runtime 이 한다(자녀 권한 허용 = 받기 동의).
+// '알림 켜기'를 누르면 서버 받기 동의(set_push_enabled true, 0036)·허용이면 토큰 등록은 push/runtime 이 한다(누른 것 = 받기 동의, 리뷰 L2).
 export function useNotifyPermission(): {state: NotifyState; denied: boolean; open: () => void} {
   const [state, setState] = useState<NotifyState>('unknown');
 
@@ -39,11 +39,12 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; ope
     return () => sub.remove();
   }, [refresh]);
 
-  // 켜기: 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)·앱 알림 끔·12 이하면 휴대폰 설정
+  // 켜기: 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)·앱 알림 끔·12 이하면 휴대폰 설정.
+  // 누른 것이 받기 동의(리뷰 L2) → 결과와 상관없이 서버 받기 동의, 허용이면 토큰 등록(push/runtime)
   const open = useCallback(() => {
     if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
       requestNotifyPermission().then(p => {
-        childPermissionResult(p).catch(() => {});
+        childNotifyOptIn(p).catch(() => {});
         if (p === 'granted') {
           refresh(); // 앱 단위로 꺼져 있을 수도 있어 다시 확인
         } else if (p === 'blocked' || p === 'unknown') {
@@ -52,6 +53,7 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; ope
       });
       return;
     }
+    childNotifyOptIn('blocked').catch(() => {});
     openNotifySettings();
   }, [refresh]);
 

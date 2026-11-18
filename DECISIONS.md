@@ -393,3 +393,34 @@
 - Q-08 상표: KIPRIS 충돌 없으면 이름 유지
 - Firebase: 사용자와 함께 설정(콘솔 작업·키는 사용자, 팀이 단계 안내·앱 연결)
 - 저장 데이터 암호화·키 관리: 팀 내부 결정으로 위임(보안 회의 → DECISIONS 기록)
+
+## 2026-11-19 법률 에이전트 답변 반영(위임) — docs/team/legal/replies/2026-11-19-legal-agent-answers.md
+- 변경(G-CLOSED 전): Q3 방침 국외 이전 근거 문장, Q7 '법 때문에 따로 남기는 정보 없음' 단정 삭제 → 접속 기록은 서비스 제공자(Supabase 등) 기본 보관 기간대로 남는다고 사실 고지(통비법 3개월 대상 여부는 KISA 118 확인 항목), Q8 내부관리계획 개정(권한 변경 기록 3년·MFA 의무·내려받은 자료 암호화·72시간), Q9 방침에 업무용 전화번호(사용자 값)
+- 보완: Q2 동의한 약관·방침 버전·시각 서버 기록(서버 0046), Q1 P2 동의 5요소 점검, Q4 설정 '문의하기'에 열람·삭제 요청 경로, Q6 푸시 문구 금지어 테스트, Q5 카카오 닉네임 동의항목 제거(최소 수집, 사용자 콘솔 작업)
+- 확신도 낮음 5건은 공개(G-PUB) 전 공식 무료 상담 확인 목록으로(Q3 EU 표기·Q7·Q15·Q16·Q17), Q6 광고성 여부는 테스터 발송 전 118 확인
+
+## 2026-11-19 저장 암호화·키 관리(위임) — docs/team/board/2026-11-19-encryption-keys/SUMMARY.md
+- 컬럼 암호화 없음(법정 저장 암호화 대상 미수집, Supabase AES-256 at rest). 키 경로 차단 D9~D13(새 secret 키 이행, 환경별 비밀값, Vault 화면 입력, DB SSL 강제, 셸 기록 금지), display_name 제거·감사 사유 개인정보 서버 거부, Android 기기 간 이전 차단, 키 관리 정책 v0.1(대장은 비밀번호 관리자, 연 1회·사고 시 즉시 교체)
+- 마이그레이션 번호: 0046 약관·방침 동의 기록(법률 Q2, 진행 중), 0047 개인정보 최소화·감사 가드(E1)
+- 11-19 staging 반영(사용자 승인 '테스트서버에 올려도대'): 0032~0045 push 완료. 확인: 원격 최신 0045, advisors 경고는 의도된 34·익명 로그인·유출 비밀번호 보호(콘솔)만, cron 4개(kakao-unlink·purge-expired-data·push-daily·push-events) 등록. Vault 값·Edge 함수 배포 전이라 발송 함수는 호출되지 않음. remote-checks.sql은 읽기 전용 역할에서 vault 복호화 권한 오류 — Studio(서비스 권한)에서 실행 필요(서버 줄에 수정 요청)
+- 11-19 도메인 확정: gahwamansa.com(Cloudflare Registrar, 사용자 구입). staging은 서브도메인(staging.gahwamansa.com 예정). Firebase는 환경별 프로젝트 2개(staging 먼저)
+- 11-19 Firebase: 새 프로젝트 한도로 기존 Google Cloud 프로젝트 gahwa-mansaseong에 Firebase 추가(Blaze — FCM 무료). 앱 2개 등록(com.bumojasik.app·.staging), google-services.json을 staging·production flavor 폴더에 배치(gitignore). 환경별 Firebase 분리는 한도가 풀리면(삭제 프로젝트 30일 뒤) 별도 staging 프로젝트로 이전. Google Analytics가 프로젝트에 연결돼 있으나 앱에 Analytics SDK가 없고 firebase.json에서 수집 꺼서 데이터 없음 — 연결 해제는 사용자 선택
+
+## 2026-11-19 FCM 발송 키(staging)
+- 서비스 계정 fcm-sender@gahwa-mansaseong(역할: Firebase Cloud Messaging API 관리자 1개만) JSON 키를 사용자가 직접 생성
+- staging Supabase secret FCM_SERVICE_ACCOUNT 설정 완료(사용자 실행, --env-file 임시 파일 삭제, 값은 화면·셸 기록에 안 남음). 키 원본은 ~/.secrets/gahwa/fcm-sender-staging.json(600), 저장소 밖
+- 비밀값 대장(키 정책 v0.1)에 이름 추가 대상. production은 별도 Firebase 프로젝트 분리 때 새 키(환경별 다른 값 규칙 D10)
+
+## 2026-11-19 GitHub 저장소
+- Piousangel/gahwamansa 비공개(사용자 선택). main만 push, 작업 브랜치는 리뷰 통과 후 main으로 합쳐 push
+- push 전 커밋 기록 전체 비밀값 검사: 비밀 파일·키 패턴 0건(RN 기본 debug.keystore, 테스트 코드의 PEM 조립 문자열만)
+
+## 2026-11-19 staging 반영 0046~0049 (사용자 승인 "올려")
+- db push 4개 적용, 원격 최신 0049. remote-checks(읽기 전용) true 20줄: definer 36개·anon 0, 뷰 쓰기 0, display_name 제거, 연결 전 삭제 경로, vault 앱 접근 0, 파기 배치 하루 이내 성공 등
+- 예상된 false: Vault project_url·push_cron_secret 미입력, 약관·방침 게시 버전 없음(G-PUB 때 admin_publish_terms_version), 응원 문장·푸시 문구 미적재(법률 확인 뒤), auth 감사 로그 0건(빌드 2 F3)
+
+## 2026-11-19 작업 방식: PR (사용자 제안)
+- 레인 작업은 브랜치를 origin(Piousangel/gahwamansa, 비공개)에 push하고 `gh pr create`로 PR을 연다. 설명: 목적·변경·검증 결과·`리뷰: <레벨> — N건 중 M건 반영`
+- 독립 리뷰어는 리뷰 파일을 같은 PR 브랜치에 커밋(또는 PR 코멘트). 작성자≠리뷰어 원칙 유지
+- 병합은 리드가 `gh pr merge --merge`(이력 보존). main 직접 커밋은 리드의 기록 문서·충돌 해결·타입 재생성만
+- 원격 DB 반영·비밀값·결제는 PR과 별개로 매번 사용자 승인

@@ -7,6 +7,6 @@ module.exports = {
   // 소리 자산(react-native preset 의 자산 변환에 없는 확장자) → 자산 번호 자리표시
   moduleNameMapper: {'\\.(wav|mp3|ogg|m4a|aac)$': '<rootDir>/testUtils/soundAssetStub.js'},
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-svg)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-svg|react-native-url-polyfill)/)',
   ],
 };

@@ -1,0 +1,15 @@
+{
+ "note": "배경 음악 2곡(bgm-proposal §2·§3 A안: Lyria Clip 30초 루프, 코스 홈·완료). 특정 가수·곡명·장르 상표 금지, 연주곡만",
+ "tracks": [
+  {
+   "id": "bgm-home",
+   "use": "P3 오늘 코스 화면",
+   "prompt": "A calm, gentle instrumental background piece for elderly listeners: soft acoustic piano with a light gayageum melody, slow tempo around 70 BPM, warm and nostalgic like an old photo album, steady and even volume, no drums, no vocals, no sudden changes, seamless loop with no intro build-up and no ending."
+  },
+  {
+   "id": "bgm-done",
+   "use": "P7 코스를 마친 화면",
+   "prompt": "A warm, softly bright instrumental piece for elderly listeners: acoustic guitar and soft piano with a light gayageum accent, relaxed tempo around 80 BPM, peaceful and content mood, steady and even volume, no drums, no vocals, no fanfare, no sudden changes, seamless loop with no intro build-up and no ending."
+  }
+ ]
+}

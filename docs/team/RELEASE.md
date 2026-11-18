@@ -27,6 +27,7 @@
 JS 쪽 우선순위(뒤가 앞을 덮음): 기본값(로컬+fake) → `env.generated.ts` → `config.local.ts`(**개발 빌드에서만**, release 에는 적용 안 됨).
 
 - env 값 검사: 필수 키, `APP_ENV`=flavor, 카카오 키 32자리 16진수, `SUPABASE_PUBLISHABLE_KEY` 는 `sb_publishable_` 로 시작하는 값만(anon·service_role JWT 금지), `SUPABASE_URL` = `https://<SUPABASE_PROJECT_REF>.supabase.co`. 어기면 빌드 실패.
+- 앱 정보 값(AU-07, 선택): `TERMS_URL`·`PRIVACY_URL`(https 만)·`CONTACT_EMAIL`·`BIZ_NAME`·`BIZ_CEO`·`BIZ_REG_NO`(000-00-00000)·`BIZ_ADDRESS`. 형식이 틀리면 빌드 실패, 비어 있으면 설정 화면에서 그 행을 숨기고 **빌드 경고**. **production release 는 하나라도 비면 실패**(G-INT "값이 없어 숨겨진 앱 정보 행 0", 확인용만 `-PallowMissingAppInfo`). 앱은 `src/lib/appInfo.ts`(`readAppInfo`·`missingAppInfo`).
 - `production.env` 가 없으면 디버그 빌드는 `production.env.example`(가짜 값)으로 경고와 함께 되지만, **release 빌드는 실패**한다(확인용으로만 `-PallowPlaceholderEnv`). `scripts/build-production.sh` 는 시작 전에 멈춘다.
 
 ### env.generated.ts 가 남는 규칙(Metro 가 어떤 서버로 붙나)
