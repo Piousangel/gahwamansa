@@ -229,6 +229,11 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
 });
 
 describe('리뷰 낮음 반영', () => {
+  test("U13 '오늘 코스로'는 화면 읽기가 켜져 있으면 그리지 않는다(라이터 11-9 추가)", async () => {
+    (AccessibilityInfo.isScreenReaderEnabled as unknown as jest.Mock).mockImplementation(() => Promise.resolve(true));
+    render(<ToCourseHomeLink onPress={jest.fn()} />);
+    await waitFor(() => expect(screen.queryByTestId('to-course-home')).toBeNull());
+  });
   test("U13 '오늘 코스로': 읽기 '오늘 코스로 돌아가기'(라이터 11-9), 저장 중에는 누를 수 없음, 100%만(115%면 숨김)", () => {
     const onPress = jest.fn();
     const {rerender} = render(<ToCourseHomeLink onPress={onPress} disabled />);
