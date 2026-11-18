@@ -7,6 +7,7 @@ import {Sun, SunArt} from './assets/sun';
 import {SunStamp} from './assets/album';
 import {useScreenReader} from './a11y';
 import {hanimTextIssues} from '../lib/hanimText';
+import {readAloudAllowed} from '../lib/audioPolicy';
 
 /**
  * 해님이 말할 수 있는 때(DECISIONS 11-17 Gemini 회의 권고): 첫 만남·완료·오류뿐.
@@ -63,7 +64,7 @@ export function SunBubble({text, moment, size, readAloud, testID}: Props) {
             {text}
           </Text20>
         </View>
-        {readAloud && !screenReader ? (
+        {readAloud && readAloudAllowed(screenReader) ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={readAloud.label}

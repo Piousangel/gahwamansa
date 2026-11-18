@@ -48,6 +48,19 @@ module.exports = {
       },
     },
     {
+      // 오디오(공용, 오디오 리뷰 L6): features 아래·ui 위. 화면·문구를 모른다(문구는 호출부가 넘긴다)
+      files: ['src/audio/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': layerRule([
+          NO_APP,
+          {
+            group: ['**/features/*', '**/copy/*', ...API_IN_FEATURES],
+            message: 'audio/ 는 features·copy 를 모른다(ARCHITECTURE 2절, 오디오 리뷰 L6).',
+          },
+        ]),
+      },
+    },
+    {
       files: ['src/ui/**/*.{ts,tsx}'],
       rules: {
         'no-restricted-imports': layerRule([

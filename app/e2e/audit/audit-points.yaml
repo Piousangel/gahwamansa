@@ -1,0 +1,77 @@
+# 감사 지점 캡처(독립 UX 감사관용, maestro-candidates "감사관이 꼭 볼 지점"). 통과·실패보다 캡처가 목적이라 flows/ 와 따로 둔다.
+# 실행 예(README 2절):
+#   DP_SIZE=360x640 app/e2e/run.sh audit/audit-points.yaml     # P1 360×640 안심 줄·스크롤
+#   FONT_SCALE=2.0  app/e2e/run.sh audit/audit-points.yaml     # 글자 200% 일주
+#   REDUCE_MOTION=1 app/e2e/run.sh audit/audit-points.yaml     # 동작 줄이기
+# C3 복사 토스트는 F5(f5-c3-toast), P7 모션은 F1(f1-p7-motion·f1-p7-end)에서도 찍힌다.
+appId: com.bumojasik.app.staging
+name: 감사 지점 캡처
+tags:
+  - audit
+---
+# P1 안심 줄('돈이나 통장 번호를 묻지 않아요')이 보이는지 + 첫 화면
+- runFlow:
+    file: ../common/parent-connect.yaml
+    env:
+      PREFIX: audit
+# 설정: 가족에게 답 보여 주기 행(→ '›' 없음, 아래 확인)
+- tapOn: '설정'
+- extendedWaitUntil:
+    visible: '가족에게 답 보여 주기.*'
+    timeout: 10000
+- takeScreenshot: audit-p13-share
+- runFlow:
+    when:
+      visible: '그만 보여 주기'
+    commands:
+      - tapOn: '그만 보여 주기'
+      - takeScreenshot: audit-p13-share-open
+      - runFlow:
+          when:
+            visible: '그대로 둘래요'
+          commands:
+            - tapOn: '그대로 둘래요'
+- back
+# P7 모션: 코스 끝까지(F1 과 같은 길) — 연출 중·끝 캡처
+- extendedWaitUntil:
+    visible: '사진 보기.*'
+    timeout: 10000
+- tapOn: '사진 보기.*'
+- extendedWaitUntil:
+    visible: '다 봤어요'
+    timeout: 10000
+- tapOn: '다 봤어요'
+- extendedWaitUntil:
+    visible: '둘 중 고르기.*'
+    timeout: 10000
+- tapOn: '둘 중 고르기.*'
+- extendedWaitUntil:
+    visible: '봄'
+    timeout: 10000
+- tapOn: '봄'
+- tapOn:
+    text: '정했어요'
+    waitToSettleTimeoutMs: 1000
+- extendedWaitUntil:
+    visible: '자판으로 쓰기.*'
+    timeout: 10000
+- tapOn: '자판으로 쓰기.*'
+- extendedWaitUntil:
+    visible: '오늘은 넘어갈게요'
+    timeout: 10000
+- tapOn: '오늘은 넘어갈게요'
+- extendedWaitUntil:
+    visible:
+      id: 'p7-stage'
+    timeout: 10000
+- takeScreenshot: audit-p7-motion-1
+- takeScreenshot: audit-p7-motion-2
+- extendedWaitUntil:
+    visible: '알겠어요'
+    timeout: 10000
+- takeScreenshot: audit-p7-end
+- tapOn: '알겠어요'
+- extendedWaitUntil:
+    visible: '오늘 코스는 여기까지예요.*'
+    timeout: 10000
+- takeScreenshot: audit-p3-done

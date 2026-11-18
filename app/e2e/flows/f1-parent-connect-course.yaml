@@ -1,0 +1,68 @@
+# F1(AU-12 ①) 어르신 첫 연결 → 코스 완료. fake API, 1일차(낱말 '나무').
+# FS → P1 0·3·6자리 → P1c → P2 동의 → P3 0/3 → P4 → P3 1/3 → P5 → P6 → P7 → P3 3/3
+# P6 은 한글 입력 대신 'a' 를 쓰고 '이대로 마칠게요'(Maestro 의 Android 글자 입력은 ASCII 만 확실)
+# 감사 지점: P1 안심 줄(fs/p1-*), P3 단계 체크(p3-1of3), P7 해님 없음·인주 색(p7-*)
+appId: com.bumojasik.app.staging
+name: F1 어르신 첫 연결 → 코스 완료
+tags:
+  - parent
+  - required
+---
+- runFlow:
+    file: ../common/parent-connect.yaml
+    env:
+      PREFIX: f1
+- takeScreenshot: f1-p3-0of3
+# P4 사진
+- tapOn: '사진 보기.*'
+- extendedWaitUntil:
+    visible: '다 봤어요'
+    timeout: 10000
+- takeScreenshot: f1-p4
+- tapOn: '다 봤어요'
+- extendedWaitUntil:
+    visible: '둘 중 고르기.*'
+    timeout: 10000
+- takeScreenshot: f1-p3-1of3
+# P5 둘 중 고르기
+- tapOn: '둘 중 고르기.*'
+- extendedWaitUntil:
+    visible: '봄'
+    timeout: 10000
+- tapOn: '봄'
+- takeScreenshot: f1-p5
+- tapOn: '정했어요'
+# P6 자판으로 쓰기
+- extendedWaitUntil:
+    visible: '자판으로 쓰기.*'
+    timeout: 10000
+- tapOn: '자판으로 쓰기.*'
+- extendedWaitUntil:
+    visible:
+      id: 'kb-input'
+    timeout: 10000
+- tapOn:
+    id: 'kb-input'
+- inputText: 'a'
+- hideKeyboard
+- takeScreenshot: f1-p6
+- tapOn: '다 썼어요'
+- extendedWaitUntil:
+    visible: '이대로 마칠게요'
+    timeout: 10000
+- tapOn: '이대로 마칠게요'
+# P7 도장(연출 중 캡처 → 누르면 끝 상태)
+- extendedWaitUntil:
+    visible:
+      id: 'p7-stage'
+    timeout: 10000
+- takeScreenshot: f1-p7-motion
+- extendedWaitUntil:
+    visible: '알겠어요'
+    timeout: 10000
+- takeScreenshot: f1-p7-end
+- tapOn: '알겠어요'
+- extendedWaitUntil:
+    visible: '오늘 코스는 여기까지예요.*'
+    timeout: 10000
+- takeScreenshot: f1-p3-3of3

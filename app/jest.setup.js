@@ -14,6 +14,38 @@ jest.mock('./src/lib/env.generated', () => ({
 }), {virtual: true});
 jest.mock('./src/lib/config.local', () => ({default: {}}), {virtual: true});
 
+// 오디오 네이티브 모듈 모킹(AU-03, 실기기 확인은 QA-04). speech 는 라이브러리가 주는 jest 모의
+jest.mock('@mhpdev/react-native-speech', () => require('@mhpdev/react-native-speech/jest'));
+jest.mock('react-native-sound', () => {
+  const instances = [];
+  class Sound {
+    constructor(asset, basePath, cb) {
+      // 0.13.0 처럼 엄격하게: 첫 줄에서 filename.startsWith 를 부르므로 숫자 자산은 TypeError(리뷰 H1)
+      if (typeof asset !== 'string') {
+        throw new TypeError('react-native-sound 0.13.0: filename must be a string');
+      }
+      this.asset = asset;
+      this.basePath = typeof basePath === 'function' ? 'FUNCTION' : basePath;
+      this.play = jest.fn();
+      this.stop = jest.fn();
+      this.setVolume = jest.fn();
+      this.setNumberOfLoops = jest.fn();
+      this.release = jest.fn();
+      instances.push(this);
+      (typeof basePath === 'function' ? basePath : cb)?.(null);
+    }
+  }
+  Sound.MAIN_BUNDLE = 'main';
+  Sound.setCategory = jest.fn();
+  Sound.__instances = instances;
+  return {__esModule: true, default: Sound};
+});
+jest.mock('react-native-volume-manager', () => ({
+  getRingerMode: jest.fn(() => Promise.resolve(2)),
+  addRingerListener: jest.fn(() => ({remove: jest.fn()})),
+  removeRingerListener: jest.fn(),
+}));
+
 // 네이티브 소셜 로그인 모듈 모킹(실기기 로그인은 리드가 확인)
 jest.mock('@react-native-kakao/core', () => ({initializeKakaoSDK: jest.fn(() => Promise.resolve())}));
 jest.mock('@react-native-kakao/user', () => ({

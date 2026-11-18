@@ -1,0 +1,16 @@
+# 공용: 지금 화면의 버전 줄('버전 1.0.0' — accessible 행이라 testID 가 계층에 안 잡혀 글자로 찾음)을 7번 눌러 개발자 메뉴를 열고 ${ROLE_LABEL}('어르신으로'·'자녀로')로 역할 전환.
+# fake 모드는 같은 fake 서버 상태를 유지한 채 역할만 바꿔 처음부터(DevMenuHost.switchRole). 부르기 전에 버전 줄이 보이는 화면에 있어야 한다.
+appId: com.bumojasik.app.staging
+---
+- scrollUntilVisible:
+    element: '버전.*1\.0\.0.*'
+    direction: DOWN
+# 앱은 4초 안 7번을 요구한다 → 명령 7개가 아니라 한 명령 안 반복(빠름)
+- tapOn:
+    text: '버전.*1\.0\.0.*'
+    repeat: 7
+    delay: 150
+- extendedWaitUntil:
+    visible: '개발자 메뉴'
+    timeout: 5000
+- tapOn: ${ROLE_LABEL}

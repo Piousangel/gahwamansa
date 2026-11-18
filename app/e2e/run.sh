@@ -62,7 +62,35 @@ curl -fs "http://localhost:$METRO_PORT/index.bundle?platform=android&dev=true&mi
 cleanup() { if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi; }
 trap cleanup EXIT
 
-# 5) 실행. 캡처는 기기 화면만(맥 화면을 찍지 않음) → out/<시각>/
+# 5) 감사용 기기 설정(선택, 끝나면 되돌림): DP_SIZE=360x640 · FONT_SCALE=2.0 · REDUCE_MOTION=1
+restore_device() {
+  adb shell wm size reset >/dev/null 2>&1 || true
+  adb shell settings put system font_scale 1.0 >/dev/null 2>&1 || true
+  for k in window_animation_scale transition_animation_scale animator_duration_scale; do
+    adb shell settings put global "$k" 1 >/dev/null 2>&1 || true
+  done
+}
+if [ -n "${DP_SIZE:-}" ] || [ -n "${FONT_SCALE:-}" ] || [ "${REDUCE_MOTION:-0}" = "1" ]; then
+  trap 'restore_device; cleanup' EXIT
+fi
+if [ -n "${DP_SIZE:-}" ]; then
+  DENSITY="$(adb shell wm density | tail -1 | grep -oE '[0-9]+$')"
+  W_DP="${DP_SIZE%x*}"; H_DP="${DP_SIZE#*x}"
+  adb shell wm size "$((W_DP * DENSITY / 160))x$((H_DP * DENSITY / 160))"
+  echo "e2e: 화면 ${DP_SIZE}dp (density $DENSITY)"
+fi
+if [ -n "${FONT_SCALE:-}" ]; then
+  adb shell settings put system font_scale "$FONT_SCALE"
+  echo "e2e: 글자 배율 $FONT_SCALE"
+fi
+if [ "${REDUCE_MOTION:-0}" = "1" ]; then
+  for k in window_animation_scale transition_animation_scale animator_duration_scale; do
+    adb shell settings put global "$k" 0
+  done
+  echo "e2e: 동작 줄이기(애니메이션 0)"
+fi
+
+# 6) 실행. 캡처는 기기 화면만(맥 화면을 찍지 않음) → out/<시각>/
 mkdir -p "$OUT_DIR"
 cd "$E2E_DIR"
 TARGETS=("$@")
