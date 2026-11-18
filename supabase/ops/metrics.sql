@@ -1,5 +1,5 @@
 -- 지표 SQL 모음(로드맵 SV-16, growth.md §3·§6, 백오피스 계획 11 §1·§2). 읽기 전용 — Studio SQL Editor(서비스 권한)에서 쿼리 하나씩 실행.
--- 공통 규칙: 심사 가족(families.is_review) 제외, 기간은 KST 날짜 [from, to). 각 쿼리 맨 위 p CTE의 날짜만 바꾼다.
+-- 공통 규칙: 심사 가족(families.is_review)·테스터 가족(families.is_test, 0045) 제외(가족이 없는 설치 이벤트는 구분 불가), 기간은 KST 날짜 [from, to). 각 쿼리 맨 위 p CTE의 날짜만 바꾼다.
 -- 개인정보: 집계 숫자만 낸다(이름·이메일 없음). A/B 비율은 응답 20명 미만이면 숨긴다(소수 표본 재식별·과잉 해석 방지).
 -- 보관 기간 한계: events 14개월, daily_sessions·answers 31일 → D7 유지·A/B 비율은 최근 31일 안에서만 정확.
 
@@ -8,7 +8,7 @@ with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to),
 ev as (
   select e.* from public.events e, p
    where (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
-     and (e.family_id is null or not exists (select 1 from public.families f where f.id = e.family_id and f.is_review))
+     and (e.family_id is null or not exists (select 1 from public.families f where f.id = e.family_id and (f.is_review or f.is_test)))
 )
 select step, name, n from (values
   (1, '설치(app_first_open)', (select count(distinct device_key) from ev where name = 'app_first_open')),
@@ -24,12 +24,12 @@ select step, name, n from (values
 with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to)
 select d, sum(case when role = 'parent' then n end) as parent_dau, sum(case when role = 'child' then n end) as child_dau,
        (select count(distinct ds.parent_id) from public.daily_sessions ds join public.families f on f.id = ds.family_id
-         where ds.session_date = x.d and not f.is_review) as parents_opened_course
+         where ds.session_date = x.d and not f.is_review and not f.is_test) as parents_opened_course
   from (select (e.ts at time zone 'Asia/Seoul')::date as d, e.actor_role as role, count(distinct e.profile_id) as n
           from public.events e, p
          where e.profile_id is not null
            and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
-           and not exists (select 1 from public.families f where f.id = e.family_id and f.is_review)
+           and not exists (select 1 from public.families f where f.id = e.family_id and (f.is_review or f.is_test))
          group by 1, 2) x
  group by d order by d;
 
@@ -38,7 +38,7 @@ with p as (select date '2026-11-20' as d_from, date '2026-12-01' as d_to),
 cohort as (
   select pr.id, (pr.created_at at time zone 'Asia/Seoul')::date as joined
     from public.profiles pr join public.families f on f.id = pr.family_id, p
-   where pr.role = 'parent' and not f.is_review
+   where pr.role = 'parent' and not f.is_review and not f.is_test
      and (pr.created_at at time zone 'Asia/Seoul')::date >= p.d_from and (pr.created_at at time zone 'Asia/Seoul')::date < p.d_to
      and (pr.created_at at time zone 'Asia/Seoul')::date <= public.kst_today() - 14
 )
@@ -55,7 +55,7 @@ select count(*) as families,
        count(*) filter (where exists (select 1 from public.profiles pr where pr.family_id = f.id and pr.role = 'parent')) as connected,
        round(100.0 * count(*) filter (where exists (select 1 from public.profiles pr where pr.family_id = f.id and pr.role = 'parent')) / nullif(count(*), 0), 1) as pct
   from public.families f, p
- where not f.is_review
+ where not f.is_review and not f.is_test
    and (f.created_at at time zone 'Asia/Seoul')::date >= p.d_from and (f.created_at at time zone 'Asia/Seoul')::date < p.d_to;
 
 -- ⑤ 유료 관심(C6, 관심 표시만): 시트 연 자녀 수, 안별 소식 받기 누른 자녀 수, 전환 분모
@@ -63,7 +63,7 @@ with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to),
 ev as (
   select e.* from public.events e, p
    where (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
-     and not exists (select 1 from public.families f where f.id = e.family_id and f.is_review)
+     and not exists (select 1 from public.families f where f.id = e.family_id and (f.is_review or f.is_test))
 )
 select (select count(distinct profile_id) from ev where name = 'child_first_answer_viewed') as denominator,
        (select count(distinct profile_id) from ev where name = 'paid_sheet_opened') as sheet_opened,
@@ -71,7 +71,7 @@ select (select count(distinct profile_id) from ev where name = 'child_first_answ
        (select jsonb_object_agg(plan, n) from (select props ->> 'plan' as plan, count(distinct profile_id) as n
                                                  from ev where name = 'paid_interest_tapped' group by 1) x) as by_plan;
 
--- ⑥ 푸시: 종류별 실행 요약 합계(보냄·실패·무효·제외)와 알림을 눌러 연 수
+-- ⑥ 푸시: 종류별 실행 요약 합계(보냄·실패·무효·제외)와 알림을 눌러 연 수(실행 요약은 집계 숫자라 테스터를 뺄 수 없음 — 운영 확인용)
 with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to)
 select r.kind, count(*) as runs, sum(r.targets) as targets, sum(r.sent) as sent, sum(r.failed) as failed, sum(r.invalid) as invalid,
        sum(r.excluded) as excluded, count(*) filter (where r.note is not null) as runs_with_note,
@@ -89,7 +89,7 @@ select q.day_index, q.option_a, q.option_b, count(*) as answers,
   from public.answers a
   join public.content_questions q on q.id = a.question_id
   join public.families f on f.id = a.family_id
- where not f.is_review
+ where not f.is_review and not f.is_test
  group by q.day_index, q.option_a, q.option_b
  order by q.day_index;
 

@@ -19,17 +19,19 @@ case "$MODE" in
 esac
 
 TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
+ERR="$(mktemp)"
+trap 'rm -f "$TMP" "$ERR"' EXIT
 
 cd "$ROOT"
 {
   echo "// 자동 생성: scripts/gen-types.sh (supabase gen types --local --schema public). 손으로 고치지 않는다."
-  npx --yes supabase gen types --lang typescript --local --schema public 2>/dev/null
+  npx --yes supabase gen types --lang typescript --local --schema public 2>"$ERR"
 } >"$TMP"
 
-# 생성 실패(로컬 스택 꺼짐 등) 시 빈 파일로 덮어쓰지 않는다
+# 생성 실패(로컬 스택 꺼짐 등) 시 빈 파일로 덮어쓰지 않고 CLI 오류를 보여 준다(업데이트 안내 줄은 뺀다)
 if ! grep -q "export type Database" "$TMP"; then
   echo "타입 생성 실패: 로컬 스택이 켜져 있는지(npx supabase status) 확인하세요." >&2
+  grep -v -i -E "new version|recommend" "$ERR" | tail -5 >&2
   exit 3
 fi
 
