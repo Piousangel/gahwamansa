@@ -94,9 +94,9 @@ select is((select count(*)::int from public.profiles where family_id = '7f300000
         + (select count(*)::int from public.entitlements where family_id = '7f300000-0000-0000-0000-000000000001')
         + (select count(*)::int from public.cheers where family_id = '7f300000-0000-0000-0000-000000000001'), 5, '다른 가족G의 데이터는 그대로다(프로필 2 + 답변 1 + 권한 1 + 응원 1)');
 
--- 11. 프로필이 없는 사용자는 거부
+-- 11. 프로필이 없는 사용자는 본인 인증 계정만 삭제(0049 P20)
 select pg_temp.act_as('7f000000-0000-0000-0000-0000000000a1', true);
-select throws_like($$ select public.delete_my_account() $$, '%no_profile%', '프로필이 없으면 삭제할 것이 없다');
+select is((public.delete_my_account()) ->> 'scope', 'none', '프로필이 없으면 본인 인증 계정만 지운다(0049 P20, 이전 no_profile)');
 
 -- 12. 푸시 토큰: 삭제한 사용자의 것만 지워진다
 reset role;

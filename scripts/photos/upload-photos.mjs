@@ -1,20 +1,18 @@
 // content/photos/day-NN.jpg 를 Supabase Storage(content-photos)에 올리고 content_photos.image_url을 갱신한다.
-// 환경변수 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (로컬: `npx supabase status -o env`의 API_URL·SERVICE_ROLE_KEY). 키는 출력하지 않는다.
+// 대상 주소·서버 키는 실행 중 입력(키는 화면에 안 보임). 로컬은 `npx supabase status`의 API URL·secret 키. 키는 출력하지 않는다.
 // 사용: node scripts/photos/upload-photos.mjs
 import {readFileSync, readdirSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {opsTarget} from '../../supabase/ops/ops-auth.mjs';
+import {confirmTarget} from '../../supabase/ops/target-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
-  process.exit(3);
-}
+// 대상 주소·서버 키: ops-auth.mjs(키 숨김 입력 또는 ops용 secret 키 환경변수 SUPABASE_SECRET_KEY, 출력하지 않음), 대상 ref 대조
+const {url, headers: auth} = await opsTarget();
+await confirmTarget(root, url, '사진 업로드(주소 갱신은 감사 기록)');
 const dir = join(root, 'content/photos');
 const files = readdirSync(dir).filter((f) => /^day-\d{2}\.jpg$/.test(f)).sort();
-const auth = {Authorization: `Bearer ${key}`, apikey: key};
 let fail = 0;
 for (const f of files) {
   const day = Number(f.slice(4, 6));

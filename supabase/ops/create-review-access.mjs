@@ -1,5 +1,5 @@
 // 스토어 심사용 가족 관리(0025). 번호는 화면에만 출력하고 어디에도 저장하지 않는다.
-// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (키는 출력하지 않음)
+// 대상 주소·서버 키: ops-auth.mjs(키 숨김 입력 또는 ops용 secret 키 환경변수, 출력하지 않음)
 // 사용:
 //   node supabase/ops/create-review-access.mjs create <자녀1 user id> <자녀2 user id> [연결 상한, 기본 5]
 //       심사 가족 + 재사용 번호(기본 꺼짐). 자녀 계정 2개는 먼저 대시보드 Authentication > Add user로 만든다.
@@ -7,13 +7,10 @@
 //   node supabase/ops/create-review-access.mjs disable <family id>   심사가 끝나면 끈다
 //   node supabase/ops/create-review-access.mjs cleanup <family id>   심사 어르신 프로필·익명 계정 삭제 + 번호 끔
 // 출력된 번호와 계정 정보는 Play 콘솔 "앱 액세스"에만 적는다(저장소·시드·채팅 금지).
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// (ops-auth는 아래에서 동적으로 불러온다)
 const [cmd, ...args] = process.argv.slice(2);
-if (!url || !key) {
-  console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
-  process.exit(3);
-}
+const {opsTarget} = await import('./ops-auth.mjs');
+const {url, headers: keyH} = await opsTarget();
 // 대상 확인: app/env/<환경>.env ref와 호스트 대조(production은 호스트 재입력)
 const {confirmTarget} = await import('./target-check.mjs');
 const {dirname, join} = await import('node:path');
@@ -25,7 +22,7 @@ if (['create', 'enable', 'disable', 'cleanup'].includes(cmd)) {
 async function rpc(name, body) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: {Authorization: `Bearer ${key}`, apikey: key, 'Content-Type': 'application/json'},
+    headers: {...keyH, 'Content-Type': 'application/json'},
     body: JSON.stringify(body),
   });
   const text = await res.text();

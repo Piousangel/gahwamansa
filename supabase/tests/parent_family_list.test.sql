@@ -14,12 +14,12 @@ insert into auth.users (id, aud, role, is_anonymous, email) values
 insert into public.families (id, created_by, is_review) values
   ('7030f000-0000-0000-0000-000000000001', '70300000-0000-0000-0000-0000000000c1', false),
   ('7030f000-0000-0000-0000-000000000009', '70300000-0000-0000-0000-0000000000c9', true); -- 심사 가족
-insert into public.profiles (id, user_id, family_id, role, display_name, parent_title, created_at) values
-  ('7030b000-0000-0000-0000-0000000000c1', '70300000-0000-0000-0000-0000000000c1', '7030f000-0000-0000-0000-000000000001', 'child', '철수', null, now() - interval '10 days'),
-  ('7030b000-0000-0000-0000-0000000000a1', '70300000-0000-0000-0000-0000000000a1', '7030f000-0000-0000-0000-000000000001', 'parent', null, '엄마', now() - interval '5 days'),
-  ('7030b000-0000-0000-0000-0000000000c2', '70300000-0000-0000-0000-0000000000c2', '7030f000-0000-0000-0000-000000000001', 'child', '영희', null, now() - interval '2 days'),
-  ('7030b000-0000-0000-0000-0000000000c9', '70300000-0000-0000-0000-0000000000c9', '7030f000-0000-0000-0000-000000000009', 'child', null, null, now() - interval '3 days'),
-  ('7030b000-0000-0000-0000-0000000000a9', '70300000-0000-0000-0000-0000000000a9', '7030f000-0000-0000-0000-000000000009', 'parent', null, null, now() - interval '1 days');
+insert into public.profiles (id, user_id, family_id, role, parent_title, created_at) values
+  ('7030b000-0000-0000-0000-0000000000c1', '70300000-0000-0000-0000-0000000000c1', '7030f000-0000-0000-0000-000000000001', 'child', null, now() - interval '10 days'),
+  ('7030b000-0000-0000-0000-0000000000a1', '70300000-0000-0000-0000-0000000000a1', '7030f000-0000-0000-0000-000000000001', 'parent', '엄마', now() - interval '5 days'),
+  ('7030b000-0000-0000-0000-0000000000c2', '70300000-0000-0000-0000-0000000000c2', '7030f000-0000-0000-0000-000000000001', 'child', null, now() - interval '2 days'),
+  ('7030b000-0000-0000-0000-0000000000c9', '70300000-0000-0000-0000-0000000000c9', '7030f000-0000-0000-0000-000000000009', 'child', null, now() - interval '3 days'),
+  ('7030b000-0000-0000-0000-0000000000a9', '70300000-0000-0000-0000-0000000000a9', '7030f000-0000-0000-0000-000000000009', 'parent', null, now() - interval '1 days');
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -41,7 +41,7 @@ select is(((public.parent_family_list() -> 'family' -> 1 ->> 'connected_date')):
           '화면용 KST 날짜');
 select is(array(select k from jsonb_object_keys(public.parent_family_list() -> 'family' -> 0) k order by 1),
           array['connected_at', 'connected_date', 'seq'], '항목은 순번·연결 시각·날짜만');
-select ok(position('철수' in public.parent_family_list()::text) = 0 and position('example.com' in public.parent_family_list()::text) = 0
+select ok( position('example.com' in public.parent_family_list()::text) = 0
           and position('7030b000' in public.parent_family_list()::text) = 0, '자녀 이름·이메일·id가 없다');
 
 select pg_temp.act_as('70300000-0000-0000-0000-0000000000a9', true);
