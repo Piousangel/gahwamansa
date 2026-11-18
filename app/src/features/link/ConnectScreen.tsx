@@ -8,7 +8,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen, SCREEN_FADE_H, type ScreenScroll} from '../../ui/Screen';
-import {color, layout, radius} from '../../ui/tokens';
+import {color, layout, radius, size, space} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CodeEntry} from './CodeEntry';
@@ -125,15 +125,17 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   // 첫 화면 묶음 높이: 창 − 위 여백 − 아래 흐림(재리뷰 M1: Screen 의 '더 있음' 흐림 28 이 마지막 키 줄을 덮지 않게).
   // 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
   const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : 0;
-  // 재확인 2 L7: 구성이 바뀌어 새 창 높이를 기다리는 동안에는 숨기지 않고 바로 전 묶음 높이로 그려 둔다(판정만 미룬다, 깜빡임 없음).
-  // 숨기는 것은 2단계로 시작해 아직 한 번도 창을 재지 못한 첫 프레임뿐(재리뷰 L1: 높이 0 묶음·겹친 약관 줄 방지)
+  // 재확인 2 L7·H3: 묶음을 숨기지 않는다. 이 구성의 창 높이를 기다리는 동안(판정만 미룸)에는 바로 전 묶음 높이,
+  // 한 번도 재지 못한 첫 프레임은 화면 크기로 어림한 높이로 그린다(재리뷰 L1의 높이 0 묶음·겹친 약관 줄도 생기지 않음).
+  // 4단계는 묶음 높이를 쓰지 않는 보통 배치다
   const lastFirst = useRef(0);
   if (firstH > 0) {
     lastFirst.current = firstH;
   }
-  const shownFirstH = firstH > 0 ? firstH : lastFirst.current;
-  // 4단계는 묶음 높이를 쓰지 않는 보통 배치라 창 높이를 기다리지 않는다(재확인 2 H3: 4단계 빈 화면)
-  const measured = !scroll || overflow || shownFirstH > 0;
+  const topPad = Math.max(space.topSafeMin, insets.top + space.md);
+  const guessDock = noDock ? insets.bottom : 6 + 64 + Math.max(28, 16 + insets.bottom);
+  const guessFirst = Math.max(0, winH - topPad - size.touchMin - FIRST_PAD - SCREEN_FADE_H - guessDock);
+  const shownFirstH = firstH > 0 ? firstH : lastFirst.current > 0 ? lastFirst.current : guessFirst;
 
   // 창·글자 크기가 바뀌면 처음부터 다시 잰다(재리뷰 L5, 원 L8: 단계가 올라가기만 하던 것)
   const dimsKey = `${winH}|${fontScale}`;
@@ -264,9 +266,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: shownFirstH} : null, !scroll ? styles.fillFirst : null, measured ? null : styles.hidden]}
-        importantForAccessibility={measured ? 'auto' : 'no-hide-descendants'}
-        accessibilityElementsHidden={!measured}>
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: shownFirstH} : null, !scroll ? styles.fillFirst : null, ]}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
         </Text20>
@@ -281,15 +281,15 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         </View>
       </View>
       {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
-      {measured && noDock ? links : null}
+      {noDock ? links : null}
       {/* 재리뷰 L2: 스크롤 단계에서는 '번호가 없어요' 안내를 묶음(고정 높이) 안이 아니라 링크 근처에 두고, 열면 보이게 스크롤한다 */}
-      {measured && scroll && help ? (
+      {scroll && help ? (
         // showRange 의 y 는 본문 contentContainer 기준 — 이 줄은 본문 바로 아래 자식이어야 한다(재확인 2 L9)
         <Text20 testID="connect-help" accessibilityLiveRegion="polite" onLayout={e => scrollRef.current?.showRange(e.nativeEvent.layout.y, e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
           {copy.connect.no_code_help}
         </Text20>
       ) : null}
-      {measured && legalInBody ? <LegalLine /> : null}
+      {legalInBody ? <LegalLine /> : null}
     </Screen>
   );
 }
@@ -338,7 +338,6 @@ const styles = StyleSheet.create({
   first: {gap: 16},
   firstDense: {gap: 12},
   fillFirst: {flex: 1, minHeight: 0},
-  hidden: {opacity: 0},
   pinned: {position: 'absolute', top: 0, left: 0, right: 0},
   links: {flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 24},
   title: {color: color.inkTitle},

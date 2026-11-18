@@ -91,6 +91,16 @@ test('자녀: 내 계정만 삭제된 경우 결과 문구', async () => {
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
 });
 
+test('0049: 가족과 연결하기 전 자녀 계정(scope none)은 호칭 기록 안내 대신 로그인·약관 동의 기록만 지워진다고 알린다', async () => {
+  const api = createFakeApi({deleteScope: 'none'});
+  await openChildDelete(api, '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보와 약관 동의 기록만 지워져요');
+  expect(screen.queryByText(/기록은 남아요/)).toBeNull(); // 틀린 안내 없음
+  expect(screen.queryByText(/함께 지워져요/)).toBeNull();
+  await press('계정 지우기');
+  await press('계정 지우기'); // 마지막 자녀용 '지우기' 입력 없이
+  await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
+});
+
 test('realApi: 삭제 RPC 성공 후 로그아웃한다', async () => {
   const signOut = jest.fn().mockResolvedValue({error: null});
   const rpc = jest.fn().mockResolvedValue({data: {scope: 'parent'}, error: null});

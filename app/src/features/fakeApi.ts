@@ -36,7 +36,7 @@ export type FakeOptions = {
   completedSteps?: StepName[]; // 오늘 이미 끝낸 단계
   streak?: number;
   failRecord?: number; // recordSessionStep 이 처음 N번 실패
-  deleteScope?: 'parent' | 'child' | 'family'; // deleteMyAccount 결과(기본 parent)
+  deleteScope?: 'parent' | 'child' | 'family' | 'none'; // deleteMyAccount 결과(기본 parent). none = 가족 연결 전 계정(0049)
   failPreview?: boolean; // deleteScopePreview 실패
   failDelete?: number; // deleteMyAccount 가 처음 N번 실패
   parentTitle?: string; // 자녀 홈 호칭(기본 부모님)

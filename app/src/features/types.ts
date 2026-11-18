@@ -52,7 +52,8 @@ export type ChildState =
       hadExpired: boolean; // 살아 있는 번호가 없고, 쓰지 않은 지난 번호가 있다(만료·무효화) → "새 번호 받기"
     };
 export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
-export type DeleteScope = 'parent' | 'child' | 'family';
+// 0049: 'none' = 가족과 연결하기 전 계정(프로필 없음: 로그인만 한 자녀, 번호 입력 전 어르신 기기)
+export type DeleteScope = 'parent' | 'child' | 'family' | 'none';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
 

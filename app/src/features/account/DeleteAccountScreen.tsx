@@ -104,7 +104,13 @@ export function DeleteAccountScreen({role}: Props) {
         <Text20>{appCopy.loading}</Text20>
       ) : child ? (
         <>
-          {strong ? (
+          {scope === 'none' ? (
+            // 0049: 가족 연결 전 계정 — '{호칭}의 기록은 남아요'는 틀린 안내라 쓰지 않는다
+            <>
+              <Text20 size={24} weight="bold">{copy.child.delete_none.title}</Text20>
+              <Text20 testID="delete-none-body">{copy.child.delete_none.body}</Text20>
+            </>
+          ) : strong ? (
             <View style={styles.box}>
               <Text20 size={24} weight="bold" style={styles.dangerText}>{withTitle(dc.last_title, title)}</Text20>
               <Text20 size={24} weight="bold">{withTitle(dc.last_body, title)}</Text20>

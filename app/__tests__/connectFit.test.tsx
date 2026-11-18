@@ -24,8 +24,7 @@ const dims = (width: number, height: number, fontScale = 1) =>
 async function openConnect() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
-  // 2단계로 시작하면 창을 재기 전 첫 프레임은 묶음이 화면 읽기에서도 숨는다(재리뷰 L1)
-  await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요', {includeHiddenElements: true}));
+  await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 }
 // 레이아웃 모의: 본문 창 높이(Screen 스크롤 창 onLayout)·키패드 영역(위치 y·높이)
 const viewport = async (h: number) =>
@@ -121,7 +120,6 @@ describe('재리뷰 H1·M3: 실제 이벤트 순서(영역 → 창)로 본 P1 �
     // 재현 D(재확인 2 H3): 4단계는 창이 다시 오지 않아도(3·4단계 하단 고정 구성 같음) 묶음이 보이고 링크·약관이 있다
     const first = screen.getByTestId('connect-first');
     expect(StyleSheet.flatten(first.props.style).opacity).toBeUndefined();
-    expect(first.props.importantForAccessibility).toBe('auto');
     expect(screen.getByTestId('connect-links')).toBeTruthy();
     expect(screen.getByTestId('legal-line')).toBeTruthy();
     // 좌표: 4단계 배치에서 잰 키패드 영역 y + 그려진 키 높이로 셋째 키 줄(7·8·9) 아래 끝이 흐림 위(창 − 흐림) 안 — 9절 "1~9 보임"
@@ -157,15 +155,17 @@ describe('재리뷰 H1·M3: 실제 이벤트 순서(영역 → 창)로 본 P1 �
     expect(screen.getByTestId('legal-line')).toBeTruthy();
   });
 
-  test('재리뷰 L1: 이 단계의 창 높이를 알기 전에는 묶음을 숨기고 약관·링크를 그리지 않는다(겹친 한 프레임 방지)', async () => {
+  test('재리뷰 L1·재확인 2 H3: 창을 재기 전 첫 프레임도 묶음을 숨기지 않고 화면 크기로 어림한 높이로 그린다(높이 0·겹침·빈 화면 없음)', async () => {
     dims(360, 640);
     await openConnect();
-    expect(StyleSheet.flatten(screen.getByTestId('connect-first', {includeHiddenElements: true}).props.style).opacity).toBe(0);
-    expect(screen.getByTestId('connect-first', {includeHiddenElements: true}).props.importantForAccessibility).toBe('no-hide-descendants'); // 숨김 동안 TalkBack 도 읽지 않음
-    expect(screen.queryByTestId('legal-line')).toBeNull();
+    const first = screen.getByTestId('connect-first'); // 숨김 없음(화면 읽기에서도 보임)
+    expect(StyleSheet.flatten(first.props.style).opacity).toBeUndefined();
+    expect(firstHeight()).toBeGreaterThan(300); // 640 − 상단 116 − 여백·흐림·하단 고정 어림
+    expect(screen.getByLabelText('숫자 1')).toBeTruthy();
+    expect(within(first).queryByTestId('legal-line')).toBeNull();
+    expect(screen.getByTestId('legal-line')).toBeTruthy(); // 묶음 뒤에(겹치지 않게)
     await viewport(430);
-    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBeUndefined();
-    expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+    expect(firstHeight()).toBe(430 - 4 - FADE); // 잰 창으로 바뀜
   });
 
   test('재리뷰 M1: 2·3단계 묶음은 아래 흐림(28)만큼 짧다 — 마지막 키 줄이 흐림 밑에 깔리지 않게', async () => {
