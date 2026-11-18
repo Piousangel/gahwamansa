@@ -1,6 +1,6 @@
 import React from 'react';
-import {AccessibilityInfo} from 'react-native';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {AccessibilityInfo, StyleSheet} from 'react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
@@ -8,6 +8,13 @@ import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {press, pressCourseNext, pressLast, toHomeConsented} from '../testUtils/flow';
+
+// 글자 배율: jest 기본(2)과 같게 두고, 해님 크기 테스트만 바꾼다
+let mockFontScale = 2;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({width: 390, height: 844, scale: 3, fontScale: mockFontScale}),
+}));
 
 // 로드맵 L2 AP-10·AP-11·AP-12·AP-14 묶음.
 let prefs: Prefs;
@@ -17,6 +24,7 @@ beforeEach(() => {
   setLocalStampsForTest(createLocalStamps(memoryStore()));
 });
 afterEach(() => {
+  mockFontScale = 2;
   setPrefsForTest(null);
   setLocalStampsForTest(null);
   jest.restoreAllMocks();
@@ -40,6 +48,41 @@ describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 
     await home();
     await new Promise<void>(r => setTimeout(() => r(), 30));
     expect(screen.queryByText('안녕하세요, 해님이에요')).toBeNull();
+  });
+  test('디자인 판정: 크기 72, 진입 알림(live region) 없음', async () => {
+    mockFontScale = 1;
+    await home();
+    const bubble = await waitFor(() => screen.getByTestId('first-greeting'));
+    const art = within(bubble).getByTestId('sun-bubble-art', {includeHiddenElements: true});
+    expect(StyleSheet.flatten(art.props.style).width).toBe(72);
+    expect(screen.getByLabelText('안녕하세요, 해님이에요').props.accessibilityLiveRegion).toBeUndefined();
+  });
+  test('글자 150% 이상이면 56', async () => {
+    mockFontScale = 1.5;
+    await home();
+    const bubble = await waitFor(() => screen.getByTestId('first-greeting'));
+    expect(StyleSheet.flatten(within(bubble).getByTestId('sun-bubble-art', {includeHiddenElements: true}).props.style).width).toBe(56);
+  });
+  test('첫 단계를 시작했다 돌아오면 다시 나오지 않는다(그 방문 동안만)', async () => {
+    await home();
+    await waitFor(() => screen.getByTestId('first-greeting'));
+    await pressCourseNext();
+    await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
+    await press('오늘 코스로 돌아가기');
+    await waitFor(() => screen.getByTestId('date-line'));
+    await new Promise<void>(r => setTimeout(() => r(), 30));
+    expect(screen.queryByTestId('first-greeting')).toBeNull();
+  });
+  test('모두 지우기를 하면 기록도 지워 다음 계정이 다시 인사를 받는다', async () => {
+    await home();
+    await waitFor(() => screen.getByTestId('first-greeting'));
+    expect(await prefs.firstGreetingSeen()).toBe(true);
+    await press('설정');
+    await press('모두 지우기');
+    await waitFor(() => screen.getByText('모두 지울까요?'));
+    await pressLast('모두 지우기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+    await waitFor(async () => expect(await prefs.firstGreetingSeen()).toBe(false));
   });
   test('미연결 열람에서는 인사하지 않는다(연결 직후에만)', async () => {
     render(<AppRoot api={createFakeApi()} />);
@@ -76,6 +119,17 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     send.mockClear();
     await press('다 봤어요');
     await waitFor(() => screen.getByTestId('date-line'));
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'), {timeout: 3000});
+  });
+  test('화면 읽기 켜짐 + 단계 완료 복귀: 체크 모션과 주 버튼 포커스가 둘 다 실행된다(리뷰 l2 M1)', async () => {
+    readerOn();
+    await home();
+    const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
+    await pressCourseNext();
+    await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
+    await press('다 봤어요');
+    await waitFor(() => screen.getByTestId('date-line'));
+    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}), {timeout: 3000});
     await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'), {timeout: 3000});
   });
   test('설정에서 돌아오면 설정 링크로 포커스', async () => {
@@ -133,6 +187,10 @@ describe('AP-12 지금 행 테이프: 고정 140×28 대신 라벨 뒤를 채우
     const tape = screen.getByTestId('step-tape', {includeHiddenElements: true});
     expect(tape.props.width).toBe(134);
     expect(tape.props.height).toBe(28);
+  });
+  test('좁은 폭(320)·200%에서 라벨이 행보다 길어도 테이프가 행 밖으로 비치지 않는다(overflow hidden)', () => {
+    render(<StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />);
+    expect(StyleSheet.flatten(screen.getByTestId('step-now-row').props.style).overflow).toBe('hidden');
   });
   test('글자 200%(줄 높이 56)면 테이프도 라벨 높이를 따른다', async () => {
     render(<StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />);

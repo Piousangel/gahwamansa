@@ -19,11 +19,13 @@ type Props = {
   dockMaxRatio?: number;
   /** 본문이 남은 높이를 꽉 채운다(스크롤 없는 한 화면 구성, 예: 첫 화면). */
   fill?: boolean;
+  /** 첫 포커스를 제목 대신 이 요소로(예: '다시 정하기'로 연 설정의 확인 제목). 시간 차 없이 한 번만 옮겨 순서가 뒤집히지 않는다(AP-11) */
+  initialFocusRef?: React.RefObject<unknown>;
 };
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, initialFocusRef}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -62,7 +64,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
           return;
         }
         t = setTimeout(() => {
-          const node = tops.current[0] ?? bodies.current[0];
+          const node = initialFocusRef?.current ?? tops.current[0] ?? bodies.current[0];
           if (node) {
             try {
               AccessibilityInfo.sendAccessibilityEvent(node as never, 'focus'); // 호스트 요소 ref 를 바로 받는 API
@@ -79,6 +81,8 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
         clearTimeout(t);
       }
     };
+    // 마운트 때 한 번(ref 객체는 바뀌지 않는다)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // KAV: Android 도 padding. edgeToEdgeEnabled=true 라 adjustResize 로 창이 줄지 않을 수 있다.

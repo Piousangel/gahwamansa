@@ -31,7 +31,7 @@ export function ParentFamilyScreen() {
   const [data, setData] = useState<ParentFamily | null>(null);
   const [error, setError] = useState<Message | null>(null);
   const [sheet, setSheet] = useState(false);
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const seq = useRef(0);
@@ -55,10 +55,9 @@ export function ParentFamilyScreen() {
   }, [load]);
 
   const stopSharing = async () => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     setSheetError(null);
     try {
       await api.withdrawConsent();

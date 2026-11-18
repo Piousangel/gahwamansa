@@ -35,7 +35,7 @@ export function ChildSettings() {
   const [picked, setPicked] = useState('부모님');
   const [saving, setSaving] = useState(false);
   const [logout, setLogout] = useState(false);
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [modalError, setModalError] = useState<string | null>(null); // 리뷰 M2: 시트·대화상자 안 오류 줄
   const {show} = useToast();
   const failText = (e: unknown) => (isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
@@ -89,10 +89,9 @@ export function ChildSettings() {
     }
   };
   const newPhoneCode = async (t: Target) => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     try {
       const code = await api.issueInviteCode(t.parentId);
       navigation.navigate('Code', {code, title: t.title});
@@ -103,10 +102,9 @@ export function ChildSettings() {
     }
   };
   const doLogout = async () => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     try {
       await api.signOut();
       setLogout(false);

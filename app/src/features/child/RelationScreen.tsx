@@ -20,14 +20,13 @@ export function RelationScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ChildParams>>();
   const {api} = useSession();
   const [title, setTitle] = useState<string>('부모님');
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<string | null>(null);
 
   const next = async () => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     setFailed(null);
     try {
       try {

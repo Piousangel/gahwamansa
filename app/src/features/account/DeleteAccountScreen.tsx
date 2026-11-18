@@ -11,6 +11,7 @@ import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import type {DeleteScope} from '../types';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {prefs} from '../../lib/prefs';
 
 type Props = {role: 'parent' | 'child'};
 
@@ -20,7 +21,7 @@ export function DeleteAccountScreen({role}: Props) {
   const {api, clear} = useSession();
   const [stage, setStage] = useState<1 | 2>(1);
   const [typed, setTyped] = useState('');
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<Message | null>(null);
   const child = role === 'child';
   const dp = copy.delete.parent;
@@ -48,14 +49,14 @@ export function DeleteAccountScreen({role}: Props) {
   const strong = child && scope === 'family';
 
   const run = async () => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     setFailed(null);
     try {
       const r = await api.deleteMyAccount();
       clear();
+      prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
       navigation.dispatch(
         CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}),
       );

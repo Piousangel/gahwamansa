@@ -13,7 +13,7 @@ import {useBusyLatch} from '../../ui/useBusyLatch';
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
   const {api, sync, syncError, setConsented} = useSession();
   const [declined, setDeclined] = useState(false);
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
 
   // 동의 화면은 코스 홈으로 바뀐다(replace): 뒤로가기로 동의 화면이 다시 나오지 않게(리뷰 ③)
@@ -33,10 +33,9 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   const shown = error ?? syncError; // 동의 저장 실패가 우선, 없으면 상태 확인 실패
   const accept = async () => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     setError(null);
     try {
       await api.giveConsent(CONSENT_VERSION);

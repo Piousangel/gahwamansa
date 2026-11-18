@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -50,7 +50,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [justDone, setJustDone] = useState<StepName | null>(null);
   const prevDone = useRef<StepName[] | null>(null);
   const afterTransition = useAfterTransition(navigation);
-  const firstGreeting = useFirstGreeting(linked === true);
+  const firstGreeting = useFirstGreeting(linked === true, navigation);
+  const {fontScale} = useWindowDimensions();
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
   const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   useEffect(() => {
@@ -204,7 +205,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         </View>
       ) : null}
       {/* AP-10 해님 첫 인사: 연결된 기기에서 코스 홈(앨범 첫 화면)을 처음 열 때 한 번(첫 만남 말풍선, 해님 말 범위: 첫 만남·완료·오류) */}
-      {firstGreeting ? <SunBubble testID="first-greeting" moment="firstMeet" text={copy.connect.greeting} /> : null}
+      {/* 디자인 판정(11-18 design-checks ①): 72, 150% 이상 56(88이면 360×640에서 '지금 할 차례' 행이 밀림). 진입 알림 없음, 첫 포커스는 날짜 그대로 */}
+      {firstGreeting ? (
+        <SunBubble testID="first-greeting" moment="firstMeet" size={fontScale >= 1.5 ? 56 : 72} text={copy.connect.greeting} />
+      ) : null}
       <View style={styles.greetGroup}>
         <Text20 size={24} weight="bold" style={styles.title}>{greeting}</Text20>
         {/* 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄 */}
@@ -236,9 +240,11 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
 }
 
 // 해님 첫 인사 1회(DECISIONS 11-17 "첫 인사는 어르신 연결 직후 앨범 첫 화면", PM 백로그 D4).
-// 연결된 상태로 처음 열린 코스 홈에서만 보이고, 보인 순간 기기에 기록한다. 이 화면이 떠 있는 동안은 그대로 둔다(다시 그려도 사라지지 않음).
-function useFirstGreeting(linked: boolean): boolean {
+// 연결된 상태로 처음 열린 코스 홈에서만 보이고, 보인 순간 기기에 기록한다. 이 방문 동안은 그대로 두고(다시 그려도 유지),
+// 첫 단계를 시작하거나 다른 화면으로 떠나면(blur) 거둔다 → 돌아와도 다시 나오지 않는다(디자인 판정 ①).
+function useFirstGreeting(linked: boolean, navigation: {addListener(name: 'blur', cb: () => void): () => void}): boolean {
   const [show, setShow] = useState(false);
+  useEffect(() => navigation.addListener('blur', () => setShow(false)), [navigation]);
   useEffect(() => {
     if (!linked) {
       return undefined;

@@ -32,7 +32,7 @@ export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn, 
   const tape = useTapeSize();
   if (status === 'now') {
     return (
-      <View accessible accessibilityLabel={label} style={[styles.row, styles.now]}>
+      <View testID="step-now-row" accessible accessibilityLabel={label} style={[styles.row, styles.now]}>
         <View style={styles.labelWrap}>
           {tapeIn ? (
             <TapeIn w={tape.w} h={tape.h} />
@@ -171,7 +171,8 @@ const styles = StyleSheet.create({
   inline: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', alignContent: 'center', columnGap: 12},
   inlineTitle: {flexShrink: 1, marginRight: 'auto'},
   done: {backgroundColor: color.doneSoft, borderWidth: 0, paddingHorizontal: 20},
-  now: {backgroundColor: color.actionSoft, borderWidth: 4, borderColor: color.action, paddingHorizontal: 16, gap: 8},
+  // overflow hidden: 좁은 폭(320)·200%에서 한 줄 라벨이 길어져 테이프가 행보다 넓어져도 행 밖으로 비치지 않게(리뷰 l2 L4)
+  now: {backgroundColor: color.actionSoft, borderWidth: 4, borderColor: color.action, paddingHorizontal: 16, gap: 8, overflow: 'hidden'},
   wait: {backgroundColor: color.card, borderWidth: 2, borderColor: color.line, paddingHorizontal: 18},
   pressed: {opacity: 0.85},
   title: {color: color.inkTitle},

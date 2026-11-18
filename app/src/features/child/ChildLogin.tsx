@@ -27,7 +27,7 @@ export function ChildLogin() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [stage, setStage] = useState<'choose' | 'email' | 'code'>('choose');
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [note, setNote] = useState<string | null>(null);
   const [canResend, setCanResend] = useState(false);
   const sentAt = useRef(0);
@@ -62,7 +62,9 @@ export function ChildLogin() {
       setNote(t.bad_email);
       return;
     }
-    beginBusy();
+    if (!beginBusy()) {
+      return; // 보내는 중 두 번 누름(보낸 횟수 제한에 빨리 닿지 않게, 리뷰 M2)
+    }
     setNote(null);
     try {
       await api.sendEmailCode(addr);
@@ -88,8 +90,10 @@ export function ChildLogin() {
   };
 
   const verify = async (value: string) => {
+    if (!beginBusy()) {
+      return;
+    }
     verifying.current = true;
-    beginBusy();
     setNote(null);
     try {
       await api.verifyEmailCode(email.trim(), value);
@@ -115,10 +119,9 @@ export function ChildLogin() {
 
   // 소셜 로그인(카카오·구글): 네이티브 SDK → Supabase. 취소는 조용히, 인터넷 문제·그 밖의 실패는 문구로.
   const social = async (provider: 'kakao' | 'google') => {
-    if (isBusy()) {
+    if (!beginBusy()) {
       return;
     }
-    beginBusy();
     setNote(null);
     try {
       const r = await api.signInWithSocial(provider);

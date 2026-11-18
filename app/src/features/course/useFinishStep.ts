@@ -14,23 +14,26 @@ export function useFinishStep() {
   const {api, applyStep, content, done} = useSession();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
-  const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
 
   // attemptNo: P6 '다 썼어요'를 누른 수(이벤트 attempt_no). 다른 단계는 주지 않는다.
   const finish = async (step: StepName, attemptNo?: number): Promise<boolean> => {
-    if (isBusy()) {
-      return false;
+    if (!beginBusy()) {
+      return false; // 같은 틱 두 번 누름(AP-14)
     }
     if (content && !content.linked) {
       // 미연결 열람: 서버에 기록하지 않고 화면에서만 다음 단계로. 오늘 코스를 다 마치면 도장은 기기에 찍는다
       // (리드 결정: 날짜만 기기 로컬, 연결 뒤에는 서버 값만). 기다린 뒤 진행해야 P7·코스 홈이 오늘 도장을 읽는다
-      if (new Set([...done, step]).size === 3) {
-        await localStamps().addToday();
+      try {
+        if (new Set([...done, step]).size === 3) {
+          await localStamps().addToday();
+        }
+        applyStep(step, 0);
+        return true;
+      } finally {
+        endBusy();
       }
-      applyStep(step, 0);
-      return true;
     }
-    beginBusy();
     setError(null);
     try {
       const sec = Math.min(7200, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
