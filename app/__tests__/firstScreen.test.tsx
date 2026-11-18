@@ -29,7 +29,7 @@ test('첫 화면: 심볼·워드마크·소개·사진 묶음·질문·두 버�
   expect(screen.getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByText('가화만사성')).toBeTruthy();
   expect(screen.getByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeTruthy();
-  expect(screen.getByLabelText('옛날 사진 앨범, AI가 만든 그림')).toBeTruthy();
+  expect(screen.getByLabelText('옛날 사진 예시, AI가 만든 그림')).toBeTruthy();
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
   expect(screen.getByRole('button', {name: '부모님 휴대폰이에요. 가족에게 받은 번호를 써요'})).toBeTruthy();
   expect(screen.getByRole('button', {name: '자녀 휴대폰이에요. 부모님께 보낼 번호를 만들어요'})).toBeTruthy();
@@ -69,7 +69,7 @@ test('자동 확인이 틀리면 칸을 비우고 오류', async () => {
 test('이전 바 라벨, 코스 중에는 "오늘 코스로 돌아가기"', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('오늘 코스로 돌아가기'));
+  await waitFor(() => screen.getAllByLabelText('오늘 코스로 돌아가기')[0]); // 상단 바(첫째)·하단 '오늘 코스로'(U13)
   expect(screen.getByText('‹ 오늘 코스')).toBeTruthy();
 });
 

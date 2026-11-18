@@ -6,6 +6,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.bumojasik.app.haptic.HapticPackage
 import com.bumojasik.app.invite.InvitePackage
 import com.bumojasik.app.splash.SplashPackage
 
@@ -20,6 +21,8 @@ class MainApplication : Application(), ReactApplication {
           add(SplashPackage())
           // 카톡 초대 링크로 설치한 경우 Play Install Referrer 의 번호를 첫 실행 1회 읽는다
           add(InvitePackage())
+          // P7 도장이 닿는 순간 시스템 촉각 1회(performHapticFeedback, 권한 없음·시스템 진동 설정 따름)
+          add(HapticPackage())
         },
     )
   }

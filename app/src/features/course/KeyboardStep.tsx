@@ -14,6 +14,7 @@ import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
+import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 import {StepHeader} from './StepHeader';
 import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
@@ -186,6 +187,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       ) : (
         <SkipLink label={k.skip} disabled={busy} onPress={complete} />
       )}
+      {open ? null : <ToCourseHomeLink onPress={toCourseHome} disabled={busy} />}
     </>
   );
 

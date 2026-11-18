@@ -3,11 +3,10 @@
 // - 7일이 지난 날짜는 읽을 때 정리한다. 연결된 뒤에는 서버 값만 쓰고 이 목록은 지운다(서버로 옮기지 않음).
 // React·RN 을 모른다(lib 규칙). 저장소는 주입하고, 기본은 AsyncStorage(없거나 실패하면 메모리).
 
-export type KeyValueStore = {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
-};
+import {defaultStore, memoryStore, type KeyValueStore} from './kvStore';
+
+export {memoryStore};
+export type {KeyValueStore};
 
 const KEY = 'local_week_stamps_v1';
 const KEEP_DAYS = 7;
@@ -73,48 +72,6 @@ export function createLocalStamps(store: KeyValueStore, now: () => Date = () => 
   };
 }
 export type LocalStamps = ReturnType<typeof createLocalStamps>;
-
-// 기본 저장소: AsyncStorage. 네이티브 모듈이 없거나(테스트·일부 환경) 실패하면 이 실행 동안만 메모리에 둔다.
-export function memoryStore(): KeyValueStore {
-  const m = new Map<string, string>();
-  return {
-    getItem: async k => m.get(k) ?? null,
-    setItem: async (k, v) => {
-      m.set(k, v);
-    },
-    removeItem: async k => {
-      m.delete(k);
-    },
-  };
-}
-
-function defaultStore(): KeyValueStore {
-  const mem = memoryStore();
-  let native: KeyValueStore | null | undefined;
-  const pick = (): KeyValueStore => {
-    if (native === undefined) {
-      try {
-        native = require('@react-native-async-storage/async-storage').default ?? null;
-      } catch {
-        native = null;
-      }
-    }
-    return native ?? mem;
-  };
-  const run = async <T>(f: (s: KeyValueStore) => Promise<T>): Promise<T> => {
-    try {
-      return await f(pick());
-    } catch {
-      native = null; // 네이티브가 실패하면 메모리로 바꾼다
-      return f(mem);
-    }
-  };
-  return {
-    getItem: k => run(s => s.getItem(k)),
-    setItem: (k, v) => run(s => s.setItem(k, v)),
-    removeItem: k => run(s => s.removeItem(k)),
-  };
-}
 
 let instance: LocalStamps | null = null;
 export function localStamps(): LocalStamps {

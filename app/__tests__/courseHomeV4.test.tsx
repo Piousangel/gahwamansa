@@ -226,6 +226,7 @@ describe('미연결', () => {
     const st = StyleSheet.flatten(strip.props.style);
     expect(st.borderWidth).toBe(3);
     expect(st.flexWrap).toBe('wrap');
+    expect(st.alignItems).toBe('baseline'); // 글 첫 줄과 '번호 쓰기' 바닥선(리뷰 R5)
     expect(st.minHeight).toBeGreaterThanOrEqual(64);
     expect(within(strip).getByText('번호 쓰기', {includeHiddenElements: true})).toBeTruthy();
     expect(within(strip).getByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeTruthy();

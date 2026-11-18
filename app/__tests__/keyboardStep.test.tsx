@@ -96,7 +96,7 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
   expect(screen.getByRole('button', {name: '마치기'})).toBeDisabled();
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 자동 이동 없음
-  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 2500});
+  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 6000});
   await press('마치기');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const rec = calls.filter(c => c.name === 'recordSessionStep');
@@ -133,7 +133,7 @@ test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴�
   const toFinish = () =>
     send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마치기');
   expect(toFinish()).toBe(false); // 알림 읽기가 끝나도록 바로 옮기지 않는다(재검토 ①)
-  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 2500}); // 1.5초(마치기 활성)와 함께
+  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 6000}); // 1.5초(마치기 활성)와 함께
   send.mockRestore();
   announce.mockRestore();
 });
@@ -273,7 +273,7 @@ test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면
 
 test('이전(‹ 오늘 코스)은 기록 없이 코스 홈으로', async () => {
   const {calls} = await toKeyboardStep();
-  await press('오늘 코스로 돌아가기');
+  await act(async () => fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로 돌아가기'})[0])); // 상단 바(하단 링크도 같은 읽기, U13)
   await waitFor(() => screen.getByTestId('date-line'));
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false);
 });

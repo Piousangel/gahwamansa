@@ -21,3 +21,25 @@ export function useReduceMotion(): boolean {
   }, []);
   return reduce;
 }
+
+/** 완료감 모션 방식(시안 P7_motion): 'full' = 크기·이동, 'reduce' = 200ms 페이드만(동작 줄이기 또는 화면 읽기).
+ *  확인 전에는 null — 그동안 모션을 시작하지 않는다(줄이기 설정인데 첫 프레임에 큰 모션이 보이는 것을 막음). */
+export type MotionMode = 'full' | 'reduce';
+export function useMotionMode(): MotionMode | null {
+  const [mode, setMode] = useState<MotionMode | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      Promise.resolve(AccessibilityInfo.isReduceMotionEnabled()).catch(() => false),
+      Promise.resolve(AccessibilityInfo.isScreenReaderEnabled()).catch(() => false),
+    ]).then(([reduce, reader]) => {
+      if (alive) {
+        setMode(reduce || reader ? 'reduce' : 'full');
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return mode;
+}

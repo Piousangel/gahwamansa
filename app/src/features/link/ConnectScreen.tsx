@@ -74,12 +74,13 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   };
 
   // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
-  //   1단계 안심 줄 숨김 → 2단계 제목 28→22 → 3단계 링크 두 개를 이전 바 줄로 → 4단계 키 64 + 본문 스크롤
+  //   1단계 제목 28→22 → 2단계 링크 두 개를 이전 바 줄로 → 3단계 키 64 + 본문 스크롤.
+  //   안심 줄은 어느 단계에서도 숨기지 않는다(UX U4). 그래서 360×640 100%(제스처 내비)도 3단계 스크롤이 된다(dev-app-notes 표, 디자인 확인 중)
   const [keyH, setKeyH] = useState<number | undefined>(undefined);
   const [level, setLevel] = useState(0);
   const [help, setHelp] = useState(false);
-  const overflow = level >= 4;
-  const linksOnTop = level >= 3;
+  const overflow = level >= 3;
+  const linksOnTop = level >= 2;
   const onArea = (e: LayoutChangeEvent) => {
     if (overflow) {
       return;
@@ -87,11 +88,11 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
     if (k !== null) {
       setKeyH(k);
-    } else if (level < 3) {
+    } else if (level < 2) {
       setLevel(l => l + 1);
     } else {
       setKeyH(KEY_MIN);
-      setLevel(4);
+      setLevel(3);
     }
   };
 
@@ -176,14 +177,12 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
           <LegalLine />
         </>
       }>
-      <Text20 size={level >= 2 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
+      <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
         {TITLE}
       </Text20>
-      {help ? (
-        <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20>
-      ) : level >= 1 ? null : (
-        <Text20 testID="connect-safe">{copy.safe.money}</Text20>
-      )}
+      {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
+      {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4). 모자라면 뒤 단계(제목 줄임·링크 위로·스크롤)로 */}
+      <Text20 testID="connect-safe">{copy.safe.money}</Text20>
       <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
         {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
         <View style={overflow ? null : styles.pinned}>

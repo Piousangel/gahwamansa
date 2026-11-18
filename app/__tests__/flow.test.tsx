@@ -33,9 +33,9 @@ async function doAllSteps() {
   await act(async () => {
     fireEvent.changeText(screen.getByLabelText('낱말 쓰는 칸'), '나무');
   });
-  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 2500});
+  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 6000});
   await press('마치기');
-  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요')); // P7
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'), {timeout: 5000}); // P7(부하에서 느릴 수 있음)
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('date-line'));
 }

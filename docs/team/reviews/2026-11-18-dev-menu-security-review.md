@@ -89,3 +89,74 @@
 ## 합치기 판정
 
 **조건부 승인.** H1(config.local 을 staging·production 번들에서 빼고 검사 표식 추가)을 고친 뒤 합친다. M1② (실제 release 산출물 grep 으로 빌드 실패)는 이번에 함께 하길 강하게 권장한다. M2·M3·L 항목은 다음 작업으로 미뤄도 된다.
+
+## 재검토 (f7bd1e3 main 병합 · 4895cea 반영) · 2026-11-18
+
+### 실행 결과
+
+| 항목 | 결과 |
+|---|---|
+| `tsc --noEmit` | 통과 |
+| `jest --maxWorkers=2`(통합 제외) | 69 묶음 / 673 테스트 통과 |
+| `npm run check:dev-menu` | 통과(release 번들에 테스트 계정·이메일 없음, production 메뉴 없음, staging 있음) |
+| 카나리아 `config.local.ts`(devTestChild `canary2@leak.test`·비밀번호·`sb_publishable_CANARYKEY99`·`127.0.0.1:54321`) + `assembleProductionRelease -PallowPlaceholderEnv` | 성공. 로그에 "release 번들 검사 통과(production)". APK Hermes 번들 `strings` 결과: 메뉴 표식·dev_menu_session_·createTestFamily·devTestChild·카나리아 비밀번호·이메일·키·로컬 주소 **모두 0건**. 대조군 `version-tap`·`version-line` 은 1건씩 있어 검사 방법은 유효 |
+| 검사 우회 시도 ①: worktree 에서만 metroDevMenu 의 config.local 대역을 꺼서 다시 빌드 | `createBundleProductionReleaseJsAndAssets FAILED`, 메시지 `[devTestChild, config.local 값(22자)…, ***@leak.test]`. 값은 길이·가린 형태로만 찍힌다 |
+| 우회 시도 ②: 실패 직후 아무것도 바꾸지 않고 다시 빌드 | 다시 실행돼 또 FAILED. 실패한 작업은 Gradle 기록이 없어 UP-TO-DATE 로 건너뛰지 않는다 |
+| 우회 시도 ③: 되돌린 뒤 두 번 빌드 | 1회차는 다시 번들 + 검사 통과, 2회차는 `UP-TO-DATE`(검사 안 돎). 입력 `sources`(app/ 아래, android·ios·build·node_modules 제외)에 config.local.ts·metroDevMenu.js·env.generated.ts 가 들어 있어, 건너뛸 때의 산출물은 이미 검사를 통과한 그것이다. build.gradle 을 고치면 작업 동작이 바뀐 것으로 보아 다시 돈다 |
+| release 뒤 env.generated.ts | 지워짐. 그 상태의 `bundleAppEnv` = `{appEnv:'unknown', buildType:'unknown'}` |
+| main 과 merge-tree | f7bd1e3 에서 병합 완료(충돌 없음) |
+
+### 이전 지적 처리
+
+| 번호 | 판정 | 근거 |
+|---|---|---|
+| H1 | **해결** | metroDevMenu.js 가 release·불명이면 config.local.ts → config.local.empty.ts. 실제 APK 에서 카나리아 0건, Gradle `verifyReleaseBundle` 이 대역을 끄면 빌드 실패시키는 것까지 확인 |
+| M1 | **해결** | 환경 변수 덮어쓰기 제거, 파일 없음·모르는 값이면 메뉴·config.local 모두 제외(fail-closed). 실제 산출물 검사 doLast(번들 작업 안, finalizer 정리보다 먼저) |
+| M2 | **대부분 해결** | 7일 만료, 로그아웃(resetRole)·계정 지우기(clear)·처음으로 때 정리 훅, 익명 세션 보관, `_removeSession` 단위 테스트. 암호화 보류는 staging 전용 + allowBackup=false 라 받아들일 만함. 남은 것: 어르신 칸이 이미 차 있으면 `keepCurrent('none')` 은 지금 익명 세션을 여전히 버림(낮음) |
+| M3 | **부분 해결 → R2** | 정리 버튼·테스트 도메인 이메일 제한·`childIsTest` 표시 추가. 그러나 지울 대상을 "만들 때의 신원"이 아니라 "정리할 때 칸에 있는 세션"으로 정한다(아래 R2) |
+| L1 | 해결 | 허용 안 되면 Pressable 이 아닌 View/Text, production 테스트 추가 |
+| L2 | 해결 | production 은 `API_MODE=real` 강제(build.gradle) |
+| L3 | 해결(문서) | ARCHITECTURE.md 금지 패턴에 예외 범위 명시. eslint 강제는 없음(낮음, 선택) |
+| L4 | 해결 | 4초 창·allowed=false 무시·setSession 오류·redeem_failed·already_has_profile·정리 훅 테스트 추가 |
+
+### 새 문제
+
+**R1 (중간, 개발 흐름) — release 빌드 뒤 디버그 개발에서 config.local 이 조용히 빠지고, 로컬 서버 대신 staging 에 붙을 수 있다**
+- 위치: `app/metroDevMenu.js:19-30`(파일 없음 → unknown → config.local 제외), `app/metro.config.js:27`(Metro 시작 때 한 번만 읽음), `app/android/app/build.gradle` cleanGeneratedAppEnv, `@react-native-community/cli-platform-android` runAndroid index.js:103(Gradle 빌드 **전에** Metro 를 띄움)
+- 재현(코드 경로, 위 표에서 release 뒤 unknown 확인): release 빌드(파일 삭제) → `npm run android`(stagingDebug) → Metro 가 먼저 떠서 unknown 으로 고정 → 이어서 preBuild 가 staging·debug 값으로 env.generated 를 씀 → 번들에는 env.generated(staging, real)는 들어가는데 config.local 은 빈 모듈. 결과: config.local 로 로컬 Supabase 를 쓰던 개발자 앱이 **staging 서버**로 붙고, 개발자 메뉴도 사라진다. Metro 를 다시 켜기 전까지 계속된다. Metro 를 먼저 켜 두는 평소 흐름(`npm start` 다음 빌드)도 같다. 안전 방향(출시물 유출 없음)이지만, 이 상태에서 "테스트 가족 만들기"를 누르면 데이터가 로컬이 아니라 staging 에 생기고, env-split 리뷰 H1(의도와 다른 원격 연결)과 같은 종류다. dev-app-notes 에 "debug 빌드 뒤에 Metro"라고 적혀 있지만 run-android 기본 동작과 반대다.
+- 권장: 출시 판정을 Metro 개발 서버와 떼기 — `react { bundleConfig = file("../../metro.release.config.js") }` 로 Gradle 번들만 쓰는 설정에서 대역을 걸고(그 설정은 env.generated 가 없으면 실패), 개발 서버 설정(metro.config.js)은 지금처럼 config.local 을 둔다. 최소한 resolveRequest 에서 env.generated 를 mtime 기준으로 다시 읽고, 개발 서버(`context.dev`/요청 dev=true)에서는 config.local 을 막지 않기. RELEASE.md §33 의 "마지막 디버그 flavor" 문장도 이 규칙으로 고친다.
+
+**R2 (중간, staging 데이터) — 테스트 가족 정리가 칸이 바뀐 뒤 실제 계정을 지울 수 있다**
+- 위치: `app/src/dev/testFamily.ts:79-80`(표시에 `childIsTest`·시각만 저장), `:97-112`(칸에서 복원한 세션의 역할만 보고 `deleteMyAccount`), `app/src/dev/sessionSlots.ts`(칸은 7일 만료, `dev_menu_test_family_v1` 은 만료 없음)
+- 재현 시나리오: 테스트 계정으로 가족 만들기(`childIsTest:true`) → 7일 지나 칸 만료(또는 "보관 세션 모두 지우기"는 표시도 지우므로 해당 없음, 만료만 해당) → "자녀로"(빈 상태) → 본인 **소셜 계정**으로 로그인 → 메뉴로 역할을 바꾸면 그 소셜 세션이 자녀 칸에 보관됨 → "테스트 가족 정리" → `whoAmI()==='child'` 이므로 그 소셜 계정을 지운다(마지막 자녀면 가족 전체). 어르신 칸도 같은 방식으로 실제 연결한 익명 어르신으로 바뀔 수 있다. 지금 테스트(`devMenu.test.tsx:232-259`)는 칸이 바뀌지 않는 경우만 본다.
+- 권장: 만들 때 어르신·자녀 user id(세션 `user.id`)를 표시에 저장하고, 정리 때 복원한 세션의 user id 가 같을 때만 지운다. 자녀는 추가로 `user.email` 이 `isTestEmail` 인지 확인. 표시에도 같은 만료를 두거나, 칸이 만료되면 표시도 지운다. 정리 시작의 `clearLocal()` 전에 `keepCurrent` 로 지금 세션 보관.
+
+**R3 (낮음) — `check:dev-menu` 가 작업 트리의 env.generated.ts·config.local.ts 를 잠시 바꾼다**
+- 위치: `app/scripts/check-dev-menu-bundle.sh:171-185`. trap 으로 되돌리지만 SIGKILL·전원 차단이면 release·production 값 env.generated 나 카나리아 config.local 이 남는다. 실행 중에 같은 체크아웃에서 Metro·Gradle 이 돌면 그 값을 읽는다. 권장: 임시 복사본(앱 폴더를 `mktemp -d` 로 rsync, node_modules 링크)에서 번들, 또는 스크립트 시작 때 "Metro 실행 중이면 중단".
+
+### 재검토 판정
+
+**합치기 승인.** 목적(production 앱에 메뉴·세션 보관·테스트 계정이 절대 들어가지 않음)은 실제 APK 와 일부러 우회한 빌드 실패로 확인됐다. 남은 R1·R2 는 개발 흐름·staging 데이터 문제라 출시물 위험은 아니다. R2 는 실제 개인 staging 계정을 지울 수 있으니 다음 작업 첫 순서로, R1 은 개발자 안내(RELEASE.md) 수정만이라도 이번에 함께 하길 권한다.
+
+### 재확인 (15eab04) · 2026-11-18
+
+| 항목 | 결과 |
+|---|---|
+| `tsc --noEmit` | 통과 |
+| `jest --maxWorkers=2`(통합 제외) | 첫 실행 69 묶음 중 1개 실패(681개 중 1개): `devMenu.test.tsx:393` "버전 7번 → …" 이 기본 5초 시간 제한 초과. 캐시가 데워진 뒤 같은 묶음 2회 다시 실행 → 32/32 통과(4.9초·2.3초). 처음 변환이 느린 데서 오는 흔들림(아래 S2) |
+| `npm run check:dev-menu` | 통과, 작업 트리 변경 없음(`git status` 깨끗) |
+| Gradle `createBundleProductionReleaseJsAndAssets`·`createBundleStagingReleaseJsAndAssets --rerun-tasks --info` | 두 작업 모두 `cli.js bundle … --dev false … --config <app>/metro.release.config.js` 로 실행(RN gradle-plugin BundleHermesCTask.kt:163-165 가 `bundleConfig` 를 `--config` 로 넘김). "release 번들 검사 통과(production)", 빌드 뒤 env.generated.ts 지워짐 |
+| env.generated.ts 가 없을 때 `require('./metro.release.config.js')` | 예외(“env.generated.ts 가 없거나 APP_ENV 를 모르겠어요”) → release 번들이 멈춤(fail-closed) |
+
+| 번호 | 판정 | 근거 |
+|---|---|---|
+| R1 | **해결** | 출시 판정이 Gradle 전용 `metro.release.config.js` 로 옮겨졌고, release 번들 두 작업이 실제로 그 설정을 쓴다. 개발 서버 설정(metro.config.js)에는 대역이 없어 release 뒤에도 config.local·개발자 메뉴가 그대로다. release 설정은 `BUILD_TYPE=release` 가 아니면 멈추고, 그래도 빠진 것은 `verifyReleaseBundle` 이 잡는다. debug 변형은 `debuggableVariants` 라 번들 작업이 없다 |
+| R2 | **해결** | 만들 때 어르신·자녀 user id·이메일을 기록하고, 정리 때 칸에서 복원한 세션의 user id 가 같고(자녀는 테스트 도메인 이메일까지) `whoAmI` 역할이 맞을 때만 지운다. user id 는 `setSession` 이 서버 확인 뒤 채운 세션에서 온다. 지난 재현 시나리오(칸에 실제 익명 어르신·본인 소셜 계정)를 그대로 옮긴 테스트(`devMenu.test.tsx:296-307`)에서 `deleteMyAccount` 가 불리지 않는다. id 가 같아도 이메일이 테스트 도메인이 아니면 거부(309), 표시 7일 만료(321), 정리 전 지금 세션 보관·복원(328)도 테스트됨 |
+| R3 | 해결 | 앱 소스를 임시 폴더로 rsync(node_modules 는 링크)해 번들하고, Gradle 과 같은 `--config metro.release.config.js` 를 쓴다 |
+| 낮음(익명 세션) | 해결 | 어르신 칸이 차 있으면 `dev_menu_session_anon_v1` 에 따로 보관 |
+
+**새로 본 것(낮음)**
+- S1 `app/src/dev/testFamily.ts` cleanupTestFamily 끝의 `slots.clearAll()`: 정리할 때 user id 가 달라 **지우지 않은** 칸(실제로 연결한 익명 어르신, anon 칸)도 같이 비운다. 지금 세션만 되돌리므로 그 익명 신원이 지금 세션이 아니면 이 기기에서 다시 꺼낼 수 없다(staging 전용, 데이터는 서버에 남음). 권장: 정리에서는 실제로 지운 신원의 칸과 표시만 지우고 나머지 칸은 둔다.
+- S2 `app/__tests__/devMenu.test.tsx:393` 화면 흐름 테스트가 처음 실행(변환 캐시 없음)에서 5초를 넘긴다. CI 처음 실행에서 흔들릴 수 있으니 `jest.setTimeout`/테스트별 제한을 15초쯤으로.
+
+**재확인 판정: 합치기 승인.** R1·R2·R3·낮음 모두 해결됐다. S1·S2는 다음 작업으로 미뤄도 된다.

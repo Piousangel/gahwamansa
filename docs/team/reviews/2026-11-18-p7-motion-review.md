@@ -96,3 +96,38 @@
 ## 합치기 판정
 
 **조건부 합치기.** H1(토글 이름 "도장 소리")은 합치기 전 수정. M1·M2는 실기기에서 바로 보이는 문제라 같은 브랜치에서 고치기를 권장, M3·M4는 디자이너 확인 뒤 후속 가능. M5·M6·낮음은 후속 작업으로 기록.
+
+## 재검토 (2026-11-18, 86415b0 main 병합 · 8dcc5fe 반영)
+
+- 방법: worktree(8dcc5fe)에서 tsc·jest 전체 2회·`assembleStagingDebug`, 코드 수정 없음. `git merge-tree --write-tree main p7-motion` 충돌 없음.
+- tsc 통과. jest 1회차(load 약 60): 6 suites·13 tests 실패. 전부 `Exceeded timeout of 5000 ms for a test`였고 p7Motion뿐 아니라 parentFamily·consentFlow·screens·cReview·previewAndVersion처럼 이 변경과 무관한 suite도 포함. 2회차(load 약 42): 69 suites·669 tests 모두 통과.
+- 빌드: `source scripts/env.sh && ./gradlew assembleStagingDebug` 성공(3분 24초, HapticModule·HapticPackage Kotlin 컴파일 통과). 합쳐진 stagingDebug manifest에 VIBRATE 없음(INTERNET·SYSTEM_ALERT_WINDOW(디버그)·ACCESS_LOCAL_NETWORK·리시버 권한·Install Referrer만).
+
+### 지적 사항 해결 여부
+
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| H1 토글 이름 | 해결 | `settings.sfx: "도장 소리"`(copy 두 곳), 테스트·주석 갱신 |
+| M1 단계 체크 시점 | **미해결(실질)** | `CourseHome.tsx:58·65`: 화면이 가려져 있으면 대기했다가 `useFocusEffect`에서 시작. 그런데 `focus` 이벤트는 내비 상태가 바뀌는 즉시(`popTo` 순간) 발생하고, 전환이 끝날 때 오는 이벤트는 `transitionEnd`다(`@react-navigation/native/src/useFocusEffect.tsx:80`은 'focus' 구독). 이전 코드도 `applyStep` 직후 바로 `popTo`였으므로 시작 시점은 사실상 같다 → pop 전환 약 300ms와 겹치는 문제는 그대로. 권장: `navigation.addListener('transitionEnd', e => { if (!e.data.closing && pending.current) … })`(native-stack은 드러나는 화면에 closing=false로 보냄), 처음 렌더 직후에는 대기를 비움. 테스트도 '포커스 뒤'만 확인하므로 시점을 검증하지 못한다 |
+| M2 건너뛰기 안내 | 해결(남는 점 낮음) | 하단 독, 끝나면 글자만 투명(자리 유지). 다만 안내 줄이 생길 때(prefs 읽은 직후) 독 높이가 늘어 본문이 반 줄쯤 위로 한 번 움직인다 → 연출 시작 직후라 900ms 측정 전이라 착지 위치에는 영향 없음. 원하면 첫 회에는 처음부터 자리를 잡아 두기 |
+| M3 큰 도장 위치·제목 페이드 | 해결 / **디자인 확인 항목** | 120 도장이 본문 흐름 안 맨 위 칸에, 제목·문구가 같이 페이드, 토큰(space·size) 사용. 끝난 뒤 그 칸에 완료 해님을 200ms 페이드로 보여 주는 것은 시안 P7_motion(빈 칸)과 다르다 → 디자이너 확인 필요(코드 문제 아님) |
+| M4 동작 줄이기 | 해결 | 120 도장 제자리 200ms 페이드 + 제목·문구, 인주·이동 없음, 오늘 칸은 이미 찍힘 |
+| M5 시스템 촉각 | 해결 | `HapticModule.confirm()`: `UiThreadUtil.runOnUiThread`, `currentActivity?.window?.decorView ?: return`(뷰 null 안전), API 30+ `CONFIRM` / 미만 `VIRTUAL_KEY`. VIBRATE 권한 제거, 앱 코드(src·android)에 `Vibration`/`vibrate(` 사용 없음. JS는 모듈이 없으면(iOS·테스트) 아무것도 안 함. 등록 방식은 SplashPackage와 같은 레거시 인터롭 |
+| M6 테스트 | 해결 | 가짜 시계로 180ms 촉각·소리, 900ms 측정 성공 시 이동·1380ms 끝, 측정 실패 폴백, 180ms 전 건너뛰기 1회, 측정 대기 중 언마운트, `P7_T` 값 대조, 판정 전(null) 미시작, 줄이기 화면. AccessibilityInfo 목을 afterEach에서 되돌려 테스트 간 누수 제거 |
+| L1 언마운트 정리 | 해결 | `alive` ref, 측정 뒤 `!alive || running 비어 있음`이면 중단, 끝 전환도 타이머로 추적·정리, prefs `.then`도 alive 확인 |
+| L2 세부 수치 | 대부분 해결 | 이징 3종 시안 bezier 그대로, 인주 지름 144·scale 0.9→1.15·220ms 전 투명. **인주 색은 아직 `color.blush #FF9E7A`(시안 `#C44F2E`)** — 토큰에 맞는 색이 없으면 디자이너 확인. 단계 체크 원 그리기(stroke)는 여전히 scale 근사(낮음) |
+| L3 판정 전 모션 | 해결 | `ui/motion.useMotionMode()`(null → 시작 안 함, 화면 읽기 = 줄이기), JustDoneRow·TapeIn·CourseDone이 같이 사용, `useMotionPref` 중복 삭제. null 동안 체크·면·글자는 투명(제목만 보임) — 한두 프레임이라 문제 없음 |
+| L4 설정 토글 | 해결 | 행 전체 Pressable(role switch, label·hint·checked), Switch는 읽기에서 숨김, 값 읽기 전 Switch 미표시·disabled, 위험 구역 위로 이동 |
+| L5 소리 경로 | 그대로(설치 뒤 확인) | DECISIONS 11-18대로 패키지 설치는 합친 뒤 main에서 |
+| L6 테스트 불안정 | 부분 | 원인 하나(목 누수)는 제거. 그러나 flow·keyboardStep의 `waitFor` timeout을 6000으로 올린 것은 효과가 없다 — jest 테스트 하나의 기본 제한이 5000ms(`jest.config.js`에 `testTimeout` 없음)라 그 전에 테스트가 끝난다. 높은 부하에서는 여전히 무관한 suite까지 5초 제한에 걸린다(위 1회차) |
+
+### 새로 본 것
+
+- 낮음 N1: `toDone`의 해님 페이드(`CourseDone.tsx:100`)는 `running`에 넣지 않아 언마운트 때 멈추지 않는다. 네이티브 드라이버 200ms라 실제 해는 없음.
+- 낮음 N2: `week`가 끝내 `undefined`로 남으면(응답 없음) 제목까지 투명한 채로 남는다. 이전에는 제목은 항상 보였다. `useWeekStamps`에 시간 제한이 없다면 몇 초 뒤 null로 넘기는 장치를 고려.
+- 낮음 N3: 테스트 timeout — 위 L6. 흐름 테스트에서 P7을 지나는 것들은 `test(..., 15000)`처럼 테스트별 제한을 주거나 config에 `testTimeout`을 둘 것.
+- 확인: HapticModule은 `@ReactMethod` 비동기 호출이라 JS 스레드를 막지 않고, 액티비티가 없을 때(백그라운드) 조용히 넘어간다. `performHapticFeedback`은 시스템 '터치 진동' 끔 설정을 따른다(시안 의도와 일치). 저 API 기기 VIRTUAL_KEY는 아주 짧은 클릭감이라 '길게 울리지 않음' 규칙에 맞음.
+
+### 재검토 판정
+
+**합치기 가능(조건 하나 권장).** H1·M2~M6·L1·L3·L4 해결. M1은 고쳤다고 했지만 시점이 바뀌지 않았다. 다만 화면 깨짐이나 기능 오류가 아니라 모션이 덜 보이는 문제라, 합친 뒤 `transitionEnd`로 바로 이어서 고치는 것도 가능하다(실기기에서 확인). M3의 완료 해님과 인주 색은 디자인 확인 항목이다.

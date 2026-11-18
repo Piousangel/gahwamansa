@@ -51,13 +51,13 @@ test('계산: 앞 사진 폭은 영역 폭의 44% 이하, 최소 72 미만이면
   expect(stackLayout(312, 80)).toBeNull();
 });
 
-test('사진 3장, 캡션·AI 문구 없음, 화면 읽기 라벨은 "옛날 사진 앨범, AI가 만든 그림"', async () => {
+test('사진 3장, 캡션·AI 문구 없음, 화면 읽기 라벨은 "옛날 사진 예시, AI가 만든 그림"', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await measure(312, 170);
   expect(screen.getByTestId('intro-photo')).toBeTruthy();
   expect(screen.getByTestId('intro-photo-back-left', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByTestId('intro-photo-back-right', {includeHiddenElements: true})).toBeTruthy();
-  expect(screen.getByLabelText('옛날 사진 앨범, AI가 만든 그림')).toBeTruthy();
+  expect(screen.getByLabelText('옛날 사진 예시, AI가 만든 그림')).toBeTruthy();
   expect(screen.queryByText(/AI/, {includeHiddenElements: true})).toBeNull(); // 눈에 보이는 표시는 없음
   expect(screen.queryByText('마을 입구 나무', {includeHiddenElements: true})).toBeNull();
 });

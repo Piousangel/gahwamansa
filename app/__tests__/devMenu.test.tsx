@@ -304,6 +304,10 @@ describe('테스트 가족: 테스트 도메인·분기·정리(M3)', () => {
     const del = jest.spyOn(api, 'deleteMyAccount');
     expect(await cleanupTestFamily({api, auth, store})).toEqual({ok: true, parent: false, child: false});
     expect(del).not.toHaveBeenCalled();
+    // 재확인 S1: 지우지 않은 칸은 그대로 남는다(표시만 정리)
+    expect(await store.getItem('dev_menu_session_child_v1')).toContain('social-a');
+    expect(await store.getItem('dev_menu_session_parent_v1')).toContain('anon2-a');
+    expect(await store.getItem('dev_menu_test_family_v1')).toBeNull();
   });
 
   test('R2: user id 가 같아도 자녀 이메일이 테스트 도메인이 아니면 지우지 않는다', async () => {
@@ -411,7 +415,7 @@ describe('메뉴 화면(fake 모드)', () => {
     });
     await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
     expect(screen.queryByText('개발자 메뉴')).toBeNull();
-  });
+  }, 15000); // 재확인 S2: 앱 전체를 그리는 흐름이라 첫 실행이 느릴 수 있다
 });
 
 describe('production 대역·fake 초기화', () => {

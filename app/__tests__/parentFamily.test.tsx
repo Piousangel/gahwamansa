@@ -76,7 +76,7 @@ test('이미 보여 주지 않는 중이면 시트에 그만 보여 주기 갈�
   await waitFor(() => screen.getByRole('header', {name: '연결된 가족'}));
   await press('그만두기, 답 보여 주기만 그만두거나, 모두 지울 수 있어요');
   expect(screen.queryByRole('button', {name: /그만 보여 주기/})).toBeNull();
-  expect(screen.getByText('답은 이미 보여 주지 않는 중이에요')).toBeTruthy(); // N4 갈래 하나일 때 안내
+  expect(screen.getByText('지금은 가족에게 답을 보여 주지 않는 중이에요')).toBeTruthy(); // N4 갈래 하나일 때 안내
   expect(screen.queryByText('둘 중 하나를 골라 주세요')).toBeNull();
   expect(screen.getByRole('button', {name: /모두 지우기/})).toBeTruthy();
 });

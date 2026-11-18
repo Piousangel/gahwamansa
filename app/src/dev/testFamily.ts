@@ -7,7 +7,7 @@
 import type {Api} from '../features/types';
 import {isServerError} from '../features/types';
 import type {KeyValueStore} from '../lib/localStamps';
-import {createSessionSlots, SLOT_KEEP_MS, TEST_FAMILY_KEY, type AuthLike} from './sessionSlots';
+import {createSessionSlots, SLOT_KEEP_MS, slotKey, TEST_FAMILY_KEY, type AuthLike} from './sessionSlots';
 
 export type DevUser = {id: string; email: string | null};
 export type DevAuth = AuthLike & {
@@ -143,7 +143,14 @@ export async function cleanupTestFamily(d: Omit<Deps, 'creds'>): Promise<Cleanup
   };
   const parent = await tryDelete('parent', mark.parentUserId, () => true);
   const child = mark.childIsTest ? await tryDelete('child', mark.childUserId, u => !!u.email && isTestEmail(u.email)) : false;
-  await slots.clearAll();
+  // 재확인 S1: 지운 신원의 칸·정리 표시만 비운다(건드리지 않은 칸 — 실제 소셜 세션·다른 익명 어르신 — 은 그대로)
+  if (parent) {
+    await d.store.removeItem(slotKey('parent'));
+  }
+  if (child) {
+    await d.store.removeItem(slotKey('child'));
+  }
+  await d.store.removeItem(TEST_FAMILY_KEY);
   await d.auth.clearLocal().catch(() => {});
   // 지금 세션이 지운 신원이 아니면 되돌린다
   if (orig && origUser && !deleted.includes(origUser.id)) {
