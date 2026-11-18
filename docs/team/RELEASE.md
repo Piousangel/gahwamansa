@@ -147,6 +147,7 @@ scripts/db-push.sh production
 DB 마이그레이션으로 고칠 수 없는 Auth 설정 경고다. `db push` 뒤 대시보드 Advisors에서 확인한다.
 - [ ] **익명 로그인 허용(auth_allow_anonymous_sign_ins)**: 어르신 연결이 익명 로그인 위에서 동작하므로 **켠 채로 둔다(의도)**. 대신 Authentication > Rate Limits의 익명 로그인 한도가 기본값 이하인지 확인하고, 남용이 보이면 CAPTCHA(Attack Protection)를 켠다. RLS는 익명 사용자도 authenticated로 보므로 모든 쓰기는 RPC 안에서 역할을 검사한다(서버 노트 §7).
 - [ ] **유출 비밀번호 보호(auth_leaked_password_protection)**: Authentication > Attack Protection에서 켠다(비밀번호 로그인을 쓰는 심사용 자녀 계정에도 해당). 요금제에 따라 안 보이면 production(Pro)에서만 켜고 staging은 경고를 받아들인다(미확인).
+- [ ] **Vault 비밀값(필수, 0033·0044)**: Database > Vault에 `project_url`(= `https://<ref>.supabase.co`)과 `push_cron_secret`(32자 이상 무작위, 함수 secrets `PUSH_CRON_SECRET`과 같은 값). 없으면 알림·카카오 해제 cron이 함수를 부르지 않고, **콘텐츠 게시 때 사진 주소의 호스트 검사가 생략된다**(https 형식만 확인). 상세는 dev-server-notes §9 #17.
 - [ ] 그 밖의 DB 경고가 남아 있으면 서버 줄에 전달(로컬 `npx supabase db advisors`는 0031 기준 "No issues found").
 
 ## 10. 빌드 결과 확인(설치 없이)

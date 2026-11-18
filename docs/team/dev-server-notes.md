@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0043) · 2026-11-17
+# 서버 계약 노트 (0019~0045) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -269,6 +269,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 14 | Providers > Email > Password | 최소 길이 **10** 이상(심사 계정용) | `minimum_password_length = 6` | ☐ | 일반 사용자는 비밀번호 로그인 안 씀 |
 | 15 | Attack Protection > CAPTCHA | **출시 시 OFF**(판단) | 없음 | ☐ | 켜면 익명 로그인·OTP 요청에 앱이 captcha 토큰을 보내야 해 앱 작업 필요. 한도(2·3)로 시작하고 남용 징후(익명 가입 급증) 시 켜는 것을 W3 보안 패스에서 재판단 |
 | 16 | Database > Extensions | **pg_cron ON** | 로컬 기본 | ☐ | 0023 파기 배치(db push 전에 켤 것) |
+| 17 | Database > Vault(Secrets) | **`project_url` = `https://<ref>.supabase.co`(필수)**, `push_cron_secret`(32자 이상 무작위, Edge secrets `PUSH_CRON_SECRET`과 같은 값) | 로컬은 없음 | ☐ | 없으면 cron이 Edge Function을 부르지 않고(not_configured), **콘텐츠 게시의 사진 주소 호스트 검사가 생략돼 https 형식만 본다**(0044 R-L1, 재검토 Q-L2). staging·production 모두 필수 |
+| 18 | Database > Extensions | **pg_net ON**(extensions 스키마) | 로컬 기본 | ☐ | 0033 cron→Edge 호출 |
 
 - 다 끝나면 production에서 Advisors(Security) 실행 → 남는 경고가 1(익명 허용, 의도)·13(요금제상 불가 시)뿐인지 확인.
 
@@ -307,3 +309,43 @@ type UnregisterPushToken = { ok: true; removed: number };
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
+
+## 15. 테스터 가족 표시(0045, 리드 결정 is_test)
+- `families.is_test`(기본 false): 비공개 테스트 테스터 가족. **지표 SQL에서만 뺀다**(알림·기능은 그대로). 심사 가족(`is_review`)과 별개.
+- 표시·해제: `node supabase/ops/mark-test-family.mjs --email <테스터 가입 메일> --operator <처리자> [--unset]`(또는 `--family <id>`). 대상 호스트 대조, 메일·id는 끝 4자리만 출력, 감사 행 `test_family_mark`.
+- 앱·서비스 역할 모두 `families`를 직접 UPDATE할 수 없다(0045, 쓰기는 definer 함수만). 가족 없는 설치 이벤트(app_first_open)는 테스터 구분이 안 된다.
+- 0045에 재검토 Q-L1 포함: 사진 주소 변경 감사의 처리자 = 실제 호출 역할(`service_role`, Studio는 `postgres`).
+
+## 16. 마이그레이션 대장(서버 기준, SV-17) — 계획 문서 대장(docs/plans/10 §2)은 리드가 이 표로 갱신
+| 번호 | 내용 | main | staging |
+|---|---|---|---|
+| 0019~0030 | 어르신 구분·응원·지난 답·events·파기·커서·심사 접근·익명 정리·starter·기록·peek·퍼널·P16 | 병합 | 반영(11-18 리드) |
+| 0031 | advisors 보안(helper·search_path·initplan) | 병합 | 사용자 확인 필요(US-05) |
+| 0032 | 푸시 토큰 등록·해제 | 병합 | 미반영 |
+| 0033 | 일일 푸시(대상·기록·cron·Edge) | 병합 | 미반영 |
+| 0034 | 이벤트 빌드 1 추가 | 병합 | 미반영 |
+| 0035 | 보안 후속(content 쓰기·동의 버전·호칭) | 병합 | 미반영 |
+| 0036 | 푸시 리뷰(TRUNCATE 회수·선점·받기 시각) | 병합 | 미반영 |
+| 0037 | 푸시 재검토(R-M1·받기 시각 유지) | 병합 | 미반영 |
+| 0038 | 응원·연결 알림·문구 자리값 | 병합 | 미반영 |
+| 0039 | 관리자 삭제·감사·재고 뷰 | 병합 | 미반영 |
+| 0040 | 콘텐츠 게시·은퇴 | 병합 | 미반영 |
+| 0041 | 알림 낮음·connected_date | 병합 | 미반영 |
+| 0042 | 카카오 연결 끊기 | 병합 | 미반영 |
+| 0043 | 관리자·게시 리뷰 반영 | 병합 | 미반영 |
+| 0044 | 카카오·사진 주소 재검토 | 병합 | 미반영 |
+| 0045 | 테스터 표시·Q-L1 | 브랜치(리뷰 대기) | 미반영 |
+- staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
+- 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
+
+## 17. 리뷰 낮음 처리표(W3 일괄, 11-18)
+| 출처 | 항목 | 처리 |
+|---|---|---|
+| push-tokens C | gen-types가 CLI 오류를 숨김 | 반영: 실패 시 오류 끝부분 출력 |
+| push-tokens L1 | 토큰 등록 호출 빈도 제한 | 보류(수용): 토큰은 본인 행만 바뀌고 남의 토큰은 비공개라 순회 이득 없음. 남용 징후가 보이면 events 상한처럼 추가 |
+| push-tokens L5·admin L5 | down 권한 원상·삭제된 어르신 큐 행 | 기록만(down은 수동 절차, 큐 행은 0041이 보내지 않고 30일 파기) |
+| push-events L3 | 잠금 화면 내용 숨김 | 앱 AU-04 채널 몫(서버 변경 없음) |
+| admin L3·R-L3 | 감사 행 uuid 전체·사유 자유 문자 | 문서: 사유에 메일·이름 금지(§4). 내부관리계획 §6·§7 정합은 법률 줄 |
+| admin L6 | 한 바퀴 뒤 재고 경보 둔감 | 기록: 06시 점검에 `max_cursor`도 함께 봄(§14) |
+| 0044 Q-L2 | Vault 미설정 시 호스트 검사 생략 | 반영: §9 #17·RELEASE 필수 설정 |
+| 0035 D-L1·D-M1 | 앱 duplicate_title 매핑·staging 이전 APK | 앱·리드 몫 |
