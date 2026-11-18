@@ -362,3 +362,4 @@
 - 11-18 E2E: Maestro 2.12.1(~/.maestro, 공식 zip sha256 확인), app/e2e/run.sh는 fake 모드 전용. 첫 흐름 parent-first-connect 에뮬레이터 통과
 - 11-18 계약 검증은 손 검증기(parseX → null) 유지, zod 도입 안 함(의존성 0)
 - 11-18 푸시 수신 동의(리뷰 M5·M6): OS 권한 허용과 별개로 N1에서 '알림 받기'를 고른 시각을 서버에 저장(push_consented_at, 철회 시 null). 발송 대상은 동의 시각이 있는 사람만. 서버 L1 + 앱 AU-04
+- 11-18 연결 끊김 알림(push.disconnected)은 빌드 1 제외(서버 발생 지점 없음, 자녀 화면 연결 끊김 상태로 충분). 알림 채널 3개: daily·cheer·family
