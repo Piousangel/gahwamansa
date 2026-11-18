@@ -365,3 +365,15 @@
 - connected_date: 서버 0041(server-l1-launch) 계약 — 처음 연결된 날, 재연결해도 그대로. ASSUMED 표시 제거. 0041 전 서버면 null → 날짜 없는 문장.
 - 선물 이용권 가격: 사용자 결정 대기, 자리값(한 달 값) 유지.
 - 디자인 판정 11-18(design-checks-ap10-c0-c6) ②: C0 연령 줄 inkSub, 글자 150% 이상이면 약관·연령 줄을 함께 본문 끝으로, 이메일 화면에도 '인증번호 받기' 아래 약관+연령 줄. ③: C6 확인은 버튼 위 초록 면(doneSoft)+체크 한 줄, announce 1회·포커스 이동 없음, 다시 열면 한 줄 없이 '관심 남김'. 늦게 온 기억값 읽기가 방금 누른 상태를 되돌리지 않게(켜기만).
+
+### 로드맵 L3 W2(AC-03·AC-07·AC-08) · 11-18
+- 계정 삭제(`DeleteAccountScreen`)도 지우기 전에 `accountTag` → 삭제 → `clearAccountKeys`(리뷰 M4 후속).
+- AC-03 N3 푸시 탭(`features/home/pushOpen.ts`): `handleChildPushOpen(api, data, toAlbum)` — data{kind}(0038, 개인 id 없음) 검사 → `push_opened{push_kind}` → 연결·재연결이면 앨범 탭 + 앱 안 배너 한 번 건너뜀(본 목록은 갱신). **AU-04 연결 지점**: 알림 탭 리스너(앱이 꺼져 있다 열림·백그라운드에서 열림)에서 자녀면 이 함수를 `navigation.navigate('Tabs', {screen: 'Album'})`와 함께 부른다. 자녀도 권한 허용 때 `set_push_enabled(true)`(0036/0038 대상 조건) — AU-04 권한 흐름에서. 재연결 문구(push.reconnected)는 푸시에만, 앱 안 배너는 처음 연결 문구만.
+- AC-07 확인(코드 기준, 실기기는 QA-06):
+  - 구글: `@react-native-google-signin` 17.0.0 공개판 `GoogleSignin.signIn`(Credential Manager 기반 One Tap 은 유료 모듈이라 미사용). nonce 미지원이라 토큰·요청 모두 nonce 없음 — Supabase 는 nonce 없는 토큰을 받는다. 위험: 재사용 방지 약함(토큰 수명 1시간·aud 검사로 완화). 실기기에서 로그인·취소·재로그인 확인 필요.
+  - 카카오: OIDC ID 토큰 + nonce(원문은 Supabase, SHA-256 hex 는 SDK). PKCE 는 네이티브 SDK(카카오톡 앱·계정 로그인) 내부 흐름이라 앱 코드에서 설정할 것이 없음 → 실기기·카카오 콘솔에서 확인 대상.
+  - 같은 이메일 자동 연결: Supabase 는 같은 확인된 이메일의 구글·이메일 OTP 를 한 사용자로 합친다(끌 수 없음, DECISIONS). 카카오는 이메일을 받지 않아 합쳐지지 않는다. `enable_manual_linking = false`. 실기기에서 구글↔이메일 같은 주소로 같은 가족이 보이는지 확인 필요.
+  - 어르신 여러 명 홈·로그아웃: 화면 테스트 추가(두 분 카드 → 설정 → 로그아웃 → 역할 선택).
+- AC-08 복사: RN 코어 Clipboard 유지(D-11). Android 13+ 는 시스템이 복사 확인을 띄우므로 앱 토스트 생략·화면 읽기 1회, 12 이하는 '복사했어요' 토스트(`ui/clipboard.systemShowsCopyNotice`).
+- L5 닫기 키(`child.home.title_sheet.close`) 문구는 리드가 라이터 확정 요청 목록에 올림.
+- 재검토 R1: 응원 대기 중 홈이 언마운트되면 보내고 그 '취소' 토스트를 hide(id). R2: 로그아웃·계정 삭제는 가명값을 먼저 받고 finally 에서 계정 키 정리(signOut·삭제 실패여도). R3: accountTag 는 솔트 없는 해시 → 기기 안 키에만, 서버·이벤트·로그 금지(주석 + __tests__/accountTagGuard: 쓰는 파일 고정·logEvent/rpc/console 줄에 tag 없음).

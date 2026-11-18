@@ -1,5 +1,6 @@
 // 계정별 기기 기억값(리뷰 M4): 같은 기기에서 다른 계정으로 들어와도 앞 계정 기억이 섞이지 않게 키에 계정 가명값을 붙인다.
 // 가명값은 Api.accountTag()(auth user id 의 sha256 앞 16자) — user id 원문은 저장하지 않는다. React 를 모른다(lib 규칙).
+// 솔트 없는 해시라 기기 밖(서버·log_event·console)으로 보내지 않는다(재검토 R3).
 import type {KeyValueStore} from './kvStore';
 
 export const SEEN_PARENTS_KEY = 'seen_parent_ids_v1'; // N3 본 어르신 id 목록

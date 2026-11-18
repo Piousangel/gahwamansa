@@ -7,6 +7,7 @@ import {color, FONT_SCALE_MAX, radius, size} from '../../ui/tokens';
 import type {Api, ChildParent} from '../types';
 import {defaultStore, type KeyValueStore} from '../../lib/kvStore';
 import {newConnection, parseSeen} from './newConnection';
+import {takeSkipBanner} from './pushOpen';
 import {accountKey, SEEN_PARENTS_KEY} from '../../lib/accountStore';
 
 const n = copy.child.n3;
@@ -34,6 +35,9 @@ export function NewConnectionBanner({api, onView, store: given}: {api: Api; onVi
       const sum = await api.fetchChildSummary();
       const r = newConnection(parseSeen(await store.getItem(key)), sum.parents);
       await store.setItem(key, JSON.stringify(r.nextSeen));
+      if (takeSkipBanner()) {
+        return; // 연결 알림을 눌러 들어옴: 알림으로 이미 알렸다(AC-03)
+      }
       if (r.banner) {
         setBanner(r.banner);
       }

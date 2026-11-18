@@ -601,3 +601,116 @@ describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
     expect(screen.queryByTestId('paid-done')).toBeNull();
   });
 });
+
+describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 복사 확인', () => {
+  const RN = require('react-native');
+  const setPlatform = (OS: string, Version: number) => {
+    Object.defineProperty(RN.Platform, 'OS', {value: OS, configurable: true, writable: true});
+    Object.defineProperty(RN.Platform, 'Version', {value: Version, configurable: true, writable: true});
+  };
+
+  test('AC-03: 연결 알림 탭 → push_opened{push_kind}·앨범으로, 모르는 kind 는 무시', () => {
+    const {handleChildPushOpen, parsePushKind, takeSkipBanner} = require('../src/features/home/pushOpen');
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    const toAlbum = jest.fn();
+    expect(handleChildPushOpen(api, {kind: 'parent_reconnected'}, toAlbum)).toBe('parent_reconnected');
+    expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'parent_reconnected'});
+    expect(toAlbum).toHaveBeenCalledTimes(1);
+    expect(takeSkipBanner()).toBe(true);
+    expect(takeSkipBanner()).toBe(false); // 한 번만
+    expect(handleChildPushOpen(api, {kind: 'parent_id_123'}, toAlbum)).toBeNull();
+    expect(parsePushKind(null)).toBeNull();
+    expect(toAlbum).toHaveBeenCalledTimes(1);
+  });
+
+  test('AC-03: 연결 알림을 눌러 들어오면 앱 안 N3 배너는 건너뛰고 본 목록만 갱신', async () => {
+    const {handleChildPushOpen} = require('../src/features/home/pushOpen');
+    const store = memoryStore();
+    await store.setItem('seen_parent_ids_v1:fake-account', JSON.stringify(['parent-1']));
+    const api = createFakeApi({parents: [{title: '엄마'}, {title: '아빠'}]});
+    handleChildPushOpen(api, {kind: 'parent_connected'}, () => {});
+    render(<NewConnectionBanner api={api} onView={() => {}} store={store} />);
+    await waitFor(async () => expect(await store.getItem('seen_parent_ids_v1:fake-account')).toBe(JSON.stringify(['parent-1', 'parent-2'])));
+    expect(screen.queryByTestId('n3-banner')).toBeNull();
+  });
+
+  test('AC-07: 어르신 두 분인 홈에서 로그아웃하면 첫 화면(역할 선택)으로', async () => {
+    const api = createFakeApi({parents: [{title: '엄마'}, {title: '아빠'}]});
+    const out = jest.spyOn(api, 'signOut');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByText('엄마의 최근 답'));
+    expect(screen.getByText('아빠의 최근 답')).toBeTruthy();
+    await press('설정');
+    await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
+    await press('로그아웃');
+    const buttons = screen.getAllByRole('button', {name: '로그아웃'});
+    fireEvent.press(buttons[buttons.length - 1]);
+    await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
+    expect(out).toHaveBeenCalledTimes(1);
+  });
+
+  test('AC-08: Android 13+ 는 시스템 복사 확인이 떠서 앱 토스트 생략(화면 읽기 1회), 12 이하는 토스트', async () => {
+    const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+    const a11y = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    try {
+      setPlatform('android', 33);
+      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+      a11y.mockClear();
+      await press('복사하기');
+      expect(screen.queryByTestId('toast')).toBeNull();
+      expect(a11y.mock.calls.filter(c => c[0] === '복사했어요')).toHaveLength(1);
+      screen.unmount();
+      setPlatform('android', 32);
+      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+      await press('복사하기');
+      await waitFor(() => screen.getByTestId('toast'));
+    } finally {
+      setPlatform(orig.OS, orig.Version);
+    }
+  });
+});
+
+describe('재검토 R1·R2', () => {
+  test('R1: 응원 대기 중 홈이 언마운트되면 보내고, 남은 \'취소\' 토스트를 거둔다', async () => {
+    const {useSendCheer} = require('../src/features/home/useSendCheer');
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    function Home() {
+      const {send: go} = useSendCheer(api, () => {});
+      return <Text onPress={() => go('thanks_always', [P({parentId: 'parent-1', title: '엄마'})])}>보내기</Text>;
+    }
+    function Root({on}: {on: boolean}) {
+      return <ToastProvider>{on ? <Home /> : <Text>다른 화면</Text>}</ToastProvider>;
+    }
+    const {rerender} = render(<Root on />);
+    fireEvent.press(screen.getByText('보내기'));
+    expect(screen.getByRole('button', {name: '취소'})).toBeTruthy();
+    rerender(<Root on={false} />);
+    await act(async () => {});
+    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
+    const undo = screen.queryByRole('button', {name: '취소'});
+    expect(undo === null || undo.props.accessibilityState?.disabled === true).toBe(true);
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 400));
+    });
+    expect(screen.queryByRole('button', {name: '취소'})).toBeNull();
+  });
+
+  test('R2: 로그아웃이 실패해도 이 계정의 기기 기억값은 정리', async () => {
+    const accountStore = require('../src/lib/accountStore');
+    const clear = jest.spyOn(accountStore, 'clearAccountKeys');
+    const api = createFakeApi({consented: true, parentTitle: '엄마', accountTag: 'acc-r2'});
+    jest.spyOn(api, 'signOut').mockRejectedValue(new Error('boom'));
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
+    await press('로그아웃');
+    const buttons = screen.getAllByRole('button', {name: '로그아웃'});
+    fireEvent.press(buttons[buttons.length - 1]);
+    await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-r2'));
+  });
+});
