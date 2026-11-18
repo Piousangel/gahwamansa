@@ -101,6 +101,20 @@ test('0049: 가족과 연결하기 전 자녀 계정(scope none)은 호칭 기�
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
 });
 
+test('PR1 리뷰 M2: scope none 이면 호칭(가족 요약)을 묻지 않는다, 가족이 있으면 묻는다', async () => {
+  const none = createFakeApi({deleteScope: 'none'});
+  const sumNone = jest.spyOn(none, 'fetchChildSummary');
+  await openChildDelete(none, '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보와 약관 동의 기록만 지워져요');
+  const before = sumNone.mock.calls.length; // 설정·홈이 부른 것
+  await act(async () => {});
+  expect(sumNone.mock.calls.length).toBe(before);
+  screen.unmount();
+  const fam = createFakeApi({deleteScope: 'child'});
+  const sumFam = jest.spyOn(fam, 'fetchChildSummary');
+  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+  expect(sumFam).toHaveBeenCalled();
+});
+
 test('realApi: 삭제 RPC 성공 후 로그아웃한다', async () => {
   const signOut = jest.fn().mockResolvedValue({error: null});
   const rpc = jest.fn().mockResolvedValue({data: {scope: 'parent'}, error: null});

@@ -15,6 +15,7 @@ import {TextLink} from '../link/TextLink';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {LegalText} from '../../ui/LegalText';
 import {legalLinks} from '../../shared/legalLinks';
+import {recordChildTerms} from '../../shared/childTerms';
 
 const t = copy.login;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -100,6 +101,7 @@ export function ChildLogin() {
     setNote(null);
     try {
       await api.verifyEmailCode(email.trim(), value);
+      recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
       navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
     } catch (e) {
       // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
@@ -129,6 +131,7 @@ export function ChildLogin() {
     try {
       const r = await api.signInWithSocial(provider);
       if (r === 'ok') {
+        recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
         navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
       }
     } catch (e) {

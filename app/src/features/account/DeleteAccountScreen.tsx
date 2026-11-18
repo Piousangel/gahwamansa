@@ -37,16 +37,32 @@ export function DeleteAccountScreen({role}: Props) {
   const [title, setTitle] = useState('부모님');
   useEffect(() => {
     let alive = true;
+    const loadTitle = () => {
+      if (child) {
+        api
+          .fetchChildSummary()
+          .then(x => alive && setTitle(x.parentTitle))
+          .catch(() => {});
+      }
+    };
     api
       .deleteScopePreview()
-      .then(r => alive && setScope(r.scope))
-      .catch(() => alive && setScope('family'));
-    if (child) {
-      api
-        .fetchChildSummary()
-        .then(s => alive && setTitle(s.parentTitle))
-        .catch(() => {});
-    }
+      .then(r => {
+        if (!alive) {
+          return;
+        }
+        setScope(r.scope);
+        // 호칭은 가족이 있을 때만 쓴다(0049 'none' = 가족 연결 전이면 묻지 않는다, PR1 리뷰 M2)
+        if (r.scope !== 'none') {
+          loadTitle();
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setScope('family'); // 범위를 모르면 가장 강한 경고
+          loadTitle();
+        }
+      });
     return () => {
       alive = false;
     };

@@ -826,3 +826,55 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     expect(within(grid).getByLabelText('엄마, 이미 쓰는 이름, 사용할 수 없음').props.accessibilityState.disabled).toBe(true);
   });
 });
+
+describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
+  test('로그인 성공 직후 record_terms_agreement(v1·v1), 실패하면 이 계정에 남기고 다음 시작 때 한 번만 다시', async () => {
+    const {recordChildTerms, retryChildTerms} = require('../src/shared/childTerms');
+    const store = memoryStore();
+    const api = createFakeApi({accountTag: 'acc-t'});
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    expect(await recordChildTerms(api, store)).toBe(true);
+    expect(rec).toHaveBeenCalledWith('v1', 'v1');
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBeNull();
+    rec.mockRejectedValueOnce(new Error('offline'));
+    expect(await recordChildTerms(api, store)).toBe(false);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBe('1');
+    rec.mockClear();
+    await retryChildTerms(api, store);
+    expect(rec).toHaveBeenCalledTimes(1);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBeNull();
+    await retryChildTerms(api, store); // 남은 것이 없으면 부르지 않는다
+    expect(rec).toHaveBeenCalledTimes(1);
+  });
+
+  test('C0 소셜 로그인에 성공하면 기록한다(약관 줄을 본 그 로그인)', async () => {
+    const api = createFakeApi();
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    jest.spyOn(api, 'signInWithSocial').mockResolvedValue('ok');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('legal-child'));
+    await press(/카카오/);
+    await waitFor(() => expect(rec).toHaveBeenCalledWith('v1', 'v1'));
+  });
+
+  test('로그인을 취소하면 기록하지 않는다', async () => {
+    const api = createFakeApi();
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    jest.spyOn(api, 'signInWithSocial').mockResolvedValue('cancelled');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('legal-child'));
+    await press(/카카오/);
+    await act(async () => {});
+    expect(rec).not.toHaveBeenCalled();
+  });
+
+  test('로그아웃·계정 삭제 정리 대상에 다시 보낼 표시도 들어간다', async () => {
+    const {clearAccountKeys} = require('../src/lib/accountStore');
+    const store = memoryStore();
+    await store.setItem('terms_pending_v1:z', '1');
+    await clearAccountKeys(store, 'z');
+    expect(await store.getItem('terms_pending_v1:z')).toBeNull();
+  });
+});
