@@ -1,11 +1,61 @@
-import {useCallback} from 'react';
-import {Linking} from 'react-native';
+import {useCallback, useEffect, useState} from 'react';
+import {AppState, Linking, PermissionsAndroid, Platform} from 'react-native';
 
-// 알림 권한 상태(C3 "연결되면 알려 드릴게요 / 알림 켜기" 줄은 꺼짐일 때만).
-// TODO(U15 푸시): 권한 조회·요청(N1 시트 → 시스템 창)이 생기면 실제 상태를 준다. 그 전에는 줄을 숨긴다(denied=false).
-export function useNotifyPermission(): {denied: boolean; open: () => void} {
-  const open = useCallback(() => {
-    Linking.openSettings().catch(() => {});
+export type NotifyState = 'granted' | 'denied' | 'unknown';
+
+// 알림 권한 실제 상태(AC-04, 의존성 없이 RN 코어만).
+// - Android 13(API 33) 이상: POST_NOTIFICATIONS 허용 여부. 휴대폰 설정에서 돌아오면(앱 활성) 다시 본다.
+// - Android 12 이하: 런타임 권한이 없어 허용으로 본다. 앱 단위로 알림을 끈 경우(areNotificationsEnabled)는 네이티브가 필요 → ASSUMED(AU-04 푸시 클라이언트가 채움).
+// TODO(AU-04): 매니페스트 POST_NOTIFICATIONS 선언·N1 안내 시트·토큰 등록은 푸시 클라이언트 몫. 선언 전에는 Android 13 이상에서 '꺼짐'으로 보인다(실제로 알림이 오지 않으므로 맞는 표시).
+export async function readNotifyState(): Promise<NotifyState> {
+  if (Platform.OS !== 'android') {
+    return 'unknown';
+  }
+  if (Number(Platform.Version) < 33) {
+    return 'granted';
+  }
+  try {
+    return (await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)) ? 'granted' : 'denied';
+  } catch {
+    return 'unknown';
+  }
+}
+
+// C3 "연결되면 알려 드릴게요 · 알림 켜기"·C7 알림 행이 쓰는 상태. denied 일 때만 켜기 안내를 보인다.
+export function useNotifyPermission(): {state: NotifyState; denied: boolean; open: () => void} {
+  const [state, setState] = useState<NotifyState>('unknown');
+
+  const refresh = useCallback(() => {
+    readNotifyState().then(setState);
   }, []);
-  return {denied: false, open};
+
+  useEffect(() => {
+    refresh();
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'active') {
+        refresh();
+      }
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  // 켜기: 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)이면 휴대폰 설정
+  const open = useCallback(() => {
+    const toSettings = () => Linking.openSettings().catch(() => {});
+    if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+        .then(r => {
+          if (r === PermissionsAndroid.RESULTS.GRANTED) {
+            setState('granted');
+          } else if (r === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+            toSettings();
+          }
+        })
+        .catch(toSettings);
+      return;
+    }
+    toSettings();
+  }, []);
+
+  return {state, denied: state === 'denied', open};
 }

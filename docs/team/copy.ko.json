@@ -138,6 +138,8 @@
       "starter_label": "이야기 꺼내기",
       "title_dup": "두 분이 같은 이름으로 보여요. 새로 연결된 분의 이름을 골라 주세요",
       "title_dup_button": "이름 고르기",
+      "title_dup_chips_a11y": "부모님 고르기",
+      "_status_title_dup_chips_a11y": "시안 C4_title_dup 칩 줄 읽기 이름(aria-label) 그대로, 라이터 확인 전",
       "title_sheet": {
         "_src": "copy-v3 11-8 C4 시트",
         "title": "새로 연결된 분을 어떻게 부르세요?",

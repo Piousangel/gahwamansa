@@ -9,6 +9,8 @@ export const EVENT_NAMES = [
   'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
   // 연결 퍼널(0029, ease-and-joy E). redeem 성공은 parent_code_redeemed. 번호 값은 어떤 속성에도 넣지 않는다
   'link_opened', 'referrer_found', 'code_prefilled',
+  // 0034 C6 곧 유료(관심 표시만). 같은 묶음의 photo_zoom_opened·child_first_answer_viewed·push_opened 는 L4(SV-04)가 추가
+  'paid_sheet_opened', 'paid_interest_tapped',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 

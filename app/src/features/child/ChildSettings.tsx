@@ -18,6 +18,7 @@ import {color, radius, size} from '../../ui/tokens';
 import {APP_VERSION} from '../../lib/appInfo';
 import {ChildParent, isOffline, LoginMethod, PARENT_TITLES} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
+import {useNotifyPermission} from './useNotifyPermission';
 
 const s = copy.child.settings;
 const rel = copy.relation;
@@ -34,6 +35,7 @@ export function ChildSettings() {
   const [picked, setPicked] = useState('부모님');
   const [saving, setSaving] = useState(false);
   const [logout, setLogout] = useState(false);
+  const notify = useNotifyPermission();
   const [busy, setBusy] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null); // 리뷰 M2: 시트·대화상자 안 오류 줄
   const {show} = useToast();
@@ -150,6 +152,11 @@ export function ChildSettings() {
         <View style={styles.group}>
           <Text20 weight="bold" style={styles.groupTitle} accessibilityRole="header">{s.account}</Text20>
           <View style={styles.section}>
+            {/* AC-04 알림 행(실제 권한 상태): 켜짐이면 무엇을 알려 주는지, 꺼짐이면 휴대폰 설정에서 꺼져 있다 + 눌러서 켜기. 상태를 모르면 숨김 */}
+            {notify.state === 'granted' ? <Row testID="child-notify-row" label={copy.push.settings_row} sub={copy.push.channel.family_desc} /> : null}
+            {notify.state === 'denied' ? (
+              <Row testID="child-notify-row" label={copy.push.settings_row} sub={copy.push.system_off.body} value={copy.push.system_off.open_child} onPress={notify.open} />
+            ) : null}
             {method ? <Row label={s.login_row} sub={s.login_via.split('{수단}').join(s.via[method])} /> : null}
             <Row
               label={s.logout}
@@ -200,7 +207,7 @@ export function ChildSettings() {
 }
 
 // 설정 행: 이름(굵게) + 보조 글/값, 누를 수 있으면 오른쪽 화살표. 터치 64 이상.
-function Row({label, sub, value, onPress, danger}: {label: string; sub?: string; value?: string; onPress?: () => void; danger?: boolean}) {
+function Row({label, sub, value, onPress, danger, testID}: {label: string; sub?: string; value?: string; onPress?: () => void; danger?: boolean; testID?: string}) {
   const inner = (
     <>
       <View style={styles.flex}>
@@ -212,10 +219,11 @@ function Row({label, sub, value, onPress, danger}: {label: string; sub?: string;
     </>
   );
   if (!onPress) {
-    return <View style={styles.row} accessible accessibilityLabel={sub ? `${label}, ${sub}` : label}>{inner}</View>;
+    return <View testID={testID} style={styles.row} accessible accessibilityLabel={sub ? `${label}, ${sub}` : label}>{inner}</View>;
   }
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={[label, value, sub].filter(Boolean).join(', ')}
       onPress={onPress}

@@ -104,7 +104,7 @@ export function ChildHome() {
                 </View>
               ))}
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
-            {dup ? <TitleDupNotice api={api} dup={dup} onChanged={load} /> : null}
+            {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
             {list.map(p => (
               <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />
             ))}

@@ -185,6 +185,9 @@ describe('C4 호칭 겹침', () => {
     const set = jest.spyOn(api, 'setParentTitleFor');
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByText('두 분이 같은 이름으로 보여요. 새로 연결된 분의 이름을 골라 주세요'));
+    const chips = screen.getByTestId('title-dup-chips'); // 시안: 칩 줄(부모님 고르기), 새로 연결된 분 칩이 현재
+    expect(chips.props.accessibilityLabel).toBe('부모님 고르기');
+    expect(within(chips).getAllByText('부모님')).toHaveLength(2);
     await press('이름 고르기');
     const sheet = screen.getByTestId('title-dup-sheet');
     expect(within(sheet).getByText('새로 연결된 분을 어떻게 부르세요?')).toBeTruthy();
@@ -251,5 +254,108 @@ describe('호칭 고르기(가족 기본 호칭) D-L1', () => {
     fireEvent.press(screen.getByLabelText('엄마'));
     await press('번호 만들기');
     await waitFor(() => screen.getByText('같은 이름이 이미 있어요. 다른 이름을 골라 주세요'));
+  });
+});
+
+describe('AC-01 C6 곧 유료 시트', () => {
+  const items = [{answeredDate: '2020-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}];
+  async function openPaid(api: ReturnType<typeof createFakeApi>) {
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await act(async () => {
+      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+    });
+    await waitFor(() => screen.getByTestId('child-past-topic'));
+    await press('이야기 주제 추천, 곧 유료');
+    return screen.getByTestId('paid-sheet');
+  }
+
+  test('C5 행을 누르면 시트: 제목·본문·법률 문장·예정 가격 3안(누르는 모양 아님), 열림 이벤트', async () => {
+    const api = createFakeApi({consented: true, parentTitle: '엄마', history: items});
+    const log = jest.spyOn(api, 'logEvent');
+    const sheet = await openPaid(api);
+    expect(within(sheet).getByText('이야기 주제 추천은 곧 유료예요')).toBeTruthy();
+    expect(within(sheet).getByText('고른 답에 맞는 이야기 주제를 추천해요')).toBeTruthy();
+    expect(within(sheet).getByText('지금은 결제되지 않아요. 관심만 표시돼요')).toBeTruthy();
+    expect(within(sheet).getByText('예정 가격')).toBeTruthy();
+    expect(within(sheet).getByText(/^한 달 .+원$/)).toBeTruthy();
+    expect(within(sheet).getByText(/^일 년 .+원$/)).toBeTruthy();
+    expect(within(sheet).getByText(/^선물 이용권 .+원$/)).toBeTruthy();
+    expect(within(sheet).getByText('형제나 친지가 대신 내 줘요')).toBeTruthy();
+    expect(within(sheet).queryAllByRole('radio')).toHaveLength(0); // 고르기 없음
+    expect(log).toHaveBeenCalledWith('paid_sheet_opened');
+  });
+
+  test("'관심 있어요' → 관심 이벤트(plan 없음)·안내 문장·'관심 남김'(비활성), 다시 열어도 남김", async () => {
+    const api = createFakeApi({consented: true, parentTitle: '엄마', history: items});
+    const log = jest.spyOn(api, 'logEvent');
+    await openPaid(api);
+    await press('관심 있어요');
+    expect(log).toHaveBeenCalledWith('paid_interest_tapped');
+    expect(screen.getByText('관심을 남겼어요. 지금은 결제되지 않아요')).toBeTruthy();
+    expect(screen.getByRole('button', {name: '관심 남김'})).toBeDisabled();
+    await press('닫기');
+    await waitFor(() => expect(screen.queryByTestId('paid-sheet')).toBeNull());
+    await press('이야기 주제 추천, 곧 유료');
+    await waitFor(() => screen.getByRole('button', {name: '관심 남김'}));
+    expect(log.mock.calls.filter(c => c[0] === 'paid_interest_tapped')).toHaveLength(1);
+  });
+});
+
+describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
+  const RN = require('react-native');
+  const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+  const setPlatform = (OS: string, Version: number) => {
+    Object.defineProperty(RN.Platform, 'OS', {value: OS, configurable: true, writable: true});
+    Object.defineProperty(RN.Platform, 'Version', {value: Version, configurable: true, writable: true});
+  };
+  function android(version: number, granted: boolean) {
+    setPlatform('android', version);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(granted);
+    return jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
+  }
+  afterEach(() => {
+    setPlatform(orig.OS, orig.Version);
+  });
+
+  async function openSettings() {
+    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+  }
+
+  test('Android 13+ 꺼짐: C7 알림 행 "알림이 휴대폰 설정에서 꺼져 있어요" + 눌러서 켜기(거절 상태면 휴대폰 설정)', async () => {
+    const request = android(34, false);
+    const openSettingsSpy = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
+    await openSettings();
+    await waitFor(() => screen.getByTestId('child-notify-row'));
+    expect(screen.getByRole('button', {name: '알림, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'})).toBeTruthy();
+    fireEvent.press(screen.getByTestId('child-notify-row'));
+    await waitFor(() => expect(openSettingsSpy).toHaveBeenCalled());
+    expect(request).toHaveBeenCalled();
+  });
+
+  test('켜짐: C7 알림 행은 무엇을 알려 주는지(누르는 행 아님)', async () => {
+    android(34, true);
+    await openSettings();
+    await waitFor(() => screen.getByTestId('child-notify-row'));
+    expect(screen.getByLabelText('알림, 가족 휴대폰과 연결되거나 연결이 풀리면 알려 드려요')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /알림이 휴대폰 설정에서/})).toBeNull();
+  });
+
+  test('Android 12 이하는 런타임 권한이 없어 켜짐으로 본다, 상태를 모르면(iOS 등) 행을 숨긴다', async () => {
+    const {readNotifyState} = require('../src/features/child/useNotifyPermission');
+    android(31, false);
+    expect(await readNotifyState()).toBe('granted');
+    setPlatform('ios', 17);
+    expect(await readNotifyState()).toBe('unknown');
+  });
+
+  test('C3: 꺼져 있으면 "연결되면 알려 드릴게요 · 알림 켜기" 줄', async () => {
+    android(34, false);
+    render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+    await waitFor(() => screen.getByTestId('wait-notify'), {timeout: 8000});
+    expect(screen.getByLabelText('연결되면 알려 드릴게요')).toBeTruthy(); // Android 렌더는 글자 대신 읽기 라벨로 찾는다
+    expect(screen.getByRole('button', {name: '알림 켜기'})).toBeTruthy();
   });
 });
