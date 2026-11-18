@@ -82,11 +82,11 @@ select is((select count(*)::int from public.redeem_attempts where uid = '1000000
 
 -- 16~18. 동의: 어르신은 동의할 수 있고, 동의하면 답변을 저장할 수 있다. 자녀는 동의 처리 불가
 select pg_temp.act_as('10000000-0000-0000-0000-0000000000a1', true);
-select lives_ok($$ select public.give_consent() $$, '어르신은 동의할 수 있다');
+select lives_ok($$ select public.give_consent('v2') $$, '어르신은 동의할 수 있다'); -- 0035부터 버전 필수
 select lives_ok($$ insert into public.answers (family_id, parent_id, question_id, choice)
   values (public.my_family_id(), public.my_profile_id(), 'd0000000-0000-0000-0000-000000000001', 'B') $$, '동의한 뒤에는 답변을 저장할 수 있다');
 select pg_temp.act_as('c1000000-0000-0000-0000-0000000000c1', false);
-select throws_like($$ select public.give_consent() $$, '%parent_required%', '자녀는 동의 처리를 할 수 없다');
+select throws_like($$ select public.give_consent('v2') $$, '%parent_required%', '자녀는 동의 처리를 할 수 없다');
 
 -- 19. 로그인 전(anon)은 redeem을 실행할 수 없다
 reset role;
