@@ -122,9 +122,10 @@ test('복원: 연결 안 된 기기는 Connect 로 시작', async () => {
 });
 
 test('포그라운드로 돌아오면 서버에서 다시 불러온다', async () => {
-  let handler: (s: string) => void = () => {};
+  // 앱 활성 구독은 여럿(코스 동기화·푸시 토큰 AU-04 등) — 모두에게 알린다
+  const handlers: ((s: string) => void)[] = [];
   jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, h: (s: string) => void) => {
-    handler = h;
+    handlers.push(h);
     return {remove: () => {}};
   }) as never);
   const api = createFakeApi({linked: true, consented: true});
@@ -133,7 +134,7 @@ test('포그라운드로 돌아오면 서버에서 다시 불러온다', async (
   await waitFor(() => screen.getByTestId('date-line'));
   const before = spy.mock.calls.length;
   await act(async () => {
-    handler('active');
+    handlers.forEach(h => h('active'));
   });
   expect(spy.mock.calls.length).toBeGreaterThan(before);
 });

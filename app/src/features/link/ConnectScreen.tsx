@@ -132,7 +132,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
 
   if (state.kind === 'confirm' || state.kind === 'redeeming') {
     // key: 같은 화면 안 분기라도 새 Screen 으로 마운트해 제목에 포커스(talkback R2, 리뷰 M2)
-    return <ConfirmView key="confirm" state={state} onYes={redeem} onOther={other} />;
+    return <ConfirmView key="confirm" state={state} typed={!prefill || prefill.code !== state.code} onYes={redeem} onOther={other} />;
   }
   if (state.kind === 'failed') {
     const m = failMessage(state.reason);
@@ -213,7 +213,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
 }
 
 // P1c 연결 확인(시안 P1c_confirm): 제목 · 카드({호칭} 폰으로 보낸 번호예요 + 큰 번호) · 안심 줄 / [이 번호로 연결하기] · 약관 줄 · 다른 번호 쓰기
-function ConfirmView({state, onYes, onOther}: {state: Extract<ConnectState, {kind: 'confirm' | 'redeeming'}>; onYes: () => void; onOther: () => void}) {
+// typed: 손으로 쓴 번호(링크로 받은 번호가 아님) → 제목 '이 번호가 맞나요?', 단서 줄은 '{호칭} 폰으로 만든 번호예요'(copy 11-19, 감사 L6)
+function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectState, {kind: 'confirm' | 'redeeming'}>; typed: boolean; onYes: () => void; onOther: () => void}) {
   const c = copy.connect_confirm;
   const busy = state.kind === 'redeeming';
   const a11y = copy.code.show_a11y.split('{앞}').join(state.code.slice(0, 3).split('').join(' ')).split('{뒤}').join(state.code.slice(3).split('').join(' '));
@@ -229,10 +230,10 @@ function ConfirmView({state, onYes, onOther}: {state: Extract<ConnectState, {kin
           </View>
         </>
       }>
-      <Text20 size={30} weight="bold" accessibilityRole="header" style={styles.title}>{c.title}</Text20>
+      <Text20 size={30} weight="bold" accessibilityRole="header" style={styles.title}>{typed ? c.title_typed : c.title}</Text20>
       <View testID="confirm-card" style={styles.card}>
         {state.title ? (
-          <Text20 testID="confirm-from" size={22} style={styles.center}>{withTitle(c.from, state.title)}</Text20>
+          <Text20 testID="confirm-from" size={22} style={styles.center}>{withTitle(typed ? c.from_typed : c.from, state.title)}</Text20>
         ) : null}
         <View testID="confirm-code" accessible accessibilityLabel={a11y}>
           <Text20 size={52} weight="bold" style={styles.code}>{formatCode(state.code)}</Text20>

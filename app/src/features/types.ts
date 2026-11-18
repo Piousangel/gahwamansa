@@ -2,6 +2,7 @@ import type {FailReason} from '../copy/copy';
 import type {CheerKey, MarkCheersReadResult, MyCheers} from '../api/contract/cheers';
 import type {ParentHistoryResult} from '../api/contract/history';
 import type {EventName, EventProps, LogEventResult} from '../api/contract/events';
+import type {MyPushSettings, RegisterPushTokenResult, SetPushEnabledResult} from '../api/contract/push';
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -146,4 +147,9 @@ export interface Api {
   // 어르신 지난 날(P15, 0028 parent_history, 계약 api/contract/history.ts). 미연결 기기는 부르지 않는다
   parentHistory(days?: number): Promise<ParentHistoryResult>;
   markCheersRead(ids: string[] | null): Promise<MarkCheersReadResult>;
+  // 푸시(0032·0036·0037, 계약 api/contract/push.ts). 연결 전 기기는 no_profile(연결 뒤 다시 등록)
+  registerPushToken(token: string): Promise<RegisterPushTokenResult>;
+  // N1 '알려 주세요'·자녀 권한 허용 때만 true(서버가 받기 시각을 남김, 0037부터 처음 시각 유지). false 면 시각이 지워진다
+  setPushEnabled(enabled: boolean): Promise<SetPushEnabledResult>;
+  myPushSettings(): Promise<MyPushSettings>;
 }

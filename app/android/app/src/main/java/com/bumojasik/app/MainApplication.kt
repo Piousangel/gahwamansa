@@ -8,6 +8,7 @@ import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.bumojasik.app.haptic.HapticPackage
 import com.bumojasik.app.invite.InvitePackage
+import com.bumojasik.app.push.PushPackage
 import com.bumojasik.app.splash.SplashPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -23,6 +24,8 @@ class MainApplication : Application(), ReactApplication {
           add(InvitePackage())
           // P7 도장이 닿는 순간 시스템 촉각 1회(performHapticFeedback, 권한 없음·시스템 진동 설정 따름)
           add(HapticPackage())
+          // 알림 채널 3개(daily·cheer·family)·앱 알림 상태·채널 설정 열기(AU-04, 권한 없음)
+          add(PushPackage())
         },
     )
   }

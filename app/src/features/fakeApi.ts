@@ -69,6 +69,7 @@ export type FakeOptions = {
   parentDays?: HistoryDay[]; // 어르신 지난 날(parent_history, 최신순). 기본 없음
   failParentHistory?: number; // parentHistory 가 처음 N번 실패(오프라인)
   accountTag?: string | null; // 기기 기억값 계정 가명값(기본 'fake-account')
+  pushEnabled?: boolean; // 서버 알림 받기 상태(켬 + 받기 시각, 0036). 기본 true, false 면 어르신 N1 이 뜬다
 };
 export type FakeParent = {
   parentId?: string;
@@ -102,6 +103,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
   let failParentHistory = opts.failParentHistory ?? 0;
+  // 기본 true(이미 받는 중) — N1 이 다른 화면 테스트를 가리지 않게. N1 을 보려면 pushEnabled:false
+  let pushEnabled = opts.pushEnabled ?? true;
   let who = opts.who;
   let failHistory = opts.failHistory ?? 0;
   let failHistoryServer = opts.failHistoryServer ?? 0;
@@ -419,6 +422,23 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       const before = unread.length;
       unread = ids === null ? [] : unread.filter(c => !ids.includes(c.id));
       return before - unread.length;
+    },
+    // 푸시(0032·0036): 프로필 = 연결된 어르신 또는 가족을 만든 자녀. 없으면 no_profile
+    async registerPushToken(token) {
+      if (!/^[A-Za-z0-9_:-]{20,4096}$/.test(token)) {
+        return {ok: false, reason: 'invalid_token'};
+      }
+      return linked || childFamily ? {ok: true} : {ok: false, reason: 'no_profile'};
+    },
+    async setPushEnabled(enabled) {
+      if (!(linked || childFamily)) {
+        return {ok: false, reason: 'no_profile'};
+      }
+      pushEnabled = enabled;
+      return {ok: true, enabled};
+    },
+    async myPushSettings() {
+      return {enabled: linked || childFamily ? pushEnabled : null};
     },
   };
 }

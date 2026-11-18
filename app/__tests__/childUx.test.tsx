@@ -406,7 +406,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     notifyFlags.promptReady = true; // AU-04 뒤 동작
   });
   afterAll(() => {
-    notifyFlags.promptReady = false;
+    notifyFlags.promptReady = true;
   });
   function android(version: number, granted: boolean) {
     setPlatform('android', version);
@@ -459,23 +459,24 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
   });
 });
 
-describe('리뷰 M1: AU-04 전에는 알림 꺼짐 안내를 숨긴다', () => {
-  test('Android 13+ 거절 상태여도 C3 줄·C7 행 없음(플래그 꺼짐)', async () => {
+describe('리뷰 M1: 플래그를 끄면 알림 꺼짐 안내를 숨긴다(AU-04 로 기본 켬)', () => {
+  test('기본 켬, 끄면 Android 13+ 거절 상태여도 C3 줄 없음', async () => {
     const RN = require('react-native');
     const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
     Object.defineProperty(RN.Platform, 'OS', {value: 'android', configurable: true, writable: true});
     Object.defineProperty(RN.Platform, 'Version', {value: 34, configurable: true, writable: true});
-    const check = jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const {readNotifyState, notifyFlags} = require('../src/features/child/useNotifyPermission');
+    expect(notifyFlags.promptReady).toBe(true);
+    notifyFlags.promptReady = false;
     try {
-      const {readNotifyState, notifyFlags} = require('../src/features/child/useNotifyPermission');
-      expect(notifyFlags.promptReady).toBe(false);
       expect(await readNotifyState()).toBe('unknown');
       render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
       await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}), {timeout: 8000});
       await act(async () => {});
       expect(screen.queryByTestId('wait-notify')).toBeNull();
-      expect(check).not.toHaveBeenCalled();
     } finally {
+      notifyFlags.promptReady = true;
       Object.defineProperty(RN.Platform, 'OS', {value: orig.OS, configurable: true, writable: true});
       Object.defineProperty(RN.Platform, 'Version', {value: orig.Version, configurable: true, writable: true});
     }

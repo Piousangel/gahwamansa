@@ -49,8 +49,8 @@ test('6번째 숫자 뒤 300ms 에 저절로 확인(그 전에는 부르지 않�
       jest.advanceTimersByTime(1);
     });
     expect(peek).toHaveBeenCalledWith('123456');
-    await waitFor(() => screen.getByText('가족이 보낸 번호예요'));
-    expect(screen.getByText('엄마 폰으로 보낸 번호예요')).toBeTruthy();
+    await waitFor(() => screen.getByText('이 번호가 맞나요?')); // 손 입력 경로 제목(11-19)
+    expect(screen.getByText('엄마 폰으로 만든 번호예요')).toBeTruthy();
     expect(screen.getByLabelText('연결 번호 1 2 3, 4 5 6')).toBeTruthy();
     expect(screen.getByText('이 앱은 돈이나 통장 번호를 묻지 않아요')).toBeTruthy();
     expect(redeem).not.toHaveBeenCalled(); // 자동 연결 금지
