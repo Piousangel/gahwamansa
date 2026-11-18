@@ -96,7 +96,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
               loading={saving}
               onPress={confirm}
             />
-            <ToCourseHomeLink onPress={toCourseHome} />
+            <ToCourseHomeLink onPress={toCourseHome} disabled={saving} />
           </>
         )
       }>

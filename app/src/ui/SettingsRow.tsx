@@ -17,18 +17,20 @@ type Props = {
   testID?: string;
   /** 오른쪽 끝(토글 등). 없고 onPress 가 있으면 '›' */
   right?: React.ReactNode;
+  /** 다른 화면으로 가지 않는 행(같은 화면에서 확인을 여닫음)은 '›'를 끈다 */
+  noChevron?: boolean;
 };
 
 // 어르신 설정 행(시안 P13_more v2, UX U8): 이름 + 보조 글, 오른쪽 '›'. 행 전체가 터치(64 이상).
 // 누르는 행은 버튼, 누르지 않는 행(앱 정보 등)은 한 덩어리 글. 문구는 호출부가 copy 에서 넘긴다(ui 는 copy 를 모름).
-export function SettingsRow({title, sub, onPress, danger, accessibilityLabel, accessibilityHint, testID, right}: Props) {
+export function SettingsRow({title, sub, onPress, danger, accessibilityLabel, accessibilityHint, testID, right, noChevron}: Props) {
   const content = (
     <>
       <View style={styles.text}>
         <Text20 size={24} weight="bold" style={danger ? styles.danger : styles.title}>{title}</Text20>
         {sub ? <Text20 style={styles.sub}>{sub}</Text20> : null}
       </View>
-      {right ?? (onPress ? <Icon name="icon-chevron-right" size={24} color={danger ? color.dangerInk : color.ink} /> : null)}
+      {right ?? (onPress && !noChevron ? <Icon name="icon-chevron-right" size={24} color={danger ? color.dangerInk : color.ink} /> : null)}
     </>
   );
   if (!onPress) {
@@ -37,8 +39,7 @@ export function SettingsRow({title, sub, onPress, danger, accessibilityLabel, ac
         testID={testID}
         accessible
         accessibilityRole="text"
-        accessibilityLabel={accessibilityLabel ?? title}
-        accessibilityHint={accessibilityHint ?? sub}
+        accessibilityLabel={accessibilityLabel ?? (sub ? `${title}, ${sub}` : title)}
         style={styles.row}>
         {content}
       </View>

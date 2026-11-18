@@ -21,7 +21,7 @@ export type ParentParams = {
   Connect: {from?: 'course'; prefill?: Prefill} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
   History: undefined; HistoryDay: {day: HistoryDay};
-  Settings: undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
+  Settings: {expand?: 'resume'} | undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 

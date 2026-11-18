@@ -1,7 +1,8 @@
-import React, {useEffect, useState} from 'react';
-import {Pressable, StyleSheet, Switch, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
+import {focusLater} from '../../ui/screenTitle';
 import {prefs} from '../../lib/prefs';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -20,9 +21,20 @@ type Confirm = 'none' | 'stop' | 'resume';
 // 어르신 설정(P13): 가족에게 답 보여 주기(그만 보여 주기 / 다시 보여 주기, 각각 확인 1단계), 모두 지우기.
 export function ParentSettings() {
   const navigation = useNavigation<NativeStackNavigationProp<ParentParams>>();
+  const route = useRoute<RouteProp<ParentParams, 'Settings'>>();
   const {api, consented, setConsented, content} = useSession();
   const linked = !!content?.linked; // 미연결 열람(번호 전)에는 보여 주기·지우기 대신 번호 쓰기 안내(QA B3)
-  const [confirm, setConfirm] = useState<Confirm>('none');
+  // 디자인 W0 ③: P3 띠 '다시 정하기'로 오면 '다시 보여 주기' 확인을 펼친 채로 연다(포커스는 확인 제목)
+  const fromDeclined = route.params?.expand === 'resume' && !consented && linked;
+  const [confirm, setConfirm] = useState<Confirm>(fromDeclined ? 'resume' : 'none');
+  const resumeTitleRef = useRef<React.ComponentRef<typeof View>>(null);
+  useEffect(() => {
+    if (!fromDeclined) {
+      return undefined;
+    }
+    return focusLater(() => resumeTitleRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -62,12 +74,10 @@ export function ParentSettings() {
       {linked ? (
         <>
           <Text20 style={styles.sub}>{t.share_scope}</Text20>
-          <SettingsRow
-            testID="settings-row-share"
-            title={t.share_row}
-            sub={consented ? t.shared_now : t.not_shared_now}
-            accessibilityLabel={`${t.share_row}, ${consented ? t.shared_now : t.not_shared_now}`}
-            accessibilityHint=""
+          {/* 디자인 W0 ②: '›' 없음, 오른쪽 동사 버튼(64) → 행 아래 확인 펼침(expanded). 200%면 버튼이 다음 줄 전체 폭 */}
+          <ShareRow
+            consented={consented}
+            expanded={confirm !== 'none'}
             onPress={() => setConfirm(confirm !== 'none' ? 'none' : consented ? 'stop' : 'resume')}
           />
           {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
@@ -80,7 +90,9 @@ export function ParentSettings() {
             </View>
           ) : confirm === 'resume' ? (
             <View style={styles.confirm}>
-              <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
+              <View ref={resumeTitleRef} accessible accessibilityRole="header" accessibilityLabel={t.resume_confirm}>
+                <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
+              </View>
               <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
               <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
             </View>
@@ -105,6 +117,7 @@ export function ParentSettings() {
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
+      {/* TODO(dev-menu 합칠 때): 버전 줄은 SettingsRow 로 이 아래에, devGate 허용(staging·개발)일 때만 onPress=versionTap, production 은 누르지 않는 글 행 */}
       <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
       {linked ? (
         <SettingsRow
@@ -167,7 +180,42 @@ function SfxRow() {
   );
 }
 
+// '가족에게 답 보여 주기' 행: 이름·상태(한 덩어리 글) + 오른쪽 동사 버튼. 보여 주는 중 '그만 보여 주기'(흰 바탕+테두리),
+// 보여 주지 않는 중 '다시 보여 주기'(채움). 누르면 행 아래에 확인을 펼친다(expanded 로 읽힘).
+function ShareRow({consented, expanded, onPress}: {consented: boolean; expanded: boolean; onPress: () => void}) {
+  const {fontScale} = useWindowDimensions();
+  const wide = fontScale >= 2;
+  const status = consented ? t.shared_now : t.not_shared_now;
+  const verb = consented ? t.stop : t.resume;
+  return (
+    <View testID="settings-row-share" style={[styles.shareRow, wide ? styles.shareRowWide : null]}>
+      <View accessible accessibilityRole="text" accessibilityLabel={`${t.share_row}, ${status}`} style={styles.toggleText}>
+        <Text20 size={24} weight="bold">{t.share_row}</Text20>
+        <Text20 style={styles.sub}>{status}</Text20>
+      </View>
+      <Pressable
+        testID="share-verb"
+        accessibilityRole="button"
+        accessibilityLabel={verb}
+        accessibilityState={{expanded}}
+        onPress={onPress}
+        style={({pressed}) => [styles.verb, consented ? styles.verbOutline : styles.verbFill, wide ? styles.verbWide : null, pressed ? styles.verbPressed : null]}>
+        <Text20 weight="bold" style={consented ? styles.verbOutlineText : styles.verbFillText}>{verb}</Text20>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  shareRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, minHeight: size.touchMin, backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16},
+  shareRowWide: {flexDirection: 'column', alignItems: 'stretch'},
+  verb: {minHeight: size.touchMin, borderRadius: radius.button, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center'},
+  verbWide: {alignSelf: 'stretch'},
+  verbOutline: {backgroundColor: color.card, borderWidth: 3, borderColor: color.action},
+  verbFill: {backgroundColor: color.action},
+  verbPressed: {opacity: 0.8},
+  verbOutlineText: {color: color.action},
+  verbFillText: {color: color.onAction},
   toggleRow: {flexDirection: 'row', alignItems: 'center', minHeight: size.touchMin},
   pressed: {backgroundColor: color.actionSoft},
   toggleText: {flex: 1, gap: 4},

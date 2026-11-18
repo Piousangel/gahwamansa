@@ -55,13 +55,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     prevDone.current = done;
     if (prev && done.length > prev.length) {
       const step = done.find(x => !prev.includes(x)) ?? null;
-      if (navigation.isFocused()) {
-        setJustDone(step);
-      } else {
-        afterTransition(() => setJustDone(step));
-      }
+      // 가려져 있거나 돌아오는 전환 중이면 전환이 끝난 뒤, 이미 보이면 바로(useAfterTransition 이 판단)
+      afterTransition(() => setJustDone(step));
     }
-  }, [done, content, navigation, afterTransition]);
+  }, [done, content, afterTransition]);
   // 아직 아무것도 못 받았는데 실패: 오류만 보여 준다(오프라인/서버 오류 문구가 다름)
   if (content === undefined && syncError) {
     return (
@@ -99,7 +96,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   ) : all ? (
     <>
       <Stitch width="100%" />
-      <BigButton variant="secondary" label={c.review_link} onPress={() => review('PhotoStep')} />
+      {/* 디자인 W0 L3: 보조 64 + 사진 아이콘 32(명세 §1) */}
+      <BigButton variant="secondary" icon="icon-photo" label={c.review_link} onPress={() => review('PhotoStep')} />
     </>
   ) : undefined;
   const todayIdx = kstWeekdayIndex();
@@ -146,7 +144,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           // 동의 거부(시안 P3 v4 '동의 거부 · 한 줄'): 옅은 면, 테두리 없음. '다시 정하기'는 설정의 다시 보여 주기로
           <View testID="course-declined" style={styles.declined}>
             <Text20 weight="bold" style={styles.declinedText}>{c.declined_banner}</Text20>
-            <TextLink label={c.declined_link} touch={size.touchMin} onPress={() => navigation.navigate('Settings')} />
+            {/* 디자인 W0 ③: 설정을 '다시 보여 주기' 확인이 펼쳐진 채로 연다(한 번 누르면 끝) */}
+            <TextLink label={c.declined_link} touch={size.touchMin} onPress={() => navigation.navigate('Settings', {expand: 'resume'})} />
           </View>
         ) : null}
       </View>
