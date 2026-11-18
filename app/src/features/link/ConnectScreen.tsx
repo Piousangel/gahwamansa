@@ -113,16 +113,27 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const noDock = level >= 3;
   const overflow = level >= 4;
   const scroll = level >= 2;
-  const [view, setView] = useState<{h: number; level: number} | null>(null); // 본문 창 높이(Screen onViewport)
+  // 본문 창 높이(Screen onViewport). 재확인 2 H3: 창 크기는 단계가 아니라 하단 고정 구성(0 링크+약관 · 1 링크만 · 2 없음)에만 달려 있으므로
+  // 그 구성으로 표시한다. 3·4단계는 구성이 같아 창이 다시 오지 않는다(onLayout 은 크기가 바뀔 때만)
+  const dockConfig = noDock ? 2 : legalInBody ? 1 : 0;
+  const [view, setView] = useState<{h: number; dock: number} | null>(null);
   const [area, setArea] = useState<{h: number; level: number; firstH: number} | null>(null);
-  const [pad, setPad] = useState<{h: number; keyH: number | undefined; level: number} | null>(null);
+  const [pad, setPad] = useState<{h: number; keyH: number | undefined} | null>(null);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScreenScroll>(null);
-  const viewH = view && view.level === level ? view.h : 0; // 다른 단계에서 잰 창 높이는 쓰지 않는다
+  const viewH = view && view.dock === dockConfig ? view.h : 0; // 다른 하단 고정 구성에서 잰 창 높이는 쓰지 않는다
   // 첫 화면 묶음 높이: 창 − 위 여백 − 아래 흐림(재리뷰 M1: Screen 의 '더 있음' 흐림 28 이 마지막 키 줄을 덮지 않게).
   // 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
   const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : 0;
-  const measured = !scroll || viewH > 0; // 2단계부터는 이 단계의 창 높이를 안 뒤에 그린다(재리뷰 L1: 높이 0 묶음·겹친 약관 줄 한 프레임 방지)
+  // 재확인 2 L7: 구성이 바뀌어 새 창 높이를 기다리는 동안에는 숨기지 않고 바로 전 묶음 높이로 그려 둔다(판정만 미룬다, 깜빡임 없음).
+  // 숨기는 것은 2단계로 시작해 아직 한 번도 창을 재지 못한 첫 프레임뿐(재리뷰 L1: 높이 0 묶음·겹친 약관 줄 방지)
+  const lastFirst = useRef(0);
+  if (firstH > 0) {
+    lastFirst.current = firstH;
+  }
+  const shownFirstH = firstH > 0 ? firstH : lastFirst.current;
+  // 4단계는 묶음 높이를 쓰지 않는 보통 배치라 창 높이를 기다리지 않는다(재확인 2 H3: 4단계 빈 화면)
+  const measured = !scroll || overflow || shownFirstH > 0;
 
   // 창·글자 크기가 바뀌면 처음부터 다시 잰다(재리뷰 L5, 원 L8: 단계가 올라가기만 하던 것)
   const dimsKey = `${winH}|${fontScale}`;
@@ -157,19 +168,20 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       escalate();
     } else if (k !== keyH) {
       setKeyH(k); // 이 키 높이로 다시 그린 키패드의 실제 높이를 받은 뒤 비교한다
-    } else if (pad && pad.level === level && pad.keyH === keyH && pad.h > area.h + 1) {
+    } else if (pad && pad.keyH === keyH && pad.h > area.h + 1) {
+      // 재확인 2 M4: 키패드 실제 높이는 키 높이(와 폭)에만 달려 있다 — 단계가 올라가도 같은 키 높이로 잰 값이면 비교한다
       escalate();
     }
-  }, [area, pad, view, level, keyH, overflow, scroll, viewH, firstH]);
+  }, [area, pad, level, keyH, overflow, scroll, viewH, firstH]);
 
-  const onViewport = (h: number) => setView(v => (v && v.h === h && v.level === level ? v : {h, level}));
+  const onViewport = (h: number) => setView(v => (v && v.h === h && v.dock === dockConfig ? v : {h, dock: dockConfig}));
   const onArea = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
-    setArea({h, level, firstH});
+    setArea({h, level, firstH: scroll && !overflow ? shownFirstH : 0});
   };
   const onKeypad = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
-    setPad({h, keyH, level});
+    setPad({h, keyH});
   };
 
   const ok = state.kind === 'ok';
@@ -252,7 +264,9 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: firstH} : null, !scroll ? styles.fillFirst : null, measured ? null : styles.hidden]}>
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: shownFirstH} : null, !scroll ? styles.fillFirst : null, measured ? null : styles.hidden]}
+        importantForAccessibility={measured ? 'auto' : 'no-hide-descendants'}
+        accessibilityElementsHidden={!measured}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
         </Text20>
@@ -270,6 +284,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {measured && noDock ? links : null}
       {/* 재리뷰 L2: 스크롤 단계에서는 '번호가 없어요' 안내를 묶음(고정 높이) 안이 아니라 링크 근처에 두고, 열면 보이게 스크롤한다 */}
       {measured && scroll && help ? (
+        // showRange 의 y 는 본문 contentContainer 기준 — 이 줄은 본문 바로 아래 자식이어야 한다(재확인 2 L9)
         <Text20 testID="connect-help" accessibilityLiveRegion="polite" onLayout={e => scrollRef.current?.showRange(e.nativeEvent.layout.y, e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
           {copy.connect.no_code_help}
         </Text20>

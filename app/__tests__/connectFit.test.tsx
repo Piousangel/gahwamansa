@@ -3,7 +3,7 @@ import {StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {BELOW_LINE_H, KEYPAD_FIXED, keypadKeyHeight} from '../src/features/link/keypadFit';
+import {BELOW_LINE_H, CELL_H, KEYPAD_FIXED, keypadKeyHeight} from '../src/features/link/keypadFit';
 import {press} from '../testUtils/flow';
 
 const RN = require('react-native');
@@ -24,7 +24,8 @@ const dims = (width: number, height: number, fontScale = 1) =>
 async function openConnect() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
-  await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
+  // 2단계로 시작하면 창을 재기 전 첫 프레임은 묶음이 화면 읽기에서도 숨는다(재리뷰 L1)
+  await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요', {includeHiddenElements: true}));
 }
 // 레이아웃 모의: 본문 창 높이(Screen 스크롤 창 onLayout)·키패드 영역(위치 y·높이)
 const viewport = async (h: number) =>
@@ -33,7 +34,7 @@ const viewport = async (h: number) =>
   });
 const area = async (y: number, h: number) =>
   act(async () => {
-    fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
+    fireEvent(screen.getByTestId('keypad-area', {includeHiddenElements: true}), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
   });
 const keyH = (label = '숫자 0') => {
   const st = screen.getByLabelText(label).props.style;
@@ -117,14 +118,50 @@ describe('재리뷰 H1·M3: 실제 이벤트 순서(영역 → 창)로 본 P1 �
     await area(150, 520 - 4 - FADE - 150); // 338: 키 64 로도 모자람
     expect(keyH()).toBe(64);
     expect(firstHeight()).toBeUndefined();
-    expect(150 + 68 + 12 + BELOW_LINE_H + 3 * (64 + 6)).toBeLessThanOrEqual(520); // 9절 "1~9 보임"(4단계는 위 여백 최소)
+    // 재현 D(재확인 2 H3): 4단계는 창이 다시 오지 않아도(3·4단계 하단 고정 구성 같음) 묶음이 보이고 링크·약관이 있다
+    const first = screen.getByTestId('connect-first');
+    expect(StyleSheet.flatten(first.props.style).opacity).toBeUndefined();
+    expect(first.props.importantForAccessibility).toBe('auto');
+    expect(screen.getByTestId('connect-links')).toBeTruthy();
+    expect(screen.getByTestId('legal-line')).toBeTruthy();
+    // 좌표: 4단계 배치에서 잰 키패드 영역 y + 그려진 키 높이로 셋째 키 줄(7·8·9) 아래 끝이 흐림 위(창 − 흐림) 안 — 9절 "1~9 보임"
+    const y4 = 140; // 4단계 묶음 간격 12 로 줄어든 영역 y(모의)
+    await area(y4, 400);
+    const k = keyH('숫자 7');
+    const cellRow = (StyleSheet.flatten(screen.getByTestId('code-cell-0').props.style).height as number | undefined) ?? CELL_H; // 그려진 칸 높이
+    expect(y4 + cellRow + 12 + BELOW_LINE_H + 3 * (k + 6)).toBeLessThanOrEqual(520 - FADE);
     expect(screen.getByTestId('connect-safe')).toBeTruthy(); // U4
+  });
+
+  test('재현 C(재확인 2 M4): 단계가 올라가도 키 높이가 같으면 같은 키 높이로 잰 실제 높이로 다시 비교한다', async () => {
+    dims(411, 914);
+    await openConnect();
+    await pad(422); // 기본 배치(무시)
+    await area(140, 410); // 키 68
+    await pad(440); // 키 68 로 그린 실제 높이('모두 / 지움' 두 줄) > 410 → 1단계
+    expect(titleSize()).toBe(22);
+    await area(130, 420); // 1단계 영역: 여전히 키 68(키패드 frame 은 그대로라 onLayout 이 다시 오지 않음)
+    expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 440 > 420 → 2단계(스크롤 켬, 약관 줄 본문으로)
+    expect(inDock('legal-line')).toBe(false);
+  });
+
+  test('재확인 2 L7: 하단 고정 구성이 바뀌어 새 창을 기다리는 동안 묶음을 숨기지 않고 바로 전 높이로 둔다', async () => {
+    dims(360, 640);
+    await openConnect();
+    await viewport(430);
+    const first2 = 430 - 4 - FADE;
+    await area(TOP_ROWS, first2 - TOP_ROWS); // 실패 → 3단계(하단 고정 빠짐, 새 창 대기)
+    const first = screen.getByTestId('connect-first');
+    expect(StyleSheet.flatten(first.props.style).opacity).toBeUndefined(); // 깜빡임 없음
+    expect(firstHeight()).toBe(first2); // 바로 전 높이 유지
+    expect(screen.getByTestId('legal-line')).toBeTruthy();
   });
 
   test('재리뷰 L1: 이 단계의 창 높이를 알기 전에는 묶음을 숨기고 약관·링크를 그리지 않는다(겹친 한 프레임 방지)', async () => {
     dims(360, 640);
     await openConnect();
-    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBe(0);
+    expect(StyleSheet.flatten(screen.getByTestId('connect-first', {includeHiddenElements: true}).props.style).opacity).toBe(0);
+    expect(screen.getByTestId('connect-first', {includeHiddenElements: true}).props.importantForAccessibility).toBe('no-hide-descendants'); // 숨김 동안 TalkBack 도 읽지 않음
     expect(screen.queryByTestId('legal-line')).toBeNull();
     await viewport(430);
     expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBeUndefined();
@@ -189,7 +226,7 @@ test('M6: 글자 키(모두 지움)는 어절 단위로만 줄바꿈(Android 는
   const {keepAllChildren} = require('../src/ui/koreanText');
   expect(keepAllChildren('모두 지움', 'android')).toBe('모⁠두 지⁠움');
   await openConnect();
-  const k = screen.getByTestId('key-모두 지움');
+  const k = screen.getByTestId('key-모두 지움', {includeHiddenElements: true});
   expect(k.props.lineBreakStrategyIOS).toBe('hangul-word');
   expect(StyleSheet.flatten(k.props.style).fontSize).toBeGreaterThanOrEqual(22);
 });
