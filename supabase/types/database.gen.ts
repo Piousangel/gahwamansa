@@ -264,14 +264,14 @@ isOneToOne: false
                   ]
                 },"families": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"is_review": boolean,"parent_title": string
+                    "created_at": string,"created_by": string | null,"id": string,"is_review": boolean,"is_test": boolean,"parent_title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_review"?: boolean,"parent_title"?: string
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_review"?: boolean,"is_test"?: boolean,"parent_title"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_review"?: boolean,"parent_title"?: string
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_review"?: boolean,"is_test"?: boolean,"parent_title"?: string
                   }
                   Relationships: [
                     
@@ -498,6 +498,9 @@ isOneToOne: false
                            },
 "admin_set_review_code":
 { Args: { "p_enabled": boolean,"p_family": string }; Returns: number
+                           },
+"admin_set_test_family":
+{ Args: { "p_family": string,"p_is_test": boolean,"p_operator": string,"p_reason": string }; Returns: Json
                            },
 "advance_content_cursor":
 { Args: { "p_profile": string }; Returns: boolean
