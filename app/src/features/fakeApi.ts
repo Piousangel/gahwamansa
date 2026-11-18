@@ -5,6 +5,7 @@ import type {
   Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
 } from './types';
 import type {MyCheers} from '../api/contract/cheers';
+import type {HistoryDay} from '../api/contract/history';
 import type {FailReason} from '../copy/copy';
 import {pairShort} from '../lib/childFormat';
 
@@ -65,6 +66,8 @@ export type FakeOptions = {
   failCheers?: boolean; // getMyCheers 실패
   failMarkRead?: boolean; // markCheersRead 실패
   eventResult?: 'rate_limited' | 'no_user' | 'invalid_props' | 'offline'; // logEvent 결과(기본 ok)
+  parentDays?: HistoryDay[]; // 어르신 지난 날(parent_history, 최신순). 기본 없음
+  failParentHistory?: number; // parentHistory 가 처음 N번 실패(오프라인)
 };
 export type FakeParent = {
   parentId?: string;
@@ -96,6 +99,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   // 자녀 가족의 가입 번호: 'live' 살아 있음 / 'expired' 지난 번호만 / null 아직 없음
   let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
+  let failParentHistory = opts.failParentHistory ?? 0;
   let who = opts.who;
   let failHistory = opts.failHistory ?? 0;
   let failHistoryServer = opts.failHistoryServer ?? 0;
@@ -297,6 +301,16 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         set.add(day(idx));
       }
       return {weekStart: day(0), doneDates: [...set].sort()};
+    },
+    async parentHistory(days = 30) {
+      if (failParentHistory > 0) {
+        failParentHistory -= 1;
+        throw new OfflineError('offline');
+      }
+      if (!linked) {
+        throw new ServerError('parent_history', 'parent_required', 'P0001'); // 서버처럼 연결된 어르신만
+      }
+      return {days: (opts.parentDays ?? []).slice(0, Math.max(1, Math.min(30, days)))};
     },
     async startToday() {
       return this.getTodayContent(); // 가짜는 커서가 없다(day 옵션 고정)

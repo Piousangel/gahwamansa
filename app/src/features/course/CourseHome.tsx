@@ -96,7 +96,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   ) : all ? (
     <>
       <Stitch width="100%" />
-      <BigButton variant="secondary" label={c.review_link} onPress={() => review('PhotoStep')} />
+      {/* 디자인 W0 L3: 보조 64 + 사진 아이콘 32(명세 §1) */}
+      <BigButton variant="secondary" icon="icon-photo" label={c.review_link} onPress={() => review('PhotoStep')} />
     </>
   ) : undefined;
   const todayIdx = kstWeekdayIndex();
@@ -119,6 +120,12 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
           <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
         </View>
+        {/* P15 진입(시안: 날짜 줄 아래 글자 링크). 미연결 기기는 서버 기록이 없으므로 숨김 */}
+        {preview ? null : (
+          <View style={styles.historyLink}>
+            <TextLink label={c.history_link} touch={64} onPress={() => navigation.navigate('History')} />
+          </View>
+        )}
         {preview ? (
           // 미연결 띠(시안 P3 v4 미연결 보드·talkback "날짜 다음"): 띠 전체가 하나의 버튼. 번호 화면을 위에 쌓아 '이전'이면 여기로(QA B2)
           <Pressable
@@ -137,7 +144,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           // 동의 거부(시안 P3 v4 '동의 거부 · 한 줄'): 옅은 면, 테두리 없음. '다시 정하기'는 설정의 다시 보여 주기로
           <View testID="course-declined" style={styles.declined}>
             <Text20 weight="bold" style={styles.declinedText}>{c.declined_banner}</Text20>
-            <TextLink label={c.declined_link} touch={size.touchMin} onPress={() => navigation.navigate('Settings')} />
+            {/* 디자인 W0 ③: 설정을 '다시 보여 주기' 확인이 펼쳐진 채로 연다(한 번 누르면 끝) */}
+            <TextLink label={c.declined_link} touch={size.touchMin} onPress={() => navigation.navigate('Settings', {expand: 'resume'})} />
           </View>
         ) : null}
       </View>
@@ -210,7 +218,9 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   sub: {color: color.ink},
   header: {flexShrink: 1},
-  headGroup: {gap: 24}, // 날짜 줄 → 띠 = 구역 간격 24(시안, 리뷰 R5)
+  headGroup: {gap: 24},
+  // 링크 줄은 날짜 줄에 붙는다(시안: 위 −16·아래 −8 마진)
+  historyLink: {alignSelf: 'flex-start', marginTop: -16, marginBottom: -8}, // 날짜 줄 → 띠 = 구역 간격 24(시안, 리뷰 R5)
   titleRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8},
   // 구역 사이 24 = 본문 gap 16 + 위아래 8(스티치 위아래)
   section: {marginVertical: 8},

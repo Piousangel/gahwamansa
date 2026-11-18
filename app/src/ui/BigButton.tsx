@@ -3,6 +3,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {color, FONT_SCALE_MAX, fontSize, lineHeight, radius, shadow, size} from './tokens';
 import {keepAllChildren, koreanTextProps} from './koreanText';
 import {Text20} from './Text20';
+import {Icon, type IconName} from './assets/icons';
 
 type Variant = 'primary' | 'secondary' | 'danger';
 type Props = {
@@ -19,13 +20,15 @@ type Props = {
   accessibilityHint?: string;
   /** 보이는 글과 읽는 말이 다를 때(예: '돌아가기' → "오늘 코스로 돌아가기", copy 11절 3) */
   accessibilityLabel?: string;
+  /** 글자 앞 아이콘(32, 글자와 같은 색). 아이콘만 버튼은 없다(R7) */
+  icon?: IconName;
   /** 접근성 포커스를 옮길 때 쓰는 누름 영역 ref(예: P6 일치 뒤 '마치기'로 포커스) */
   buttonRef?: React.Ref<React.ComponentRef<typeof Pressable>>;
 };
 
 // 명세 §1: 주 minHeight 72·글자 32, 보조·위험 minHeight 64·글자 26·테두리 3, 반경 36, 고정 height 없음.
 // 눌림은 색만 바뀜(움직임·Android 리플 없음). 위험은 색이 아니라 외곽선(비채움)+문구로 주 버튼과 구분한다.
-export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, accessibilityHint, accessibilityLabel, buttonRef}: Props) {
+export function BigButton({label, onPress, disabled, variant = 'primary', loading, loadingLabel = '잠시만요', disabledReason, accessibilityHint, accessibilityLabel, buttonRef, icon}: Props) {
   const primary = variant === 'primary';
   const blocked = !!disabled || !!loading;
   const shown = loading ? loadingLabel : label;
@@ -55,7 +58,19 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
               : {borderColor: color.action, backgroundColor: pressed ? color.actionSoft : loading ? color.paperSoft : color.card},
           disabled ? styles.disabled : null,
         ]}>
-        {({pressed}) => (
+        {({pressed}) => {
+          const ink = disabled
+            ? color.disabledInk
+            : primary
+              ? color.onAction
+              : variant === 'danger'
+                ? color.dangerInk
+                : pressed
+                  ? color.actionPressed
+                  : color.action;
+          return (
+          <View style={styles.inner}>
+          {icon ? <Icon name={icon} size={32} color={ink} /> : null}
           <Text
             {...koreanTextProps}
             maxFontSizeMultiplier={FONT_SCALE_MAX}
@@ -76,13 +91,16 @@ export function BigButton({label, onPress, disabled, variant = 'primary', loadin
             ]}>
             {keepAllChildren(shown)}
           </Text>
-        )}
+          </View>
+          );
+        }}
       </Pressable>
     </View>
   );
 }
 const styles = StyleSheet.create({
   wrap: {marginVertical: 6}, // 기존 호출부(gap 없는 View 안)에서 버튼이 붙지 않게: 사이 12(touch.gapMin)
+  inner: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 1},
   base: {borderRadius: radius.button, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 8, alignSelf: 'stretch'},
   primary: {minHeight: size.buttonPrimary},
   outline: {minHeight: size.buttonSecondary, borderWidth: 3, boxShadow: 'none'},

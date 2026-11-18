@@ -7,6 +7,12 @@ export function kstDateLine(now: Date = new Date()): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAYS[d.getUTCDay()]}`;
 }
 
+// 지난 날(P15) 날짜 표기: 서버 session_date(KST 날짜 'YYYY-MM-DD') → "11월 19일 수요일"(copy 11-3 history.day)
+export function historyDateLabel(ymd: string): string {
+  const d = new Date(`${ymd}T00:00:00Z`); // 이미 KST 날짜라 시차를 더하지 않는다
+  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAYS[d.getUTCDay()]}`;
+}
+
 // 월=0 … 일=6
 export function kstWeekdayIndex(now: Date = new Date()): number {
   return (kst(now).getUTCDay() + 6) % 7;

@@ -1,5 +1,6 @@
 import type {FailReason} from '../copy/copy';
 import type {CheerKey, MarkCheersReadResult, MyCheers} from '../api/contract/cheers';
+import type {ParentHistoryResult} from '../api/contract/history';
 import type {EventName, EventProps, LogEventResult} from '../api/contract/events';
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
@@ -134,5 +135,7 @@ export interface Api {
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다
   // 응원(P8): get_my_cheers / mark_cheers_read(0020, 계약은 api/contract/cheers.ts). 어르신만, 미연결 열람에서는 부르지 않는다
   getMyCheers(): Promise<MyCheers>;
+  // 어르신 지난 날(P15, 0028 parent_history, 계약 api/contract/history.ts). 미연결 기기는 부르지 않는다
+  parentHistory(days?: number): Promise<ParentHistoryResult>;
   markCheersRead(ids: string[] | null): Promise<MarkCheersReadResult>;
 }

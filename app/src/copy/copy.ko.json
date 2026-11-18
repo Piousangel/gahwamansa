@@ -333,7 +333,8 @@
     "done_unlinked_sub": "번호를 받으면 그때부터 고른 답이 가족에게 보여요",
     "declined_banner": "고른 답은 저장되지 않아요",
     "declined_link": "다시 정하기",
-    "to_home": "오늘 코스로"
+    "to_home": "오늘 코스로",
+    "history_link": "지난 날 보기"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -659,5 +660,15 @@
     "button_done": "관심 남김",
     "toast": "관심을 남겼어요. 지금은 결제되지 않아요",
     "close": "닫기"
+  },
+  "history": {
+    "_status": "copy-v3 11-3·11-7 #17c 확정. date_a11y·photo_a11y 는 읽기 라벨(라이터 확인 전)",
+    "title": "지난 날",
+    "sub": "최근 한 달 동안 본 사진이에요",
+    "empty": "사진을 보면 여기에 모여요",
+    "chosen": "고른 답",
+    "question": "{두 선택지} 고른 답",
+    "word": "낱말",
+    "day_a11y": "{날짜}, 자세히 보기"
   }
 }
