@@ -100,8 +100,12 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
           </>
         )
       }>
-      <Text20 size={32} weight="bold">{q.prompt ?? appCopy.question_title}</Text20>
-      <Text20 size={22}>{appCopy.question_hint}</Text20>
+      {/* AP-08 시안 P5_question: 제목 '마음에 드는 쪽을 골라 주세요'(32) + 보조(20, inkSub) 묶음, 그 아래 질문 문장(22 굵게) */}
+      <View style={styles.titleGroup}>
+        <Text20 size={32} weight="bold" style={styles.value}>{appCopy.question_title}</Text20>
+        <Text20 style={styles.hint}>{appCopy.question_hint}</Text20>
+      </View>
+      {q.prompt ? <Text20 size={22} weight="bold" style={styles.value}>{q.prompt}</Text20> : null}
       {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9) */}
       <View testID="choice-group" accessibilityRole="radiogroup">
         <SelectCard label={q.option_a} selected={choice === 'A'} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
@@ -140,4 +144,6 @@ const styles = StyleSheet.create({
   chosen: {borderWidth: 4, borderColor: color.action, backgroundColor: color.actionSoft, paddingHorizontal: 18},
   tag: {color: color.doneInk},
   value: {color: color.inkTitle},
+  titleGroup: {gap: 6},
+  hint: {color: color.inkSub},
 });
