@@ -1,7 +1,7 @@
 // 독립 UX 감사(2026-11-18) 중간·낮음 중 어르신 화면 반영분. 감사 재현 조건(기기 크기·글자 배율)으로 본다.
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
@@ -86,4 +86,23 @@ test('P2: 넷째 줄은 체크 카드 밖 ⓘ 한 줄', async () => {
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
   expect(screen.getByTestId('consent-info')).toBeTruthy();
+});
+
+test('M3: 확인 패널이 열리면 패널 끝까지 보이게 본문을 스크롤한다(하단 고정 돌아가기에 가려지지 않게)', async () => {
+  mockDims = {width: 360, height: 640, scale: 3, fontScale: 1.5};
+  const {ScrollView} = require('react-native');
+  const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+  scrollTo.mockClear();
+  await home();
+  await press('설정');
+  await waitFor(() => screen.getByText('도장 소리'));
+  await act(async () => {
+    fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
+  });
+  await press('그만 보여 주기');
+  const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
+  await act(async () => {
+    fireEvent(panel, 'layout', {nativeEvent: {layout: {x: 0, y: 500, width: 320, height: 260}}});
+  });
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 + 260 - 300 + 12, animated: true});
 });
