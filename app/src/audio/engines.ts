@@ -27,6 +27,21 @@ export async function getRinger(): Promise<Ringer> {
   }
 }
 
+/**
+ * 미디어(음악) 소리 크기 0~1(react-native-volume-manager getVolume, Android 는 music 스트림). 읽기 전 '소리 0' 안내용(AP-03, 시안 PX_read_aloud).
+ * 모르면 null(안내하지 않고 그냥 읽는다).
+ */
+export async function getMediaVolume(): Promise<number | null> {
+  try {
+    const vm = require('react-native-volume-manager');
+    const r = await vm.getVolume?.();
+    const v = typeof r === 'number' ? r : r?.volume;
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 // 벨소리 구독(리뷰 M6): volume-manager 의 removeRingerListener 는 네이티브 관찰자를 전역으로 끊는다. 그래서 네이티브 구독은
 // 하나만 두고 앱 안 구독자를 세어, 마지막 구독자가 떠날 때만 전역 해제한다(native-stack 은 이전 화면을 마운트한 채로 둔다).
 const ringerSubscribers = new Set<(r: Ringer) => void>();

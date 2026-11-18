@@ -1,11 +1,11 @@
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {confirmDeleteAll, press, toHomeConsented} from '../testUtils/flow';
 
 async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
@@ -19,7 +19,7 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openParentDelete(api);
   expect(del).not.toHaveBeenCalled();
-  await press('모두 지우기');
+  await confirmDeleteAll(); // P9 → 2단계 확인 상자
   expect(del).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('모두 지웠어요'));
   // 스택 초기화: 이전 화면이 남아 있지 않다
@@ -40,7 +40,7 @@ test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => 
 test('삭제 실패는 지워지지 않았음을 알리고 다시 할 수 있다', async () => {
   const api = createFakeApi({consented: true, failDelete: 1});
   await openParentDelete(api);
-  await press('모두 지우기');
+  await confirmDeleteAll(); // P9 → 2단계 확인 상자
   await waitFor(() => screen.getByText('지우는 중에 문제가 생겼어요'));
   expect(screen.queryByText('모두 지웠어요')).toBeNull();
   await press('다시 하기');
@@ -129,7 +129,7 @@ test('리뷰 M4 후속: 계정 삭제도 지우기 전에 계정 가명값을 �
     return del();
   });
   await openParentDelete(api);
-  await press('모두 지우기');
+  await confirmDeleteAll(); // P9 → 2단계 확인 상자
   await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-del'));
   expect(order).toEqual(['tag', 'delete']);
   clear.mockRestore();
@@ -141,7 +141,25 @@ test('재검토 R2: 삭제(또는 그 뒤 로그아웃)가 실패해도 계정�
   const api = createFakeApi({consented: true, accountTag: 'acc-del2'});
   jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new Error('signOut failed'));
   await openParentDelete(api);
-  await press('모두 지우기');
+  await confirmDeleteAll(); // P9 → 2단계 확인 상자
   await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-del2'));
   clear.mockRestore();
+});
+
+test('감사 H1 회귀: P9 모두 지우기를 한 번 누르면 지우지 않고 "정말 모두 지울까요? / 되돌릴 수 없어요" 상자, 그만둘래요면 그대로', async () => {
+  const api = createFakeApi({consented: true});
+  const del = jest.spyOn(api, 'deleteMyAccount');
+  await openParentDelete(api);
+  expect(screen.queryByText(/되돌릴 수 없어요/)).toBeNull(); // 1단계에는 없음(마지막 상자에서 한 번만)
+  await press('모두 지우기');
+  const box = await waitFor(() => screen.getByTestId('delete-confirm2'));
+  expect(within(box).getByText('정말 모두 지울까요?')).toBeTruthy();
+  expect(within(box).getByText('되돌릴 수 없어요')).toBeTruthy();
+  expect(del).not.toHaveBeenCalled();
+  await act(async () => {
+    fireEvent.press(within(box).getByRole('button', {name: '그만둘래요'}));
+  });
+  await waitFor(() => expect(screen.queryByTestId('delete-confirm2')).toBeNull());
+  expect(del).not.toHaveBeenCalled();
+  expect(screen.getByText('모두 지울까요?')).toBeTruthy();
 });

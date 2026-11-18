@@ -42,6 +42,7 @@ jest.mock('react-native-sound', () => {
 });
 jest.mock('react-native-volume-manager', () => ({
   getRingerMode: jest.fn(() => Promise.resolve(2)),
+  getVolume: jest.fn(() => Promise.resolve({volume: 0.5})), // 미디어 소리 크기(읽어 주기 '소리 0' 안내)
   addRingerListener: jest.fn(() => ({remove: jest.fn()})),
   removeRingerListener: jest.fn(),
 }));

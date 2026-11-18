@@ -13,11 +13,13 @@ type Props = {
   state?: SelectCardState;
   errorText?: string;
   selectedLabel?: string;
+  /** 공간이 모자랄 때(P5 3단계): 높이 132 → 96, '골랐어요'는 같은 줄 오른쪽. 글자 32 유지 */
+  compact?: boolean;
 };
 
 // 화면 읽기는 라디오(talkback-spec R9): 묶음은 쓰는 쪽에서 accessibilityRole="radiogroup" 으로 감싼다.
 // 명세 §2: minHeight 132, 반경 24, 테두리 4, 패딩 16, 글자 32 / 배지 20 굵게. 선택은 색 + 굵은 테두리 + 글자("골랐어요").
-export function SelectCard({label, selected, onPress, state, errorText, selectedLabel = copy.question.chosen}: Props) {
+export function SelectCard({label, selected, onPress, state, errorText, selectedLabel = copy.question.chosen, compact}: Props) {
   const s: SelectCardState = state ?? (selected ? 'selected' : 'default');
   const on = selected || s === 'selected';
   const locked = s === 'saving' || s === 'disabled';
@@ -30,6 +32,7 @@ export function SelectCard({label, selected, onPress, state, errorText, selected
       onPress={onPress}
       style={({pressed}) => [
         styles.card,
+        compact ? styles.compact : null,
         s === 'disabled'
           ? styles.disabled
           : s === 'error'
@@ -58,6 +61,7 @@ export function SelectCard({label, selected, onPress, state, errorText, selected
 }
 const styles = StyleSheet.create({
   card: {marginVertical: 8, minHeight: size.selectCard, borderRadius: radius.select, borderWidth: 4, padding: 16, justifyContent: 'center', gap: 4},
+  compact: {minHeight: 96, marginVertical: 6, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 12},
   on: {backgroundColor: color.actionSoft, borderColor: color.action},
   off: {backgroundColor: color.card, borderColor: color.line},
   pressed: {backgroundColor: color.paperSoft, borderColor: color.action},

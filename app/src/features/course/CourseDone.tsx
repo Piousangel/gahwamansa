@@ -16,6 +16,8 @@ import {useWeekStamps} from './useWeekStamps';
 import {useMotionMode} from '../../ui/motion';
 import {newStampFeedback} from './stampFeedback';
 import {prefs} from '../../lib/prefs';
+import {Dialog} from '../../ui/Dialog';
+import {useCourseBgm} from './useCourseBgm';
 
 const d = copy.done;
 const BIG = 120; // 큰 도장 지름(시안 P7_motion, 오늘 칸 도장 40으로 줄어 앉는다)
@@ -77,6 +79,10 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const week = gaveUp ? null : fetched;
   const mode = useMotionMode();
   const toHome = () => navigation.popTo('CourseHome');
+  // AP-04 첫 완료 1회 권유(시안 PX_music): 연출이 끝난 뒤 '음악을 틀어 드릴까요?' → 들어 볼게요면 켜고 미리 듣기 상자.
+  // 음원(CT-04)이 없거나 화면 읽기 켜짐이면 묻지 않는다. 한 번 보이면 다시 묻지 않는다(prefs bgmOffered)
+  const music = useCourseBgm();
+  const [offer, setOffer] = useState<'none' | 'ask' | 'preview'>('none');
   useBackAction(toHome);
 
   const feedback = useRef(newStampFeedback()).current;
@@ -196,6 +202,26 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     };
   }, []);
 
+  const musicAvailable = music.available;
+  const musicOn = music.enabled;
+  useEffect(() => {
+    if (phase !== 'done' || !musicAvailable || musicOn) {
+      return undefined;
+    }
+    let alive = true;
+    prefs()
+      .bgmOffered()
+      .then(seen => {
+        if (alive && !seen) {
+          prefs().markBgmOffered();
+          setOffer('ask');
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [phase, musicAvailable, musicOn]);
+
   const todayIdx = kstWeekdayIndex();
   const days = week ? stampsFromDates(week.weekStart, week.doneDates) : null;
   const firstStamp = !!days && days[todayIdx] && days.filter(Boolean).length === 1;
@@ -210,6 +236,44 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
         : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
   const full = mode === 'full';
   const bigShown = mode === 'reduce' || (full && phase !== 'done');
+
+  const bgmDialogs = (
+    <>
+      <Dialog
+        visible={offer === 'ask'}
+        title={copy.bgm.offer_title}
+        body={`${copy.bgm.offer_body}\n${copy.bgm.offer_source}`}
+        actions={[
+          {
+            label: copy.bgm.offer_yes,
+            onPress: () => {
+              music.setEnabled(true);
+              setOffer('preview');
+            },
+          },
+          {label: copy.bgm.offer_no, onPress: () => setOffer('none')},
+        ]}
+        testID="bgm-offer"
+      />
+      <Dialog
+        visible={offer === 'preview'}
+        title={copy.bgm.preview_title}
+        body={`${copy.bgm.preview_now}\n${copy.bgm.settings_sub}`}
+        actions={[
+          {label: copy.bgm.keep, onPress: () => setOffer('none')},
+          {
+            label: copy.bgm.off,
+            onPress: () => {
+              music.setEnabled(false);
+              setOffer('none');
+            },
+          },
+        ]}
+        onBack={() => setOffer('none')}
+        testID="bgm-preview"
+      />
+    </>
+  );
 
   return (
     <Screen
@@ -255,17 +319,20 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
             </Animated.View>
           ) : null}
         </View>
-        {/* 제목·문구는 함께 페이드(시안 mo-text) */}
-        <Animated.View testID="p7-text" style={[styles.textGroup, {opacity: v.text}]}>
-          <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
-          {body ? (
-            <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>
-          ) : null}
-        </Animated.View>
+        {/* 감사 M9·디자인 판정(리드 승인, 시안 P7_motion 수정): 제목은 첫 프레임부터 보인다. 페이드는 둘째 줄만 */}
+        <View style={styles.textGroup}>
+          <Text20 testID="p7-title" size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
+          <Animated.View testID="p7-text" style={{opacity: v.text}}>
+            {body ? (
+              <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>
+            ) : null}
+          </Animated.View>
+        </View>
         {days ? (
           <StampRow days={days} todayIdx={todayIdx} hideIdx={full && phase !== 'done' ? todayIdx : undefined} cellRef={cellRef} />
         ) : null}
       </Pressable>
+      {music.available ? bgmDialogs : null}
     </Screen>
   );
 }

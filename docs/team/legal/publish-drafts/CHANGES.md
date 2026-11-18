@@ -48,6 +48,7 @@
 | 8절 Lyria 곡 이름·생성일 자리표시 삭제 | 판단: 방침 필수 기재 아님, assets-manifest에서 관리(추정) |
 | "법령에 따라 따로 보관할 정보 없음"은 단정형 유지 | 잠정 판단. lawyer-packet 7 회신이 다르면 행 추가 |
 | (11-18 추가) 4절 삭제 예외 2행: 카카오 회원번호 연결 끊기용 최대 30일, 앱 밖 요청 처리 기록 1년(개인정보 없이), 1절 한 줄에 "예외는 4절". 삭제 안내 3절에도 같은 2행 | 사실: 0042 kakao_unlink_queue, 0039·0043 admin_audit(대상 uuid·사유, FK 없음, 1년). 결정: DECISIONS 11-18 |
+| (11-18 추가) 3절 노출 사실 고지: 거절·철회 시 가족 화면 "답을 나누지 않는 중", 동의와 무관하게 연결 여부·처음 연결한 날·연결 알림이 자녀에게 보임. 삭제 안내 1절 "그만 보여 주기"에도 같은 내용 | 사실: child_summary(0041) `shared`·`connected`·`connected_date`, child.not_shared. LG-06 #5·#7, 결정 DECISIONS 11-18(라이터 앱 문구와 같은 뜻 — 라이터 확정 뒤 단어 대조) |
 | 개발자 메뉴: 방침에 넣지 않음 | 사실: staging 전용(DECISIONS 11-18), production 번들 제외는 release-gates A8로 확인 |
 
 ### 약관 terms-v1.html → terms.html (v1.1)

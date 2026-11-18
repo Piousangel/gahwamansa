@@ -15,6 +15,7 @@ import {StepError} from './StepError';
 import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 import {PhotoZoom} from './PhotoZoom';
+import {ReadAloud, ttsText} from './ReadAloud';
 import {track} from './track';
 import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
@@ -29,6 +30,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const [imageFailed, setImageFailed] = useState(false);
   const [loaded, setLoaded] = useState(false); // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음)
   const [zoom, setZoom] = useState(false);
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
   const {api, content} = useSession();
@@ -127,14 +129,17 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       {showImage ? <Text20 style={styles.sub}>{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text20> : null}
       <Text20 size={22}>{appCopy.photo_look}</Text20>
       {photo.recall_questions.map(q => (
-        <Text20 key={q} size={24} weight="bold">{q}</Text20>
+        <Text20 key={q} size={24} weight="bold" style={reading ? styles.reading : null}>{q}</Text20>
       ))}
+      {/* AP-03 읽어 주기: 회상 질문 바로 아래 가운데(시안 PX_read_aloud) */}
+      {photo.recall_questions.length > 0 ? <ReadAloud text={ttsText.photo(photo.recall_questions)} onSpeaking={setReading} /> : null}
     </Screen>
   );
 }
 
 // 폴라로이드(명세 §6) 최소 적용: 흰 틀·안쪽 14·lifted 그림자. 기울기·테이프는 장식이라 빌드 1에서 생략.
 const styles = StyleSheet.create({
+  reading: {textDecorationLine: 'underline', textDecorationColor: color.sky},
   polaroid: {alignSelf: 'center', width: '100%', maxWidth: 300, backgroundColor: color.card, padding: 14, borderRadius: 4, boxShadow: shadow.lifted, gap: 8},
   photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft, borderRadius: 2},
   caption: {textAlign: 'center'},

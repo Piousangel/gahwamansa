@@ -5,6 +5,8 @@ import {defaultStore, type KeyValueStore} from './kvStore';
 
 const SFX = 'pref_sfx_enabled';
 const SKIP_HINT = 'pref_p7_skip_hint_seen';
+const BGM = 'pref_bgm_enabled'; // 배경 음악(기본 꺼짐, DECISIONS 11-17)
+const BGM_OFFERED = 'pref_bgm_offered'; // P7 첫 완료 권유를 이미 보였나(한 번만)
 const FIRST_GREETING = 'pref_p3_first_greeting_seen'; // 해님 첫 인사(연결 직후 앨범 첫 화면 1회, DECISIONS 11-17)
 const ZOOM_OPENED = 'pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라도 열었나(첫 안내 끝)
 const PHOTO_VISITS = 'pref_p4_visits'; // P4 방문 수(첫 안내는 세 번째 방문까지)
@@ -31,6 +33,10 @@ export function createPrefs(store: KeyValueStore) {
     setSfxEnabled: (v: boolean) => setBool(SFX, v),
     skipHintSeen: () => getBool(SKIP_HINT, false),
     markSkipHintSeen: () => setBool(SKIP_HINT, true),
+    bgmEnabled: () => getBool(BGM, false),
+    setBgmEnabled: (v: boolean) => setBool(BGM, v),
+    bgmOffered: () => getBool(BGM_OFFERED, false),
+    markBgmOffered: () => setBool(BGM_OFFERED, true),
     firstGreetingSeen: () => getBool(FIRST_GREETING, false),
     markFirstGreetingSeen: () => setBool(FIRST_GREETING, true),
     /** 모두 지우기·처음 화면으로: 다음에 연결하는 계정이 다시 첫 인사를 받게 지운다(리뷰 L3) */

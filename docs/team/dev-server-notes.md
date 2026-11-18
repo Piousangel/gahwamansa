@@ -309,6 +309,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
+- 감사 사유 규칙(DECISIONS 11-18): `admin_delete_*`의 사유(reason)에는 **요청 번호만**(예: `REQ-2026-012 웹 삭제 요청`), 이름·메일·닉네임·기종 같은 개인정보 금지. 처리자(operator)는 사람 이름 대신 역할명(`owner`). admin_audit는 1년 보관되고 대상이 지워져도 남는다(0039). 요청 번호↔메일 대응은 문의 메일함의 삭제 요청 대장에만(내부관리계획 §6·§7).
 
 ## 15. 테스터 가족 표시(0045, 리드 결정 is_test)
 - `families.is_test`(기본 false): 비공개 테스트 테스터 가족. **지표 SQL에서만 뺀다**(알림·기능은 그대로). 심사 가족(`is_review`)과 별개.
