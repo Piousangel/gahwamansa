@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Maestro E2E 실행(에뮬레이터, fake API 디버그 빌드). 사용법·전제: app/e2e/README.md
 #   app/e2e/run.sh                 # flows/ 전부
-#   app/e2e/run.sh flows/parent-first-connect.yaml
-# 환경변수: AVD(기본 gahwa_parent) · METRO_PORT(기본 8081) · SKIP_INSTALL=1 · SKIP_BUILD=1
+#   app/e2e/run.sh flows/f1-parent-connect-course.yaml
+# 환경변수: AVD(기본 gahwa_parent) · ANDROID_SERIAL(기기 고정, 예 emulator-5556) · METRO_PORT(기본 8081) · SKIP_INSTALL=1 · SKIP_BUILD=1
+# 두 실행을 동시에: 서로 다른 ANDROID_SERIAL·AVD·METRO_PORT 를 준다(README 2절).
 set -euo pipefail
 
 E2E_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -30,12 +31,35 @@ LOCAL_CFG="$APP_DIR/src/lib/config.local.ts"
 [ -f "$LOCAL_CFG" ] || fail "src/lib/config.local.ts 가 없어요: cp src/lib/config.local.example.ts src/lib/config.local.ts (기본 fake)"
 grep -Eq "API_MODE:[[:space:]]*'fake'" "$LOCAL_CFG" || fail "config.local.ts 의 API_MODE 가 'fake' 가 아니에요(E2E 는 fake 전용)."
 
-# 2) 기기: 연결된 기기가 없으면 AVD 를 화면 없이 켠다
-if ! adb devices | awk 'NR>1 && $2=="device"' | grep -q .; then
-  echo "e2e: 에뮬레이터 $AVD 시작(화면 없음)"
-  nohup emulator -avd "$AVD" -no-window -no-audio -no-boot-anim -no-snapshot-save >"$E2E_DIR/out-emulator.log" 2>&1 &
-  adb wait-for-device
+# 2) 기기 고정: 모든 adb·maestro 호출이 한 기기만 쓰게 한다(다른 사람·감사관이 같은 에뮬레이터를 쓰지 않게)
+#    - ANDROID_SERIAL 이 있으면 그 기기만(adb 는 이 환경 변수를 그대로 따른다). emulator-NNNN 이 꺼져 있으면 AVD 를 그 포트로 켠다.
+#    - 없으면 연결된 기기가 정확히 하나일 때만 그것을 쓰고, 둘 이상이면 멈춘다(어느 기기인지 모르면 남의 실행을 깰 수 있다).
+online() { adb devices | awk 'NR>1 && $2=="device" {print $1}'; }
+if [ -n "${ANDROID_SERIAL:-}" ]; then
+  if ! online | grep -qx "$ANDROID_SERIAL"; then
+    case "$ANDROID_SERIAL" in
+      emulator-*)
+        PORT="${ANDROID_SERIAL#emulator-}"
+        echo "e2e: 에뮬레이터 $AVD 를 $ANDROID_SERIAL 로 시작(화면 없음)"
+        # 같은 AVD 가 이미 다른 포트로 떠 있어도 겹쳐 켤 수 있게 읽기 전용
+        nohup emulator -avd "$AVD" -port "$PORT" -read-only -no-window -no-audio -no-boot-anim -no-snapshot-save >"$E2E_DIR/out-emulator-$PORT.log" 2>&1 &
+        ;;
+      *) fail "ANDROID_SERIAL=$ANDROID_SERIAL 기기가 연결돼 있지 않아요." ;;
+    esac
+  fi
+else
+  COUNT="$(online | grep -c . || true)"
+  if [ "$COUNT" -gt 1 ]; then
+    fail "기기가 여러 대 연결돼 있어요($(online | tr '\n' ' ')). ANDROID_SERIAL=<기기> 로 하나를 고르세요."
+  fi
+  if [ "$COUNT" -eq 0 ]; then
+    echo "e2e: 에뮬레이터 $AVD 시작(화면 없음)"
+    nohup emulator -avd "$AVD" -no-window -no-audio -no-boot-anim -no-snapshot-save >"$E2E_DIR/out-emulator.log" 2>&1 &
+  fi
 fi
+adb wait-for-device
+export ANDROID_SERIAL="${ANDROID_SERIAL:-$(online | head -1)}"
+echo "e2e: 기기 $ANDROID_SERIAL"
 until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
 
 # 3) 빌드·설치(stagingDebug = JS 는 Metro 에서 받음)
@@ -95,5 +119,5 @@ mkdir -p "$OUT_DIR"
 cd "$E2E_DIR"
 TARGETS=("$@")
 [ ${#TARGETS[@]} -gt 0 ] || TARGETS=(flows)
-maestro test "${TARGETS[@]}" --test-output-dir "$OUT_DIR" --format junit --output "$OUT_DIR/report.xml"
+maestro --device "$ANDROID_SERIAL" test "${TARGETS[@]}" --test-output-dir "$OUT_DIR" --format junit --output "$OUT_DIR/report.xml"
 echo "e2e: 통과. 캡처·보고서: $OUT_DIR"
