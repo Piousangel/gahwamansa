@@ -29,7 +29,7 @@ test('첫 화면: 심볼·워드마크·소개·사진 묶음·질문·두 버�
   expect(screen.getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByText('가화만사성')).toBeTruthy();
   expect(screen.getByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeTruthy();
-  expect(screen.getByLabelText('옛날 사진 앨범, AI가 만든 그림')).toBeTruthy();
+  expect(screen.getByLabelText('옛날 사진 예시, AI가 만든 그림')).toBeTruthy();
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
   expect(screen.getByRole('button', {name: '부모님 휴대폰이에요. 가족에게 받은 번호를 써요'})).toBeTruthy();
   expect(screen.getByRole('button', {name: '자녀 휴대폰이에요. 부모님께 보낼 번호를 만들어요'})).toBeTruthy();

@@ -1,8 +1,56 @@
 [
-  {"file": "brand/sheet_sun/BR_sun_expressions.dc.html", "title": "해님 캐릭터 시트(표정 5종 + 손 흔들기, 88/56/40, 규칙, 판독 테스트)", "w": 1280, "h": 1400},
-  {"file": "brand/sheet_album/BR_album_assets.dc.html", "title": "앨범 장식 에셋(모서리 꽂이·테이프·스티치·폴라로이드·종이 결·도장)", "w": 1280, "h": 1340},
-  {"file": "brand/sheet_states/BR_states.dc.html", "title": "빈 상태·오류 일러스트 4종", "w": 1280, "h": 900},
-  {"file": "brand/explore/EX_p3_a.dc.html", "title": "P3 오늘의 코스 홈 · 안1 절제(해님+폴라로이드)", "w": 390, "h": 844},
-  {"file": "brand/explore/EX_p3_b.dc.html", "title": "P3 오늘의 코스 홈 · 안2 균형(+스티치선·테이프·해님 도장)", "w": 390, "h": 844},
-  {"file": "brand/explore/EX_p3_c.dc.html", "title": "P3 오늘의 코스 홈 · 안3 풍부(+모서리 꽂이·종이 결·손글씨 메모)", "w": 390, "h": 844}
+  {
+    "file": "brand/sheet_sun/BR_sun_expressions.dc.html",
+    "title": "해님 캐릭터 시트(표정 5종 + 손 흔들기, 88/56/40, 규칙, 판독 테스트) — 볼터치 제거(빌드 1), 말은 첫 만남·완료·오류만",
+    "w": 1280,
+    "h": 1400
+  },
+  {
+    "file": "brand/sheet_album/BR_album_assets.dc.html",
+    "title": "앨범 장식 에셋(모서리 꽂이·테이프·스티치·폴라로이드·종이 결·도장)",
+    "w": 1280,
+    "h": 1340
+  },
+  {
+    "file": "brand/sheet_states/BR_states.dc.html",
+    "title": "빈 상태·오류 일러스트 4종",
+    "w": 1280,
+    "h": 900
+  },
+  {
+    "file": "brand/explore/EX_p3_a.dc.html",
+    "title": "P3 오늘의 코스 홈 · 안1 절제(해님+폴라로이드)",
+    "w": 390,
+    "h": 844
+  },
+  {
+    "file": "brand/explore/EX_p3_b.dc.html",
+    "title": "P3 오늘의 코스 홈 · 안2 균형(+스티치선·테이프·해님 도장)",
+    "w": 390,
+    "h": 844
+  },
+  {
+    "file": "brand/explore/EX_p3_c.dc.html",
+    "title": "P3 오늘의 코스 홈 · 안3 풍부(+모서리 꽂이·종이 결·손글씨 메모)",
+    "w": 390,
+    "h": 844
+  },
+  {
+    "file": "brand/BR_symbol.dc.html",
+    "title": "브랜드 심볼 D안(살구 인장 家 + 옛날 사진) · 3D 상세판·단순판·런처",
+    "w": 1336,
+    "h": 1008
+  },
+  {
+    "file": "brand/BR_staging.dc.html",
+    "title": "스테이징 앱 표시(배지 T·이름·앱 안 띠)",
+    "w": 1156,
+    "h": 868
+  },
+  {
+    "file": "brand/BR_symbol_retired.dc.html",
+    "title": "(은퇴) 해+폴라로이드 심볼 — 보관, 구현하지 않음",
+    "w": 656,
+    "h": 528
+  }
 ]

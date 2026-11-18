@@ -1,5 +1,7 @@
 # 실제 법률 전문가 검토 질문 목록 (법률팀, 2026-11-17)
 
+> **11-18: 송부용은 `lawyer-packet.md`(관문별 재구성) · `kisa-118-brief.md`(118 상담 1장).** 이 문서는 원본 기록으로 둔다.
+
 > **법률 자문이 아닙니다.** 이 문서는 변호사(또는 KISA 개인정보 상담·변리사)에게 가져갈 질문을 정리한 것입니다. 각 질문의 "우리 잠정 판단"은 실무 추정이며 확정이 아닙니다.
 > 함께 보낼 자료: site/drafts/privacy-v2.html, delete-account-v2.html, terms-v1.html, docs/team/legal/compliance-checklist.md, docs/team/store/play-console-draft.md.
 > 기존 목록과의 관계: policy.md §7.2(1~10)와 privacy-v2 "검토 요청" 중 법률 항목을 흡수해 우선순위로 다시 묶었다. 중복 질문은 하나로 합침.

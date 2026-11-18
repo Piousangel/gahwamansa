@@ -15,7 +15,7 @@ async function finishCourse(opts: FakeOptions = {}, prepare?: (api: ReturnType<t
   return api;
 }
 const today = kstWeekdayIndex();
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+const WEEKDAYS_A11Y = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
 
 test('이번 주 첫 도장: 해님(하트 없음)·제목·도장 줄(오늘 칸)·"오늘 첫 도장을 찍었어요"', async () => {
   await finishCourse();
@@ -26,7 +26,7 @@ test('이번 주 첫 도장: 해님(하트 없음)·제목·도장 줄(오늘 �
     expect(s.props.xml).not.toContain('M34 90C30');
   }
   await waitFor(() => screen.getByText(/오늘 첫 도장을 찍었어요\.\s*내일 새 사진이 와요/));
-  expect(screen.getByLabelText(`이번 주 도장, ${WEEKDAYS[today]} 찍었어요`)).toBeTruthy();
+  expect(screen.getByLabelText(`이번 주 도장, ${WEEKDAYS_A11Y[today]}에 찍었어요`)).toBeTruthy();
   expect(screen.getAllByTestId(`stamp-on-${today}`, {includeHiddenElements: true}).length).toBeGreaterThan(0);
   expect(screen.queryByText(/연속|잘하셨|최고/)).toBeNull(); // 숫자 연속·칭찬 없음
 });
@@ -35,7 +35,7 @@ test('이번 주 다른 날에도 찍었으면 "도장을 찍었어요. 내일 �
   const other = today === 0 ? 1 : 0;
   await finishCourse({weekDone: [other]});
   await waitFor(() => screen.getByText(/^도장을 찍었어요\.\s*내일 새 사진이 와요/));
-  expect(screen.getByLabelText(`이번 주 도장, ${[WEEKDAYS[other], WEEKDAYS[today]].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b)).join(' ')} 찍었어요`)).toBeTruthy();
+  expect(screen.getByLabelText(`이번 주 도장, ${[other, today].sort((a, b) => a - b).map(i => WEEKDAYS_A11Y[i]).join(', ')}에 찍었어요`)).toBeTruthy();
   expect(screen.queryByText('오늘 첫 도장을 찍었어요')).toBeNull();
 });
 

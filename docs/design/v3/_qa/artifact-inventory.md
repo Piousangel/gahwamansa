@@ -165,3 +165,8 @@
 - P7_motion: 결정 2건(해님 없음, 인주 color.brandSealDeep) 명세 반영. design-system/tokens-v3.json color.brandSealDeep 추가
 - P16_family·C4_title_dup·N3_connected: copy 11-8 확정 문구로 교체
 - 구현 대조 4차 #28~35, UX 개선 제안 _qa/ux-improvements-2026-11-18.md(13건)
+
+## 15. 2026-11-18 로드맵 13 W0·W1 (게시 없음)
+- W0: DZ-06 B1 보완, DZ-04 판정 5건(볼터치 26개 삭제), p7-followup 디자인 확인 3건(P13_more 보드 3개), 코스 홈 v4 숫자 정정 → _qa/2026-11-18-w0-design.md, 웨이브 0 UX 감사 _qa/2026-11-18-wave0-ux.md
+- W1: DZ-05 체크표 _qa/2026-11-18-dz05-checklist.md. 생성기 글자 하한 20(kit.f) 적용 후 생성 시트 전부 재생성, QA 5폭 × 3배율 실패 0(남은 20 미만은 보드 이름·시스템 알림 모형·단계 번호 배지)
+- DZ-10(P7 미연결 도장 연출)은 v26에서 이미 반영 → 확인 완료
