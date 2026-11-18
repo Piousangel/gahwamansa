@@ -4,12 +4,14 @@
 //       검수표 content/review.md (형식은 content-gate.mjs 머리말)
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (키는 출력하지 않음)
 // 사용: node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason "11월 3주차 추가"] [--check]
-//       --check: 게이트만 검사(업로드·게시 안 함). 실제 실행은 대상 호스트를 보여 주고 환경 이름(staging|production)을 다시 입력해야 진행.
+//       --check: 게이트만 검사(업로드·게시 안 함). 실제 실행은 대상 호스트를 보여 주고 환경 이름을 다시 입력받아 app/env/<환경>.env의 ref와 대조(production은 호스트 재입력).
+//       검수표는 파일·sha256 칸으로 검수한 사진과 묶인다(content-gate.mjs 머리말).
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createInterface} from 'node:readline/promises';
-import {checkBatch, parseReview} from './content-gate.mjs';
+import {checkBatch, parseReview, PHOTO_NAME} from './content-gate.mjs';
+import {confirmTarget} from '../../supabase/ops/target-check.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const argv = process.argv.slice(2);
@@ -36,13 +38,28 @@ const auth = {Authorization: `Bearer ${key}`, apikey: key};
 
 const entries = JSON.parse(readFileSync(resolve(batchPath), 'utf8'));
 const review = parseReview(readFileSync(join(root, 'content/review.md'), 'utf8'));
-const maxRes = await fetch(`${url}/rest/v1/content_photos?select=day_index&order=day_index.desc&limit=1`, {headers: auth});
-if (!maxRes.ok) {
-  console.error(`현재 콘텐츠 조회 실패 HTTP ${maxRes.status}`);
-  process.exit(1);
+// 서버와 같은 기준: 사진·질문 두 표의 최대 day_index(C-L7)
+let existingMax = 0;
+for (const table of ['content_photos', 'content_questions']) {
+  const res = await fetch(`${url}/rest/v1/${table}?select=day_index&order=day_index.desc&limit=1`, {headers: auth});
+  if (!res.ok) {
+    console.error(`현재 콘텐츠 조회 실패 HTTP ${res.status}`);
+    process.exit(1);
+  }
+  existingMax = Math.max(existingMax, (await res.json())[0]?.day_index ?? 0);
 }
-const existingMax = (await maxRes.json())[0]?.day_index ?? 0;
-const problems = checkBatch(entries, review, existingMax);
+// 이름 검사를 통과한 파일만 읽어 sha256을 계산(경로 이탈 방지, C-M2)
+const hashes = {};
+for (const e of entries) {
+  if (PHOTO_NAME.test(String(e.photo ?? ''))) {
+    try {
+      hashes[e.photo] = createHash('sha256').update(readFileSync(join(root, 'content/photos', e.photo))).digest('hex');
+    } catch {
+      hashes[e.photo] = '';
+    }
+  }
+}
+const problems = checkBatch(entries, review, existingMax, hashes);
 if (problems.length) {
   console.error('게시할 수 없어요(사진은 올리지 않았어요):\n- ' + problems.join('\n- '));
   process.exit(2);
@@ -50,25 +67,12 @@ if (problems.length) {
 console.log(`게이트 통과: day ${entries.map((e) => e.day_index).join(', ')} (지금 끝 ${existingMax})`);
 if (checkOnly) process.exit(0);
 
-// 대상 확인: 호스트를 보여 주고 환경 이름을 다시 입력받는다(production은 한 번 더)
-const host = new URL(url).host;
-console.log(`대상: ${host}`);
-const rl = createInterface({input: process.stdin, output: process.stdout});
-const env = (await rl.question('이 대상의 환경 이름을 입력하세요(local|staging|production): ')).trim();
-const expectLocal = /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host);
-if (!['local', 'staging', 'production'].includes(env) || (env === 'local') !== expectLocal) {
-  console.error('환경 이름이 대상과 맞지 않아 멈춥니다.');
-  process.exit(2);
-}
-if (env === 'production' && (await rl.question('production에 게시합니다. 호스트를 그대로 입력하세요: ')).trim() !== host) {
-  console.error('호스트가 달라 멈춥니다.');
-  process.exit(2);
-}
-rl.close();
+// 대상 확인(C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트가 같아야 진행(production은 호스트 재입력)
+await confirmTarget(root, url, '콘텐츠 게시');
 
 const days = [];
 for (const e of entries) {
-  const file = `day-${e.day_index}.jpg`;
+  const file = `v2/day-${String(e.day_index).padStart(2, '0')}.jpg`; // CDN 캐시 회피 경로(DECISIONS 11-18, C-L6)
   const up = await fetch(`${url}/storage/v1/object/content-photos/${file}`, {
     method: 'POST',
     headers: {...auth, 'Content-Type': 'image/jpeg', 'x-upsert': 'false', 'cache-control': 'max-age=3600'},
@@ -81,7 +85,7 @@ for (const e of entries) {
   const {photo, ...rest} = e;
   days.push({...rest, image_url: `${url}/storage/v1/object/public/content-photos/${file}`});
 }
-const res = await fetch(`${url}/rest/v1/rpc/admin_publish_content`, {
+const res = await fetch(`${url}/rest/v1/rpc/admin_publish_content`, { // 인자: 묶음·사유·처리자(0043 순서, 이름으로 보냄)
   method: 'POST',
   headers: {...auth, 'Content-Type': 'application/json'},
   body: JSON.stringify({p_days: days, p_operator: operator, p_reason: reason}),

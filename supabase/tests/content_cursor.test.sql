@@ -118,7 +118,7 @@ select set_config('bumo.allow_content_delete', 'off', true);
 select throws_like($$ delete from public.content_photos where day_index = 3 $$, '%content_immutable%', '게시된 사진은 지울 수 없다(지우고 다시 넣어 뜻 바꾸기 차단)');
 select throws_like($$ delete from public.content_questions where day_index = 3 $$, '%content_immutable%', '게시된 문항은 지울 수 없다(답이 파기돼 FK가 풀려도)');
 select is((select caption from public.content_photos where day_index = 3), 'c3', '삭제 시도 뒤에도 사진 설명은 그대로다');
-select is(public.purge_expired_data(now() + interval '400 days') ->> 'answers', '0', '파기 배치는 콘텐츠를 지우지 않고 그대로 돈다');
+select is(public.purge_expired_data() ->> 'answers', '0', '파기 배치는 콘텐츠를 지우지 않고 그대로 돈다'); -- 0043부터 미래 기준 시각은 거부
 
 select * from finish();
 rollback;

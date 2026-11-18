@@ -55,7 +55,7 @@ reset role;
 set local role service_role;
 select throws_like($$ select public.admin_delete_answers('7039b000-0000-0000-0000-0000000000a1', '', 'ops') $$, '%reason_required%', '사유가 없으면 거부');
 select throws_like($$ select public.admin_delete_answers('7039b000-0000-0000-0000-0000000000a1', '메일 요청 #3', null) $$, '%operator_required%', '처리자가 없으면 거부');
-select is(public.admin_delete_answers('7039b000-0000-0000-0000-0000000000a1', '메일 요청 #3', 'ops-hyun'), '{"ok": true, "answers": 2, "sessions": 1}'::jsonb, '답·코스 기록만 지운다');
+select is(public.admin_delete_answers('7039b000-0000-0000-0000-0000000000a1', '메일 요청 #3', 'ops-hyun'), '{"ok": true, "answers": 2, "events": 0, "sessions": 1}'::jsonb, '답·코스 기록만 지운다(0043부터 코스 이벤트 수 포함)');
 select is(public.admin_delete_answers('7039b000-0000-0000-0000-0000000000c1', '잘못된 대상', 'ops-hyun') ->> 'reason', 'not_parent', '자녀 프로필은 답 삭제 대상이 아니다');
 reset role;
 select is((select count(*)::int from public.profiles where id = '7039b000-0000-0000-0000-0000000000a1' and consented_at is not null), 1, '연결·동의는 그대로');

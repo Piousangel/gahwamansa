@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0042) · 2026-11-17
+# 서버 계약 노트 (0019~0043) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -146,14 +146,17 @@ type UnregisterPushToken = { ok: true; removed: number };
 - **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
   ```sql
   select public.admin_delete_account('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- {ok, scope: child|parent|family} | {ok:false, reason:'not_found'}
-  select public.admin_delete_answers('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- 어르신 답·코스 기록만 {ok, answers, sessions} | not_found·not_parent
+  select public.admin_delete_answers('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- 어르신 답·코스 기록·코스 이벤트(0043) {ok, answers, sessions, events} | not_found·not_parent
   ```
   - 계정 삭제 규칙은 앱 `delete_my_account`와 같은 공통 함수(`account_delete_core`): 자녀가 남으면 본인만, 마지막 자녀면 가족 전체 + 어르신 익명 인증 계정, 대상 인증 계정까지.
-  - 사유·처리자 필수(`reason_required`·`operator_required`). 처리마다 `admin_audit`(처리자·시각·대상·가족·사유) — 대상이 지워져도 남고, 수정·삭제는 트리거가 막으며 1년 지나면 파기 배치만 지운다. 월 1회 점검: `select * from admin_audit where at > now() - interval '1 month' order by at;`
+  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관).
+  - 사유·처리자 필수(`reason_required`·`operator_required`). 처리마다 `admin_audit`(처리자·시각·대상·가족·사유) — 대상이 지워져도 남는다. 0043부터 서비스 역할도 감사 표에 쓰기·수정·삭제·비우기 권한이 없고(쓰기는 admin RPC만), 1년 지나면 파기 배치만 지운다. 파기 함수는 미래 기준 시각을 거부(`future_now`). 공통 삭제 함수는 서비스 역할도 직접 못 부른다. 월 1회 점검: `select * from admin_audit where at > now() - interval '1 month' order by at;`
   - 처리 기한: 목표 7일·상한 10일(DECISIONS 11-17). 본인 확인 방법은 정책 문서 기준(삭제 안내 페이지).
 - **콘텐츠 추가(0040, SV-08)**: `node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason ...]` (`--check`는 게이트만).
   - 순서: 검수표 `content/review.md` 게이트(검수일·검수자·"글자·사람·현대물건 없음"·"AI 표기"·"실제 장소 아님" 모두 ✅) → 끝에만·빈칸 없이 이어지는지 → **통과해야** 사진 업로드(덮어쓰기 금지, JPEG) → `admin_publish_content`(사진·질문·첫마디 한 번에, 감사 `content_publish`).
-  - 이미 게시된 day_index는 덮어쓰지 않는다(`day_exists`), 중간 끼우기·건너뛰기 거부(`not_append`), 자리표시 사진·빈 문구 거부(`invalid_item`). 고칠 땐 새 날 + `select admin_retire_content(<day>, '<처리자>', '<사유>')`.
+  - 이미 게시된 day_index는 덮어쓰지 않는다(`day_exists`), 중간 끼우기·건너뛰기 거부(`not_append`), 공개 사진 버킷 주소가 아니거나 길이 초과·빈 문구 거부(`invalid_item`). 고칠 땐 새 날 + `select admin_retire_content(<day>, '<사유>', '<처리자>')` — 이미 은퇴면 `already_retired`, 은퇴 뒤 활성 날이 7일보다 적어지면 `too_few_active`.
+  - 서비스 역할은 콘텐츠 표에 직접 insert·delete할 수 없다(0043, 게시는 RPC·감사로만). 사진 주소 갱신만 허용.
+  - 검수표에 `파일`·`sha256` 칸(검수한 사진 파일과 묶음), 사진 이름은 `day-<숫자>.jpg`만, 업로드 경로 `v2/day-NN.jpg`. 대상 확인은 `app/env/<환경>.env`의 `SUPABASE_PROJECT_REF`와 호스트 대조(`supabase/ops/target-check.mjs`, 문구 적재 스크립트도 같음).
   - 실행 전에 대상 호스트를 보여 주고 환경 이름을 다시 입력받는다(production은 호스트 재입력). 검수표 형식은 `scripts/photos/content-gate.mjs` 머리말. 게이트 테스트 `node --test scripts/photos/content-gate.test.mjs`.
 - **콘텐츠 재고(0039)**: `select * from content_runway;` → `active_days`, `max_cursor`(가장 앞선 어르신 커서, 심사 가족 제외), `remaining_new_days`(그 뒤 남은 새 콘텐츠 날 수). 7일 미만이면 콘텐츠 추가(06시 루틴 경보 PM-07).
 - **응원 도착·연결 알림(0038, SV-03)**: cron `push-events` 5분마다 → `push_events_kick()`(창 안이고 처리할 응원·연결 큐가 있을 때만) → Edge Function `push-events` → `push_events_claim()`.

@@ -6,7 +6,7 @@
 import {readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createInterface} from 'node:readline/promises';
+import {confirmTarget} from './target-check.mjs';
 import {execFileSync} from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -55,26 +55,14 @@ if (!url || !key) {
   console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
   process.exit(3);
 }
-// 대상 확인(리뷰 L2): 호스트를 보여 주고 환경 이름을 다시 입력받는다. production은 호스트를 한 번 더.
+// 대상 확인(리뷰 L2·C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트를 대조한다. production은 호스트를 한 번 더.
 // 문구가 들어가는 순간 발송 조건이 충족되므로, 셸에 남은 다른 환경 키로 잘못 넣지 않게 한다.
-const host = new URL(url).host;
 let commit = 'unknown';
 try {
   commit = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], {encoding: 'utf8'}).trim();
 } catch {}
-console.log(`대상: ${host}  (copy.ko.json 커밋 ${commit})`);
-const rl = createInterface({input: process.stdin, output: process.stdout});
-const envName = (await rl.question('이 대상의 환경 이름을 입력하세요(local|staging|production): ')).trim();
-const isLocal = /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host);
-if (!['local', 'staging', 'production'].includes(envName) || (envName === 'local') !== isLocal) {
-  console.error('환경 이름이 대상과 맞지 않아 멈춥니다.');
-  process.exit(2);
-}
-if (envName === 'production' && (await rl.question('production 실발송이 시작됩니다. 호스트를 그대로 입력하세요: ')).trim() !== host) {
-  console.error('호스트가 달라 멈춥니다.');
-  process.exit(2);
-}
-rl.close();
+const host = new URL(url).host;
+const envName = await confirmTarget(root, url, `푸시 문구 적재, copy.ko.json 커밋 ${commit}`);
 async function upsert(table, body, onConflict) {
   const res = await fetch(`${url}/rest/v1/${table}?on_conflict=${onConflict}`, {
     method: 'POST',

@@ -60,7 +60,8 @@ update public.kakao_unlink_queue set attempts = 10 where kakao_user_id = 'kakao-
 select public.kakao_unlink_record(jsonb_build_array(jsonb_build_object('id', (select id from public.kakao_unlink_queue where kakao_user_id = 'kakao-9003'), 'status', 'retry', 'http', 500)));
 select ok((select gave_up_at is not null from public.kakao_unlink_queue where kakao_user_id = 'kakao-9003'), '10번 실패하면 포기 표시(운영자 확인)');
 select is(jsonb_array_length(public.kakao_unlink_claim(10, now() + interval '1 day')), 0, '포기한 것은 다시 선점하지 않는다');
-select public.purge_expired_data(now() + interval '31 days');
+update public.kakao_unlink_queue set gave_up_at = now() - interval '31 days' where kakao_user_id = 'kakao-9003'; -- 0043부터 미래 기준 시각 거부
+select public.purge_expired_data();
 select is((select count(*)::int from public.kakao_unlink_queue where kakao_user_id = 'kakao-9003'), 0, '포기한 회원번호도 30일 뒤 파기');
 
 select pg_temp.act_as('70420000-0000-0000-0000-0000000000a1', true);
