@@ -61,6 +61,8 @@ adb wait-for-device
 export ANDROID_SERIAL="${ANDROID_SERIAL:-$(online | head -1)}"
 echo "e2e: 기기 $ANDROID_SERIAL"
 until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
+# logcat 버퍼를 넉넉히(기본 256K 면 긴 실행에서 앞쪽 ANR·크래시 기록이 밀려남, 재확인 L)
+adb logcat -G 16M >/dev/null 2>&1 || true
 
 # 3) 빌드·설치(stagingDebug = JS 는 Metro 에서 받음)
 if [ "${SKIP_INSTALL:-0}" != "1" ]; then
@@ -72,9 +74,23 @@ if [ "${SKIP_INSTALL:-0}" != "1" ]; then
   adb install -r "$APK" >/dev/null
 fi
 
-# 4) Metro: 기기의 localhost:8081 → 맥의 METRO_PORT. 이미 떠 있으면 그대로 쓴다
-adb reverse tcp:8081 "tcp:$METRO_PORT" >/dev/null
+# 4) 정리 함수를 먼저 건다(리뷰 L3: Metro 를 띄운 뒤 실패해도 끄도록, L1: 설정을 바꾸기 전에 되돌리기를 걸도록)
 METRO_PID=""
+HIDE_CHANGED=0
+PREV_HIDE_DIALOGS=""
+cleanup() { if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi; }
+restore_dialogs() {
+  [ "$HIDE_CHANGED" = "1" ] || return 0
+  if [ "$PREV_HIDE_DIALOGS" = "null" ]; then
+    adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
+  else
+    adb shell settings put global hide_error_dialogs "$PREV_HIDE_DIALOGS" >/dev/null 2>&1 || true
+  fi
+}
+trap 'restore_dialogs; cleanup' EXIT
+
+# Metro: 기기의 localhost:8081 → 맥의 METRO_PORT. 이미 떠 있으면 그대로 쓴다
+adb reverse tcp:8081 "tcp:$METRO_PORT" >/dev/null
 if ! curl -fs "http://localhost:$METRO_PORT/status" | grep -q running; then
   echo "e2e: Metro 시작(port $METRO_PORT)"
   (cd "$APP_DIR" && nohup npx react-native start --port "$METRO_PORT" >"$E2E_DIR/out-metro.log" 2>&1) &
@@ -83,8 +99,18 @@ if ! curl -fs "http://localhost:$METRO_PORT/status" | grep -q running; then
 fi
 # 첫 번들은 30초 넘게 걸릴 수 있어 flow 시작 전에 미리 만든다(첫 화면 대기 시간 초과 방지)
 curl -fs "http://localhost:$METRO_PORT/index.bundle?platform=android&dev=true&minify=false" -o /dev/null || fail "Metro 번들을 만들지 못했어요(out-metro.log)"
-cleanup() { if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi; }
-trap cleanup EXIT
+
+# 시스템 ANR 창("Process system isn't responding") 숨김(HIDE_DIALOGS=0 이면 끔): F6 불안정 원인(2026-11-18 캡처 — 첫 화면을 덮음).
+# 바쁜 맥에서 에뮬레이터가 느려지면 뜬다. 모든 앱의 ANR·크래시 창도 숨겨지므로 우리 앱 ANR·크래시는 아래 logcat 검사로 실패 처리한다(리뷰 M1).
+# 앞 값을 읽지 못하면 바꾸지 않는다(리뷰 L1: 되돌릴 값을 모르면 건드리지 않음). 같은 기기에 두 실행을 겹치지 않는다(README, 리뷰 L2)
+if [ "${HIDE_DIALOGS:-1}" = "1" ]; then
+  if PREV_HIDE_DIALOGS="$(adb shell settings get global hide_error_dialogs 2>/dev/null | tr -d '\r')" && [ -n "$PREV_HIDE_DIALOGS" ]; then
+    HIDE_CHANGED=1
+    adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+  else
+    echo "e2e: hide_error_dialogs 를 읽지 못해 바꾸지 않아요"
+  fi
+fi
 
 # 5) 감사용 기기 설정(선택, 끝나면 되돌림): DP_SIZE=360x640 · FONT_SCALE=2.0 · REDUCE_MOTION=1
 restore_device() {
@@ -95,7 +121,7 @@ restore_device() {
   done
 }
 if [ -n "${DP_SIZE:-}" ] || [ -n "${FONT_SCALE:-}" ] || [ "${REDUCE_MOTION:-0}" = "1" ]; then
-  trap 'restore_device; cleanup' EXIT
+  trap 'restore_device; restore_dialogs; cleanup' EXIT
 fi
 if [ -n "${DP_SIZE:-}" ]; then
   DENSITY="$(adb shell wm density | tail -1 | grep -oE '[0-9]+$')"
@@ -119,5 +145,16 @@ mkdir -p "$OUT_DIR"
 cd "$E2E_DIR"
 TARGETS=("$@")
 [ ${#TARGETS[@]} -gt 0 ] || TARGETS=(flows)
+adb logcat -b all -c >/dev/null 2>&1 || true
+set +e
 maestro --device "$ANDROID_SERIAL" test "${TARGETS[@]}" --test-output-dir "$OUT_DIR" --format junit --output "$OUT_DIR/report.xml"
-echo "e2e: 통과. 캡처·보고서: $OUT_DIR"
+RC=$?
+set -e
+# 우리 앱의 ANR·크래시(창이 숨겨졌거나 회복돼도)는 실패로(리뷰 M1). 다른 앱·시스템 것은 기록만
+adb logcat -d -b main -b system -b events -b crash >"$OUT_DIR/logcat.txt" 2>/dev/null || true
+grep -E "ANR in |am_anr|FATAL EXCEPTION|Process: " "$OUT_DIR/logcat.txt" >"$OUT_DIR/anr-crash.txt" 2>/dev/null || true
+if grep -qE "ANR in $APP_ID|am_anr.*$APP_ID" "$OUT_DIR/logcat.txt" || grep -A3 "FATAL EXCEPTION" "$OUT_DIR/logcat.txt" | grep -q "Process: $APP_ID"; then
+  fail "앱 ANR·크래시가 기록됐어요($OUT_DIR/anr-crash.txt). 흐름이 통과해도 실패로 봅니다."
+fi
+[ "$RC" -eq 0 ] || fail "흐름 실패(rc=$RC). 캡처·보고서: $OUT_DIR"
+echo "e2e: 통과(앱 ANR·크래시 0). 캡처·보고서: $OUT_DIR"

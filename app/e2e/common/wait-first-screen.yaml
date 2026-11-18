@@ -1,0 +1,20 @@
+# 공용: 새 실행 뒤 첫 화면('이 휴대폰은 누구 거예요?')까지 기다리기(F6 불안정 안정화, 2026-11-18).
+# 원인(캡처 out/20261118-212954 step-011): 첫 화면은 떴지만 에뮬레이터 시스템 ANR 창("Process system isn't responding")이 위를 덮어
+# 60초 대기가 실패했다. 창은 앱 실행 뒤에 뜨므로 시작 때 한 번 닫는 것으로는 못 막는다 → 10초씩 기다리며 그 사이 시스템 창을 닫는다(최대 120초).
+# 첫 실행의 Metro 첫 번들(새 worktree·캐시 없음)도 60초를 넘을 수 있어 총 대기를 늘렸다.
+appId: com.bumojasik.app.staging
+---
+- repeat:
+    times: 12
+    while:
+      notVisible: '이 휴대폰은 누구 거예요\?'
+    commands:
+      - runFlow:
+          file: dismiss-system-dialogs.yaml
+      - extendedWaitUntil:
+          visible: '이 휴대폰은 누구 거예요\?'
+          timeout: 10000
+          optional: true
+- runFlow:
+    file: dismiss-system-dialogs.yaml
+- assertVisible: '이 휴대폰은 누구 거예요\?'
