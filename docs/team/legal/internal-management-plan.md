@@ -45,6 +45,9 @@
    | 업로드 키스토어·비밀번호 | Play 서명(`~/keys/bumojasik/`) | — | {날짜} | 교체 안 함(분실 대비 백업 2곳) |
    | Supabase access token | CLI | 예 | {날짜} | 안 쓰는 토큰은 폐기 |
    | Gemini API 키 | 사진 생성 스크립트 | — | {날짜} | {날짜} |
+   | Apple Sign in with Apple 키(.p8)·Key ID·Team ID | Supabase Auth Apple provider(client secret 생성), 삭제 때 토큰 교환·revoke(빌드 2 iOS) | 예(staging·production 앱 분리 시) | {날짜} | {날짜} |
+   | Apple Services ID | Supabase Auth Apple provider(빌드 2 iOS) | 예 | {날짜} | 식별자(비밀 아님), 이름만 기록 |
+   | APNs 인증 키(.p8) | Firebase 콘솔 업로드(빌드 2 iOS, 감사 U6) | — | {날짜} | {날짜} |
 5. 키 규칙(정책 v0.1 요약): staging·production 값이 같으면 출시 관문 실패. Vault 값은 대시보드 Vault 화면으로만 입력. Edge secrets는 `supabase secrets set --env-file <저장소 밖 임시 파일>` 후 파일 삭제. 명령줄 인자·`VAR=값 명령`·curl 헤더에 비밀 금지(불가피하면 앞 공백 + `setopt HIST_IGNORE_SPACE`). 교체는 유출·의심·인원 변경 즉시, 그 외 연 1회, staging 리허설 먼저.
 
 ## 4. 접근 통제 (고시 제6조)
