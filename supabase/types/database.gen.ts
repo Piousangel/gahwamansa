@@ -38,16 +38,30 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"cheers": {
+                },"cheer_texts": {
                   Row: {
-                    "family_id": string,"from_child": string,"id": string,"message_key": string,"read_at": string | null,"sent_at": string,"to_parent": string
+                    "message_key": string,"text": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "family_id": string,"from_child": string,"id"?: string,"message_key": string,"read_at"?: string | null,"sent_at"?: string,"to_parent": string
+                    "message_key": string,"text": string,"updated_at"?: string
                   }
                   Update: {
-                    "family_id"?: string,"from_child"?: string,"id"?: string,"message_key"?: string,"read_at"?: string | null,"sent_at"?: string,"to_parent"?: string
+                    "message_key"?: string,"text"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"cheers": {
+                  Row: {
+                    "family_id": string,"from_child": string,"id": string,"message_key": string,"notified_at": string | null,"read_at": string | null,"sent_at": string,"to_parent": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "family_id": string,"from_child": string,"id"?: string,"message_key": string,"notified_at"?: string | null,"read_at"?: string | null,"sent_at"?: string,"to_parent": string
+                  }
+                  Update: {
+                    "family_id"?: string,"from_child"?: string,"id"?: string,"message_key"?: string,"notified_at"?: string | null,"read_at"?: string | null,"sent_at"?: string,"to_parent"?: string
                   }
                   Relationships: [
                     {
@@ -356,14 +370,14 @@ isOneToOne: false
                   ]
                 },"push_copy": {
                   Row: {
-                    "body": string,"kind": string,"title": string,"updated_at": string
+                    "body": string,"body_fallback": string | null,"body_many": string | null,"kind": string,"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"kind": string,"title": string,"updated_at"?: string
+                    "body": string,"body_fallback"?: string | null,"body_many"?: string | null,"kind": string,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "body"?: string,"kind"?: string,"title"?: string,"updated_at"?: string
+                    "body"?: string,"body_fallback"?: string | null,"body_many"?: string | null,"kind"?: string,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -527,6 +541,9 @@ isOneToOne: false
 "purge_expired_data":
 { Args: { "p_now"?: string }; Returns: Json
                            },
+"push_channel":
+{ Args: { "p_kind": string }; Returns: string
+                           },
 "push_daily_claim":
 { Args: { "p_now"?: string }; Returns: Json
                            },
@@ -539,8 +556,23 @@ isOneToOne: false
 "push_daily_targets":
 { Args: { "p_now"?: string }; Returns: Json
                            },
+"push_events_claim":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
+"push_events_kick":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
+"push_kick":
+{ Args: { "p_function": string }; Returns: Json
+                           },
+"push_reachable":
+{ Args: { "p_profile": string }; Returns: boolean
+                           },
 "push_record":
 { Args: { "p_excluded"?: number,"p_kind": string,"p_note"?: string,"p_now"?: string,"p_results": Json }; Returns: Json
+                           },
+"push_render":
+{ Args: { "p_fallback"?: string,"p_template": string,"p_vars": Json }; Returns: string
                            },
 "record_session_step":
 { Args: { "p_duration"?: number,"p_step": string }; Returns: Json
