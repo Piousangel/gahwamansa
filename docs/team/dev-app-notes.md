@@ -458,6 +458,10 @@
 5. M1 토글 main 반영 확인 → `FCM_WIRED = true` → staging 실기기 수신(QA-07: 허용·거절·나중에, 08~21 창, 탭 라우팅, 알림 거부 기기의 설치 ID 생성 여부).
 6. 출시 게이트(그때 추가): production release 는 `src/production/google-services.json` 이 없으면 실패하게(지금은 Firebase 전이라 넣지 않음).
 
+### 보안 회의 E5 — 백업·기기 이전 제외 · 2026-11-19
+- `res/xml/data_extraction_rules.xml`(Android 12+: cloud-backup·device-transfer 모두 모든 도메인 제외) + `res/xml/backup_rules.xml`(11 이하 자동 백업 제외), 매니페스트 `android:dataExtractionRules`·`android:fullBackupContent` 연결(`allowBackup="false"` 유지). 일부 제조사 D2D 가 allowBackup=false 를 무시하는 경우 대비.
+- 확인: stagingRelease 병합 매니페스트 `usesCleartextTraffic="false"`·`allowBackup="false"`·두 규칙 연결, 권한 INTERNET·POST_NOTIFICATIONS·DYNAMIC_RECEIVER_NOT_EXPORTED·INSTALL_REFERRER 뿐. 관문 행 release-gates G-25(백업)·G-26(평문 통신).
+- `react-native-url-polyfill` 을 `^4.0.0` → `4.0.0` 정확 고정(웹뷰 재확인 낮음, lock 은 이미 4.0.0).
 ### Firebase 설치(US-10 완료 뒤) · 2026-11-19 (xhigh 리뷰 대상)
 - 프로젝트 `gahwa-mansaseong` 하나에 staging·production 앱 2개(DECISIONS 11-19). `google-services.json` 은 `app/android/app/src/{staging,production}/`(gitignore·600, 저장소 밖에서 복사, 커밋 금지).
 - `@react-native-firebase/app`·`messaging` **27.1.0** 정확 고정. 함께 들어온 npm 의존성: 웹 `firebase` 13.1.0 묶음(@firebase/*, grpc·protobuf 등 — RNFB 의 웹·기타 플랫폼용). Android 번들에 들어가는지는 아래 '번들 확인'.

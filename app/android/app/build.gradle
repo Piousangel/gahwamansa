@@ -436,6 +436,15 @@ android.applicationVariants.configureEach { variant ->
     def generate = {
         checkPlaceholder()
         checkAppInfo()
+        // 2026-11-19 E2E 에서 발견: assembleStagingDebug 그래프에도 preProductionDebugBuild 가 끼어(라이브러리 debug 의존) 나중에 도는 쪽이
+        // env.generated.ts 를 production 값으로 덮어써 Metro(디버그) 앱이 production 처럼 동작했다(개발자 메뉴 막힘).
+        // 요청한 작업 이름에 변형 이름이 있으면(예: assembleStagingDebug) 그 변형만 쓴다. 이름이 없으면(assembleDebug 등) 예전처럼
+        def requested = gradle.startParameter.taskNames.join(" ").toLowerCase()
+        def named = ["stagingdebug", "stagingrelease", "productiondebug", "productionrelease"].any { requested.contains(it) }
+        // 리뷰 M-R1: 디버그 변형만 건너뛴다 — release 번들은 언제나 자기 값을 쓴다(혼합 호출에서도 번들 직전 generate)
+        if (!isRelease && named && !requested.contains(variant.name.toLowerCase())) {
+            return
+        }
         writeEnvTs(e, vName, vCode, linkHost, isRelease)
     }
     // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패)
