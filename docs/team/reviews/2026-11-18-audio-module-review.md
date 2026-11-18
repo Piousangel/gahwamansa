@@ -110,3 +110,45 @@
 - H1은 기능이 통째로 무음이 되는 결함이다. 수정한 뒤 실제 재생을 확인하고, jest 모의도 실제처럼 바꿔야 한다.
 - M1~M6은 AP-03·AP-04가 이 모듈을 쓰기 전에 고치기를 권한다. 특히 M1·M2·M5는 화면 연결 뒤 고치면 비용이 커진다. M3·M4는 이번 병합 범위에서 처리하기를 권한다.
 - 병합 때 `jest.config.js` 충돌은 두 줄을 모두 남기면 된다.
+
+---
+
+## 재검토 (2026-11-18, 커밋 `6ea523d` 리뷰 반영 · `8dbc97a` main 병합)
+
+### 실행 결과 (worktree HEAD `8dbc97a`)
+
+- tsc: 통과 (exit 0)
+- jest: `--testPathIgnorePatterns __integration__ --maxWorkers=2 --cacheDirectory <scratchpad 별도>` 79/79 스위트, 768/768 통과. 계약 비교 테스트와 훅 테스트 7건 포함.
+- eslint: 변경 파일 경고 0
+- 참고: 테스트할 때 worktree에 커밋되지 않은 다른 작업(`src/features/fakeApi.ts` 수정, `e2e/` 새 yaml)이 있었다. 이번 리뷰 범위가 아니며, 결과는 이 상태 그대로 기준이다.
+- release 빌드: `source scripts/env.sh` 후 `./gradlew assembleStagingRelease -PallowPlaceholderEnv`가 성공했다(7분 58초). APK 크기는 80,854,658바이트(유니버설, 축소 꺼짐).
+  - `aapt2 dump resources` 결과 `raw/src_ui_assets_stamp → res/E4.wav`가 있다. 경로 단축으로 파일 이름은 바뀌었지만 자원 이름은 그대로이므로 `getIdentifier(name,"raw")`로 찾힌다.
+  - APK 안 `res/E4.wav`와 `src/ui/assets/stamp.wav`를 `cmp`로 비교한 결과 바이트가 같다.
+  - 따라서 release에서 `resolveAssetSource`가 돌려주는 이름(`src_ui_assets_stamp`)과 실제 raw 자원이 일치한다. 실기기에서 소리를 듣는 확인은 QA-04에 남긴다.
+
+### 지적별 확인
+
+| ID | 결과 | 근거 |
+|---|---|---|
+| H1 | 해결 | `engines.ts:76-103`: 숫자 자산은 `Image.resolveAssetSource().uri` 문자열로 바꾸고, 두 번째 인자는 undefined로 넘긴다. 함수를 넘기면 0.13.0이 경로 앞에 함수 글자를 붙이는 문제도 함께 막았다. jest 모의가 숫자면 TypeError를 내도록 엄격해졌다. debug(http)·release(raw 이름)·풀기 실패(null) 테스트가 있다. release APK의 raw 자원은 위에서 확인했다. |
+| M1 | 해결 (통화는 QA-04로 넘김, DECISIONS 367에 기록) | `instance.ts:8-15` `bindAppLifecycle`이 active가 아니면 `stopAll`을 부른다. `hooks.ts:23-54` `useReadAloud`가 화면 읽기를 직접 읽고, 화면 읽기가 켜지면 정지, 언마운트되면 정지한다. 남은 점은 아래 R1. |
+| M2 | 해결 | `hooks.ts:99-146` `held`: 시스템이 멈춘 뒤 앱으로 돌아와도 재생하지 않고, 사용자가 끄고 다시 켜면 재생한다. 효과 실행 순서(132행 held 설정 → 138행 wasPlaying 초기화)를 따라가 보니 맞다. 훅 테스트 2건이 있다. |
+| M3 | 해결 | `audioPolicy.ts` `sfxAllowed` 한 곳에서 판단한다. `stampSoundAllowed`는 그 별칭이고 `playSfx`는 삭제됐다. 소리 장치는 `audio().sfx('stamp')` 캐시를 함께 쓴다(인스턴스 1개 테스트 있음). `audioPolicy.sfx`가 이제 읽는 중에도 false가 되는 동작 변화는 정책 문서와 맞는다. |
+| M4 | 해결 | `engines.ts:15` Android 0.9, iOS 0.45. DECISIONS 367에 기록됐다. |
+| M5 | 해결 | `useBgm`이 load·stop·release를 맡는다(언마운트 때 release 1회 테스트 있음). |
+| M6 | 해결 | `engines.ts:32-67`: 네이티브 구독은 하나만 두고 앱 안 구독자를 센다. 마지막 구독자가 떠날 때만 전역 해제하고, 해제 함수를 두 번 불러도 한 번만 센다(테스트 있음). |
+| L1·L2·L6 | 해결 | 한국어 음성은 '있음'만 기억한다. 새로 읽기 전에 이전 읽기를 멈춘다. `.eslintrc.js`에 audio 계층 규칙을 추가했다. |
+| 계약 테스트 | 해결 | 정의 정규식이 스키마·따옴표·공백·`or replace` 생략을 허용한다. 달러 태그 짝을 찾고, 못 찾으면 파일 이름을 담은 오류를 낸다. 파일 읽기는 `beforeAll`로 옮겼다. 값 목록이 0개인지 확인하는 가드와 숫자가 든 이름도 처리한다. |
+
+### 새로 남은 것 (모두 낮음, 병합을 막지 않음)
+
+- **R1 (낮음-중간, AP-03 연결 때 처리)** `hooks.ts:45-52` `useReadAloud`는 언마운트 때만 멈춘다. native-stack은 다음 화면으로 갈 때 이전 화면을 언마운트하지 않으므로, P4에서 읽던 소리가 P5로 넘어가도 계속된다. AP-03에서 호출부가 `useFocusEffect`나 blur 때 `stop()`을 부르게 하거나, 훅에 `stopOnBlur` 연결점을 두기를 권한다(audio 계층이 navigation을 모르게 하려면 호출부 쪽이 낫다). 같은 이유로, 한 화면이 언마운트될 때 다른 화면이 시작한 읽기를 멈출 수 있다(전역 엔진). 영향은 작다.
+- **R2 (낮음)** `audioCore.ts:93-96`의 주석 "이전 읽기의 끝 이벤트는 setSpeaking(true) 앞에서 처리됨"은 보장되지 않는다. 네이티브 `onStopped`는 비동기 이벤트라 `stop()` promise보다 늦게 올 수 있다. 그러면 새 읽기의 onStart 전까지 잠깐 덕킹이 풀린다(소리 튐 정도). 주석을 "잠깐 풀릴 수 있음"으로 고치거나, 발화 id로 이벤트를 거르기를 권한다.
+- **R3 (낮음)** `bindAppLifecycle`은 `inactive`에서도 멈추고, `useBgm`도 이를 held로 처리한다. 그래서 iOS에서 제어 센터를 내리는 정도로도 음악이 멈추고 다시 켜지지 않는다. 빌드 1은 Android 우선이므로 iOS 작업 때 `background`만 보도록 조정을 검토한다.
+- **R4 (기록)** release APK 크기 증가량은 기준 빌드가 없어 계산하지 못했다. 이번 값 80,854,658바이트(stagingRelease, 유니버설)를 기준선으로 남긴다.
+
+### 재검토 판정
+
+1. **합치기 가능.** 높음 0, 중간 0. 이전 H1·M1~M6·낮음·계약 테스트 보강이 모두 반영됐고 tsc·jest 768/768이 초록이다.
+2. release 빌드에서 도장 소리가 `raw/src_ui_assets_stamp`(바이트 동일)로 실제 들어가는 것을 확인했다. 귀로 듣는 확인과 통화 중 동작은 QA-04에서 한다.
+3. R1(다음 화면으로 넘어갈 때 읽기 정지)은 AP-03 화면 연결 때 반드시 처리한다. R2·R3은 후속 정리로 둔다.
