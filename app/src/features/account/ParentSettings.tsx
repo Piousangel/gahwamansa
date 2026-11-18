@@ -16,6 +16,7 @@ import {errorMessage} from '../course/useFinishStep';
 import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {NotifyRows} from './NotifyRows';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -110,6 +111,8 @@ export function ParentSettings() {
         </View>
       )}
       <SettingsGroup title={t.group_sound} />
+      {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
+      {linked ? <NotifyRows api={api} /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}

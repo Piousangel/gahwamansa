@@ -261,7 +261,7 @@ describe('설정 도장 소리 토글(P13)', () => {
     const ids = screen.UNSAFE_root.findAll(n => n.props?.testID === 'sfx-row' || n.props?.testID === 'settings-row-delete').map(n => n.props.testID);
     expect(ids.indexOf('sfx-row')).toBeLessThan(ids.indexOf('settings-row-delete'));
     expect(ids.indexOf('sfx-row')).toBeGreaterThanOrEqual(0);
-    expect(screen.UNSAFE_getAllByType(Switch)).toHaveLength(1);
+    expect(within(screen.getByTestId('sfx-row')).UNSAFE_getAllByType(Switch)).toHaveLength(1); // 행마다 스위치 하나(알림 행 2개는 따로)
   });
   test('저장값을 읽기 전에는 스위치를 그리지 않는다(켜짐→꺼짐 깜빡임 없음)', async () => {
     await prefs.setSfxEnabled(false);
