@@ -210,6 +210,262 @@
     "era": "7080",
     "city_variant_ok": true
    }
+  },
+  {
+   "day": 15,
+   "orig": 2,
+   "scene": "장날 아침 좌판 위 채소 바구니들",
+   "subject": "several woven bamboo baskets filled with radishes, potatoes and green onions on a low wooden market stall, dirt market street, soft overcast morning light, no seasonal fruit",
+   "caption": "장날 아침",
+   "check": "**바구니**: 대나무 바구니 3~5개가 앞쪽 중앙에 크게, 엮은 결이 보임. 가격표·간판·포장지 글자 없음, 사람은 없거나 멀리 뒷모습",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 16,
+   "orig": 4,
+   "scene": "시골 정류장에 서 있는 버스, 흙길",
+   "subject": "an old rounded 1970s country bus parked at a simple roadside stop on a dirt road, rice fields behind, soft overcast midday light, no destination sign, no number plate, no lettering anywhere on the bus",
+   "caption": "버스 오는 길",
+   "check": "**버스**: 버스 한 대가 옆모습으로 화면 1/3 이상. 행선지판·번호판·차체 글자 없음(2배 확대 확인), 승객 얼굴 없음, 아스팔트·현대 승용차 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 17,
+   "orig": 6,
+   "scene": "학교 복도 끝에 달린 종, 창으로 든 햇빛",
+   "subject": "a small brass school bell hanging from a wooden bracket at the end of an old wooden school corridor, sunlight through windows, quiet empty hallway",
+   "caption": "수업 시작 종",
+   "check": "**종**: 놋쇠 종과 매단 줄이 또렷하고 화면 중앙. 게시물·시간표 글자 없음, 아이들 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 18,
+   "orig": 17,
+   "scene": "아침 마당에 세워진 대나무 빗자루",
+   "subject": "a bamboo broom leaning against a mud wall in a swept dirt yard, neat sweep lines on the ground, soft early morning light",
+   "caption": "마당 쓰는 아침",
+   "check": "**빗자루**: 대나무 빗자루 한 자루가 세워져 길게 보임. 사람 없음(집안일 성 역할 배치 금지), 낙엽·눈 같은 계절 단서 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 19,
+   "orig": 12,
+   "scene": "방과 후 빈 교실의 칠판과 분필",
+   "subject": "an empty old classroom with a dark green chalkboard wiped clean and a few white chalk sticks on the wooden ledge, warm late afternoon light, wooden desks",
+   "caption": "방과 후 교실",
+   "check": "**칠판**: 칠판이 화면 가로 절반 이상, 분필이 받침대에 보임. 칠판은 지운 상태로 글자·숫자·그림 없음, 게시물 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 20,
+   "orig": 21,
+   "scene": "마루 위 둥근 밥상, 밥그릇과 숟가락",
+   "subject": "a round low wooden dining table (dure-ban) on a wooden floor with brass rice bowls, side dish plates and brass spoons with chopsticks, warm soft indoor light",
+   "caption": "둥근 밥상",
+   "check": "**숟가락**: 놋숟가락 2~4개가 앞쪽에 또렷. 손·사람 없음, 반찬은 계절 단서 없는 것(김치·나물)",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": true
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 21,
+   "orig": 19,
+   "scene": "대청마루에 놓인 선풍기와 부채",
+   "subject": "an old metal electric fan and a round paper hand fan on a wide wooden open floor (daecheong maru) of a Korean house, bright summer afternoon, no brand or logo on the fan",
+   "caption": "대청마루 여름",
+   "check": "**선풍기**: 철제 선풍기가 화면 중앙, 날개 대칭 확인. 상표·글자 없음, 플라스틱 현대 선풍기 금지",
+   "tags": {
+    "season": "summer",
+    "season_cue": "text",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 22,
+   "orig": 22,
+   "scene": "학교 현관 앞 계단에 놓인 책가방",
+   "subject": "an old leather school satchel resting on worn stone steps at the entrance of a small rural school, soft morning light, no name tag or lettering",
+   "caption": "등굣길 책가방",
+   "check": "**책가방**: 가죽 책가방 하나가 계단 위 중앙. 이름표·학교 이름·글자 없음, 아이 없음, 벚꽃·낙엽 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 23,
+   "orig": 20,
+   "scene": "장터 국밥집 앞 큰 솥과 국자",
+   "subject": "a huge black iron cauldron with steaming soup and a long ladle resting on its rim outside a simple market eatery, gentle steam, soft daylight, no signboard",
+   "caption": "장터 국밥집",
+   "check": "**국자**: 긴 국자가 솥 위에 또렷. 간판·차림표 글자 없음, 사람 얼굴 없음, 김은 부드럽게(연기·불 강조 금지)",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": true
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 24,
+   "orig": 14,
+   "scene": "방 안 횃대에 걸린 한복들",
+   "subject": "two colorful traditional hanbok outfits hanging on a wooden clothes pole in a plain Korean room, paper-lattice window, soft morning light",
+   "caption": "한복 걸린 방",
+   "check": "**한복**: 저고리·치마 등 한복 1~2벌이 화면 중앙에 펼쳐 보임. 사람·마네킹 없음, 제사·의례 소품 없음. 캡션은 '설빔' 대신 계절 무관 '한복 걸린 방'(WR-09에서 확정)",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 25,
+   "orig": 24,
+   "scene": "마당에 걸린 가마솥, 하얀 김",
+   "subject": "a large black iron cauldron (gamasot) set into a clay hearth in a farmhouse yard, white steam rising softly, lid half open, calm daylight, only a tiny ember glow, no flames",
+   "caption": "가마솥 김",
+   "check": "**가마솥**: 가마솥이 화면 중앙 크게, 뚜껑과 손잡이 또렷. 불길·연기·검댕 강조 없음, 사람 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 26,
+   "orig": 28,
+   "scene": "맑은 냇가 바위 위에 놓인 낚싯대",
+   "subject": "a simple bamboo fishing rod resting on a smooth rock beside a clear shallow stream, pebbles under the water, soft summer daylight",
+   "caption": "냇가 낚시",
+   "check": "**낚싯대**: 대나무 낚싯대가 화면을 가로질러 길게, 끝까지 끊김 없이. 잡힌 물고기·사람 없음",
+   "tags": {
+    "season": "summer",
+    "season_cue": "image",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 27,
+   "orig": 25,
+   "scene": "탁자 위 꽃다발",
+   "subject": "a hand-tied bouquet of simple flowers wrapped in plain paper on a small table covered with a white cloth, soft indoor window light, no guest book, no cards, no lettering",
+   "caption": "결혼식 날 꽃",
+   "check": "**꽃다발**: 꽃다발이 화면 중앙 크게. 방명록·카드·리본 글자 없음, 사람 없음, 종교 장식 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "any",
+    "era": "7080",
+    "city_variant_ok": true
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 28,
+   "orig": 26,
+   "scene": "잔치하는 앞마당에 쳐진 천막과 긴 상",
+   "subject": "a white canvas awning set up in a farmhouse front yard with long low tables laid with plates of food, empty of people, bright soft daylight",
+   "caption": "잔치하는 앞마당",
+   "check": "**앞마당**: 천막과 긴 상이 놓인 마당 전체가 보임. 사람 없음(또는 멀리 작은 뒷모습 1명), 현수막·글자 없음, 제사상 아님",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 29,
+   "orig": 29,
+   "scene": "마당 한쪽 닭장과 아침 햇살",
+   "subject": "a small wooden chicken coop with a few hens in a farmhouse yard, a basket with brown eggs nearby, warm early morning sunlight",
+   "caption": "닭장 아침",
+   "check": "**닭장**: 나무 닭장이 화면 중앙, 닭 2~4마리 형태 정상(다리·부리 오류 점검). 사람 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+  },
+  {
+   "day": 30,
+   "orig": 30,
+   "scene": "저녁 노을 속 흙담 골목, 멀리 걷는 작은 사람",
+   "subject": "a narrow village alley between low mud-and-stone walls at sunset, warm orange sky, one small distant figure seen from behind walking away",
+   "caption": "흙담 골목 저녁",
+   "check": "**흙담**: 흙담이 양옆으로 길게 이어지고 질감이 보임. 사람은 멀리 작은 뒷모습 1명까지, 전선·전봇대 없음",
+   "tags": {
+    "season": "any",
+    "season_cue": "none",
+    "place": "country",
+    "era": "7080",
+    "city_variant_ok": false
+   },
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
   }
  ],
  "tags_note": "tags: season(spring|summer|autumn|winter|any), season_cue(text=캡션·질문에 계절이 박힘 / image=사진에만 / none), place(country|city|any), era(7080=1970~80년대), city_variant_ok(같은 낱말로 도시판 사진을 만들 수 있음). 개인화 회의 2026-11-17 빌드 1 #1. 2026-11-17 계절 점검으로 14칸 재배치(orig=writer.md 원본 일차)"
