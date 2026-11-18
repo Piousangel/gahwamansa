@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
@@ -9,6 +10,8 @@ import {BigButton} from '../../ui/BigButton';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {Icon} from '../../ui/assets/icons';
+import {color, radius, shadow} from '../../ui/tokens';
 
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
   const {api, sync, syncError, setConsented} = useSession();
@@ -64,21 +67,43 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
       top={<BackBar />}
       bottom={
         <>
+          {/* 오류 상자는 하단 버튼 바로 위(디자인 판정: 네 줄로 늘어 본문에 두면 150% 이상에서 화면 밖으로 밀림). 읽기는 본문 다음, 버튼 앞 */}
+          {shown ? (
+            <View testID="consent-error" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
+              <Icon name="icon-warning" size={28} color={color.dangerInk} />
+              <View style={styles.errorText}>
+                <Text20 size={24} weight="bold" style={styles.errorTitle}>{shown.title}</Text20>
+                <Text20>{shown.body}</Text20>
+              </View>
+            </View>
+          ) : null}
           <BigButton label={copy.consent.accept} disabled={busy} onPress={accept} />
           <BigButton variant="secondary" label={copy.consent.decline} onPress={decline} />
         </>
       }>
-      <Text20 size={30} weight="bold">{copy.consent.title}</Text20>
-      {copy.consent.body.map(t => (
-        <Text20 key={t} size={22}>{t}</Text20>
-      ))}
-      <Text20>{copy.consent.reassure}</Text20>
-      {shown ? (
-        <>
-          <Text20 size={24} weight="bold">{shown.title}</Text20>
-          <Text20>{shown.body}</Text20>
-        </>
-      ) : null}
+      <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>{copy.consent.title}</Text20>
+      {/* 시안 P2: 흰 카드 안 체크 행. 행 간격 8, 체크 32 는 첫 줄에 맞춤(여러 줄이어도 위 정렬).
+          본문은 Screen 스크롤 영역이라 150% 이상에서 넘치면 아래 흐림이 보이고, 버튼은 하단 고정이라 끝까지 안 읽어도 누를 수 있다 */}
+      <View testID="consent-points" style={styles.card}>
+        {copy.consent.body.map(t => (
+          <View key={t} testID="consent-point" style={styles.point}>
+            <Icon name="icon-check" size={32} color={color.done} />
+            <Text20 size={22} style={styles.pointText}>{t}</Text20>
+          </View>
+        ))}
+      </View>
+      <Text20 size={22} style={styles.sub}>{copy.consent.reassure}</Text20>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {color: color.inkTitle},
+  card: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 12, paddingHorizontal: 16, gap: 8, boxShadow: shadow.soft},
+  point: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 60},
+  pointText: {flex: 1, minWidth: 0, color: color.inkTitle},
+  sub: {color: color.inkSub},
+  error: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: color.card, borderWidth: 4, borderColor: color.danger, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16},
+  errorText: {flex: 1, gap: 6},
+  errorTitle: {color: color.dangerInk},
+});
