@@ -410,3 +410,7 @@
 - 서비스 계정 fcm-sender@gahwa-mansaseong(역할: Firebase Cloud Messaging API 관리자 1개만) JSON 키를 사용자가 직접 생성
 - staging Supabase secret FCM_SERVICE_ACCOUNT 설정 완료(사용자 실행, --env-file 임시 파일 삭제, 값은 화면·셸 기록에 안 남음). 키 원본은 ~/.secrets/gahwa/fcm-sender-staging.json(600), 저장소 밖
 - 비밀값 대장(키 정책 v0.1)에 이름 추가 대상. production은 별도 Firebase 프로젝트 분리 때 새 키(환경별 다른 값 규칙 D10)
+
+## 2026-11-19 GitHub 저장소
+- Piousangel/gahwamansa 비공개(사용자 선택). main만 push, 작업 브랜치는 리뷰 통과 후 main으로 합쳐 push
+- push 전 커밋 기록 전체 비밀값 검사: 비밀 파일·키 패턴 0건(RN 기본 debug.keystore, 테스트 코드의 PEM 조립 문자열만)
