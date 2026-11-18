@@ -11,9 +11,7 @@ jest.mock('../src/lib/appInfo', () => {
   const actual = jest.requireActual('../src/lib/appInfo');
   return {
     ...actual,
-    get CONTACT_EMAIL() {
-      return mockMail;
-    },
+    readAppInfo: () => ({...actual.readAppInfo(), contactEmail: mockMail}),
   };
 });
 afterEach(() => {

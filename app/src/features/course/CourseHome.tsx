@@ -53,7 +53,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const afterTransition = useAfterTransition(navigation);
   const firstGreeting = useFirstGreeting(linked === true, navigation);
   const {fontScale} = useWindowDimensions();
-  const music = useCourseBgm(); // AP-04: 음원(CT-04)이 없으면 available=false 라 버튼도 없다
+  const music = useCourseBgm('home'); // AP-04: 음원(CT-04)이 없으면 available=false 라 버튼도 없다
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
   const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   useEffect(() => {

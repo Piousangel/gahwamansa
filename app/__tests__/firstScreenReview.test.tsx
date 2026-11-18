@@ -130,7 +130,7 @@ test('글자 200%: 하단 영역이 넘치면 고정을 풀고 화면 전체 스
 test('코스 사진·설정에 AI 고지', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press('설정');
-  await waitFor(() => screen.getByText('앱 정보'));
+  await waitFor(() => screen.getByText('AI가 만든 것')); // 앱 정보 한 목록의 AI 안내(AP-06)
   expect(screen.getByText('앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요')).toBeTruthy();
 });
 
