@@ -1,9 +1,10 @@
 # 에뮬레이터 시스템 창 정리(앱 밖). 없으면 아무것도 하지 않는다.
+# 창 제목 예: "Process system isn't responding"(따옴표 종류와 무관하게 responding 으로 찾는다)
 appId: com.bumojasik.app.staging
 ---
 - repeat:
     times: 3
     while:
-      visible: ".*isn't responding.*"
+      visible: ".*responding.*"
     commands:
       - tapOn: 'Wait'

@@ -84,7 +84,18 @@ fi
 # 첫 번들은 30초 넘게 걸릴 수 있어 flow 시작 전에 미리 만든다(첫 화면 대기 시간 초과 방지)
 curl -fs "http://localhost:$METRO_PORT/index.bundle?platform=android&dev=true&minify=false" -o /dev/null || fail "Metro 번들을 만들지 못했어요(out-metro.log)"
 cleanup() { if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi; }
-trap cleanup EXIT
+# 시스템 ANR 창("Process system isn't responding") 숨김: F6 불안정 원인(2026-11-18 캡처 — 첫 화면 위를 덮어 대기 실패).
+# 바쁜 맥(빌드·jest 동시)에서 에뮬레이터가 느려지면 뜬다. 앞 값을 보관했다가 끝나면 되돌린다(감사관 등 다른 사용자 설정 보존)
+PREV_HIDE_DIALOGS="$(adb shell settings get global hide_error_dialogs 2>/dev/null | tr -d '\r')"
+adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+restore_dialogs() {
+  if [ -z "$PREV_HIDE_DIALOGS" ] || [ "$PREV_HIDE_DIALOGS" = "null" ]; then
+    adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
+  else
+    adb shell settings put global hide_error_dialogs "$PREV_HIDE_DIALOGS" >/dev/null 2>&1 || true
+  fi
+}
+trap 'restore_dialogs; cleanup' EXIT
 
 # 5) 감사용 기기 설정(선택, 끝나면 되돌림): DP_SIZE=360x640 · FONT_SCALE=2.0 · REDUCE_MOTION=1
 restore_device() {
@@ -95,7 +106,7 @@ restore_device() {
   done
 }
 if [ -n "${DP_SIZE:-}" ] || [ -n "${FONT_SCALE:-}" ] || [ "${REDUCE_MOTION:-0}" = "1" ]; then
-  trap 'restore_device; cleanup' EXIT
+  trap 'restore_device; restore_dialogs; cleanup' EXIT
 fi
 if [ -n "${DP_SIZE:-}" ]; then
   DENSITY="$(adb shell wm density | tail -1 | grep -oE '[0-9]+$')"

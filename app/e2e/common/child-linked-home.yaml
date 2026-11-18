@@ -6,9 +6,10 @@ appId: com.bumojasik.app.staging
 - extendedWaitUntil:
     visible: '앱 정보'
     timeout: 10000
-- scrollUntilVisible:
-    element: '앱 정보'
-    direction: DOWN
+- runFlow:
+    file: edge-scroll.yaml
+    env:
+      TARGET: '앱 정보'
 - tapOn: '앱 정보'
 - runFlow:
     file: dev-menu.yaml
