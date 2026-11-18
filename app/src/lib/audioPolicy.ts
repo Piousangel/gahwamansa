@@ -31,6 +31,12 @@ export type AudioDecision = {
 /** 읽어 주는 동안 음악 크기(bgm-proposal: 10% 이하). */
 export const BGM_DUCK_VOLUME = 0.1;
 
+/**
+ * '읽어 주세요'를 보여 주고 말할 수 있는가 — 한 곳에서만 판단한다(SunBubble 버튼 표시·audio.speak 공용).
+ * 화면 읽기(TalkBack)와 겹치므로 켜져 있으면 막는다(R16). 벨소리 무음·진동은 보지 않는다: 사용자가 직접 누른 소리라 허용.
+ */
+export const readAloudAllowed = (screenReader: boolean): boolean => !screenReader;
+
 export function audioPolicy(i: AudioInputs): AudioDecision {
   if (!i.appActive) {
     return {bgm: 'stop', bgmVolume: 1, sfx: false, ttsAllowed: false};
@@ -43,6 +49,6 @@ export function audioPolicy(i: AudioInputs): AudioDecision {
     bgmVolume: i.ttsSpeaking ? BGM_DUCK_VOLUME : 1,
     sfx: !quiet,
     // 읽어 주기는 사용자가 직접 누른 소리라 무음 모드에서도 허용. 화면 읽기와는 겹치므로 숨김(R16)
-    ttsAllowed: !i.screenReader,
+    ttsAllowed: readAloudAllowed(i.screenReader),
   };
 }

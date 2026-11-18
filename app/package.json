@@ -14,6 +14,7 @@
     "check:dev-menu": "bash scripts/check-dev-menu-bundle.sh"
   },
   "dependencies": {
+    "@mhpdev/react-native-speech": "1.4.4",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-google-signin/google-signin": "17.0.0",
     "@react-native-kakao/core": "3.2.0",
@@ -28,8 +29,10 @@
     "react-native-get-random-values": "2.0.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.30.1",
+    "react-native-sound": "0.13.0",
     "react-native-svg": "^15.16.1",
-    "react-native-url-polyfill": "^4.0.0"
+    "react-native-url-polyfill": "^4.0.0",
+    "react-native-volume-manager": "2.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
