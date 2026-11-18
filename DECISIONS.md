@@ -405,3 +405,8 @@
 - 11-19 staging 반영(사용자 승인 '테스트서버에 올려도대'): 0032~0045 push 완료. 확인: 원격 최신 0045, advisors 경고는 의도된 34·익명 로그인·유출 비밀번호 보호(콘솔)만, cron 4개(kakao-unlink·purge-expired-data·push-daily·push-events) 등록. Vault 값·Edge 함수 배포 전이라 발송 함수는 호출되지 않음. remote-checks.sql은 읽기 전용 역할에서 vault 복호화 권한 오류 — Studio(서비스 권한)에서 실행 필요(서버 줄에 수정 요청)
 - 11-19 도메인 확정: gahwamansa.com(Cloudflare Registrar, 사용자 구입). staging은 서브도메인(staging.gahwamansa.com 예정). Firebase는 환경별 프로젝트 2개(staging 먼저)
 - 11-19 Firebase: 새 프로젝트 한도로 기존 Google Cloud 프로젝트 gahwa-mansaseong에 Firebase 추가(Blaze — FCM 무료). 앱 2개 등록(com.bumojasik.app·.staging), google-services.json을 staging·production flavor 폴더에 배치(gitignore). 환경별 Firebase 분리는 한도가 풀리면(삭제 프로젝트 30일 뒤) 별도 staging 프로젝트로 이전. Google Analytics가 프로젝트에 연결돼 있으나 앱에 Analytics SDK가 없고 firebase.json에서 수집 꺼서 데이터 없음 — 연결 해제는 사용자 선택
+
+## 2026-11-19 FCM 발송 키(staging)
+- 서비스 계정 fcm-sender@gahwa-mansaseong(역할: Firebase Cloud Messaging API 관리자 1개만) JSON 키를 사용자가 직접 생성
+- staging Supabase secret FCM_SERVICE_ACCOUNT 설정 완료(사용자 실행, --env-file 임시 파일 삭제, 값은 화면·셸 기록에 안 남음). 키 원본은 ~/.secrets/gahwa/fcm-sender-staging.json(600), 저장소 밖
+- 비밀값 대장(키 정책 v0.1)에 이름 추가 대상. production은 별도 Firebase 프로젝트 분리 때 새 키(환경별 다른 값 규칙 D10)
