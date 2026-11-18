@@ -1,7 +1,7 @@
 # Play 데이터 보안 양식 초안 + 실제 수집 대조표 (LG-05, L6, 2026-11-18)
 
 > **법률 자문 아님.** Play 양식 분류는 Google 안내(https://support.google.com/googleplay/android-developer/answer/10787469) 기준 실무 판단이며, 콘솔 칸 이름은 입력 때 다시 확인.
-> 기준: **main `f876ed6`**(서버 마이그레이션 0001~0043, Edge Function push-daily·push-events·kakao-unlink, 앱 이벤트 계약 `app/src/api/contract/events.ts`). 이전 초안: `docs/team/store/play-console-draft.md` §4·§5(v2.1, 11-17) — 이 문서가 §4·§5를 대체한다(store 문서 반영은 입력 직전 1회).
+> 기준: **main**(서버 마이그레이션 0001~0045, 11-19 확인 — 처음 대조는 `f876ed6` 0001~0043, Edge Function push-daily·push-events·kakao-unlink, 앱 이벤트 계약 `app/src/api/contract/events.ts`). 이전 초안: `docs/team/store/play-console-draft.md` §4·§5(v2.1, 11-17) — 이 문서가 §4·§5를 대체한다(store 문서 반영은 입력 직전 1회).
 > 11-19 추가: 서버 브랜치 `server-l1-launch`의 0046~0048(약관·방침 확인 기록, display_name 제거, 감사 사유 개인정보 거부, 카카오 큐 처리)을 반영했다. **main 미병합 → 병합 전까지 해당 칸은 예정**.
 > 표기: **사실** = main 코드로 확인 · **예정** = 브랜치·계획만(main에 없음) · **추정** = 판단.
 > **제출 조건**: 아래 §4 "실측 필요" 3건을 출시 AAB로 확인한 뒤에만 콘솔에 입력(release-gates C-06).
@@ -11,13 +11,13 @@
 | # | 데이터 | 어디서(사실 근거) | 서버로 감? | 보관·삭제(사실) | Play 범주 > 유형 | 필수/선택 | 목적 |
 |---|---|---|---|---|---|---|---|
 | 1 | 익명 로그인 ID(부모님) | Supabase Auth 익명, profiles(이름 열 없음 — `display_name` 제거, 0047 예정) | 예 | 계정 삭제 시 즉시(0017·0026·0039 account_delete_core) | 개인 정보 > 사용자 ID | 필수 | 앱 기능, 계정 관리 |
-| 2 | 카카오 회원번호 | auth.identities(provider_id) | 예 | 삭제 시 인증 계정 즉시 삭제. **단 카카오 연결 끊기용으로 `kakao_unlink_queue`에 회원번호를 옮겨 성공 즉시 삭제, 실패 재시도 최대 10회 → 포기 행은 30일 뒤 파기**(0042). 포기 행은 운영자가 재시도(`admin_kakao_unlink_retry`) 또는 콘솔 수동 해제 후 삭제(`admin_kakao_unlink_resolve`), 큐 회원번호는 서비스 역할도 못 읽음(0047 예정) | 개인 정보 > 사용자 ID | 필수(카카오 로그인 시) | 계정 관리 |
+| 2 | 카카오 회원번호 | auth.identities(provider_id) | 예 | 삭제 시 인증 계정 즉시 삭제. **단 카카오 연결 끊기용으로 `kakao_unlink_queue`에 회원번호를 옮겨 성공 즉시 삭제, 실패 재시도 최대 10회 → 포기 행은 30일 뒤 파기**(0042). 포기 행은 운영자가 재시도(`admin_kakao_unlink_retry`) 또는 콘솔 수동 해제 후 삭제(`admin_kakao_unlink_resolve`), 서비스 역할도 큐 표를 직접 읽지 못하고 해제 함수 `kakao_unlink_claim`으로만 회원번호를 받음(0047 예정) | 개인 정보 > 사용자 ID | 필수(카카오 로그인 시) | 계정 관리 |
 | 3 | 카카오 닉네임 | 카카오 동의항목(선택). Supabase Auth 로그인 정보에만 남고 앱 표에 복사하지 않음(`profiles.display_name` 쓰는 곳 0 → 0047 제거 예정) | 예 | 계정 삭제 시 즉시 | 개인 정보 > 이름 | 선택 | 계정 관리 |
 | 4 | 구글 고유 번호·이메일·이름·프로필 사진 주소 | Supabase Auth Google | 예 | 계정 삭제 시 즉시 | 사용자 ID / 이메일 주소 / 이름 | 선택(구글 로그인 시) | 계정 관리 |
 | 5 | 이메일(인증번호 로그인) | Supabase Auth OTP | 예(+메일 발송 업체) | 계정 삭제 시 즉시 | 개인 정보 > 이메일 주소 | 선택 | 계정 관리 |
 | 6 | 호칭(정해진 목록) | profiles / families | 예 | 가족 삭제 시 | 수집 신고 대상 아님(추정: 정해진 선택값, 이름 아님) | — | — |
 | 7 | 고른 답(A/B)·날짜 | answers(동의 시만, 0012) | 예 | 31일째 파기(0023), 철회 즉시, 삭제 즉시 | 앱 활동 > 기타 작업 | 선택 | 앱 기능 |
-| 8 | 동의 여부·버전·시각, 알림 받기 시각, 약관·방침 확인 기록(버전·시각·그때 역할) | parents·consent_events(0019), profiles.push_consented_at(0036·0037), terms_agreements(0046·0048 예정: 같은 버전 쌍 1줄, 게시된 버전만) | 예 | 계정 삭제 시 cascade(terms_agreements는 auth.users cascade). 시간 기준 파기 없음 | 앱 활동 > 기타 작업(추정: 별도 유형 없음, 7과 함께) | 필수 | 앱 기능 |
+| 8 | 동의 여부·버전·시각, 알림 받기 시각, 약관·방침 확인 기록(버전·시각·그때 역할) | parents·consent_events(0019), profiles.push_consented_at(0036·0037), terms_agreements(0046·0048 예정: 같은 버전 쌍 1줄, 게시된 버전만) | 예 | 계정 삭제 시 cascade(terms_agreements는 auth.users cascade). 시간 기준 파기 없음. **가족 연결 전 계정(role none)은 지금 삭제 경로 없음**(no_profile — 서버 요청 중, CHANGES P20) | 앱 활동 > 기타 작업(추정: 별도 유형 없음, 7과 함께) | 필수 | 앱 기능 |
 | 9 | 코스 기록(날짜·단계·시간·받은 콘텐츠 id) | daily_sessions(0028) | 예 | 31일째 파기 | 앱 활동 > 앱 상호작용 | 필수 | 앱 기능 |
 | 10 | 응원(정해진 문구 키) | cheers(0020) | 예 | 31일 파기 | 메시지 > 기타 인앱 메시지 | 선택 | 앱 기능 |
 | 11 | 초대 번호·입력 시도 | invite_codes·redeem_attempts | 예 | 30일 파기 | 수집 신고 대상 아님(추정: 앱이 만든 1회용 번호, 사용자 데이터 아님) | — | — |
@@ -27,7 +27,7 @@
 | 15 | Firebase 설치 ID | Firebase SDK | 예정(AU-02, main 앱에 Firebase 없음 — `app/package.json` 사실) | Google 기준 | 기기 또는 기타 ID | 필수 | 앱 기능, 분석 |
 | 16 | 비정상 종료 로그·진단(기기 모델·OS·앱 버전) | Crashlytics | 예정(AU-05) | Google 90일 | 앱 정보 및 성능 > 비정상 종료 로그 / 진단 | 필수 | 분석 |
 | 17 | 서버 접속 기록(IP 등) | Supabase 플랫폼 | 예 | Pro 7일(supabase.com/pricing, 11-19) | 신고 안 함(IP 유형 없음, 위치 추정에 안 씀 — 기존 판단 유지) | — | — |
-| 18 | 관리자 감사 기록 | admin_audit(0039·0043·0045·0047·0048): 처리자·작업 종류·사유·**대상 profile·family uuid** 또는 detail(카카오 큐 번호, 약관 종류·버전). 사유·처리자에 `@`·9자리 이상 숫자 거부(0047 예정) | 예(서버 내부) | **삭제 뒤에도 1년 보관**(FK 없음, purge 0043) | 신고 판단 필요(추정: 가명 ID만이면 "삭제 후 보관" 설명에 포함) | — | 보안·법적 의무(추정) |
+| 18 | 관리자 감사 기록(방침 표기: 운영자 작업 기록) | admin_audit(0039 이후 모든 admin_* RPC — 0039·0040·0043~0048): 처리자·작업 종류·사유·**대상 profile·family uuid** 또는 detail(카카오 큐 번호, 약관 종류·버전). 서버는 사유·처리자에 `@`·연속 9자리 이상 숫자만 거부(0047 예정), 그 밖의 개인정보는 운영 규칙 | 예(서버 내부) | **삭제 뒤에도 1년 보관**(FK 없음, purge 0043) | 신고 판단 필요(추정: 가명 ID만이면 "삭제 후 보관" 설명에 포함) | — | 보안·법적 의무(추정) |
 | 19 | 초대 번호(링크·Install Referrer로 받은 것) | 기기 `invite_store`(MODE_PRIVATE, allowBackup=false) | **아니오**(연결할 때 번호만 = 11) | 최대 7일·사용 즉시 삭제 | Play "수집" 아님(기기 밖으로 안 나감) | — | — |
 | 20 | 미연결 도장 날짜, 로그인 상태 | 기기 저장 | 아니오 | 7일·로그아웃 | Play "수집" 아님 | — | — |
 | 21 | 친 낱말(P6) | 기기 안 비교만 | 아니오(1차 grep: KeyboardStep에 api 호출 0) | — | 신고 안 함 | — | — |
