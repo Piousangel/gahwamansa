@@ -72,6 +72,8 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
       {copy.consent.body.map(t => (
         <Text20 key={t} size={22}>{t}</Text20>
       ))}
+      {/* 법률 노출 #7: 싫어요일 때 가족에게 보이는 것(체크 목록 밖 한 줄, copy 11-19) */}
+      <Text20 testID="consent-decline-note">{copy.consent.decline_note}</Text20>
       <Text20>{copy.consent.reassure}</Text20>
       {shown ? (
         <>
