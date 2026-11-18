@@ -365,3 +365,4 @@
 - 11-18 연결 끊김 알림(push.disconnected)은 빌드 1 제외(서버 발생 지점 없음, 자녀 화면 연결 끊김 상태로 충분). 알림 채널 3개: daily·cheer·family
 - 11-18 테스트 규칙: worktree마다 jest --cacheDirectory를 따로 지정(공유 캐시로 React 두 벌 로드되어 대량 실패한 사례). 공유 로컬 DB(54322)에는 main에 들어간 마이그레이션만, 미병합 검증은 임시 스택
 - 11-18 TTS 속도: Android 0.9·iOS 0.45(기본 속도 근사, QA-04 실기기에서 확정). BGM은 오디오 포커스를 잡지 않음(mixWithOthers, 도장 소리가 다른 앱 소리를 끊지 않게). 통화 중 읽어 주기 정지는 QA-04에서 확인
+- 11-18 관리자 답 삭제(admin_delete_answers)는 해당 사용자의 코스 관련 events(course_step_completed·course_completed 등)도 함께 삭제 — 삭제 안내의 '참여 기록' 약속 우선
