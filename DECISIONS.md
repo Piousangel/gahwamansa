@@ -432,3 +432,10 @@
 
 ## 2026-11-19 약관 재동의 게이트(needs_reagree)
 - 빌드 1은 약관·방침 v1만 존재 → 재동의 화면 게이트 없음, 앱은 계약(needs_reagree)만 유지. v2 게시 시 재동의 화면 추가(법률 확인 후), 등록 절차는 내부관리계획 §6
+
+## 2026-11-19 iOS 준비(감사 docs/team/qa/2026-11-19-ios-readiness-audit.md)
+- 빌드 1에 당길 것 N1~N8: 초대 페이지 아이폰 분기(N1), env 생성기를 공통 node 스크립트로(N2), 토큰 p_platform=Platform.OS(N3), 방침·법률 묻음에 Apple 로그인·APNs(N4), 자녀 로그인 Apple 버튼 자리(N5), Firebase iOS 앱 등록(N6), RELEASE.md iOS 콘솔 절차(N8)
+- N7 번들 ID: iOS도 com.bumojasik.app / staging은 com.bumojasik.app.staging (Android와 동일)
+- 팀 추천 채택(위임): Apple 로그인 제공(4.8), iPhone 전용(iPad 끔, 빌드 2 설정 때), 아이폰 초대는 번호 직접 입력(Install Referrer 없음)
+- 사용자 결정 대기: Apple Developer 가입(연 99달러, 개인/법인), 앱 이름 선점 시기, APNs 키 발급, iOS 빌드·TestFlight용 iPhone
+- 빌드 2 주의(감사 문서): iOS 알림 켜기는 앱이 먼저 권한을 요청해야 설정 항목이 생김, 스와이프 뒤로 가기가 useBackAction 우회, SceneDelegate openURLContexts
