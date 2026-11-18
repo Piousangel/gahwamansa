@@ -365,3 +365,9 @@
 - connected_date: 서버 0041(server-l1-launch) 계약 — 처음 연결된 날, 재연결해도 그대로. ASSUMED 표시 제거. 0041 전 서버면 null → 날짜 없는 문장.
 - 선물 이용권 가격: 사용자 결정 대기, 자리값(한 달 값) 유지.
 - 디자인 판정 11-18(design-checks-ap10-c0-c6) ②: C0 연령 줄 inkSub, 글자 150% 이상이면 약관·연령 줄을 함께 본문 끝으로, 이메일 화면에도 '인증번호 받기' 아래 약관+연령 줄. ③: C6 확인은 버튼 위 초록 면(doneSoft)+체크 한 줄, announce 1회·포커스 이동 없음, 다시 열면 한 줄 없이 '관심 남김'. 늦게 온 기억값 읽기가 방금 누른 상태를 되돌리지 않게(켜기만).
+### AU-03 공용 오디오 모듈(src/audio) · 2026-11-18 (리뷰 reviews/2026-11-18-audio-module-review.md 반영·재검토 통과)
+- 화면이 쓰는 것: `useReadAloud()`(allowed·speaking·speak·stop, 화면 읽기 값은 훅이 직접 읽음), `useBgm(자산, {enabled, screen})`(트랙 열기·멈춤·release 까지 훅이), 효과음은 `audio().sfx('stamp')` + 판단 `lib/audioPolicy sfxAllowed` 한 곳.
+- 멈춤: 앱이 뒤로 가면 `bindAppLifecycle` 이 읽기·음악 모두 정지, 화면을 떠나면(언마운트)·화면 읽기가 켜지면 `useReadAloud` 가 정지. 시스템 사유로 멈춘 음악은 돌아와도 자동 재생 안 함(껐다 켜면 재생).
+- **AP-03(읽어 주기) 연결 때 할 일 — 재검토 R1**: native-stack 은 다음 화면으로 갈 때(push) 이전 화면을 언마운트하지 않으므로, 언마운트 정지만으로는 P4→P5 처럼 다음 단계로 넘어갈 때 읽기가 이어진다. AP-03 은 화면 이탈(`useIsFocused` false 또는 `navigation.addListener('blur')`) 때 `stop()` 을 부를 것(테스트: 읽는 중 다음 단계로 이동 → stop 호출).
+- 자산: react-native-sound 0.13.0 은 문자열 파일 이름만 받는다 → require 번호는 `Image.resolveAssetSource().uri`(debug Metro http, release res/raw 이름). release 경로 실제 재생은 미확인(QA-04).
+- 속도 TTS Android 0.9 / iOS 0.45(같은 숫자의 뜻이 다름), 덕킹 10%(절대값 — BGM 기본 30%·페이드는 AP-04 에서 정함). 통화 수신 중 TTS·BGM 정지는 라이브러리 포커스 처리가 비어 있어 미보장(QA-04 5번).

@@ -29,6 +29,13 @@ DP_SIZE=360x640 app/e2e/run.sh audit/audit-points.yaml   # 화면 크기(dp)
 FONT_SCALE=2.0  app/e2e/run.sh audit/audit-points.yaml   # 글자 배율
 REDUCE_MOTION=1 app/e2e/run.sh audit/audit-points.yaml   # 애니메이션 0(동작 줄이기 근사)
 ```
+- **기기 고정**: 모든 adb·maestro 호출은 `ANDROID_SERIAL` 한 기기만 쓴다. 없으면 연결된 기기가 하나일 때만 진행하고 둘 이상이면 멈춘다(감사관 등 다른 실행의 에뮬레이터를 깨지 않게).
+  ```bash
+  adb devices                                            # 지금 기기 확인
+  ANDROID_SERIAL=emulator-5554 app/e2e/run.sh            # 이 기기만
+  # 두 실행을 동시에: 다른 기기 + 다른 Metro 포트. emulator-NNNN 이 꺼져 있으면 그 포트로 AVD 를 읽기 전용으로 켠다
+  ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 app/e2e/run.sh
+  ```
 - **run.sh 가 도는 동안 run.sh 를 고치지 않는다**(bash 는 실행 중 스크립트를 이어 읽어, 고친 뒤 엉뚱한 줄을 실행할 수 있다).
 `run.sh` 순서: fake 설정 확인 → 기기가 없으면 AVD `gahwa_parent` 를 화면 없이 켬 → `assembleStagingDebug` → 설치 → `adb reverse tcp:8081 tcp:$METRO_PORT` → Metro 없으면 켬(끝나면 끔) → `maestro test` → `e2e/out/<시각>/`(캡처 PNG·`report.xml`, gitignore).
 
