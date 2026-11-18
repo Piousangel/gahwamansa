@@ -202,7 +202,7 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
   test('구역 제목 가족·알림과 소리·앱, 안심 줄, 행 순서, 위험 행은 맨 아래', async () => {
     await toHomeConsented(createFakeApi({linked: true, consented: true}));
     await press('설정');
-    await waitFor(() => screen.getByText('가족에게는 고른 답과 날짜만 보여요'));
+    await waitFor(() => screen.getByText('가족에게는 고른 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요'));
     for (const h of ['가족', '알림과 소리', '앱']) {
       expect(screen.getByRole('header', {name: h})).toBeTruthy();
     }
