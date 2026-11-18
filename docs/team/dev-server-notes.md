@@ -305,14 +305,14 @@ type UnregisterPushToken = { ok: true; removed: number };
 매일(평일) Studio SQL Editor에서 확인하고 이상이 있으면 서버 줄에 알린다.
 1. **카카오 연결 끊기**(재검토 R-M1): `supabase/ops/metrics.sql` ⑧ — `gave_up > 0`이면 운영자가 원인(어드민 키·카카오 응답)을 보고 수동 해제 후 행 처리. `config_error_runs_7d > 0`이면 `KAKAO_ADMIN_KEY` secret 확인(키 오류는 시도 횟수를 쓰지 않고 1시간마다 다시 시도). `oldest_waiting`이 하루를 넘으면 cron·함수 배포 확인.
 2. **푸시**: ⑥ — `runs_with_note`(config_error·oauth_failed·invalid_ratio_hold)가 있으면 FCM 서비스 계정·프로젝트 확인. 일일 알림 `sent`가 0인데 대상이 있으면 `push_copy` 적재 여부(no_copy) 확인.
-3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트).
+3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 
 ## 15. 테스터 가족 표시(0045, 리드 결정 is_test)
 - `families.is_test`(기본 false): 비공개 테스트 테스터 가족. **지표 SQL에서만 뺀다**(알림·기능은 그대로). 심사 가족(`is_review`)과 별개.
-- 표시·해제: `node supabase/ops/mark-test-family.mjs --email <테스터 가입 메일> --operator <처리자> [--unset]`(또는 `--family <id>`). 대상 호스트 대조, 메일·id는 끝 4자리만 출력, 감사 행 `test_family_mark`.
+- 표시·해제: `node supabase/ops/mark-test-family.mjs --email --operator <처리자> [--unset]` → 메일은 프롬프트로 입력(셸 기록에 남지 않게), 또는 `--family <id>`. 대상 호스트 대조, 메일·id는 끝 4자리만 출력, 감사 행 `test_family_mark`.
 - 앱·서비스 역할 모두 `families`를 직접 UPDATE할 수 없다(0045, 쓰기는 definer 함수만). 가족 없는 설치 이벤트(app_first_open)는 테스터 구분이 안 된다.
 - 0045에 재검토 Q-L1 포함: 사진 주소 변경 감사의 처리자 = 실제 호출 역할(`service_role`, Studio는 `postgres`).
 
@@ -339,6 +339,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
 ## 17. 리뷰 낮음 처리표(W3 일괄, 11-18)
+기준: **반영**=코드·테스트로 고침, **문서**=동작은 그대로 두고 운영 규칙·안내로 막음, **보류(수용)**=위험이 작고 근거를 적어 두고 징후가 보이면 다시 봄, **다른 줄 몫**=앱·법률·리드 소유라 전달만.
 | 출처 | 항목 | 처리 |
 |---|---|---|
 | push-tokens C | gen-types가 CLI 오류를 숨김 | 반영: 실패 시 오류 끝부분 출력 |
