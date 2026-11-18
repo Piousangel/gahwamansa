@@ -460,5 +460,5 @@
 
 ### 보안 회의 E5 — 백업·기기 이전 제외 · 2026-11-19
 - `res/xml/data_extraction_rules.xml`(Android 12+: cloud-backup·device-transfer 모두 모든 도메인 제외) + `res/xml/backup_rules.xml`(11 이하 자동 백업 제외), 매니페스트 `android:dataExtractionRules`·`android:fullBackupContent` 연결(`allowBackup="false"` 유지). 일부 제조사 D2D 가 allowBackup=false 를 무시하는 경우 대비.
-- 확인: stagingRelease 병합 매니페스트 `usesCleartextTraffic="false"`·`allowBackup="false"`·두 규칙 연결, 권한 INTERNET·POST_NOTIFICATIONS·DYNAMIC_RECEIVER_NOT_EXPORTED·INSTALL_REFERRER 뿐. 관문 행 release-gates G-25.
+- 확인: stagingRelease 병합 매니페스트 `usesCleartextTraffic="false"`·`allowBackup="false"`·두 규칙 연결, 권한 INTERNET·POST_NOTIFICATIONS·DYNAMIC_RECEIVER_NOT_EXPORTED·INSTALL_REFERRER 뿐. 관문 행 release-gates G-25(백업)·G-26(평문 통신).
 - `react-native-url-polyfill` 을 `^4.0.0` → `4.0.0` 정확 고정(웹뷰 재확인 낮음, lock 은 이미 4.0.0).

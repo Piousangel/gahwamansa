@@ -1,28 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 12(API 31)+ 백업·기기 이전 규칙(보안 회의 E5, docs/team/board/2026-11-19-encryption-keys).
      allowBackup=false 만으로는 일부 제조사의 기기 간 이전(D2D)이 앱 데이터를 옮길 수 있어, 클라우드 백업·기기 이전 모두에서
-     모든 도메인을 뺀다. 세션 토큰·푸시 토큰·계정별 기억값이 새 폰으로 따라가지 않게(새 폰은 새 연결·로그인). -->
+     모든 도메인을 뺀다. 세션 토큰·푸시 토큰·계정별 기억값이 새 폰으로 따라가지 않게(새 폰은 새 연결·로그인).
+     path="." = 그 도메인 전체(생략해도 같음 — backup_rules.xml 과 표기를 맞춤, PR #8 리뷰 L1). -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" />
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
-        <exclude domain="device_root" />
-        <exclude domain="device_file" />
-        <exclude domain="device_database" />
-        <exclude domain="device_sharedpref" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" />
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
-        <exclude domain="device_root" />
-        <exclude domain="device_file" />
-        <exclude domain="device_database" />
-        <exclude domain="device_sharedpref" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </device-transfer>
 </data-extraction-rules>
