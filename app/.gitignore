@@ -84,3 +84,6 @@ src/lib/config.local.ts
 src/lib/env.generated.ts
 # worktree 에서 node_modules 를 심볼릭 링크로 쓸 때(링크는 node_modules/ 디렉터리 패턴에 안 걸림)
 /node_modules
+# Maestro E2E 결과(캡처·보고서·로그, app/e2e/README.md)
+/e2e/out/
+/e2e/out-*.log

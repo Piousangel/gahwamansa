@@ -1,0 +1,9 @@
+# 에뮬레이터 시스템 창 정리(앱 밖). 없으면 아무것도 하지 않는다.
+appId: com.bumojasik.app.staging
+---
+- repeat:
+    times: 3
+    while:
+      visible: ".*isn't responding.*"
+    commands:
+      - tapOn: 'Wait'
