@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 알림(AU-04): Android 13 이상 런타임 권한. 요청은 N1 '알려 주세요'(어르신)·C3 '알림 켜기'(자녀)에서만, 앱 시작 때 묻지 않는다 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
       android:name=".MainApplication"

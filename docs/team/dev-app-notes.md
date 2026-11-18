@@ -383,3 +383,22 @@
 - AC-08 복사: RN 코어 Clipboard 유지(D-11). Android 13+ 는 시스템이 복사 확인을 띄우므로 앱 토스트 생략·화면 읽기 1회, 12 이하는 '복사했어요' 토스트(`ui/clipboard.systemShowsCopyNotice`).
 - L5 닫기 키(`child.home.title_sheet.close`) 문구는 리드가 라이터 확정 요청 목록에 올림.
 - 재검토 R1: 응원 대기 중 홈이 언마운트되면 보내고 그 '취소' 토스트를 hide(id). R2: 로그아웃·계정 삭제는 가명값을 먼저 받고 finally 에서 계정 키 정리(signOut·삭제 실패여도). R3: accountTag 는 솔트 없는 해시 → 기기 안 키에만, 서버·이벤트·로그 금지(주석 + __tests__/accountTagGuard: 쓰는 파일 고정·logEvent/rpc/console 줄에 tag 없음).
+
+### AU-04 푸시 클라이언트(fake 토큰 경로) · 2026-11-18 (보안 리뷰 xhigh 대상)
+- 범위: Firebase(US-10) 전. `@react-native-firebase` 미설치(DECISIONS 11-18), 토큰 공급자 인터페이스 `src/push/tokenSource.ts`(`PushTokenSource`: getToken·onTokenRefresh·getInitialOpen·onOpen·onForeground). fake API 모드 = 가짜 토큰(`FAKE_PUSH_TOKEN`, 실서버에 가지 않음), real 모드 = `nullTokenSource`(토큰 없음 → 등록 안 함). Firebase 붙일 때 `createFcmTokenSource` 하나 + `pickTokenSource` 한 줄.
+- 매니페스트 `POST_NOTIFICATIONS`. 요청은 N1 '알려 주세요'(어르신)·C3/C7 '알림 켜기'(자녀)에서만, 앱 시작 때 묻지 않는다.
+- 네이티브 `PushModule`(Kotlin, 새 의존성 없음): 채널 만들기·앱 알림 허용(`areNotificationsEnabled`, 12 이하 앱 단위 끔까지)·채널별 켜짐·채널/앱 알림 설정 열기. JS `src/push/notifyNative.ts`.
+- **채널 3개·잠금 화면 공개(push-events 리뷰 L3 판단)**: id 는 계약 그대로 `daily·cheer·family`(서버 channel_id), 이름·설명 copy `push.channel.*`, 중요도 모두 default(소리는 휴대폰 설정). 잠금 화면: `daily` = PUBLIC(본문은 AI 사진 설명뿐, N1 시안 잠금 화면 그림) / `cheer`·`family` = PRIVATE(응원 문장·호칭이 가족 관계를 드러냄 → 휴대폰 '민감한 내용 숨기기'를 켠 사람에게는 앱 이름만). 채널 중요도·공개는 만든 뒤 앱이 못 바꾼다(사용자 값 유지) — 바꾸려면 새 id 가 필요하고 서버 channel_id 도 함께 바꿔야 한다.
+- 받기 동의(`set_push_enabled(true)`, 0036 받기 시각): 어르신은 **N1 '알려 주세요'를 누를 때**(시스템 창 결과와 별개 — OS 거절이면 토큰이 없어 오지 않음), 자녀는 **알림 권한이 허용됐을 때**(C3 '알림 켜기'로 허용 또는 이미 허용된 기기의 첫 확인, 계정당 한 번 `push_child_on_v1`). 오프라인으로 못 보내면 어르신은 `yes_pending` 으로 기억해 앱 시작·활성 때 다시 보낸다. '괜찮아요'는 서버 호출 없음·다시 묻지 않음(켜기는 P13, AP-06).
+- N1(`src/push/PushPermissionScreen`, ParentStack `PushPermission` 한 줄): 연결·동의한 어르신이 코스 홈에 있고 서버 `my_push_settings().enabled === false` 이고 이 계정에서 답한 적이 없을 때 한 번(`push_prompt_v1`). 서버가 이미 받는 중(재설치)이면 묻지 않는다. 동의 거부 어르신은 N1 없음(일일 알림 대상 아님).
+  - **디자인 확인 필요**: 알림 그림의 시각 '오전 8:00'은 뺐다(실제 발송 09:00, D-07). 그림의 예시 설명은 새 키 `push.permission.preview_caption`('감 익는 마당'), 읽기 `preview_a11y`(copy-v3 10절 #15 확정 문장) — 원본에 append, 라이터 확인 요청.
+  - fake API 는 기본 `pushEnabled: true`(다른 화면 테스트·E2E 를 N1 이 가리지 않게). N1 을 보려면 `createFakeApi({pushEnabled: false})`.
+- 토큰: 권한이 허용이고 프로필이 있으면 등록(앱 시작·연결 바뀜·앱 활성·토큰 갱신, 멱등). 성공한 토큰만 `lib/pushToken` 에 둔다 → 로그아웃 때 `realApi.signOut` 이 `unregister_push_token` 먼저(기존). 계정 삭제는 서버가 토큰 행을 지우고 앱은 기기 기억만 지운다. `no_profile` 은 다음 기회에.
+- 알림 탭(`src/app/PushHost`, 내비 참조 `src/navigation/navRef`): data `{kind}` 만 해석(`contract/push.parsePushKind`).
+  - 어르신 U1: `push_opened{push_kind}` → 스택을 [P3] 로 맞추고 오늘 콘텐츠가 오면 첫 안 한 단계를 위에(이미 다 했거나 콘텐츠 없으면 P3). 응원 도착 → P3. 자녀 종류는 버린다.
+  - 자녀 AC-03: `features/home/pushOpen.handleChildPushOpen`(push_opened·앨범·N3 배너 1회 건너뜀). 탭 화면에서만 앨범으로 이동, 대기 화면이면 기록만(연결되면 대기 화면이 스스로 넘어감), 로그인 전 화면에서는 처리하지 않는다(로그인 우회 방지).
+  - 꺼진 앱을 알림으로 연 경우(getInitialOpen)는 역할·화면이 준비될 때까지 들고 있다가 처리.
+- 포그라운드 수신: FCM 은 앱이 앞에 있을 때 알림을 그리지 않는다. 빌드 1 은 따로 그리지 않음(어르신 응원은 P3 갱신, 자녀 연결은 앱 안 N3 배너가 담당). 인터페이스 `onForeground` 만 둠.
+- 자녀 `useNotifyPermission.notifyFlags.promptReady = true`. 12 이하 앱 단위 끔도 '꺼짐'으로 본다(네이티브 확인, 이전 ASSUMED 해소). 거절(다시 묻지 않음)·앱 끔이면 휴대폰 알림 설정(채널 화면 우선)으로.
+- `TextLink` 를 `ui/TextLink` 로 올림(N1 이 씀). `features/link/TextLink` 는 다시 내보내기만 — AU-10 에서 호출부 교체 후 삭제.
+- **Firebase 붙일 때 할 일(별도 항목)**: `@react-native-firebase/app`·`messaging` 정확 고정, flavor별 `google-services.json`(gitignore) + gradle 플러그인, 매니페스트 meta-data `com.google.firebase.messaging.default_notification_channel_id = daily`, `createFcmTokenSource`(getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage), 알림 거부 기기의 Firebase 설치 ID 생성 여부(QA-07), 실기기 수신 QA-07.

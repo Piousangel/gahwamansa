@@ -15,6 +15,7 @@ import {ParentSettings} from '../features/account/ParentSettings';
 import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {KeyboardStep} from '../features/course/KeyboardStep';
 import {CourseDone} from '../features/course/CourseDone';
+import {PushPermissionScreen} from '../push/PushPermissionScreen';
 
 export type ParentParams = {
   // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
@@ -22,6 +23,7 @@ export type ParentParams = {
   PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
   History: undefined; HistoryDay: {day: HistoryDay};
   Settings: {expand?: 'resume'} | undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
+  PushPermission: undefined; // N1 알림 안내(AU-04, src/push)
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 
@@ -41,6 +43,7 @@ export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRou
       <Stack.Screen name="HistoryDay" component={HistoryDayScreen} />
       <Stack.Screen name="DeleteAccount">{() => <DeleteAccountScreen role="parent" />}</Stack.Screen>
       <Stack.Screen name="DeleteDone" component={DeleteDoneScreen} />
+      <Stack.Screen name="PushPermission" component={PushPermissionScreen} />
     </Stack.Navigator>
   );
 }

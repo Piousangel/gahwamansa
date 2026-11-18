@@ -39,7 +39,8 @@ module.exports = {
   overrides: [
     ...featureOverrides,
     {
-      files: ['src/shared/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}', 'src/api/**/*.{ts,tsx}'],
+      // push/(AU-04)·navigation/ 도 같은 층: features 아래, app/ 은 모른다(조립은 app/PushHost)
+      files: ['src/shared/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}', 'src/api/**/*.{ts,tsx}', 'src/push/**/*.{ts,tsx}', 'src/navigation/**/*.{ts,tsx}'],
       rules: {
         'no-restricted-imports': layerRule([
           NO_APP,
