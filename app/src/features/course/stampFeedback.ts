@@ -1,4 +1,3 @@
-import {Platform} from 'react-native';
 import {hapticConfirm} from '../../ui/haptic';
 import {prefs as defaultPrefs, type Prefs} from '../../lib/prefs';
 import type {Ringer} from '../../lib/audioPolicy';
