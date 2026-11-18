@@ -140,7 +140,7 @@
 
   // platform.js 가 안 읽혀도 번호·Android 흐름은 살아 있게(실패 시 UA 에 Android 가 있으면 android, 아니면 desktop)
   var platform = window.GahwaPlatform
-    ? GahwaPlatform.detectPlatform(navigator.userAgent, navigator.maxTouchPoints)
+    ? window.GahwaPlatform.detectPlatform(navigator.userAgent, navigator.maxTouchPoints)
     : (/Android/i.test(navigator.userAgent) ? 'android' : 'desktop');
   var code = readCode();
   if (!code) {
