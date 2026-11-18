@@ -26,6 +26,7 @@
        font-family:'Jua',sans-serif;font-size:30px;line-height:38px;text-align:center;text-decoration:none}
   .note{margin:0;font-size:20px;line-height:30px;font-weight:500;color:var(--sub);text-align:center}
   .note.big{font-size:24px;line-height:36px;font-weight:700;color:var(--ink)}
+  .note a{color:inherit}
   .foot{margin-top:auto;padding:16px 20px;font-size:16px;line-height:1.6;color:var(--sub);border-top:1px solid var(--line)}
   .foot a{color:inherit}
   [hidden]{display:none !important}
@@ -80,12 +81,13 @@
       </div>
       <!-- 문구 라이터 확인 전 (iOS·데스크톱 분기, 감사 N1) -->
       <div id="state-ios" hidden>
-        <p class="note big">아이폰용 앱은 준비 중이에요</p>
+        <p class="note big">아이폰·아이패드용 앱은 준비 중이에요</p>
         <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요. 이 번호를 전해 주셔도 돼요</p>
       </div>
       <div id="state-desktop" hidden>
         <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
         <p class="note">앱을 켜고 이 번호 6개를 써도 돼요</p>
+        <p class="note"><a href="#" class="as-android">휴대폰인데 이 화면이 보이면 여기를 눌러 주세요</a></p>
       </div>
     </div>
     <div id="no-code" hidden>
@@ -94,12 +96,13 @@
         <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써 주세요</p>
       </div>
       <div id="nc-ios" hidden>
-        <p class="note big">아이폰용 앱은 준비 중이에요</p>
+        <p class="note big">아이폰·아이패드용 앱은 준비 중이에요</p>
         <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요</p>
       </div>
       <div id="nc-desktop" hidden>
         <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
         <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써도 돼요</p>
+        <p class="note"><a href="#" class="as-android">휴대폰인데 이 화면이 보이면 여기를 눌러 주세요</a></p>
       </div>
     </div>
     <noscript><p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 가화만사성 앱에 써 주세요</p></noscript>
@@ -136,23 +139,41 @@
   function show(id) { document.getElementById(id).hidden = false; }
   function hide(id) { document.getElementById(id).hidden = true; }
 
-  var platform = GahwaPlatform.detectPlatform(navigator.userAgent, navigator.maxTouchPoints);
+  // platform.js 가 안 읽혀도 번호·Android 흐름은 살아 있게(실패 시 UA 에 Android 가 있으면 android, 아니면 desktop)
+  var platform = window.GahwaPlatform
+    ? GahwaPlatform.detectPlatform(navigator.userAgent, navigator.maxTouchPoints)
+    : (/Android/i.test(navigator.userAgent) ? 'android' : 'desktop');
   var code = readCode();
   if (!code) {
     show('no-code');
     show('nc-' + platform);
     if (platform === 'android') document.getElementById('install-plain').href = PLAY;
+    else if (platform === 'desktop') wireAsAndroid();
     return;
   }
   show('has-code');
   // 번호는 textContent 로만(조각 값은 외부 입력 — HTML 로 넣지 않는다). 읽기 좋게 3·3
   document.getElementById('code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
-  document.getElementById('install').href = playUrl(code);
   if (platform !== 'android') {
-    // 아이폰·데스크톱엔 Play 버튼을 보이지 않는다(번호는 화면 위에 그대로)
+    // 아이폰·데스크톱엔 Play 링크를 DOM 에도 두지 않는다(번호는 화면 위에 그대로)
     show('state-' + platform);
+    wireAsAndroid();
     return;
   }
+  startAndroid();
+  function wireAsAndroid() {
+    // "데스크톱 사이트" 모드인 Android 폰 구제: 눌러야만 Android 흐름으로 바뀐다
+    var links = document.querySelectorAll('.as-android');
+    for (var i = 0; i < links.length; i++) {
+      links[i].addEventListener('click', function (e) {
+        e.preventDefault();
+        hide('state-desktop'); hide('nc-desktop');
+        if (code) startAndroid(); else { show('nc-android'); document.getElementById('install-plain').href = PLAY; }
+      });
+    }
+  }
+  function startAndroid() {
+  document.getElementById('install').href = playUrl(code);
   var open = document.getElementById('open-app');
   open.href = intentUrl(code);
   show('state-open');
@@ -162,6 +183,7 @@
       if (document.visibilityState === 'visible') { hide('state-open'); show('state-install'); }
     }, 2500);
   });
+  }
 })();
 </script>
 </body>
