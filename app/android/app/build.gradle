@@ -2,6 +2,24 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Firebase(US-10 뒤): google-services.json 은 flavor 폴더(app/src/<flavor>/, gitignore)에만 둔다. 하나라도 있으면 플러그인을 적용하고,
+// 파일이 없는 flavor 는 processXxxGoogleServices 를 끈다(그 flavor 는 Firebase 없이 빌드 — 앱은 토큰 없음으로 동작, fcmTokenSource).
+// 둘 다 없으면 아무것도 하지 않는다(지금 상태). 저장소 루트·app/ 바로 아래 google-services.json 은 쓰지 않는다(flavor 섞임 방지).
+def googleServicesFlavors = ["staging", "production"].findAll { file("src/${it}/google-services.json").exists() }
+if (googleServicesFlavors) {
+    apply plugin: "com.google.gms.google-services"
+    if (file("google-services.json").exists()) {
+        throw new GradleException("app/android/app/google-services.json 은 쓰지 않아요. app/src/<flavor>/google-services.json 에만 두세요(staging·production 섞임 방지).")
+    }
+    tasks.configureEach { t ->
+        def m = t.name =~ /^process(Staging|Production)(Debug|Release)GoogleServices$/
+        if (m.matches() && !(m.group(1).toLowerCase() in googleServicesFlavors)) {
+            t.enabled = false
+        }
+    }
+    logger.lifecycle("Firebase: google-services.json 있는 flavor = ${googleServicesFlavors.join(', ')}")
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -160,6 +178,30 @@ if (appLinkHostDebug) {
     logger.warn("경고: -PappLinkHostDebug=${appLinkHostDebug} → debug 빌드에만 App Links host 를 덮어씁니다(release 는 env 파일 값)")
 }
 def appLinkPlaceholders = { String h -> [appLinkHost: h ?: "applinks.invalid", appLinksEnabled: h ? "true" : "false"] }
+
+/**
+ * 앱 정보 값(AU-07, 선택·공개 값): 이용약관·방침 URL, 문의 메일, 사업자 정보. 원본 app/env/<flavor>.env, 앱은 src/lib/appInfo.ts.
+ * - 형식이 틀리면 빌드 실패(https URL만, 메일, 사업자등록번호 000-00-00000, 글자는 80자 안·따옴표/꺾쇠/줄바꿈 없음)
+ * - 빠지면 화면에서 그 행을 숨기고 빌드 경고. production release 는 실패(G-INT "값이 없어 숨겨진 앱 정보 행 0")
+ *   — 확인용 빌드만 -PallowMissingAppInfo
+ */
+def APP_INFO_RULES = [
+    TERMS_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
+    PRIVACY_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
+    CONTACT_EMAIL: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+    BIZ_NAME: /[^\n"<>]{1,80}/,
+    BIZ_CEO: /[^\n"<>]{1,80}/,
+    BIZ_REG_NO: /\d{3}-\d{2}-\d{5}/,
+    BIZ_ADDRESS: /[^\n"<>]{1,80}/,
+]
+appEnvs.each { name, e ->
+    APP_INFO_RULES.each { k, re ->
+        def v = (e[k] ?: "").toString().trim()
+        if (v && !(v ==~ re)) throw new GradleException("${name}.env: ${k} 형식이 아니에요: ${v}")
+        e[k] = v
+    }
+}
+def missingAppInfo = { Map e -> APP_INFO_RULES.keySet().findAll { !e[it] } }
 // 리뷰 M2: 같은 카카오 키면 두 앱이 같은 kakao{키}://oauth 를 받아 한 폰에 같이 설치 시 웹 로그인 복귀가 엉킨다
 if (appEnvs.staging.KAKAO_NATIVE_APP_KEY == appEnvs.production.KAKAO_NATIVE_APP_KEY) {
     logger.warn("경고: staging·production 카카오 네이티브 키가 같아요. 두 앱을 한 폰에 같이 설치하면 카카오 웹 로그인 복귀가 엉킬 수 있어요. staging 키 발급·등록은 docs/team/RELEASE.md '외부 콘솔 등록'.")
@@ -233,7 +275,7 @@ def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost, 
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
         BUILD_TYPE: release ? "release" : "debug",
-    ]
+    ] + APP_INFO_RULES.keySet().collectEntries { [(it): e[it] ?: ""] }
     def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
     generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +
             "export default ${body};\n", "UTF-8")
@@ -368,12 +410,24 @@ android.applicationVariants.configureEach { variant ->
             logger.warn("경고: app/env/${variant.flavorName}.env 가 없어 ${e.SOURCE}(예시 값)로 빌드합니다. 이 앱은 서버에 붙지 못해요.")
         }
     }
+    // AU-07: 빠진 앱 정보 값은 경고, production release 는 실패(G-INT)
+    def checkAppInfo = {
+        def missing = missingAppInfo(e)
+        if (!missing) return
+        // 리뷰 L4: 출시 경로(build-production.sh 가 늘 주는 -PrequireRealEnv)에서는 -PallowMissingAppInfo 를 무시한다
+        def allowMissing = project.hasProperty("allowMissingAppInfo") && !project.hasProperty("requireRealEnv")
+        if (variant.flavorName == "production" && isRelease && !e.PLACEHOLDER && !allowMissing) {
+            throw new GradleException("production.env: 앱 정보 값이 없어요(설정 화면에서 숨겨짐): ${missing.join(', ')}. G-INT 전 필수(US-03·US-04). 확인용 빌드만 -PallowMissingAppInfo(출시 경로 -PrequireRealEnv 에서는 무시)")
+        }
+        logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 숨겨지는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
+    }
     def generate = {
         checkPlaceholder()
+        checkAppInfo()
         writeEnvTs(e, vName, vCode, linkHost, isRelease)
     }
-    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값 검사만(네이티브 컴파일 전에 일찍 실패)
-    variant.preBuildProvider.configure { doFirst { isRelease ? checkPlaceholder() : generate() } }
+    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패)
+    variant.preBuildProvider.configure { doFirst { isRelease ? { checkPlaceholder(); checkAppInfo() }() : generate() } }
     def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
     tasks.matching { it.name == bundleTask }.configureEach { t ->
         // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)
@@ -402,5 +456,88 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+/**
+ * 오픈소스 라이선스 목록(AU-06): Android 네이티브(Maven) 의존성 → src/oss/android.generated.json. JS 목록은 scripts/ossLicenses.js.
+ * - 근원: productionReleaseRuntimeClasspath 의 외부 모듈(프로젝트 모듈 = react-native-* 는 JS 목록에 있음) + 각 POM 의 <licenses>
+ *   (POM 에 없으면 부모 POM 을 3단계까지 따라간다). 새 의존성·플러그인 없음.
+ * - 다시 만들기: cd app && npm run oss:android
+ * - production release 빌드는 두 목록이 최신인지 검사한다(verifyOssLicenses, 낡으면 실패 — 의존성 바꾼 뒤 npm run oss). POM 조회 실패는 따로 알림
+ */
+def ossAndroidOut = file("../../src/oss/android.generated.json")
+// POM 을 못 받은 모듈(네트워크·저장소 문제)은 fails 에 모은다 — "목록이 낡았어요"와 다른 실패로 알리기 위해(리뷰 O1)
+def ossPomLicenses
+ossPomLicenses = { String group, String module, String version, int depth, List fails ->
+    def id = org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.newId(
+        org.gradle.api.internal.artifacts.DefaultModuleIdentifier.newId(group, module), version)
+    def res = project.dependencies.createArtifactResolutionQuery()
+        .forComponents([id])
+        .withArtifacts(org.gradle.maven.MavenModule, org.gradle.maven.MavenPomArtifact)
+        .execute()
+    for (c in res.resolvedComponents) {
+        for (a in c.getArtifacts(org.gradle.maven.MavenPomArtifact)) {
+            if (!(a instanceof org.gradle.api.artifacts.result.ResolvedArtifactResult)) continue
+            def pom = new groovy.xml.XmlSlurper(false, false).parse(a.file)
+            def lic = pom.licenses.license.collect { [name: it.name.text().trim(), url: it.url.text().trim()] }.findAll { it.name || it.url }
+            if (lic || depth >= 3 || !pom.parent.artifactId.text()) return lic
+            return ossPomLicenses(pom.parent.groupId.text().trim(), pom.parent.artifactId.text().trim(), pom.parent.version.text().trim(), depth + 1, fails)
+        }
+    }
+    fails << "${group}:${module}:${version}".toString()
+    return []
+}
+def ossAndroidJson = {
+    def conf = configurations.getByName("productionReleaseRuntimeClasspath")
+    def ids = conf.incoming.resolutionResult.allComponents
+        .collect { it.id }
+        .findAll { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+        .collect { [group: it.group, module: it.module, version: it.version] }
+        .unique()
+        .sort { a, b -> "${a.group}:${a.module}".toString() <=> "${b.group}:${b.module}".toString() ?: a.version <=> b.version }
+    def fails = []
+    def rows = ids.collect { m ->
+        [name: "${m.group}:${m.module}".toString(), version: m.version, licenses: ossPomLicenses(m.group, m.module, m.version, 0, fails)]
+    }
+    if (fails) {
+        throw new GradleException("오픈소스 라이선스(Android): POM 조회 실패(네트워크·저장소 문제로 보임, 목록이 낡은 것과 다름) ${fails.size()}개: ${fails.take(5).join(', ')}. 연결을 확인하고 다시 실행해 주세요.")
+    }
+    return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([packages: rows])) + "\n"
+}
+def ossDiff = { String cur, String next ->
+    def names = { String t -> t ? (t =~ /"name": "([^"]+)",\s*"version": "([^"]+)"/).collect { "${it[1]}@${it[2]}".toString() } as Set : [] as Set }
+    def a = names(cur)
+    def b = names(next)
+    return ((b - a).collect { "+${it}" } + (a - b).collect { "-${it}" }).take(5).join(', ')
+}
+tasks.register("generateOssAndroid") {
+    group = "oss"
+    description = "Android 네이티브 의존성 라이선스 목록을 src/oss/android.generated.json 으로(AU-06)"
+    notCompatibleWithConfigurationCache("의존성 해석·POM 읽기")
+    doLast {
+        ossAndroidOut.setText(ossAndroidJson(), "UTF-8")
+        logger.lifecycle("오픈소스 라이선스 목록(Android) → ${ossAndroidOut}")
+    }
+}
+tasks.register("verifyOssLicenses") {
+    group = "oss"
+    description = "production release 빌드 전: JS·Android 라이선스 목록이 최신인지(AU-06)"
+    notCompatibleWithConfigurationCache("의존성 해석·node 실행")
+    doLast {
+        def next = ossAndroidJson()
+        def cur = ossAndroidOut.exists() ? ossAndroidOut.getText("UTF-8") : ""
+        if (cur != next) {
+            throw new GradleException("오픈소스 라이선스 목록(Android)이 낡았어요(${ossDiff(cur, next) ?: '내용 차이'}). app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
+        }
+        def proc = ["node", file("../../scripts/ossLicenses.js").absolutePath, "--check"].execute(null, file("../.."))
+        proc.waitForProcessOutput(System.out, System.err)
+        if (proc.exitValue() != 0) throw new GradleException("오픈소스 라이선스 목록(JS)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
+    }
+}
+// 리뷰 O1: 검사는 production release(출시 산출물)에서만 — staging release·디버그는 네트워크·node 상태와 무관하게 빌드
+android.applicationVariants.configureEach { variant ->
+    if (!variant.buildType.debuggable && variant.flavorName == "production") {
+        variant.preBuildProvider.configure { dependsOn("verifyOssLicenses") }
     }
 }

@@ -21,9 +21,29 @@ export type AppEnv = {
   VERSION_NAME: string; // 빌드가 없으면 ''
   VERSION_CODE: number | null;
   GIT_SHA: string;
+} & AppInfoEnv;
+
+// 앱 정보 값(AU-07, 공개 값, app/env/<flavor>.env). 없으면 '' → 그 행을 화면에서 숨긴다(자리표시 금지).
+// 빠진 값은 빌드 경고, production release 는 빌드 실패(G-INT 관문 "값이 없어 숨겨진 앱 정보 행 0").
+export type AppInfoEnv = {
+  TERMS_URL: string; // 이용약관(https)
+  PRIVACY_URL: string; // 개인정보 처리방침(https)
+  CONTACT_EMAIL: string; // 문의 메일
+  BIZ_NAME: string; // 상호
+  BIZ_CEO: string; // 대표
+  BIZ_REG_NO: string; // 사업자등록번호 000-00-00000
+  BIZ_ADDRESS: string; // 주소
 };
+export const APP_INFO_KEYS = ['TERMS_URL', 'PRIVACY_URL', 'CONTACT_EMAIL', 'BIZ_NAME', 'BIZ_CEO', 'BIZ_REG_NO', 'BIZ_ADDRESS'] as const;
 
 export const DEFAULT_ENV: AppEnv = {
+  TERMS_URL: '',
+  PRIVACY_URL: '',
+  CONTACT_EMAIL: '',
+  BIZ_NAME: '',
+  BIZ_CEO: '',
+  BIZ_REG_NO: '',
+  BIZ_ADDRESS: '',
   APP_ENV: 'local',
   API_MODE: 'fake',
   SUPABASE_PROJECT_REF: '',

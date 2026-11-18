@@ -5,7 +5,7 @@
 import {isPushTokenShape} from '../api/contract/push';
 import {isQuietEventFailure, type EventProps} from '../api/contract/events';
 import type {Api} from '../features/types';
-import {accountKey, PUSH_CHILD_KEY, PUSH_PROMPT_KEY} from '../lib/accountStore';
+import {accountKey, PUSH_PROMPT_KEY} from '../lib/accountStore';
 import type {KeyValueStore} from '../lib/kvStore';
 import {readPushToken, savePushToken} from '../lib/pushToken';
 import type {PushTokenSource} from './tokenSource';
@@ -71,7 +71,7 @@ async function setEnabledTrue(api: Api): Promise<boolean> {
   }
 }
 
-export type ParentPromptAnswer = 'yes' | 'yes_pending' | 'no';
+export type ParentPromptAnswer = 'yes' | 'yes_pending' | 'no' | 'off';
 
 async function readAnswer(store: KeyValueStore, key: string): Promise<string | null> {
   try {
@@ -131,29 +131,75 @@ export async function declineParentPrompt({api, store}: PushDeps): Promise<void>
   }
 }
 
-/** 앞에서 보내지 못한 어르신 받기 동의를 다시 보낸다(앱 시작·앞으로 돌아올 때) */
+/**
+ * 앞에서 보내지 못한 어르신 받기 동의를 다시 보낸다(앱 시작·앞으로 돌아올 때). 리뷰 L3: 서버 값이 먼저 —
+ * 이미 받는 중이면 기억만 고치고, 연결 전이면 두고, 끈 경우(P13 토글 → 'off')는 'yes_pending' 이 아니므로 다시 켜지 않는다.
+ */
 export async function retryPending({api, store}: PushDeps): Promise<void> {
   const tag = await tagOf(api);
   if (!tag) {
     return;
   }
   const key = accountKey(PUSH_PROMPT_KEY, tag);
-  if ((await readAnswer(store, key)) === 'yes_pending' && (await setEnabledTrue(api))) {
+  if ((await readAnswer(store, key)) !== 'yes_pending') {
+    return;
+  }
+  let enabled: boolean | null;
+  try {
+    enabled = (await api.myPushSettings()).enabled;
+  } catch {
+    return; // 오프라인: 다음 기회에
+  }
+  if (enabled === true || (enabled === false && (await setEnabledTrue(api)))) {
     await writeAnswer(store, key, 'yes');
   }
 }
 
 /**
- * 자녀: 알림 권한이 허용된 상태를 서버 받기 동의로 알린다(이 계정에서 한 번). C3 '알림 켜기'로 허용했을 때와,
- * 이미 허용돼 있던 기기(Android 12 이하 등)의 첫 확인 때. 자녀가 나중에 앱에서 끄면(C7) 이 기억 때문에 다시 켜지 않는다.
+ * 자녀 받기 동의(DECISIONS 11-18 리뷰 L2): 앱 안에서 '알림 켜기'(C3 줄)·C7 토글을 **눌렀을 때만** 부른다 — 권한 허용만으로는 기록하지 않음.
+ * 서버 동의 → 권한이 허용이면 토큰 등록. 서버 호출이 실패하면 false(호출부가 다시 누를 수 있게 둔다).
  */
-export async function childPermissionGranted(deps: PushDeps): Promise<void> {
-  const {api, store} = deps;
-  const tag = await tagOf(api);
-  if (tag && !(await readAnswer(store, accountKey(PUSH_CHILD_KEY, tag)))) {
-    if (await setEnabledTrue(api)) {
-      await writeAnswer(store, accountKey(PUSH_CHILD_KEY, tag), 'yes');
-    }
+export async function childOptIn(deps: PushDeps, permission: () => Promise<NotifyPermission>): Promise<boolean> {
+  const ok = await setEnabledTrue(deps.api);
+  if ((await permission()) === 'granted') {
+    await registerToken(deps);
   }
-  await registerToken(deps);
+  return ok;
+}
+
+export type ReceiveResult = {ok: true; enabled: boolean} | {ok: false; reason: 'offline' | 'no_profile' | 'invalid'};
+
+/**
+ * 앱 안 알림 끄기·켜기(리뷰 M1: P13 어르신 채널 토글·C7 자녀 '가족 연결' 토글이 부른다). 서버 set_push_enabled(0036·0037).
+ * 끄면 받기 시각이 지워지고(발송 대상 아님) 이 계정의 N1 기억은 'off'(다시 묻지 않음·재시도로 다시 켜지 않음).
+ * 켜면 'yes' + 권한이 허용이면 토큰 등록. 토큰 해제는 하지 않는다(해제는 로그아웃용, dev-server-notes §2).
+ */
+export async function setReceive(deps: PushDeps, enabled: boolean, permission: () => Promise<NotifyPermission>): Promise<ReceiveResult> {
+  const {api, store} = deps;
+  let r;
+  try {
+    r = await api.setPushEnabled(enabled);
+  } catch {
+    return {ok: false, reason: 'offline'};
+  }
+  if (!r.ok) {
+    return r;
+  }
+  const tag = await tagOf(api);
+  if (tag) {
+    await writeAnswer(store, accountKey(PUSH_PROMPT_KEY, tag), enabled ? 'yes' : 'off');
+  }
+  if (enabled && (await permission()) === 'granted') {
+    await registerToken(deps);
+  }
+  return {ok: true, enabled: r.enabled};
+}
+
+/** 지금 서버 받기 상태(켬 + 받기 시각). 연결 전 null, 오프라인 'offline' — P13·C7 토글 초기값 */
+export async function readReceive({api}: PushDeps): Promise<boolean | null | 'offline'> {
+  try {
+    return (await api.myPushSettings()).enabled;
+  } catch {
+    return 'offline';
+  }
 }

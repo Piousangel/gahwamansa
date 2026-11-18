@@ -79,9 +79,19 @@ export function createFakeTokenSource(token: string | null = FAKE_PUSH_TOKEN): F
   };
 }
 
-/** API 모드로 고른다: fake 모드 = 가짜 토큰(화면·흐름 확인), real 모드 = Firebase 전까지 토큰 없음 */
+/**
+ * API 모드로 고른다: fake 모드 = 가짜 토큰(화면·흐름 확인), real 모드 = FCM(연결 뒤) 또는 토큰 없음.
+ * FCM 은 FCM_WIRED(앱 안 끄기 토글이 main 에 들어온 뒤 켬, 리뷰 M1)이고 모듈·google-services.json 이 있을 때만.
+ */
 export function pickTokenSource(apiMode: 'fake' | 'real'): PushTokenSource {
-  return override ?? (apiMode === 'fake' ? createFakeTokenSource() : nullTokenSource);
+  if (override) {
+    return override;
+  }
+  if (apiMode === 'fake') {
+    return createFakeTokenSource();
+  }
+  const fcm: typeof import('./fcmTokenSource') = require('./fcmTokenSource');
+  return (fcm.FCM_WIRED ? fcm.createFcmTokenSource() : null) ?? nullTokenSource;
 }
 
 let override: PushTokenSource | null = null;

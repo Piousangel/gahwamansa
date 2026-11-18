@@ -15,6 +15,11 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Firebase(US-10 뒤, dev-app-notes 'Firebase 연결 계획'): flavor 별 google-services.json(gitignore)이 하나라도 있을 때만
+        // Google 서비스 플러그인을 받는다. 없으면 지금과 똑같이 빌드된다. 4.5.0 = @react-native-firebase 27.1.0 권장값(2026-06 배포)
+        if (["staging", "production"].any { file("app/src/${it}/google-services.json").exists() }) {
+            classpath("com.google.gms:google-services:4.5.0")
+        }
     }
 }
 

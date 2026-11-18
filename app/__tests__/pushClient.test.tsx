@@ -13,7 +13,9 @@ import {pushChannelSpecs} from '../src/push/channels';
 import {COURSE_ORDER, parentStepAfterOpen} from '../src/push/openRoute';
 import {
   acceptParentPrompt,
-  childPermissionGranted,
+  childOptIn,
+  readReceive,
+  setReceive,
   declineParentPrompt,
   registerToken,
   retryPending,
@@ -163,21 +165,49 @@ describe('어르신 N1 받기 동의', () => {
   });
 });
 
-describe('자녀 권한 허용 = 받기 동의(이 계정에서 한 번)', () => {
-  test('허용 확인 때 set_push_enabled(true) 한 번 + 토큰 등록, 프로필이 없으면 다음에 다시', async () => {
+describe('받기 동의·끄기(리뷰 L2·L3·M1 API)', () => {
+  test("자녀: '알림 켜기'를 누를 때만 동의 — 결과와 상관없이 서버 동의, 허용이면 토큰 등록", async () => {
     const api = createFakeApi({who: 'child', childFamily: true});
     const d = deps(api);
     const en = jest.spyOn(api, 'setPushEnabled');
-    await childPermissionGranted(d);
-    await childPermissionGranted(d);
-    expect(en).toHaveBeenCalledTimes(1);
+    expect(await childOptIn(d, async () => 'blocked')).toBe(true);
+    expect(en).toHaveBeenCalledWith(true);
+    expect(await readPushToken()).toBeNull();
+    await childOptIn(d, async () => 'granted');
     expect(await readPushToken()).toBe(FAKE_PUSH_TOKEN);
+    expect(await childOptIn(deps(createFakeApi({who: 'child'})), async () => 'granted')).toBe(false); // 가족 전(no_profile)
+  });
 
-    const noFam = deps(createFakeApi({who: 'child'}));
-    const en2 = jest.spyOn(noFam.api, 'setPushEnabled');
-    await childPermissionGranted(noFam);
-    await childPermissionGranted(noFam);
-    expect(en2).toHaveBeenCalledTimes(2); // no_profile 이라 기억하지 않음
+  test('앱 안 끄기: set_push_enabled(false) 후 N1 다시 묻지 않고, yes_pending 재시도가 다시 켜지 않는다', async () => {
+    const d = deps();
+    const en = jest.spyOn(d.api, 'setPushEnabled').mockRejectedValueOnce(new Error('offline'));
+    await acceptParentPrompt(d, async () => 'granted'); // 동의 못 보냄 → yes_pending
+    expect(await setReceive(d, false, async () => 'granted')).toEqual({ok: true, enabled: false});
+    await retryPending(d);
+    expect(en.mock.calls.map(c => c[0])).toEqual([true, false]); // 재시도 없음
+    expect(await shouldPromptParent(d)).toBe(false);
+    expect(await readReceive(d)).toBe(false);
+  });
+
+  test('재시도는 서버 값 먼저: 이미 받는 중이면 다시 부르지 않는다', async () => {
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: true});
+    const d = deps(api);
+    const en = jest.spyOn(api, 'setPushEnabled').mockRejectedValueOnce(new Error('offline'));
+    await acceptParentPrompt(d, async () => 'denied');
+    await retryPending(d);
+    expect(en).toHaveBeenCalledTimes(1);
+  });
+
+  test('켜기: 서버 동의 + 허용이면 토큰 등록, 실패는 값으로', async () => {
+    const d = deps();
+    const reg = jest.spyOn(d.api, 'registerPushToken');
+    expect(await setReceive(d, true, async () => 'granted')).toEqual({ok: true, enabled: true});
+    expect(reg).toHaveBeenCalled();
+    expect(await setReceive(deps(createFakeApi({linked: false})), true, async () => 'granted')).toEqual({ok: false, reason: 'no_profile'});
+    const off = deps();
+    jest.spyOn(off.api, 'setPushEnabled').mockRejectedValueOnce(new Error('x'));
+    expect(await setReceive(off, false, async () => 'granted')).toEqual({ok: false, reason: 'offline'});
+    expect(await readReceive(deps(createFakeApi({linked: false})))).toBeNull();
   });
 });
 
@@ -281,5 +311,98 @@ describe('앱 조립(PushHost)', () => {
     await waitFor(() => expect(en).toHaveBeenCalledWith(true));
     await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
     await waitFor(() => expect(screen.queryByTestId('wait-notify')).toBeNull());
+  });
+  test('리뷰 L1: 시스템 창이 뜨지 않으면(blocked) N1 이 닫히지 않고 휴대폰 설정 안내', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const settings = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
+    render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false})} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await press(copy.push.permission.yes);
+    await waitFor(() => screen.getByTestId('n1-system-off'));
+    await press(copy.push.system_off.open_parent);
+    expect(settings).toHaveBeenCalled();
+    await press(copy.push.permission.no);
+    await waitFor(() => expect(screen.queryByTestId('n1-system-off')).toBeNull());
+  });
+
+  test('리뷰 L2: 자녀는 권한이 이미 허용이어도 누르기 전에는 받기 동의를 보내지 않는다(토큰 등록만)', async () => {
+    setPlatform('android', 34);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const en = jest.spyOn(api, 'setPushEnabled');
+    const reg = jest.spyOn(api, 'registerPushToken');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN), {timeout: 8000});
+    expect(en).not.toHaveBeenCalled();
+  });
+
+  test('리뷰 L4: 연결 전 어르신도 권한이 있으면 토큰 등록을 부른다(no_profile 은 정상)', async () => {
+    setPlatform('android', 34);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
+    const api = createFakeApi();
+    const reg = jest.spyOn(api, 'registerPushToken');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(reg).toHaveBeenCalled(), {timeout: 8000});
+    expect(await readPushToken()).toBeNull();
+  });
+
+  test('리뷰 L6: N1 같은 진행 중 화면은 알림 탭이 끊지 않고, 떠난 뒤 처리', async () => {
+    const src = createFakeTokenSource();
+    setTokenSourceForTest(src);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await act(async () => {
+      src.emitOpen({kind: 'daily'});
+    });
+    expect(screen.getByRole('button', {name: copy.push.permission.yes})).toBeTruthy();
+    expect(log).not.toHaveBeenCalledWith('push_opened', expect.anything());
+    await press(copy.push.permission.no);
+    await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'daily'}));
+    await waitFor(() => screen.getByTestId('photo-polaroid'), {timeout: 8000});
+  });
+
+  test('리뷰 L5·L7: 자녀 — 계정이 바뀌면 처리 못 한 탭을 버리고, 어르신 종류는 버린다', async () => {
+    const src = createFakeTokenSource();
+    setTokenSourceForTest(src);
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    let tag = 'acc-a';
+    jest.spyOn(api, 'accountTag').mockImplementation(async () => tag);
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}), {timeout: 8000});
+    await act(async () => {
+      src.emitOpen({kind: 'daily'});
+    });
+    await press('설정'); // 탭 밖 화면: 연결 알림은 보류
+    await act(async () => {
+      src.emitOpen({kind: 'parent_connected'});
+    });
+    tag = 'acc-b';
+    await act(async () => {
+      fireEvent.press(screen.getAllByRole('button', {name: copy.nav.back_a11y})[0]);
+    });
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await act(async () => {});
+    expect(log).not.toHaveBeenCalledWith('push_opened', expect.anything());
+  });
+
+  test('역할을 고르기 전(첫 화면) 알림 탭은 버린다', async () => {
+    const src = createFakeTokenSource();
+    setTokenSourceForTest(src);
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} />);
+    await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'), {timeout: 8000});
+    await act(async () => {
+      src.emitOpen({kind: 'daily'});
+    });
+    await act(async () => {});
+    expect(log).not.toHaveBeenCalledWith('push_opened', expect.anything());
   });
 });

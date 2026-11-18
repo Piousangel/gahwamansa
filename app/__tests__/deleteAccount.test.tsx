@@ -129,9 +129,10 @@ test('리뷰 M4 후속: 계정 삭제도 지우기 전에 계정 가명값을 �
     return del();
   });
   await openParentDelete(api);
+  order.length = 0; // 앱 시작 때의 다른 가명값 읽기(푸시 N1 기억 확인, AU-04)는 세지 않는다 — 지우기 누른 뒤 순서만
   await confirmDeleteAll(); // P9 → 2단계 확인 상자
   await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-del'));
-  expect(order).toEqual(['tag', 'delete']);
+  expect(order.slice(0, 2)).toEqual(['tag', 'delete']); // 지운 뒤 새 시작의 읽기는 상관없음
   clear.mockRestore();
 });
 
