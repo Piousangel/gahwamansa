@@ -50,6 +50,8 @@ export function NotifyRows() {
         perm: perm === 'blocked' ? 'blocked' : perm === 'denied' ? 'denied' : 'ok',
         channels: {daily: daily !== false, cheer: cheer !== false},
       });
+      // 다시 읽기에 성공하면 지난 실패 줄(켬·끔 실패·ask_failed)은 지운다 — 앱 복귀 뒤 이미 켜져 있는데 줄이 남지 않게(PR #9 리뷰 낮음)
+      setFailed(null);
     } catch {
       setS(prev => prev); // 읽기 실패: 지난 값 유지(처음이면 그리지 않음)
     }
