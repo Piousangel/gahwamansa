@@ -25,6 +25,7 @@
        background:var(--btn);color:var(--on-btn);border:3px solid var(--btn);box-shadow:0 4px 12px rgba(116,72,33,.18);
        font-family:'Jua',sans-serif;font-size:30px;line-height:38px;text-align:center;text-decoration:none}
   .note{margin:0;font-size:20px;line-height:30px;font-weight:500;color:var(--sub);text-align:center}
+  .note.big{font-size:24px;line-height:36px;font-weight:700;color:var(--ink)}
   .foot{margin-top:auto;padding:16px 20px;font-size:16px;line-height:1.6;color:var(--sub);border-top:1px solid var(--line)}
   .foot a{color:inherit}
   [hidden]{display:none !important}
@@ -38,6 +39,7 @@
     (조각 자리를 #Intent 가 쓰므로 번호는 엑스트라 S.code → 앱 MainActivity 가 조각으로 옮김). 사용자가 눌러야 동작(자동 이동 안 함).
     눌렀는데 2.5초 지나도 이 페이지가 그대로면 "설치 전" 화면으로 바꾼다.
   - 그 밖(또는 앱이 안 열림): [Play 스토어에서 받기] = Play 링크 referrer=code%3D번호 → 설치 후 첫 실행에 Install Referrer 로 번호가 들어감
+  - iPhone·iPad(데스크톱 UA 포함): Play 버튼 대신 "준비 중" 안내 + 번호. 데스크톱: 휴대폰에서 열라는 안내 + 번호. 판별은 platform.js
   - 번호가 없거나 JS 가 안 돌면: 메시지의 번호를 직접 쓰라는 안내(시안 밖 상태 — 라이터 확인 필요)
   - 기한 문구는 넣지 않는다(번호 종류마다 서버 만료가 달라 날짜를 단정하지 않음. 기한은 공유 메시지에 있음)
   TODO(사용자): HOST 를 production.env 의 APP_LINK_HOST 와 같은 값으로(staging 서브도메인 페이지는 PACKAGE 도 .staging)
@@ -76,15 +78,35 @@
         <a class="btn" id="install" href="#"><span>Play 스토어에서 받기</span></a>
         <p class="note">설치하고 열면 이 번호가 들어 있어요. 안 들어 있으면 번호 6개를 써 주세요</p>
       </div>
+      <!-- 문구 라이터 확인 전 (iOS·데스크톱 분기, 감사 N1) -->
+      <div id="state-ios" hidden>
+        <p class="note big">아이폰용 앱은 준비 중이에요</p>
+        <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요. 이 번호를 전해 주셔도 돼요</p>
+      </div>
+      <div id="state-desktop" hidden>
+        <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
+        <p class="note">앱을 켜고 이 번호 6개를 써도 돼요</p>
+      </div>
     </div>
     <div id="no-code" hidden>
-      <a class="btn" id="install-plain" href="#"><span>Play 스토어에서 받기</span></a>
-      <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써 주세요</p>
+      <div id="nc-android" hidden>
+        <a class="btn" id="install-plain" href="#"><span>Play 스토어에서 받기</span></a>
+        <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써 주세요</p>
+      </div>
+      <div id="nc-ios" hidden>
+        <p class="note big">아이폰용 앱은 준비 중이에요</p>
+        <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요</p>
+      </div>
+      <div id="nc-desktop" hidden>
+        <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
+        <p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 앱에 써도 돼요</p>
+      </div>
     </div>
     <noscript><p class="note">가족이 보낸 카카오톡 메시지에 있는 번호 6개를 가화만사성 앱에 써 주세요</p></noscript>
   </div>
   <div class="foot">이 앱은 돈이나 은행 번호를 묻지 않아요 · <a href="../index.html">개인정보 처리방침</a></div>
 </div>
+<script src="platform.js"></script>
 <script>
 (function () {
   // ---- 설정(도메인 확정 후 사용자) ----
@@ -114,18 +136,21 @@
   function show(id) { document.getElementById(id).hidden = false; }
   function hide(id) { document.getElementById(id).hidden = true; }
 
+  var platform = GahwaPlatform.detectPlatform(navigator.userAgent, navigator.maxTouchPoints);
   var code = readCode();
   if (!code) {
     show('no-code');
-    document.getElementById('install-plain').href = PLAY;
+    show('nc-' + platform);
+    if (platform === 'android') document.getElementById('install-plain').href = PLAY;
     return;
   }
   show('has-code');
   // 번호는 textContent 로만(조각 값은 외부 입력 — HTML 로 넣지 않는다). 읽기 좋게 3·3
   document.getElementById('code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
   document.getElementById('install').href = playUrl(code);
-  if (!/Android/i.test(navigator.userAgent)) {
-    show('state-install');
+  if (platform !== 'android') {
+    // 아이폰·데스크톱엔 Play 버튼을 보이지 않는다(번호는 화면 위에 그대로)
+    show('state-' + platform);
     return;
   }
   var open = document.getElementById('open-app');
