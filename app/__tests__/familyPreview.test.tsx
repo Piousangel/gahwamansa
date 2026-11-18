@@ -48,15 +48,15 @@ test('답 있음: 호칭의 최근 답 카드(고른 답·날짜) + 지난 답 2
   await waitFor(() => screen.getByTestId('settings-row-preview'));
 });
 
-test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마의 최근 답 / 답을 나누지 않는 중이에요", 고른 답 없음, 소개문은 뒤 문장만', async () => {
+test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마의 최근 답 / 답을 나누지 않는 중이에요", 고른 답 없음, 소개문은 sub_off', async () => {
   const device = await openPreview({consented: false, parentDays: DAYS});
   expect(within(device).getByText('가족 휴대폰 화면')).toBeTruthy();
   const card = within(device).getByTestId('preview-not-shared');
   expect(within(card).getByText('엄마의 최근 답')).toBeTruthy();
   expect(within(card).getByText('답을 나누지 않는 중이에요')).toBeTruthy();
   expect(within(device).queryByText('가을')).toBeNull();
-  expect(screen.getByTestId('preview-sub').props.children).toBe('연결된 날과 답을 보여 주는 중인지도 보여요');
-  expect(screen.getByText('• 안 한 날은 보이지 않아요')).toBeTruthy();
+  expect(screen.getByTestId('preview-sub').props.children).toBe('지금은 고른 답이 가족에게 보이지 않아요. 답을 보여 주지 않는 중인 것만 보여요'); // 라이터 sub_off
+  expect(screen.queryByTestId('preview-notes')).toBeNull(); // 거부 상태에서는 '보이지 않아요' 두 줄 없음
 });
 
 test('아직 고른 답 없음: "고른 답이 생기면 여기에 보여요", 소개문은 그대로', async () => {
