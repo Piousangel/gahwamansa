@@ -193,3 +193,30 @@
 ### 재검토 판정
 - **0036: 높음 0 / 중간 1(R-M1) / 낮음 2** → 원 지적 M1~M6 모두 해소. **합치기 가능(조건)**: R-M1은 실제 발송을 켜기 전(US-10 Firebase secrets 등록·staging 실기기 발송)에 고칠 것. 지금은 `push_copy`가 비어 있어 발송이 일어나지 않으므로 병합 자체는 막지 않는다.
 - **0035: 높음 0 / 중간 1(D-M1, 리드 확인) / 낮음 4(D-L2 해소, D-L1·D-L3·D-L4 남음)** → 합치기 가능, staging push 전에 테스터 APK가 820714c 이후 빌드인지 확인.
+
+---
+
+## 재검토 2 — 0037 (a46a541)
+
+### 실행한 검증
+- 임시 스택(`bumo-jasik-sec-review`)에 a46a541 스냅숏 **0001→0037 재생** + `supabase test db` → **Files=35, Tests=546, Result: PASS**(push_rereview 신규). `node --test lib.test.mts` → **13/13 pass**. 스택은 끝나고 삭제.
+- 직접 탐침: `classifyFcmError` — SENDER_ID_MISMATCH(403) → **invalid_token**, 필드 없는 INVALID_ARGUMENT(400) → **failed**, UNREGISTERED(404) → invalid_token. `parent_titles()` anon 실행 **f**, authenticated **t**. `set_push_enabled(true)` 반복 호출 시 기존 `push_consented_at`(2026-01-01) **유지**.
+- 다른 부분(app·design·docs)은 같은 브랜치의 main 병합분이라 이번 재검토 범위 밖.
+
+### 지적별 상태
+| 지적 | 상태 | 근거 |
+|---|---|---|
+| R-M1 토큰 하나로 실행 중단 | **해소** | `lib.mts` SENDER_ID_MISMATCH → 그 토큰만 삭제, 토큰이 아닌 400 → 그 토큰만 failed, 중단은 서로 다른 토큰 3개 이상의 401·403(비 SENDER)·404(비 UNREGISTERED)에서만(`CONFIG_ERROR_ABORT_AT=3`). 단위 테스트 79·91행이 "한 개는 안 막음 / 2개 계속 / 3개 중단"을 검증 |
+| R-L2 동의 시각 덮어쓰기 | **해소** | `0037` `coalesce(push_consented_at, now())`, 끄면 null·다시 켜면 새 시각. pgTAP·탐침 확인 |
+| D-L3 parent_titles anon | **해소** | PUBLIC·anon 회수, authenticated 유지 |
+| D-L4 테스트 빈틈 | **해소(서버 쪽)** | 사진 버킷 storage 정책 0개, references 권한 단언 추가 |
+| R-L1 미연결 계정의 토큰 행 삭제 | 수용(변경 없음) | 토큰 비공개 전제 |
+| D-L1 앱 duplicate_title 매핑 · D-M1 820714c 이전 APK | **남음(앱 줄·리드)** | 서버 범위 밖 |
+
+### 남은 관찰(낮음, 조치 선택)
+- 401·403·404가 토큰과 무관하게 나는 진짜 설정 오류일 때 중단까지 최대 3건 + 동시 실행 중인 요청(최대 10개)이 더 나가 failed로 기록된다. 선점분은 그날 재시도하지 않으므로 그날 대상 전원이 놓친다. 설정 오류는 push_runs.note `config_error`로 남으니 운영 알림(실행 요약 확인)만 붙이면 된다.
+- 공격자가 서로 다른 토큰 3개로 401·403(비 SENDER)·404(비 UNREGISTERED)를 일으킬 수 있는 토큰 단위 응답은 알려진 것이 없다 → 이 경로의 남용 가능성은 낮음.
+
+### 재검토 2 판정
+- **0037: 높음 0 / 중간 0 / 낮음 0(관찰 1)** → 푸시 서버 줄(0032~0037) **합치기 가능, 서버 쪽 조건 없음**. R-M1 해소로 실발송 전제 조건도 서버 쪽은 충족.
+- 출시 전 남은 조건은 서버 밖 2건: D-M1(staging push 전 테스터 APK가 820714c 이후 빌드인지 리드 확인), D-L1(앱 `setParentTitle`의 duplicate_title 매핑, 앱 줄).
