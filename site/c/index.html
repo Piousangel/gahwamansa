@@ -26,7 +26,7 @@
        font-family:'Jua',sans-serif;font-size:30px;line-height:38px;text-align:center;text-decoration:none}
   .note{margin:0;font-size:20px;line-height:30px;font-weight:500;color:var(--sub);text-align:center}
   .note.big{font-size:24px;line-height:36px;font-weight:700;color:var(--ink)}
-  .note a{color:inherit}
+  .note a{color:inherit;display:inline-block;min-height:48px;padding:10px 8px}
   .foot{margin-top:auto;padding:16px 20px;font-size:16px;line-height:1.6;color:var(--sub);border-top:1px solid var(--line)}
   .foot a{color:inherit}
   [hidden]{display:none !important}
@@ -79,14 +79,13 @@
         <a class="btn" id="install" href="#"><span>Play 스토어에서 받기</span></a>
         <p class="note">설치하고 열면 이 번호가 들어 있어요. 안 들어 있으면 번호 6개를 써 주세요</p>
       </div>
-      <!-- 문구 라이터 확인 전 (iOS·데스크톱 분기, 감사 N1) -->
       <div id="state-ios" hidden>
         <p class="note big">아이폰·아이패드용 앱은 준비 중이에요</p>
-        <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요. 이 번호를 전해 주셔도 돼요</p>
+        <p class="note">안드로이드 폰이 있으면 거기서 이 링크를 열어 주세요. 없으면 링크를 보낸 가족에게 알려 주세요</p>
       </div>
       <div id="state-desktop" hidden>
         <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
-        <p class="note">앱을 켜고 이 번호 6개를 써도 돼요</p>
+        <p class="note">휴대폰에서 앱을 켜고 이 번호 6개를 써도 돼요</p>
         <p class="note"><a href="#" class="as-android">휴대폰인데 이 화면이 보이면 여기를 눌러 주세요</a></p>
       </div>
     </div>
@@ -97,7 +96,7 @@
       </div>
       <div id="nc-ios" hidden>
         <p class="note big">아이폰·아이패드용 앱은 준비 중이에요</p>
-        <p class="note">가족에게 안드로이드 폰으로 열어 달라고 말해 주세요</p>
+        <p class="note">안드로이드 폰이 있으면 거기서 이 링크를 열어 주세요. 없으면 링크를 보낸 가족에게 알려 주세요</p>
       </div>
       <div id="nc-desktop" hidden>
         <p class="note big">휴대폰에서 이 링크를 열어 주세요</p>
