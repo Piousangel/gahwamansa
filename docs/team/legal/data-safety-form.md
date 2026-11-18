@@ -25,7 +25,7 @@
 | 14 | 알림 발송 기록 | push_log(종류·날짜·profile·결과, **토큰 없음**) 31일, push_runs(숫자만) 13개월, push_claims 31일 | 예(서버 내부) | profile 삭제 시 cascade | 별도 신고 불필요(추정: 12·13의 서버 처리 기록) | — | — |
 | 15 | Firebase 설치 ID | Firebase SDK | 예정(AU-02, main 앱에 Firebase 없음 — `app/package.json` 사실) | Google 기준 | 기기 또는 기타 ID | 필수 | 앱 기능, 분석 |
 | 16 | 비정상 종료 로그·진단(기기 모델·OS·앱 버전) | Crashlytics | 예정(AU-05) | Google 90일 | 앱 정보 및 성능 > 비정상 종료 로그 / 진단 | 필수 | 분석 |
-| 17 | 서버 접속 기록(IP 등) | Supabase 플랫폼 | 예 | 요금제 기간(미확인) | 신고 안 함(IP 유형 없음, 위치 추정에 안 씀 — 기존 판단 유지) | — | — |
+| 17 | 서버 접속 기록(IP 등) | Supabase 플랫폼 | 예 | Pro 7일(supabase.com/pricing, 11-19) | 신고 안 함(IP 유형 없음, 위치 추정에 안 씀 — 기존 판단 유지) | — | — |
 | 18 | 관리자 감사 기록 | admin_audit(0039·0043): 처리자·사유·**대상 profile·family uuid** | 예(서버 내부) | **삭제 뒤에도 1년 보관**(FK 없음) | 신고 판단 필요(추정: 가명 ID만이면 "삭제 후 보관" 설명에 포함) | — | 보안·법적 의무(추정) |
 | 19 | 초대 번호(링크·Install Referrer로 받은 것) | 기기 `invite_store`(MODE_PRIVATE, allowBackup=false) | **아니오**(연결할 때 번호만 = 11) | 최대 7일·사용 즉시 삭제 | Play "수집" 아님(기기 밖으로 안 나감) | — | — |
 | 20 | 미연결 도장 날짜, 로그인 상태 | 기기 저장 | 아니오 | 7일·로그아웃 | Play "수집" 아님 | — | — |
