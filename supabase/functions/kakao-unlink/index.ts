@@ -2,23 +2,18 @@
 // x-cron-secret 헤더로만 연다(config.toml verify_jwt=false). secrets: PUSH_CRON_SECRET(공용 cron 비밀), KAKAO_ADMIN_KEY(카카오 앱 어드민 키, US-12).
 // 로그에 회원번호·키를 찍지 않는다(요약 숫자만).
 import { safeEqual } from '../_shared/push.mts';
+import { makeRpc, pickServiceKey } from '../_shared/service.mts';
 import { runUnlink } from '../_shared/kakao.mts';
 
 const env = (k: string) => Deno.env.get(k) ?? '';
 
-async function rpc(name: string, args: Record<string, unknown>): Promise<unknown> {
-  const res = await fetch(`${env('SUPABASE_URL')}/rest/v1/rpc/${name}`, {
-    method: 'POST',
-    headers: {
-      apikey: env('SUPABASE_SERVICE_ROLE_KEY'),
-      Authorization: `Bearer ${env('SUPABASE_SERVICE_ROLE_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(args),
-  });
-  if (!res.ok) throw new Error(`rpc_failed:${name}:${res.status}`);
-  return res.json();
-}
+// 서버 키: 새 secret 키(SUPABASE_SECRET_KEYS, 이름 edge→default) 우선, 없으면 옛 서비스 키 폴백(보안 회의 D9·E2). 키 값은 로그에 남기지 않는다.
+const serviceKey = pickServiceKey((k) => Deno.env.get(k) ?? undefined);
+const rpc = serviceKey
+  ? makeRpc(env('SUPABASE_URL'), serviceKey)
+  : async (): Promise<unknown> => {
+      throw new Error('service_key_missing');
+    };
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method_not_allowed', { status: 405 });
