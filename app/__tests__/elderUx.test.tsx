@@ -219,8 +219,12 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
   test('보여 주기 행을 누르면 확인(그만 보여 주기)이 열린다', async () => {
     await toHomeConsented(createFakeApi({linked: true, consented: true}));
     await press('설정');
-    await press('가족에게 답 보여 주기, 보여 주는 중이에요');
+    const verb = screen.getByTestId('share-verb');
+    expect(verb.props.accessibilityState?.expanded).toBe(false);
+    await press('그만 보여 주기'); // W0 ②: 오른쪽 동사 버튼 → 행 아래 확인 펼침
     await waitFor(() => screen.getByText('가족에게 그만 보여 줄까요?'));
+    expect(screen.getByTestId('share-verb').props.accessibilityState?.expanded).toBe(true);
+    expect(within(screen.getByTestId('settings-row-share')).queryByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeNull();
   });
 });
 
@@ -236,7 +240,28 @@ describe('리뷰 낮음 반영', () => {
     rerender(<ToCourseHomeLink onPress={onPress} />);
     expect(screen.queryByTestId('to-course-home')).toBeNull();
   });
-  test("설정: 보여 주기 행은 '›' 없음(같은 화면 확인), 보여 주지 않는 중이면 행 아래 '다시 보여 주기' 버튼", async () => {
+  test("W0 ③: 거부 상태 P3 띠 '다시 정하기' → 설정이 '다시 보여 주기' 확인을 펼친 채, 제목에 포커스, 좋아요 한 번이면 끝", async () => {
+    const api = createFakeApi({linked: true, consented: false});
+    const give = jest.spyOn(api, 'giveConsent');
+    const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    await press('다시 정하기');
+    await waitFor(() => screen.getByText('오늘부터 고른 답이 가족에게 보여요'));
+    await waitFor(() =>
+      expect(send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '오늘부터 고른 답이 가족에게 보여요')).toBe(true),
+    );
+    await press('좋아요');
+    expect(give).toHaveBeenCalledTimes(1);
+  });
+  test('P3 v4 정정: 다 마치면 \'오늘 코스 다시 보기\' 보조 64 + 사진 아이콘', async () => {
+    render(<AppRoot api={createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question', 'hangul']})} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    const btn = screen.getByRole('button', {name: '오늘 코스 다시 보기'});
+    expect(StyleSheet.flatten(typeof btn.props.style === 'function' ? btn.props.style({pressed: false}) : btn.props.style).minHeight).toBe(64);
+    expect(within(btn).getByTestId('icon-photo', {includeHiddenElements: true})).toBeTruthy();
+  });
+  test("설정: 보여 주기 행은 '›' 없음(같은 화면 확인), 보여 주지 않는 중이면 행 오른쪽 '다시 보여 주기'", async () => {
     render(<AppRoot api={createFakeApi({linked: true, consented: false})} role="parent" restore />);
     await waitFor(() => screen.getByTestId('date-line'));
     await press('설정');

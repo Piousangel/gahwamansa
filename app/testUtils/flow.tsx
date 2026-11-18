@@ -11,6 +11,14 @@ export async function press(name: string | RegExp) {
 }
 
 // 코스 홈의 주 버튼(지금 단계 이름: 사진 보기 / 둘 중 고르기 / 글씨 쓰기, 시안 P3 copy 10절)을 누른다
+// 같은 이름 버튼이 여럿일 때 마지막 것(예: 설정 동사 버튼과 펼친 확인 안의 실행 버튼, 디자인 W0 ②)
+export async function pressLast(name: string | RegExp) {
+  await act(async () => {
+    const all = screen.getAllByRole('button', {name});
+    fireEvent.press(all[all.length - 1]);
+  });
+}
+
 export async function pressCourseNext() {
   await act(async () => {
     fireEvent.press(within(screen.getByTestId('screen-dock')).getByTestId('big-button').findByProps({accessibilityRole: 'button'}));

@@ -142,7 +142,7 @@ test('코스 홈에서 나중 동의가 서버 오류면 그 오류 문구를 �
   await toHome(api, false);
   // P3 v4: 거부 띠의 '다시 정하기' → 설정의 다시 보여 주기
   await press('다시 정하기');
-  await press('가족에게 답 보여 주기, 보여 주지 않는 중이에요'); // UX U8: 보여 주기 행 → 다시 보여 주기 확인
+  // W0 ③: '다시 정하기'로 오면 '다시 보여 주기' 확인이 이미 펼쳐져 있다(한 번 누르면 끝)
   await press('좋아요');
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
 });

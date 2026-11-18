@@ -32,7 +32,7 @@ test('거부한 뒤 코스 홈에서 나중에 동의할 수 있다', async () =
   expect(give).not.toHaveBeenCalled();
   // P3 v4: 거부 한 줄 띠 '다시 정하기' → 설정 '다시 보여 주기' → 좋아요
   await press('다시 정하기');
-  await press('가족에게 답 보여 주기, 보여 주지 않는 중이에요'); // UX U8: 보여 주기 행 → 다시 보여 주기 확인
+  // W0 ③: '다시 정하기'로 오면 '다시 보여 주기' 확인이 이미 펼쳐져 있다(한 번 누르면 끝)
   await press('좋아요');
   expect(give).toHaveBeenCalledTimes(1);
 });
