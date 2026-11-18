@@ -3,12 +3,13 @@
 //   선택 PUSH_DRY_RUN=1(보내지 않고 대상 수만). PUSH_CRON_SECRET은 32자 이상 무작위. SUPABASE_URL·SUPABASE_SECRET_KEYS(새 키)·SUPABASE_SERVICE_ROLE_KEY(옛 키)는 런타임이 넣어 준다.
 // 로그에 토큰·개인 id를 찍지 않는다(요약 숫자만).
 import { runDaily, safeEqual, type ServiceAccount } from '../_shared/push.mts';
-import { makeRpc, pickServiceKey } from '../_shared/service.mts';
+import { makeRpc, pickServiceKey, serviceKeyLog } from '../_shared/service.mts';
 
 const env = (k: string) => Deno.env.get(k) ?? '';
 
 // 서버 키: 새 secret 키(SUPABASE_SECRET_KEYS, 이름 edge→default) 우선, 없으면 옛 서비스 키 폴백(보안 회의 D9·E2). 키 값은 로그에 남기지 않는다.
 const serviceKey = pickServiceKey((k) => Deno.env.get(k) ?? undefined);
+console.log(serviceKeyLog((k) => Deno.env.get(k) ?? undefined, serviceKey)); // 값 없이 종류·키 이름만(리뷰 L3 staging 확인)
 const rpc = serviceKey
   ? makeRpc(env('SUPABASE_URL'), serviceKey)
   : async (): Promise<unknown> => {

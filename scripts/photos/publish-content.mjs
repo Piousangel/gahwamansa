@@ -4,7 +4,7 @@
 //       검수표 content/review.md (형식은 content-gate.mjs 머리말)
 // 대상 주소·서버 키: supabase/ops/ops-auth.mjs(키 숨김 입력 또는 ops용 secret 키 환경변수, 출력하지 않음)
 // 사용: node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason "11월 3주차 추가"] [--check]
-//       --check: 게이트만 검사(업로드·게시 안 함). 실제 실행은 대상 호스트를 보여 주고 환경 이름을 다시 입력받아 app/env/<환경>.env의 ref와 대조(production은 호스트 재입력).
+//       --check: 게이트만 검사(업로드·게시 안 함). 어느 쪽이든 키로 요청하기 전에 대상 호스트를 보여 주고 환경 이름을 다시 입력받아 app/env/<환경>.env의 ref와 대조(production은 호스트 재입력).
 //       검수표는 파일·sha256 칸으로 검수한 사진과 묶인다(content-gate.mjs 머리말).
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -30,6 +30,9 @@ if (!batchPath || (!checkOnly && !operator)) {
 }
 
 const {url, headers: auth} = await opsTarget();
+// 대상 확인(C-M1·xhigh M3): 키로 요청하기 **전에**, 입력한 환경의 app/env/<환경>.env ref와 실제 호스트가 같아야 진행(production은 호스트 재입력).
+// --check도 현재 콘텐츠 끝 번호를 서버에서 읽으므로 같은 확인을 거친다.
+await confirmTarget(root, url, checkOnly ? '콘텐츠 게이트 검사(조회만)' : '콘텐츠 게시');
 
 const entries = JSON.parse(readFileSync(resolve(batchPath), 'utf8'));
 const review = parseReview(readFileSync(join(root, 'content/review.md'), 'utf8'));
@@ -62,8 +65,6 @@ if (problems.length) {
 console.log(`게이트 통과: day ${entries.map((e) => e.day_index).join(', ')} (지금 끝 ${existingMax})`);
 if (checkOnly) process.exit(0);
 
-// 대상 확인(C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트가 같아야 진행(production은 호스트 재입력)
-await confirmTarget(root, url, '콘텐츠 게시');
 
 const days = [];
 for (const e of entries) {

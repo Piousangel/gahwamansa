@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000048', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000049', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장
@@ -105,6 +105,16 @@ with checks(check_name, ok, detail) as (
   select '약관·방침 게시 버전 있음(0048)',
          exists (select 1 from public.terms_versions where kind = 'terms') and exists (select 1 from public.terms_versions where kind = 'privacy'),
          '없으면 앱의 약관 동의가 unknown_version으로 거부됨 — admin_publish_terms_version으로 게시'
+  union all
+  select 'public 뷰 쓰기 권한 없음(서비스 역할·앱·anon, 0049 M1)',
+         not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace,
+                            unnest(array['service_role', 'authenticated', 'anon']) r(role), unnest(array['insert', 'update', 'delete', 'truncate']) pr(priv)
+                      where n.nspname = 'public' and c.relkind in ('v', 'm') and has_table_privilege(r.role, c.oid, pr.priv)),
+         'false면 kakao_unlink_gave_up 등으로 감사 없이 큐를 고치거나 지울 수 있음'
+  union all
+  select '프로필 없는 계정 삭제 경로(0049 P20)',
+         has_function_privilege('service_role', 'public.admin_delete_user(uuid,text,text)', 'execute')
+           and not has_function_privilege('authenticated', 'public.admin_delete_user(uuid,text,text)', 'execute'), null
   union all
   select '인증 감사 로그 최근 30일 쌓임(auth.audit_log_entries)',
          (select count(*) from auth.audit_log_entries where created_at > now() - interval '30 days') > 0,

@@ -2,12 +2,13 @@
 // 응원 도착(N2, 어르신)·연결/재연결(N3, 자녀). x-cron-secret 헤더로만 연다(config.toml verify_jwt=false).
 // secrets는 push-daily와 같다: PUSH_CRON_SECRET, FCM_SERVICE_ACCOUNT, 선택 PUSH_DRY_RUN=1. 로그에 토큰·개인 id를 찍지 않는다.
 import { runEvents, safeEqual, type ServiceAccount } from '../_shared/push.mts';
-import { makeRpc, pickServiceKey } from '../_shared/service.mts';
+import { makeRpc, pickServiceKey, serviceKeyLog } from '../_shared/service.mts';
 
 const env = (k: string) => Deno.env.get(k) ?? '';
 
 // 서버 키: 새 secret 키(SUPABASE_SECRET_KEYS, 이름 edge→default) 우선, 없으면 옛 서비스 키 폴백(보안 회의 D9·E2). 키 값은 로그에 남기지 않는다.
 const serviceKey = pickServiceKey((k) => Deno.env.get(k) ?? undefined);
+console.log(serviceKeyLog((k) => Deno.env.get(k) ?? undefined, serviceKey)); // 값 없이 종류·키 이름만(리뷰 L3 staging 확인)
 const rpc = serviceKey
   ? makeRpc(env('SUPABASE_URL'), serviceKey)
   : async (): Promise<unknown> => {

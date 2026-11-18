@@ -31,7 +31,7 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
   if ! npx --yes supabase start --workdir "$WORK" \
     -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1; then
     echo "== 임시 스택 시작 실패 — 마지막 출력(키 줄 제외):"
-    grep -v -E "eyJ[A-Za-z0-9_-]{10,}|sb_(secret|publishable)_|S3_PROTOCOL_ACCESS|JWT_SECRET|new version|recommend" "$WORK/start.log" | tail -15
+    grep -v -i -E "eyJ[A-Za-z0-9_-]{10,}|sb_(secret|publishable)_|S3_PROTOCOL_ACCESS|JWT_SECRET|jwt secret|secret key|access key|new version|recommend" "$WORK/start.log" | tail -15
     exit 1
   fi
   echo "== 임시 스택 시작($PROJECT, db 55322)"
@@ -44,6 +44,9 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
   grep -E "^Applying migration|^Seeding|Finished" "$WORK/reset.log" | tail -4 || true
   echo "== test db"
   npx --yes supabase test db --workdir "$WORK" 2>&1 | grep -v -i "new version\|recommend" | grep -E "not ok|Failed|Wstat|Tests=|Result|ERROR" || true
+  # remote-checks.sql이 문법·권한 오류 없이 끝까지 도는지(값은 로컬이라 false 줄이 있을 수 있음). 결과는 PASS 판정에 쓰지 않는다.
+  echo "== remote-checks.sql 실행 확인(임시 스택)"
+  docker exec -i "supabase_db_$PROJECT" psql -U postgres -X -q -v ON_ERROR_STOP=1 -At -F ' | ' <"$ROOT/supabase/ops/remote-checks.sql" 2>&1 | tail -40 || true
 } 2>&1 | tee "$LOG"
 
 echo "로그: $LOG"

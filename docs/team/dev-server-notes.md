@@ -133,6 +133,19 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 인증 계정 단위 이력(같은 두 버전 반복은 새 기록 없음 — 앱 시작 때 다시 불러도 됨). 계정을 지우면 함께 지워진다(D-05 원칙). 앱은 표를 직접 못 읽는다.
 - 새 약관·방침 버전은 운영자가 `select admin_publish_terms_version('terms'|'privacy', '<버전>', '<사유>', '<처리자>');`로 게시(감사, 되돌리지 않음). 앱은 `needs_reagree`로 다시 동의 화면을 띄울지 정한다(게이트 여부는 법률·리드 결정). 같은 버전 쌍은 한 번만 기록(번갈아 보내도 늘지 않음).
 - **게시 버전이 하나도 없으면 동의가 `unknown_version`으로 거부**된다 → 환경마다 출시 전에 약관·방침 버전을 먼저 게시(remote-checks에 확인 줄).
+- **앱은 `needs_reagree`만 쓴다**(xhigh 리뷰 L9). `terms_version`·`privacy_version`·`agreed_at`은 "마지막으로 새로 기록된 쌍"이라 A→B→A로 동의하면 B를 보여 준다(같은 쌍은 다시 기록하지 않음). 화면에 "동의한 버전"을 보여 주는 용도로 쓰지 않는다.
+- **버전 표기 규칙**(법률 재확인): 서버 값은 `v<정수>`(필요하면 `v1.1`) 또는 `YYYY-MM-DD`. 약관·방침 문서 머리의 "버전 1"·"버전 1.1"이 서버 `v1`·`v1.1`과 같다(문서 머리를 바꾸면 같은 번호로 게시). 한 종류 안에서는 한 가지 형식만 쓰고, 날짜 형식으로 바꾸지 않는다.
+- **게시 순서 규칙**(리뷰 L8): "최신 = 가장 늦게 게시한 버전"이다. 옛 버전을 나중에 게시(백필)하지 않는다 — 그 버전이 최신이 되어 모든 사용자가 옛 버전 재동의 대상이 된다. 한 트랜잭션에서 같은 종류를 두 번 게시하지 않는다(게시 시각이 같아 텍스트 정렬로 갈림: `v10` < `v9`).
+
+### delete_my_account() / delete_scope_preview() — 가족 연결 전 계정 (0049, 법률 리뷰 M1·방침 게시 조건 P20)
+```ts
+// sb.rpc('delete_scope_preview') → { scope: 'child' | 'parent' | 'family' | 'none' }
+// sb.rpc('delete_my_account')    → { scope: 'child' | 'parent' | 'family' | 'none' }
+//   'none' = 가족과 연결하기 전 계정(프로필 없음: 로그인만 한 자녀, 번호 입력 전 어르신 익명 기기). 0049 전에는 no_profile 예외였다.
+```
+- `none`이면 본인 인증 계정을 지우고, 그와 함께 약관 동의 이력(terms_agreements)·소셜 식별 정보(identities)가 cascade로, 푸시 토큰은 함수가 지운다. 카카오 로그인이었으면 회원번호를 연결 끊기 큐에 넣는다(0042와 같은 규칙).
+- 앱 할 일(앱 줄 몫): P9 삭제 확인 화면이 `none`을 받으면 "가족 기록은 없고, 로그인 정보와 약관 동의 기록만 지워져요" 같은 안내를 보여 준다(문구는 라이터). 삭제 뒤 기기 정리는 기존과 같다. 지금 앱 `deleteMyAccount`는 반환값을 쓰지 않아 깨지지 않는다. `deleteScopePreview`의 `scope` 타입에 `'none'`을 추가해야 한다.
+- 연결 직후 경쟁(삭제 확인과 같은 순간 번호 연결): 서버가 인증 사용자 행을 잠근 뒤 프로필을 다시 보고, 그 사이 연결됐으면 프로필 기준 삭제(child·parent·family)로 처리한다.
 
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
@@ -154,14 +167,17 @@ type UnregisterPushToken = { ok: true; removed: number };
   - 성공·이미 해제(-101·-103)는 행 삭제(회원번호 보관 안 함), 실패는 2^n분 뒤 재시도(최대 24시간), 10번 실패하면 `gave_up_at`(운영자 확인) → 30일 뒤 파기.
   - 환경 설정(사용자, US-12): Edge secrets `KAKAO_ADMIN_KEY`(카카오 앱 어드민 키, 저장소·채팅 금지) + 공용 `PUSH_CRON_SECRET`·Vault 값(푸시와 같음), `npx supabase functions deploy kakao-unlink`. 키가 없으면 선점하지 않는다(시도 횟수 보존).
   - 확인: `select count(*), min(enqueued_at), max(attempts), count(gave_up_at) from kakao_unlink_queue;` 앱은 할 일 없음(탈퇴는 서버가 처리).
-- **응원·연결 알림 보강(0041)**: 문구가 없는 종류는 cron이 할 일로 세지 않고, 직전 실행이 dry-run이면 1시간 쉰다. 큐의 어르신 프로필이 지워졌으면 연결 알림을 보내지 않는다. 문구 적재 스크립트는 대상 호스트를 보여 주고 환경 이름을 다시 입력받으며(production은 호스트 재입력) 금지어(혜택·무료·할인·유료·이벤트·쿠폰·광고·"다시 오세요")가 있으면 멈춘다. 잠금 화면 내용 숨김(L3)은 앱 AU-04 채널 설정 몫.
+- **응원·연결 알림 보강(0041)**: 문구가 없는 종류는 cron이 할 일로 세지 않고, 직전 실행이 dry-run이면 1시간 쉰다. 큐의 어르신 프로필이 지워졌으면 연결 알림을 보내지 않는다. 문구 적재 스크립트는 대상 호스트를 보여 주고 환경 이름을 다시 입력받으며(production은 호스트 재입력) 금지어(혜택·무료·할인·유료·이벤트·쿠폰·광고·"다시 오세요")가 있으면 멈춘다. 서버 제약(`push_text_clean`, 0049)도 같은 목록(유료 포함, 방침 2절)이고, 보이지 않는 글자·문장부호·공백을 걷어내고 NFKC로 합친 뒤 검사한다(`혜·택`·`할­인`·NFD 분해 모두 거부). "무료한 오후"·"사진의 포인트"·"생일 이벤트"처럼 뜻이 다른 말도 거부된다(공백을 지우는 이상 "무료 한 달"과 구분할 수 없어 일부러 둠 — 문구를 바꿔 쓴다. 낱말 좁히기는 법률 줄 확인 뒤). 잠금 화면 내용 숨김(L3)은 앱 AU-04 채널 설정 몫.
 - **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
   ```sql
   select public.admin_delete_account('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- {ok, scope: child|parent|family} | {ok:false, reason:'not_found'}
   select public.admin_delete_answers('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- 어르신 답·코스 기록·코스 이벤트(0043) {ok, answers, sessions, events} | not_found·not_parent
+  select public.admin_delete_user('<auth user id>', '메일 요청 #번호(접수일)', '<처리자>');   -- 0049: 가족 연결 전(프로필 없는) 계정 {ok, scope:'none'} | not_found·has_profile
   ```
   - 계정 삭제 규칙은 앱 `delete_my_account`와 같은 공통 함수(`account_delete_core`): 자녀가 남으면 본인만, 마지막 자녀면 가족 전체 + 어르신 익명 인증 계정, 대상 인증 계정까지.
-  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관). 0047부터 사유·처리자에 `@`나 9자리 이상 숫자가 있으면 서버가 `pii_in_args`로 거부한다.
+  - 프로필이 없는 계정(가족 만들기 전 자녀, 번호 입력 전 어르신 기기)은 `admin_delete_account`가 찾지 못한다(not_found) → `admin_delete_user`(대상은 **auth 사용자 id**). 프로필이 있으면 `has_profile`로 거부하니 `admin_delete_account`를 쓴다. 인증 계정·약관 동의 이력·토큰 삭제, 카카오면 해제 큐, 감사 `delete_user`(detail에 user_id). 대상 계정 찾는 법은 §19 제안 ③(리드 결정 전에는 Studio Authentication에서 사용자를 찾아 id만 복사).
+  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관). 서버가 `pii_in_args`로 거부하는 것(0047·0049): `@`·전각 `＠`·"이름 at 도메인 dot com", 하이픈·공백·점으로 끊어도 이어 붙여 **9자리 이상인 숫자**(전화·카드·계좌). uuid는 먼저 걷어내므로 사유에 가족 id를 적어도 된다.
+  - **접수 번호 규칙**: 숫자 8자리 이하(예 `20261119`) 또는 `#n`(예 `#12`). 날짜는 `11-19`·`2026-11-19`로, **시각은 적지 않는다**(`2026-11-19 12:30`은 공백으로 이어 붙어 10자리가 되어 거부).
   - 사유·처리자 필수(`reason_required`·`operator_required`). 처리마다 `admin_audit`(처리자·시각·대상·가족·사유) — 대상이 지워져도 남는다. 0043부터 서비스 역할도 감사 표에 쓰기·수정·삭제·비우기 권한이 없고(쓰기는 admin RPC만), 1년 지나면 파기 배치만 지운다. 파기 함수는 미래 기준 시각을 거부(`future_now`). 공통 삭제 함수는 서비스 역할도 직접 못 부른다. 월 1회 점검: `select * from admin_audit where at > now() - interval '1 month' order by at;`
   - 처리 기한: 목표 7일·상한 10일(DECISIONS 11-17). 본인 확인 방법은 정책 문서 기준(삭제 안내 페이지).
 - **콘텐츠 추가(0040, SV-08)**: `node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason ...]` (`--check`는 게이트만).
@@ -325,7 +341,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
-- 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
+- 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`(프로필 없는 계정은 `admin_delete_user`, 0049)로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 
 ## 15. 테스터 가족 표시(0045, 리드 결정 is_test)
 - `families.is_test`(기본 false): 비공개 테스트 테스터 가족. **지표 SQL에서만 뺀다**(알림·기능은 그대로). 심사 가족(`is_review`)과 별개.
@@ -352,6 +368,10 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0043 | 관리자·게시 리뷰 반영 | 병합 | 미반영 |
 | 0044 | 카카오·사진 주소 재검토 | 병합 | 미반영 |
 | 0045 | 테스터 표시·Q-L1 | 브랜치(리뷰 대기) | 미반영 |
+| 0046 | 약관 동의 이력·금지어 제약 | 브랜치 server-l1-launch | 미반영 |
+| 0047 | 키 위생(E1·E7: display_name 제거·pii_in_args·카카오 포기 뷰) | 브랜치 server-l1-launch | 미반영 |
+| 0048 | 약관 게시 버전·재동의 판단 | 브랜치 server-l1-launch | 미반영 |
+| 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 브랜치 server-l1-launch | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
@@ -367,6 +387,15 @@ type UnregisterPushToken = { ok: true; removed: number };
 | admin L6 | 한 바퀴 뒤 재고 경보 둔감 | 기록: 06시 점검에 `max_cursor`도 함께 봄(§14) |
 | 0044 Q-L2 | Vault 미설정 시 호스트 검사 생략 | 반영: §9 #17·RELEASE 필수 설정 |
 | 0035 D-L1·D-M1 | 앱 duplicate_title 매핑·staging 이전 APK | 앱·리드 몫 |
+| xhigh 11-19 L1 | 금지어 정규화 우회·과잉 거부 | 반영(0049 정규화·유료 추가). 과잉 거부는 보류(수용): 공백 제거 방식상 "무료한"과 "무료 한 달"을 구분 못 함 → 낱말 좁히기는 법률 줄 확인 뒤 |
+| xhigh L2·L3 | SUPABASE_SECRET_KEYS 이상 모양·첫 값 폴백 | 반영: 객체·문자열 검사 후 폴백, `edge`→`default`만(다른 이름 안 씀). 기동 로그에 종류·키 이름 목록(값 없음) — staging에서 `edge` 이름이 실제로 들어오는지 함수 로그로 확인 |
+| xhigh L4·L5·L6 | ops 키 파이프 입력·미리 입력 에코·옛 키 조용히 사용 | 반영: 터미널 아니면 키 입력 거부(환경변수만), 프롬프트 직전 남은 입력 버리고 "프롬프트 뒤 붙여 넣기" 안내, 옛 키면 "옛 키 사용" 출력 |
+| xhigh L7 | database.gen.ts 0045 기준 | 리드 몫: 합치기 창에서 main 공유 DB에 0046~0049 반영 뒤 `scripts/gen-types.sh`(서버 줄은 미병합 번호를 공유 DB에 올리지 않음) |
+| xhigh L8 | 옛 버전 백필 시 최신 뒤바뀜 | 문서: §2 게시 순서 규칙(백필 금지) |
+| xhigh L9 | A→B→A 표시 버전 | 문서: §2 앱은 `needs_reagree`만 |
+| xhigh L10 | down이 감사 action 제약을 되돌리지 않음 | 문서: down 0047·0048·0049 머리말 |
+| xhigh L11 | replay 실패 출력 필터 | 반영: `-i`·`jwt secret`·`secret key`·`access key` |
+| xhigh L12 | §18 B 약관 게시 단계 없음 | 반영: B-3a |
 
 ## 18. staging 반영 리허설 절차(0031~0045) · production dry-run 점검 (W3, 실행은 사용자·리드 — 서버 줄은 원격 실행 안 함)
 비밀값(서비스 키·FCM JSON·카카오 어드민 키·cron 비밀)은 비밀번호 관리자에서 꺼내 쓰고 저장소·채팅·셸 기록에 남기지 않는다.
@@ -381,6 +410,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 1. **확장**: 대시보드 Database > Extensions에서 `pg_cron`, `pg_net` 켜기(0033·0042가 cron·http 호출에 씀). 마이그레이션도 `create extension if not exists`로 켜지만 권한상 대시보드에서 먼저 켜 두는 것이 안전.
 2. **Vault — 대시보드 Vault 화면으로만 입력**(보안 회의 D11, SQL Editor에 값을 쓰지 않음: 쿼리 기록에 남는다): Database > Vault > Add new secret으로 `project_url` = `https://<staging-ref>.supabase.co`, `push_cron_secret` = 32자 이상 무작위(비밀번호 관리자의 생성기로 만들고 저장). 루트 키는 꺼내 보관하지 않는다.
 3. **마이그레이션**: `scripts/db-push.sh staging` → 화면의 dry-run 목록이 위 범위와 같은지 확인 → 환경 이름·ref 재입력 → push.
+   - 3a. **약관·방침 버전 게시**(0048부터, 앱 동의 전에 필수): 법률 확정본의 문서 머리 "버전 n"에 맞춰(§2 버전 표기 규칙) SQL Editor에서 `select admin_publish_terms_version('terms', 'v1', '출시 약관 게시 #n', '<처리자>');`와 `('privacy', 'v1', …)`를 한 번씩, **따로 실행**(한 트랜잭션에 두 번 게시 금지·옛 버전 백필 금지, §2). 감사 행이 남는다.
 4. **확인**: SQL Editor에 `supabase/ops/remote-checks.sql`을 붙여 실행. 이 단계에서 false여도 되는 줄: 푸시 문구·응원 문장(아직 안 넣음), 파기 배치 최근 성공(다음 날 00:10 KST 이후 다시), 사진 주소(0044 이전 사진이면 아래 B-9).
 5. **함수 secrets**(맥 터미널, 값은 비밀번호 관리자에서 임시 파일로 — 저장소 밖 `~/tmp/staging.secrets`, 끝나면 삭제):
    ```bash
@@ -395,7 +425,8 @@ type UnregisterPushToken = { ok: true; removed: number };
    unset PCS
    ```
    → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
-8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력 → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음) → 환경 `staging` 입력(ref 대조). `KEY=값 node …` 형태로 쓰지 않는다.
+8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력(https만) → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음, **프롬프트가 뜬 뒤 붙여 넣기** — 먼저 붙여 넣으면 터미널이 보여 준다) → 환경 `staging` 입력(ref 대조). `KEY=값 node …`·`echo 키 | node …` 형태로 쓰지 않는다(파이프 입력은 스크립트가 거부). "옛 키 사용"이 출력되면 셸에 남은 `SUPABASE_SERVICE_ROLE_KEY`를 `unset`하고 다시.
+   - 모든 ops·photos 스크립트는 주소 검사 → 대상 확인(confirmTarget) → 그 뒤에만 키로 요청한다(xhigh M3, publish-content `--check` 포함).
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).
 11. **다시 확인**: `remote-checks.sql` 전부 true(심사 기간이면 심사 번호 줄만 예외). 결과를 staging 반영 기록에 붙인다.
@@ -410,3 +441,27 @@ type UnregisterPushToken = { ok: true; removed: number };
 - [ ] 콘텐츠: 시드 + 사진 v2 업로드 계획, 문구 적재는 법률 리뷰 통과본으로
 - [ ] 심사 접근(§11): 심사 가족 만들기는 반영 뒤, 번호는 기본 꺼짐 확인
 - [ ] 반영 뒤 `remote-checks.sql` + `metrics.sql` ⑧·⑥ 첫날 확인, 06시 점검(§14) 시작
+
+## 19. 제안(구현 안 함 — 리드·법률 결정 대기, xhigh·법률 재확인 11-19)
+### ① 쓰지 않는 연결 전 계정 정리 배치
+- 문제: 설치 직후 익명 로그인(어르신 기기·미연결 열람)이나 로그인만 하고 가족을 만들지 않은 자녀 계정은 프로필이 없어 파기 배치(0023)에 걸리지 않는다. 그 사이 약관 동의 이력·푸시 토큰·소셜 식별 정보가 기한 없이 남는다. 본인 삭제 경로는 0049로 생겼지만, 앱을 지운 사람은 부를 수 없다.
+- 안: `purge_expired_data`에 한 단계 추가 — `user_delete_core`와 같은 규칙(토큰 삭제·카카오면 해제 큐·인증 계정 삭제 → 동의 이력 cascade)으로
+  - 익명 + 프로필 없음 + `coalesce(last_sign_in_at, created_at)`가 **90일** 넘음
+  - 비익명(카카오·구글·메일) + 프로필 없음 + 마지막 로그인 **1년** 넘음(가족 만들기 전 이탈)
+  - 한 번에 최대 N건(예 500), 결과는 건수만 반환(`stale_users`). 감사 행은 남기지 않는다(배치 파기 — 방침의 보관 기간 표에 한 줄 추가).
+- 영향: 그 기기에서 앱을 다시 열면 세션이 무효 → 앱은 이미 있는 "새 익명 로그인" 경로로 시작(0026과 같음). 연결된 어르신(프로필 있음)은 대상이 아니다. 기간(90일·1년)은 법률·리드 결정. 방침에 "연결하지 않은 계정은 마지막 사용 후 ○일 뒤 삭제" 문장이 필요하다.
+
+### ② terms_agreements 보관 기한
+- 지금: 계정이 있는 동안 기한 없이 보관, 계정 삭제 때 cascade로 함께 삭제. 같은 버전 쌍은 다시 쌓이지 않아(0048) 사용자당 행 수는 게시한 버전 쌍 수 이하다.
+- 안 A(추천): 지금 그대로 "계정 삭제 시까지"로 방침에 적는다. ①이 들어가면 쓰지 않는 계정의 이력도 기한이 생긴다. 동의 입증은 계정이 있는 동안만 필요하다는 전제(삭제 뒤 분쟁 대비 보관이 필요하면 안 C).
+- 안 B: 사용자당 최근 2쌍만 남긴다(재동의 판단에는 최신 쌍만 필요). 옛 동의 시점 입증이 약해진다.
+- 안 C: 계정 삭제 뒤에도 가명(인증 uid의 sha256) + 버전·시각만 1년 보관. 삭제 약속("모두 지워요")과 충돌하므로 방침 예외 조항이 필요하다(지금 예외는 카카오 큐 30일·감사 1년 두 개뿐).
+
+### ③ 앱이 없어진 분의 메일 삭제 요청 — 계정 찾는 법(법률 재확인 L12)
+- 원칙(키 정책 ④): 운영자 화면·터미널·대장·채팅에 회원번호·메일 주소 전체를 출력하지 않는다. **끝 4자리만** 보여 주고(`mark-test-family.mjs`와 같은 규칙), 찾은 id는 화면에 다시 치지 않고 스크립트가 그대로 삭제 RPC에 넘긴다.
+- 메일로 가입한 자녀·구글 자녀: 요청 메일의 주소로 찾는다. 안 — `supabase/ops/find-and-delete-account.mjs --operator <처리자> --request '#n'`: 메일을 **숨김 입력**으로 받음 → 서비스 역할 전용 definer `admin_find_user(p_email)`(신설 제안)이 `auth.users.email` 또는 `identities.identity_data->>'email'`을 소문자로 비교해 `{user_id, has_profile, role, provider, created_on(날짜만)}` 목록을 돌려줌 → 스크립트는 "uid 끝 4자리 · provider · 역할 · 가입일 · 메일 끝 4자리 마스킹(`****.com`이 아니라 `…l.com`처럼 4글자)"만 출력 → 운영자가 번호로 골라 확인 입력 → 프로필이 있으면 `admin_delete_account(profile)`, 없으면 `admin_delete_user(uid)`. 감사 사유는 접수 번호만.
+- 카카오 자녀: 메일 없이 가입할 수 있어("Allow users without an email") 메일로 못 찾을 수 있다. 두 안 중 택1(둘 다 가능):
+  - (a) 요청자에게 카카오 계정 메일을 받아 위 경로로 찾는다(카카오가 메일을 줬을 때만 identity_data에 있음).
+  - (b) **카카오 "연결 끊기 알림"(unlink callback)** 을 받는 Edge Function을 둔다: 사용자가 카카오 계정 설정 > 연결된 서비스 관리에서 우리 앱 연결을 끊으면 카카오가 회원번호와 함께 우리 주소를 부른다 → 서버가 그 회원번호의 인증 계정을 같은 공통 규칙으로 삭제(감사 `delete_user`, 사유 "카카오 연결 끊기 알림"). 삭제 안내 페이지에 "카카오로 가입했다면 카카오 설정에서 연결을 끊으면 계정이 지워져요"를 적을 수 있다. 앱 어드민 키로 요청 출처를 검증(카카오 문서 기준), 회원번호는 로그에 남기지 않는다.
+- 어르신 익명 기기: 메일·회원번호가 없어 **본인 확인 수단이 없다**. 연결된 어르신은 자녀 계정으로 찾는다(자녀 메일로 가족을 찾고, 어르신 프로필은 `admin_delete_account(어르신 profile)` — 요청자가 그 가족의 자녀인지 확인한 뒤). 연결 전 익명 기기는 지울 대상을 특정할 수 없으므로 ①의 90일 자동 정리로 처리하고, 삭제 안내에 그렇게 적는다.
+- 구현 범위(결정 시): 마이그레이션 1(admin_find_user, 출력 열 최소) + ops 스크립트 1 + (b)를 고르면 Edge Function 1·카카오 콘솔 설정(사용자). pgTAP은 "메일·회원번호 전체가 반환값에 없음"을 고정.
