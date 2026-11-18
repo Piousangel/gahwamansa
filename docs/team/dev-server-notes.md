@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0045) · 2026-11-17
+# 서버 계약 노트 (0019~0046) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -122,6 +122,16 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다.
 - 시스템 알림 권한과는 별개다(권한 거부면 애초에 토큰이 없음). 토큰 해제(`unregister_push_token`)는 로그아웃용.
 
+### record_terms_agreement(p_terms_version text, p_privacy_version text) / my_terms_status()  (0046, 법률 Q2)
+```ts
+// 자녀: 로그인 화면의 약관 줄에 동의할 때(가족 만들기 전이어도 됨). 어르신: 연결 화면의 약관 줄 동의 때(연결 전 익명 기기여도 됨).
+// sb.rpc('record_terms_agreement', { p_terms_version: 'v1', p_privacy_version: 'v2' })
+//   → { ok: true; recorded: boolean } | { ok: false; reason: 'invalid_version' }   // 버전 형식 v<n>[.<n>] 또는 YYYY-MM-DD
+// sb.rpc('my_terms_status') → { terms_version, privacy_version, agreed_at } | {}  // 기록 없으면 {}
+```
+- 인증 계정 단위 이력(같은 두 버전 반복은 새 기록 없음 — 앱 시작 때 다시 불러도 됨). 계정을 지우면 함께 지워진다(D-05 원칙). 앱은 표를 직접 못 읽는다.
+- 새 약관·방침 버전이 나오면 앱이 `my_terms_status`와 비교해 다시 동의 화면을 띄울지 정한다(재동의 게이트 여부는 법률·리드 결정).
+
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
 - 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result, link_opened, referrer_found, code_prefilled`(마지막 3개 0029), `paid_sheet_opened, paid_interest_tapped, photo_zoom_opened, child_first_answer_viewed, push_opened`(0034).
@@ -164,6 +174,7 @@ type UnregisterPushToken = { ok: true; removed: number };
   - N3 연결·재연결 → **그 가족 자녀**(DECISIONS U11: 자녀 즉시 알림은 연결·응원 관련만, 부모님 답 알림 없음). 제목·본문 `{호칭}` = 그 어르신 호칭(없으면 가족 호칭).
   - 공통 조건: 알림 켬 + 알림 받기 시각(자녀도 앱이 권한 허용 때 `set_push_enabled(true)`를 불러야 함) + 심사 가족 아님 + 토큰. KST 08:00~20:59에만 처리(밤 것은 아침에), 3일 지난 것은 보내지 않고 처리 표시. 선점 즉시 처리 표시(실패해도 재발송 없음).
   - 문구: 서버가 대상마다 `{설명}`(일일: 그 어르신 오늘 사진 설명, 없으면 `body_fallback`)·`{응원}`·`{n}`·`{호칭}`을 채워 `title`·`body`·`channel`을 준다. 채널 id: daily → `daily`, 응원 → `cheer`, 연결 → `family`(**AU-04가 세 채널을 같은 id로 만든다**, 채널 이름·설명은 copy `push.channel.*`).
+  - 문구 검사(0046 Q6): 서버 check 제약이 `push_copy`·`cheer_texts`에 광고성 낱말(혜택·할인·이벤트·무료·쿠폰·적립·포인트·경품·광고·"다시 오세요")이 들어가면 거부한다. 적재 스크립트도 같은 목록 + 유료로 먼저 멈춘다.
   - 문구 넣기: `node supabase/ops/load-push-copy.mjs --approved`(copy.ko.json `push.*`·`cheers.*` → `push_copy`·`cheer_texts`, 법률 리뷰 뒤, 환경마다). `--dry-run`으로 미리 보기.
   - 연결 끊김 알림(`push.disconnected`)은 서버에 발생 지점이 없어 빌드 1 범위 밖(필요하면 별도 결정).
   - Edge 공용 로직은 `supabase/functions/_shared/push.mts`(테스트 `push.test.mts`), 함수 둘 다 secrets 같음.

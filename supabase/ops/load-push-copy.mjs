@@ -32,7 +32,8 @@ for (const r of rows) {
 }
 for (const c of cheers) if (!c.text || c.text.length > 60) problems.push(`cheers.${c.message_key}: 없거나 60자 초과`);
 // 금지어(WR-02·법률 체크리스트 #10): 혜택·유료·재방문 재촉·광고 표시가 들어가면 적재하지 않는다
-const BANNED = ['혜택', '무료', '할인', '유료', '이벤트', '쿠폰', '다시 오세요', '(광고)', '광고'];
+// 서버 check(0046 push_text_clean)와 같은 목록 + 유료(서버는 문구 검사 대상 아님)
+const BANNED = ['혜택', '할인', '이벤트', '무료', '쿠폰', '적립', '포인트', '경품', '광고', '다시 오세요', '유료'];
 for (const r of [...rows.flatMap((x) => [x.title, x.body, x.body_fallback, x.body_many]), ...cheers.map((c) => c.text)]) {
   for (const w of BANNED) if ((r ?? '').includes(w)) problems.push(`금지어 "${w}": ${r}`);
 }

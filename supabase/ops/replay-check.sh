@@ -31,7 +31,7 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
   if ! npx --yes supabase start --workdir "$WORK" \
     -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1; then
     echo "== 임시 스택 시작 실패 — 마지막 출력(키 줄 제외):"
-    grep -v -i -E "key|secret|jwt|new version|recommend" "$WORK/start.log" | tail -15
+    grep -v -E "eyJ[A-Za-z0-9_-]{10,}|sb_(secret|publishable)_|S3_PROTOCOL_ACCESS|JWT_SECRET|new version|recommend" "$WORK/start.log" | tail -15
     exit 1
   fi
   echo "== 임시 스택 시작($PROJECT, db 55322)"
