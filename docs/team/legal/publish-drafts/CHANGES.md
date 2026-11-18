@@ -120,3 +120,4 @@
 | 방침 본문(`privacy.html`)은 바꾸지 않고 **별도 부록 초안** `privacy-ios-addendum.md`를 만듦: Apple 로그인 행, Apple 토큰 보관 행, APNs 위탁·국외 이전 행, iOS에서 틀려지는 문장(Play 설치 경로·안드로이드 버전·백업·알림 끄는 경로) 바꿀 문장 | 게시본에 "구현 예정"을 두지 않는 원칙(이 문서 머리), Apple 자리표시가 빌드 1 게시 조건(`{` 0건)을 막음. iOS 출시 PR에서 합치고 버전을 올림 |
 | 새 문서 `../app-privacy-label.md`: Play 대조표 행 번호 → App Store 분류·연결·추적·목적, iOS 행 i1~i3 | Apple App Privacy 안내(https://developer.apple.com/app-store/app-privacy-details/, 11-19 조회) |
 | `../official-consult-checklist.md` A-1~A-3, `../lawyer-packet.md` §3 iOS 항목, `../data-safety-form.md` §6 | 감사 N4 "변호사 묶음에 미리 넣기" |
+| (11-19) 리드 결정 3건(위임) 반영: Apple 로그인은 이메일만 요청, 고른 답·응원은 App Store "사용자 콘텐츠 > 기타 사용자 콘텐츠", Apple 토큰 보관 30일(카카오 큐와 같음). Apple 개인정보 문의 경로·연결 끊기 메뉴 경로·iOS 백업 제외 여부는 확인 전이라 자리표시 유지 | 리드 결정(PR #6) |
