@@ -64,3 +64,35 @@ production에서 `[설정 필요]`·개발자 메뉴·BGM이 보이지 않는다
 - `npx eslint .`: 오류 0, 경고 31(모두 기존 no-restricted-imports. 바뀐 파일은 ParentSettings 기존 4건뿐, AppInfoRows·NotifyRows·bgmAsset·DevMenuHost는 0)
 - `npx jest --testPathIgnorePatterns __integration__ --cacheDirectory <scratchpad>`: 1회차 99/100 스위트(957/958). `devMenu.test.tsx` "버전 7번 → 어르신으로 전환" 1건 실패. 단독 2회는 32/32 통과, 전체 2회차는 **100/100 스위트, 958/958 통과**. 병렬 부하에서 생기는 시간 문제로 보고, 이번 변경과는 관계가 없다고 판단(DevMenuHost는 버튼 하나만 더함).
 - 에뮬레이터·실기기·통합 테스트(`__integration__`)는 돌리지 않았다. TalkBack 판단은 코드 읽기로만 했다.
+
+## 재확인 (2026-11-19, `l2-notify-fix` df2bd22, main f9cdd69에서 분기)
+
+**판정: M1·L1~L9 모두 해소, 새 문제는 낮음 3건(N1~N3) → 합치기 가능.**
+
+| 지적 | 결과 | 근거 |
+|---|---|---|
+| M1 denied/blocked 분리 | 해소 | `NotifyRows` state `perm: ok/denied/blocked`. `SystemOffRow`는 blocked만. 켜기는 `runtime.parentEnableFromSettings`, 끄기는 `setPushReceive(false)`(N1 기억 'off') |
+| └ 순서 | 맞음 | `setReceive(d, true, request)`: set_push_enabled(true) → 성공해야 N1 기억 'yes' → 권한 창 → granted면 `registerToken`. 테스트가 `invocationCallOrder`로 서버 호출이 권한 창보다 먼저인지 확인 |
+| └ 실패 시 롤백 | 맞음 | 서버 실패(offline/no_profile)면 권한 창을 띄우지 않고 `!next`로 되돌림 + 문구. 예외는 새 `catch`가 되돌림(L5). 서버 성공 뒤 창에서 거절하면 서버 true가 남는다(N1 '알려 주세요'와 같은 규칙, 이전 리뷰에서 수용) → 아래 denied 줄로 이어짐 |
+| └ blocked 결과 | 맞음 | 권한 창 결과가 blocked면 `openNotifySettings()` + 행이 `SystemOffRow`로. 휴대폰 설정에서 켜고 돌아오면 `PushHost` sync(AppState active → granted면 `registerToken`, PushHost.tsx:50-58)가 토큰을 등록한다 |
+| 서버 켜짐 + denied | 동작함(N1·N2) | 스위치 아래 `notify-perm-denied`: 문구 `system_off.body` + [알려 주세요] → `requestNotifyPermission` → granted면 `parentEnableFromSettings(async () => perm)`로 토큰 등록(set_push_enabled(true) 재호출은 0037 처음 시각 유지로 멱등). blocked면 `SystemOffRow`로 바뀐다 |
+| L1 빨간 `[설정 필요]` | 해소 | `SettingsRow badge`(dangerInk). 테스트가 색을 확인 |
+| L2·L3 TalkBack | 해소 | 사업자 `accessibilityState.expanded`, 약관·방침 `busy` + `announce(loading)`. 테스트 있음 |
+| L4 오프라인 줄 | 해소 | 화면 focus 때 지움 |
+| L5 catch | 해소 | 위 |
+| L6 경쟁 | 해소 | `toggles` 순번 ref + `isBusy()`: 읽기 시작 뒤 토글이 있었거나 진행 중이면 읽은 값을 버린다. 권한 창 때문에 앱이 background → active가 되어 생기는 `load`도 이 조건으로 버려지고, 토글 결과가 최종 값을 정한다. 끝난 뒤 다시 읽지는 않지만 토글 결과가 서버 응답 값이라 문제없다. 직접 겨냥한 테스트는 없음(N3) |
+| L7 production 음원 제외 | 해소 | `metro.release.config.js:8-17` `resolveRequest` → `metroDevMenu.devMenuRedirect`: `src/lib/bgmAsset.ts`이고 APP_ENV가 staging·local이 아니며(불명 포함) 파일에 `const RELEASED = true`가 없으면 `bgmAsset.stub.ts`(require 없음 → 자산이 번들·res/raw에 안 들어감). stub API(`bgmAsset`·`setBgmPreview`·`bgmPreview`·`setBgmAssetForTest`·`BgmTrack`)가 원본과 같아 tsc 통과. `devMenu.test`가 production·불명·공개 뒤·staging·실제 파일·stub에 `require(` 없음을 단언. 정규식이 틀리면 음악이 빠지는 쪽(fail-closed)이다 |
+| L8 주석 | 해소 | appInfo·env·build.gradle·env 예시 갱신, `setBgmAssetForTest(null)` = 숨김 |
+| L9 테스트 | 해소 | 방침·busy·AI 음악 고지·펼침·N1 재노출 안 함(화면 단위) 추가 |
+| SettingsRow 공용 prop | 영향 없음 | `badge`·`accessibilityState`는 선택 prop이라 넘기지 않는 화면은 출력이 같다. 차이는 Pressable 힌트가 `sub ?? ''`에서 `subText \|\| undefined`(빈 문자열 → undefined)로 바뀐 것뿐이고, 읽히는 내용은 같다. 다른 화면 테스트 모두 통과 |
+
+### 새 지적(낮음)
+- **N1. denied 줄 문구가 버튼과 어긋남** — `NotifyRows.tsx`(`notify-perm-denied`). 문구는 "알림이 휴대폰 설정에서 꺼져 있어요"인데, 버튼 [알려 주세요]는 휴대폰 설정이 아니라 앱 안에서 권한 창을 띄운다. 13 이상에서 묻기 전 상태(N1 '알려 주세요' → 창 닫음)에도 이 줄이 보인다. "알림을 받으려면 허용이 필요해요" 같은 문구(copy 키 신설, 디자인 확인)를 권한다.
+- **N2. `askAgain` 결과를 버림** — 허용 뒤 `parentEnableFromSettings` 결과(offline 등)를 보지 않아, 실패해도 `perm: 'ok'`가 되고 아무 안내가 없다(토큰은 다음 PushHost sync에서 등록되므로 영향은 작다). 거절·blocked 결과는 `logPermissionResult`로 기록되지 않는다(허용만 기록). `failed` 줄 표시와 `logPermissionResult(perm)` 호출을 권한다.
+- **N3. 테스트 빈틈** — "서버 켜짐 + denied → [알려 주세요] → 허용 → 토큰 등록"과 L6 경쟁(토글 중 active 읽기가 덮지 않음), 켜기 중 서버 실패 → 권한 창 안 뜸 + 되돌림에 대한 단언이 없다.
+
+### 실행 결과 (df2bd22를 이 worktree에서 detached로 체크아웃, package-lock은 l2-appinfo와 같아 기존 node_modules를 씀)
+- `npx tsc --noEmit`: 오류 0
+- `npx eslint .`: 오류 0, 경고 70(모두 no-restricted-imports. main f9cdd69에서 늘어난 것). 이번 커밋이 바꾼 소스·테스트 13파일만 돌리면 경고 0
+- `npx jest --testPathIgnorePatterns __integration__ --cacheDirectory <scratchpad>/jestcache2`: 1회차는 965개 중 956개 통과, 9개 스위트 실패. 실패는 모두 `Exceeded timeout`(15·20초)이었고, 스위트 하나가 130~240초 걸렸다(머신 load average 44). 실패한 9개 + notifyRows·parentAppInfo·bgm을 `-w 2`로 다시 돌리니 단위 테스트 13스위트, 224/224 통과(같은 패턴에 걸린 `__integration__/devMenu.test.ts`는 서버가 필요해 제외 대상)
+- 에뮬레이터·실기기는 돌리지 않음. 실제 권한 창 동작과 background→active 순서는 코드를 읽어서만 판단
