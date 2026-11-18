@@ -137,3 +137,26 @@
 ### 재검토 판정
 
 **합치기 승인.** 목적(production 앱에 메뉴·세션 보관·테스트 계정이 절대 들어가지 않음)은 실제 APK 와 일부러 우회한 빌드 실패로 확인됐다. 남은 R1·R2 는 개발 흐름·staging 데이터 문제라 출시물 위험은 아니다. R2 는 실제 개인 staging 계정을 지울 수 있으니 다음 작업 첫 순서로, R1 은 개발자 안내(RELEASE.md) 수정만이라도 이번에 함께 하길 권한다.
+
+### 재확인 (15eab04) · 2026-11-18
+
+| 항목 | 결과 |
+|---|---|
+| `tsc --noEmit` | 통과 |
+| `jest --maxWorkers=2`(통합 제외) | 첫 실행 69 묶음 중 1개 실패(681개 중 1개): `devMenu.test.tsx:393` "버전 7번 → …" 이 기본 5초 시간 제한 초과. 캐시가 데워진 뒤 같은 묶음 2회 다시 실행 → 32/32 통과(4.9초·2.3초). 처음 변환이 느린 데서 오는 흔들림(아래 S2) |
+| `npm run check:dev-menu` | 통과, 작업 트리 변경 없음(`git status` 깨끗) |
+| Gradle `createBundleProductionReleaseJsAndAssets`·`createBundleStagingReleaseJsAndAssets --rerun-tasks --info` | 두 작업 모두 `cli.js bundle … --dev false … --config <app>/metro.release.config.js` 로 실행(RN gradle-plugin BundleHermesCTask.kt:163-165 가 `bundleConfig` 를 `--config` 로 넘김). "release 번들 검사 통과(production)", 빌드 뒤 env.generated.ts 지워짐 |
+| env.generated.ts 가 없을 때 `require('./metro.release.config.js')` | 예외(“env.generated.ts 가 없거나 APP_ENV 를 모르겠어요”) → release 번들이 멈춤(fail-closed) |
+
+| 번호 | 판정 | 근거 |
+|---|---|---|
+| R1 | **해결** | 출시 판정이 Gradle 전용 `metro.release.config.js` 로 옮겨졌고, release 번들 두 작업이 실제로 그 설정을 쓴다. 개발 서버 설정(metro.config.js)에는 대역이 없어 release 뒤에도 config.local·개발자 메뉴가 그대로다. release 설정은 `BUILD_TYPE=release` 가 아니면 멈추고, 그래도 빠진 것은 `verifyReleaseBundle` 이 잡는다. debug 변형은 `debuggableVariants` 라 번들 작업이 없다 |
+| R2 | **해결** | 만들 때 어르신·자녀 user id·이메일을 기록하고, 정리 때 칸에서 복원한 세션의 user id 가 같고(자녀는 테스트 도메인 이메일까지) `whoAmI` 역할이 맞을 때만 지운다. user id 는 `setSession` 이 서버 확인 뒤 채운 세션에서 온다. 지난 재현 시나리오(칸에 실제 익명 어르신·본인 소셜 계정)를 그대로 옮긴 테스트(`devMenu.test.tsx:296-307`)에서 `deleteMyAccount` 가 불리지 않는다. id 가 같아도 이메일이 테스트 도메인이 아니면 거부(309), 표시 7일 만료(321), 정리 전 지금 세션 보관·복원(328)도 테스트됨 |
+| R3 | 해결 | 앱 소스를 임시 폴더로 rsync(node_modules 는 링크)해 번들하고, Gradle 과 같은 `--config metro.release.config.js` 를 쓴다 |
+| 낮음(익명 세션) | 해결 | 어르신 칸이 차 있으면 `dev_menu_session_anon_v1` 에 따로 보관 |
+
+**새로 본 것(낮음)**
+- S1 `app/src/dev/testFamily.ts` cleanupTestFamily 끝의 `slots.clearAll()`: 정리할 때 user id 가 달라 **지우지 않은** 칸(실제로 연결한 익명 어르신, anon 칸)도 같이 비운다. 지금 세션만 되돌리므로 그 익명 신원이 지금 세션이 아니면 이 기기에서 다시 꺼낼 수 없다(staging 전용, 데이터는 서버에 남음). 권장: 정리에서는 실제로 지운 신원의 칸과 표시만 지우고 나머지 칸은 둔다.
+- S2 `app/__tests__/devMenu.test.tsx:393` 화면 흐름 테스트가 처음 실행(변환 캐시 없음)에서 5초를 넘긴다. CI 처음 실행에서 흔들릴 수 있으니 `jest.setTimeout`/테스트별 제한을 15초쯤으로.
+
+**재확인 판정: 합치기 승인.** R1·R2·R3·낮음 모두 해결됐다. S1·S2는 다음 작업으로 미뤄도 된다.
