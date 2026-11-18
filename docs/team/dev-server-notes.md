@@ -383,7 +383,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - [ ] staging에서 B 전체 완료·실기기 확인 기록 있음
 - [ ] production Auth 설정 §9 1~18 완료(특히 Vault 2개, pg_cron·pg_net, 익명 한도, 카카오 "Allow users without an email")
 - [ ] `scripts/db-push.sh production` 실행 → **dry-run 목록만 확인하고**, 실제 반영할 때가 아니면 환경 이름 재입력에서 다른 값을 넣어 멈춘다(아무것도 바뀌지 않음). 목록이 0001~0045 + 이후 번호인지, staging과 같은 커밋인지
-- [ ] 스크립트의 스키마 백업이 `~/bumo-jasik-backups/`에 생겼는지(데이터 백업은 Pro 일일 백업·PITR)
+- [ ] 실제 반영 때(확인 입력 뒤) 스크립트가 만드는 스키마 백업이 `~/bumo-jasik-backups/`에 생겼는지 — dry-run만 보고 멈추면 백업은 생기지 않는다(데이터 백업은 Pro 일일 백업·PITR)
 - [ ] production secrets는 staging과 **다른 값**(cron 비밀·카카오 production 앱 어드민 키·FCM production 프로젝트 서비스 계정)
 - [ ] 콘텐츠: 시드 + 사진 v2 업로드 계획, 문구 적재는 법률 리뷰 통과본으로
 - [ ] 심사 접근(§11): 심사 가족 만들기는 반영 뒤, 번호는 기본 꺼짐 확인
