@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000046', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000048', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장
@@ -95,6 +95,16 @@ with checks(check_name, ok, detail) as (
          'http_post 실행 ' || has_function_privilege('authenticated', 'net.http_post(text,jsonb,jsonb,jsonb,integer)', 'execute')::text
            || ' / 요청 큐 insert ' || has_table_privilege('authenticated', 'net.http_request_queue', 'insert')::text
            || ' — net 스키마는 앱 API에 노출되지 않음(Settings > API > Exposed schemas에 net이 없어야 함)'
+  union all
+  select '참고: pg_graphql(앱 API 두 번째 경로)', null,
+         case when exists (select 1 from pg_extension where extname = 'pg_graphql')
+              then '설치됨 — anon 사용 ' || has_schema_privilege('anon', 'graphql_public', 'usage')::text
+                   || '. 표 권한·RLS가 REST와 같게 적용되지만, 쓰지 않으면 대시보드 Extensions에서 끄는 것을 검토'
+              else '설치 안 됨' end
+  union all
+  select '약관·방침 게시 버전 있음(0048)',
+         exists (select 1 from public.terms_versions where kind = 'terms') and exists (select 1 from public.terms_versions where kind = 'privacy'),
+         '없으면 앱의 약관 동의가 unknown_version으로 거부됨 — admin_publish_terms_version으로 게시'
   union all
   select '인증 감사 로그 최근 30일 쌓임(auth.audit_log_entries)',
          (select count(*) from auth.audit_log_entries where created_at > now() - interval '30 days') > 0,

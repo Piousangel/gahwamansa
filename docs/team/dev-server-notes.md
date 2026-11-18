@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0047) · 2026-11-17
+# 서버 계약 노트 (0019~0048) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -126,11 +126,13 @@ type UnregisterPushToken = { ok: true; removed: number };
 ```ts
 // 자녀: 로그인 화면의 약관 줄에 동의할 때(가족 만들기 전이어도 됨). 어르신: 연결 화면의 약관 줄 동의 때(연결 전 익명 기기여도 됨).
 // sb.rpc('record_terms_agreement', { p_terms_version: 'v1', p_privacy_version: 'v2' })
-//   → { ok: true; recorded: boolean } | { ok: false; reason: 'invalid_version' }   // 버전 형식 v<n>[.<n>] 또는 YYYY-MM-DD
-// sb.rpc('my_terms_status') → { terms_version, privacy_version, agreed_at } | {}  // 기록 없으면 {}
+//   → { ok: true; recorded: boolean } | { ok: false; reason: 'invalid_version' | 'unknown_version' }   // 0048: 게시된 버전만
+// sb.rpc('my_terms_status') → { latest_terms, latest_privacy, needs_reagree, terms_version?, privacy_version?, agreed_at? }
+//   needs_reagree = 최신 게시 버전 쌍에 아직 동의하지 않음(기록이 없으면 true). 0046의 {}(기록 없음)는 0048부터 이 모양으로 바뀜
 ```
 - 인증 계정 단위 이력(같은 두 버전 반복은 새 기록 없음 — 앱 시작 때 다시 불러도 됨). 계정을 지우면 함께 지워진다(D-05 원칙). 앱은 표를 직접 못 읽는다.
-- 새 약관·방침 버전이 나오면 앱이 `my_terms_status`와 비교해 다시 동의 화면을 띄울지 정한다(재동의 게이트 여부는 법률·리드 결정).
+- 새 약관·방침 버전은 운영자가 `select admin_publish_terms_version('terms'|'privacy', '<버전>', '<사유>', '<처리자>');`로 게시(감사, 되돌리지 않음). 앱은 `needs_reagree`로 다시 동의 화면을 띄울지 정한다(게이트 여부는 법률·리드 결정). 같은 버전 쌍은 한 번만 기록(번갈아 보내도 늘지 않음).
+- **게시 버전이 하나도 없으면 동의가 `unknown_version`으로 거부**된다 → 환경마다 출시 전에 약관·방침 버전을 먼저 게시(remote-checks에 확인 줄).
 
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
@@ -368,6 +370,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 ## 18. staging 반영 리허설 절차(0031~0045) · production dry-run 점검 (W3, 실행은 사용자·리드 — 서버 줄은 원격 실행 안 함)
 비밀값(서비스 키·FCM JSON·카카오 어드민 키·cron 비밀)은 비밀번호 관리자에서 꺼내 쓰고 저장소·채팅·셸 기록에 남기지 않는다.
+- **셸 기록 규칙(보안 회의 D13)**: 비밀값은 명령줄 인자·`VAR=값 명령`·curl 헤더 문자열로 쓰지 않는다. 운영 스크립트(ops·photos 6개)는 키를 숨김 입력으로 받는다(ops용 secret 키 `SUPABASE_SECRET_KEY`를 쓸 때도 `read -rs SUPABASE_SECRET_KEY; export SUPABASE_SECRET_KEY` 후 끝나면 `unset`). 불가피하게 명령줄에 쓰면 앞에 공백을 두고 zsh에 `setopt HIST_IGNORE_SPACE`(한 번 `~/.zshrc`에). Edge secrets는 `--env-file <저장소 밖 임시 파일>` 후 바로 삭제.
+- **키 분리(D9·D10)**: Edge Function은 런타임이 주는 새 secret 키(`SUPABASE_SECRET_KEYS`, 이름 `edge` 권장)를, 운영 스크립트는 **따로 발급한 ops용 secret 키**를 쓴다. staging·production의 모든 비밀값은 서로 다르다(같으면 출시 관문 실패). 옛 서비스 키(legacy)는 새 키로 옮긴 뒤 비활성화(2026년 말 폐기).
 
 ### A. 준비(로컬, 서버 줄·리드)
 1. main이 0045까지 포함하는지, `supabase/ops/replay-check.sh` 통과(0001→끝 재생 + pgTAP), `scripts/gen-types.sh --check` 최신.
@@ -375,21 +379,23 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 ### B. staging 반영(사용자 — 순서 중요)
 1. **확장**: 대시보드 Database > Extensions에서 `pg_cron`, `pg_net` 켜기(0033·0042가 cron·http 호출에 씀). 마이그레이션도 `create extension if not exists`로 켜지만 권한상 대시보드에서 먼저 켜 두는 것이 안전.
-2. **Vault**(SQL Editor, 값은 붙여 넣고 바로 지우기):
-   ```sql
-   select vault.create_secret('https://<staging-ref>.supabase.co', 'project_url');
-   select vault.create_secret('<32자 이상 무작위>', 'push_cron_secret');   -- 맥에서 openssl rand -hex 32 로 만들고 비밀번호 관리자에 저장
-   ```
+2. **Vault — 대시보드 Vault 화면으로만 입력**(보안 회의 D11, SQL Editor에 값을 쓰지 않음: 쿼리 기록에 남는다): Database > Vault > Add new secret으로 `project_url` = `https://<staging-ref>.supabase.co`, `push_cron_secret` = 32자 이상 무작위(비밀번호 관리자의 생성기로 만들고 저장). 루트 키는 꺼내 보관하지 않는다.
 3. **마이그레이션**: `scripts/db-push.sh staging` → 화면의 dry-run 목록이 위 범위와 같은지 확인 → 환경 이름·ref 재입력 → push.
 4. **확인**: SQL Editor에 `supabase/ops/remote-checks.sql`을 붙여 실행. 이 단계에서 false여도 되는 줄: 푸시 문구·응원 문장(아직 안 넣음), 파기 배치 최근 성공(다음 날 00:10 KST 이후 다시), 사진 주소(0044 이전 사진이면 아래 B-9).
 5. **함수 secrets**(맥 터미널, 값은 비밀번호 관리자에서 임시 파일로 — 저장소 밖 `~/tmp/staging.secrets`, 끝나면 삭제):
    ```bash
-   # ~/tmp/staging.secrets 내용: PUSH_CRON_SECRET=<Vault와 같은 값>  FCM_SERVICE_ACCOUNT=<서비스 계정 JSON 한 줄>  KAKAO_ADMIN_KEY=<staging 앱 어드민 키>  PUSH_DRY_RUN=1
+   # ~/tmp/staging.secrets 는 편집기로 만든다(echo·heredoc 금지 — 셸 기록에 남음). 줄마다 PUSH_CRON_SECRET=… / FCM_SERVICE_ACCOUNT=<JSON 한 줄> / KAKAO_ADMIN_KEY=<staging 전용 카카오 앱 어드민 키> / PUSH_DRY_RUN=1
    npx supabase secrets set --project-ref <staging-ref> --env-file ~/tmp/staging.secrets && rm ~/tmp/staging.secrets
    ```
 6. **함수 배포**: `npx supabase functions deploy push-daily push-events kakao-unlink --project-ref <staging-ref>` (config.toml의 `verify_jwt = false`가 함께 적용되는지 대시보드 Functions에서 확인).
-7. **연기 시험(dry-run)**: `curl -s -X POST https://<staging-ref>.supabase.co/functions/v1/push-daily -H "x-cron-secret: <값>"` → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
-8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `SUPABASE_URL=https://<staging-ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<staging 서비스 키> node supabase/ops/load-push-copy.mjs --approved` → 환경 `staging` 입력(ref 대조).
+7. **연기 시험(dry-run)** — 비밀값을 명령줄에 쓰지 않는다(보안 회의 D13):
+   ```bash
+   read -rs PCS            # 비밀번호 관리자에서 push_cron_secret 붙여 넣기(화면에 안 보임)
+   printf 'x-cron-secret: %s\n' "$PCS" | curl -s -X POST https://<staging-ref>.supabase.co/functions/v1/push-daily -H @-
+   unset PCS
+   ```
+   → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
+8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력 → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음) → 환경 `staging` 입력(ref 대조). `KEY=값 node …` 형태로 쓰지 않는다.
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).
 11. **다시 확인**: `remote-checks.sql` 전부 true(심사 기간이면 심사 번호 줄만 예외). 결과를 staging 반영 기록에 붙인다.

@@ -9,6 +9,9 @@ insert into auth.users (id, aud, role, is_anonymous) values
   ('70460000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false),  -- 자녀(가족 만들기 전)
   ('70460000-0000-0000-0000-0000000000a1', 'authenticated', 'authenticated', true);   -- 어르신 기기(연결 전)
 
+-- 0048부터 게시된 버전만 받는다: 이 테스트가 쓰는 버전을 게시해 둔다
+insert into public.terms_versions (kind, version) values ('terms', 'v1'), ('terms', '2026-11-19'), ('privacy', 'v2'), ('privacy', 'v3') on conflict do nothing;
+
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated', 'is_anonymous', p_anon)::text, true);
@@ -23,7 +26,7 @@ select is(public.record_terms_agreement('v1', 'v3') ->> 'recorded', 'true', '방
 select is(public.record_terms_agreement('2026-11-19', 'v3') ->> 'recorded', 'true', '날짜 형식 버전도 된다');
 select is(public.record_terms_agreement('bad version', 'v3') ->> 'reason', 'invalid_version', '형식이 틀리면 거부');
 select is(public.record_terms_agreement(null, 'v3') ->> 'reason', 'invalid_version', 'null은 거부');
-select is(public.my_terms_status() - 'agreed_at', '{"privacy_version": "v3", "terms_version": "2026-11-19"}'::jsonb, '내 최신 동의 버전을 본다');
+select is(public.my_terms_status() - 'agreed_at' - 'latest_terms' - 'latest_privacy' - 'needs_reagree', '{"privacy_version": "v3", "terms_version": "2026-11-19"}'::jsonb, '내 최신 동의 버전을 본다(0048 비교 키 제외)');
 select throws_ok($$ select count(*) from public.terms_agreements $$, '42501', null, '앱은 동의 이력 표를 직접 못 읽는다');
 
 select pg_temp.act_as('70460000-0000-0000-0000-0000000000a1', true);
