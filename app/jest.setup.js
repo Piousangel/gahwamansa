@@ -58,6 +58,13 @@ jest.mock('react-native-webview', () => {
   return {__esModule: true, WebView, default: WebView};
 });
 
+// Firebase 메시징(AU-04): 테스트에는 Firebase 앱이 없다 → getMessaging 이 실패하는 실제 상황과 같게(공급자는 null, 토큰 없음)
+jest.mock('@react-native-firebase/messaging', () => ({
+  getMessaging: () => {
+    throw new Error('No Firebase App (jest)');
+  },
+}));
+
 // 네이티브 소셜 로그인 모듈 모킹(실기기 로그인은 리드가 확인)
 jest.mock('@react-native-kakao/core', () => ({initializeKakaoSDK: jest.fn(() => Promise.resolve())}));
 jest.mock('@react-native-kakao/user', () => ({

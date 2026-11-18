@@ -19,6 +19,8 @@
   "dependencies": {
     "@mhpdev/react-native-speech": "1.4.4",
     "@react-native-async-storage/async-storage": "^3.1.1",
+    "@react-native-firebase/app": "27.1.0",
+    "@react-native-firebase/messaging": "27.1.0",
     "@react-native-google-signin/google-signin": "17.0.0",
     "@react-native-kakao/core": "3.2.0",
     "@react-native-kakao/user": "3.2.0",
