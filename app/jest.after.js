@@ -7,3 +7,6 @@ beforeEach(() => {
   finishBoot();
   finishFlight();
 });
+
+// QA-13: waitFor 기본 대기(1초)가 부하에서 모자라 date-line 대기가 가끔 실패 → 5초로(testTimeout 20초 안)
+require('@testing-library/react-native').configure({asyncUtilTimeout: 5000});
