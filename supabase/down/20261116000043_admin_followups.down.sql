@@ -1,0 +1,3 @@
+-- 0043 되돌리기(수동). 권한 회수(M1·L1·C-L4)는 보안 약화라 되돌리지 않는다.
+-- 함수: admin_delete_answers(0039)·account_delete_core(0042)·purge_expired_data(0042) 정의를 다시 실행하고,
+--   admin_publish_content·admin_retire_content는 drop 후 0040 정의(인자 순서 처리자, 사유)로 다시 만든다.

@@ -185,7 +185,11 @@ export type EventsSummary =
  * 결과는 종류별로 push_record에 남긴다. 설정 오류·OAuth 실패 처리는 일일 알림과 같다.
  */
 export async function runEvents(deps: RunDeps): Promise<EventsSummary> {
-  if (deps.dryRun || !deps.serviceAccount) return { status: 'dry_run' };
+  if (deps.dryRun || !deps.serviceAccount) {
+    // 0041: dry-run을 남겨 5분 cron이 1시간 쉬게 한다(선점·처리 표시는 하지 않음)
+    await deps.rpc('push_record', { p_kind: 'cheer_arrived', p_results: [], p_excluded: 0, p_note: 'dry_run' });
+    return { status: 'dry_run' };
+  }
   const t = (await deps.rpc('push_events_claim', {})) as { window_open: boolean; targets: Target[] };
   if (!t.window_open) return { status: 'window_closed' };
   if (t.targets.length === 0) return { status: 'no_targets' };
