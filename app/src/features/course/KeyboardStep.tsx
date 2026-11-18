@@ -202,7 +202,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       }
       bottom={dock}>
       {open || phase === 'matched' ? null : <Text20 size={22} weight="bold" style={styles.title}>{k.guide}</Text20>}
-      <View style={styles.card}>
+      {/* S25 실기기(11-19): 자판이 열리면 본문이 낮아져 카드가 제목 밑으로 밀려 잘렸다 → 열림 동안은 카드를 납작하게(사진 없음·칸 44·읽어 주기 숨김) */}
+      <View testID="kb-card" style={[styles.card, open ? styles.cardOpen : null]}>
         {showPhoto ? (
           // 명세 P6 4번: 카드(사진+칸)는 한 덩어리로 읽는다 → 사진은 읽기에서 빼고 칸 묶음 라벨이 대표
           <View style={styles.figure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -214,7 +215,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
         ) : null}
         <WordCells cells={cells} filled={filled} big={!open} />
         {/* AP-03 읽어 주기: 낱말 칸 바로 아래. 낱말과 한 글자씩(화면 읽기 켜짐이면 숨김 R16) */}
-        {phase === 'matched' ? null : <ReadAloud text={ttsText.word(word, cells)} />}
+        {phase === 'matched' || open ? null : <ReadAloud text={ttsText.word(word, cells)} />}
       </View>
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
       <View style={phase === 'matched' ? styles.hidden : styles.inputWrap}>
@@ -228,7 +229,10 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           ref={inputRef}
           testID="kb-input"
           accessibilityLabel={k.input_label}
-          placeholder={k.placeholder}
+          // 안내는 말줄임 없이 줄바꿈(multiline, 높이는 최소만). 자판이 열린 뒤에는 이미 한 일이라 비운다(공간 확보, S25 11-19)
+          placeholder={open ? undefined : k.placeholder}
+          multiline
+          textAlignVertical="center"
           placeholderTextColor={color.inkSub}
           onChangeText={onChangeText}
           onFocus={() => setKbOpen(true)}
@@ -302,14 +306,14 @@ function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[];
   const word = cells.join('');
   const count = k.count_words[cells.length - 1] ?? String(cells.length);
   const label = k.card_a11y.split('{낱말}').join(word).split('{n}').join(count);
-  const side = big ? 64 : 52;
+  const side = big ? 64 : 44;
   return (
     <View style={styles.cells} accessible accessibilityRole="image" accessibilityLabel={label}>
       {cells.map((ch, i) => {
         const on = i < filled;
         return (
           <View key={`${ch}-${i}`} testID={`${idPrefix}-${i}`} style={[styles.cell, {width: side, height: side}, on ? styles.cellOn : null]}>
-            <Text20 size={big ? 40 : 32} weight="bold" maxFontSizeMultiplier={1} style={styles.title}>{ch}</Text20>
+            <Text20 size={big ? 40 : 28} weight="bold" maxFontSizeMultiplier={1} style={styles.title}>{ch}</Text20>
             {on ? (
               <View testID={`${idPrefix}-check-${i}`} style={styles.badge}>
                 <Icon name="icon-check" size={14} color={color.onAction} />
@@ -357,6 +361,7 @@ const styles = StyleSheet.create({
   cellOn: {backgroundColor: color.sky, borderStyle: 'solid', borderColor: color.action},
   badge: {position: 'absolute', right: -7, top: -7, width: 22, height: 22, borderRadius: 11, backgroundColor: color.action, alignItems: 'center', justifyContent: 'center'},
   inputWrap: {gap: 6},
+  cardOpen: {padding: 8, gap: 8},
   skipLink: {minHeight: 64, alignItems: 'center', justifyContent: 'center'},
   skipText: {textDecorationLine: 'underline', color: color.ink},
   hidden: {display: 'none'},
