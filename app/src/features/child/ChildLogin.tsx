@@ -153,6 +153,9 @@ export function ChildLogin() {
     return (
       <Screen
         top={<BackBar onBack={resetRole} />}
+        // 실기기 S25 버그(11-19): 하단 고정 내용(카카오·구글·약관 두 줄·연령·이메일·아래 여백 ≈ 368dp)이 기본 상한 40%(891 → 356)를 넘어
+        // 하단 고정 안에서 스크롤되며 카카오 버튼이 얇은 띠로 잘렸다. 타사 로그인 규정(GUIDELINES.md 자녀 로그인 '하단 고정 45%')대로 상한을 45%로
+        dockMaxRatio={C0_DOCK_RATIO}
         bottom={
           <>
             <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
@@ -224,6 +227,9 @@ export function ChildLogin() {
     </Screen>
   );
 }
+
+// C0 하단 고정 상한(GUIDELINES.md 자녀 로그인: 하단 고정이 45%를 넘으면 안에서 스크롤 — 그때도 버튼이 먼저, 약관·연령 줄이 먼저 가려진다)
+export const C0_DOCK_RATIO = 0.45;
 
 const styles = StyleSheet.create({
   legal: {textAlign: 'center', color: color.ink, marginVertical: 4},
