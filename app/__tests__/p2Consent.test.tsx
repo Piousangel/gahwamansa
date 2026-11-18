@@ -10,7 +10,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError} from '../src/features/types';
 import {enterCode, press} from '../testUtils/flow';
 
-const FOURTH = '싫어요를 누르면 가족에게는 답을 보여 주지 않는 중이라는 것만 보여요';
+const FOURTH = '싫어요를 누르면 가족은 답을 보여 주지 않는 중인 것만 알아요'; // consent.decline_note(copy 11-19)
 
 async function toConsent(api = createFakeApi()) {
   render(<AppRoot api={api} role="parent" />);

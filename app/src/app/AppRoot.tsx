@@ -19,6 +19,8 @@ import {SplashHold, SplashOverlay} from './SplashOverlay';
 import {localStamps} from '../lib/localStamps';
 import {clearDevSessions} from '../dev/devGate';
 import {startInviteSources, subscribeInvite, type InviteBanner} from '../lib/linkSources';
+import {emitRouteChange, navRef} from '../navigation/navRef';
+import {PushHost} from './PushHost';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -216,7 +218,8 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
         {/* 시작 대기 중에는 뒤 화면을 화면 읽기에서 숨긴다(덮개만 읽힘) */}
         <View style={styles.root} importantForAccessibility={hold ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={hold}>
           <SessionContext.Provider value={value}>
-            <NavigationContainer>{body}</NavigationContainer>
+            <NavigationContainer ref={navRef} onReady={emitRouteChange} onStateChange={emitRouteChange}>{body}</NavigationContainer>
+            <PushHost role={who} />
           </SessionContext.Provider>
         </View>
         {hold ? (
