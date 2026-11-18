@@ -629,7 +629,10 @@
       "open_parent": "휴대폰 설정 열기",
       "open_child": "설정 열기",
       "row": "휴대폰 설정에서 꺼져 있어요",
-      "channel_row": "{채널} 알림은 휴대폰 설정에서 꺼져 있어요"
+      "channel_row": "{채널} 알림은 휴대폰 설정에서 꺼져 있어요",
+      "_status_denied_row": "임시(앱 L2, l2-appinfo 재확인 N1 2026-11-19): denied_row 는 라이터 확인 전. 버튼은 push.permission.yes('알려 주세요') 재사용 — N1 과 같은 동작(앱 안 권한 창)",
+      "denied_row": "알림을 받으려면 휴대폰에서 한 번 허락해 주세요",
+      "ask_failed": "알림이 켜지지 않았어요. 잠시 뒤에 다시 눌러 주세요"
     },
     "settings_row": "알림",
     "settings_sub": "하루 한 번, 오늘 사진이 오면 알려 드려요"

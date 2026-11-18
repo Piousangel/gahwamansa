@@ -10,6 +10,8 @@ import {copy} from '../src/copy/copy';
 import {createFakeTokenSource, FAKE_PUSH_TOKEN, setTokenSourceForTest} from '../src/push/tokenSource';
 
 afterEach(() => jest.restoreAllMocks());
+// Android 에서는 Text20 이 한글 사이에 WJ(단어 안 줄바꿈 막기)를 넣는다 — 비교 전에 뺀다
+const wj = (t: string) => t.replace(/\u2060/g, '').trim();
 
 async function settings(opts: FakeOptions = {}) {
   const api = createFakeApi({linked: true, consented: true, ...opts});
@@ -140,6 +142,67 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
   });
 
+  test('재확인 N3-③: 켜는 중 서버 실패 → 스위치는 꺼짐으로 되돌리고 한 줄, 권한 창은 띄우지 않는다', async () => {
+    const api = await declinedThenSettings();
+    const request = jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
+    jest.spyOn(api, 'setPushEnabled').mockRejectedValue(new Error('offline'));
+    await waitFor(() => sw());
+    await act(async () => {
+      fireEvent.press(sw());
+    });
+    await waitFor(() => expect(sw().props.accessibilityState).toMatchObject({checked: false, disabled: false}));
+    expect(screen.getByTestId('notify-failed')).toBeTruthy();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  test('재확인 N3-①·N1·N2: 서버 켜짐 + denied → 허락 부탁 줄 + [알려 주세요] → 허용이면 토큰 등록·줄 사라짐, 결과는 이벤트(값만)', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    const api = createFakeApi({linked: true, consented: true, accountTag: `acc-m1-${++n}`}); // 서버 켜짐
+    const reg = jest.spyOn(api, 'registerPushToken');
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    await press('설정');
+    const row = await waitFor(() => screen.getByTestId('notify-perm-denied'));
+    expect(within(row).getByText(copy.push.system_off.denied_row, {normalizer: wj})).toBeTruthy();
+    expect(within(row).queryByText(copy.push.system_off.body, {normalizer: wj})).toBeNull(); // '휴대폰 설정에서 꺼져 있어요'가 아님
+    // 먼저 거절: 줄은 남고, 결과 이벤트는 denied 값만
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValueOnce('denied').mockResolvedValueOnce('granted');
+    await act(async () => {
+      fireEvent.press(within(row).getByRole('button', {name: copy.push.permission.yes}));
+    });
+    await waitFor(() => expect(log).toHaveBeenCalledWith('push_permission_result', {result: 'denied'}));
+    expect(screen.getByTestId('notify-perm-denied')).toBeTruthy();
+    expect(reg).not.toHaveBeenCalled();
+    // 다시 눌러 허용
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
+    await act(async () => {
+      fireEvent.press(within(screen.getByTestId('notify-perm-denied')).getByRole('button', {name: copy.push.permission.yes}));
+    });
+    await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
+    expect(log).toHaveBeenCalledWith('push_permission_result', {result: 'granted'});
+    await waitFor(() => expect(screen.queryByTestId('notify-perm-denied')).toBeNull());
+    expect(screen.queryByTestId('notify-failed')).toBeNull();
+  });
+
+  test('재확인 N2: [알려 주세요]로 허용했는데 서버가 실패하면 한 줄', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const api = createFakeApi({linked: true, consented: true, accountTag: `acc-m1-${++n}`});
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    await press('설정');
+    const row = await waitFor(() => screen.getByTestId('notify-perm-denied'));
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
+    jest.spyOn(api, 'setPushEnabled').mockResolvedValue({ok: false, reason: 'invalid'});
+    await act(async () => {
+      fireEvent.press(within(row).getByRole('button', {name: copy.push.permission.yes}));
+    });
+    await waitFor(() => expect(within(screen.getByTestId('notify-row')).getByText(copy.push.system_off.ask_failed, {normalizer: wj})).toBeTruthy());
+  });
+
   test('켤 때 권한 창 결과가 blocked(다시 묻지 않음)면 그때만 휴대폰 설정을 연다', async () => {
     await declinedThenSettings();
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
@@ -168,4 +231,34 @@ test('M1 규칙 화면 확인(리뷰 L9 ③): P13 에서 끄면 다음 실행에
   await waitFor(() => screen.getByTestId('date-line'));
   await new Promise<void>(r => setTimeout(() => r(), 300));
   expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull();
+});
+
+test('재확인 N3-② L6 경쟁: 토글 중 앱 복귀(active)로 다시 읽은 옛 값이 새 값을 덮지 않는다', async () => {
+  const handlers: ((st: string) => void)[] = [];
+  const RN = require('react-native');
+  jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+    if (type === 'change') {
+      handlers.push(h);
+    }
+    return {remove: jest.fn()};
+  }) as never);
+  const api = createFakeApi({linked: true, consented: true, accountTag: 'acc-l6-race'});
+  render(<AppRoot api={api} role="parent" restore />);
+  await waitFor(() => screen.getByTestId('date-line'));
+  await press('설정');
+  await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
+  let release: () => void = () => {};
+  jest.spyOn(api, 'setPushEnabled').mockImplementation(enabled => new Promise(r => (release = () => r({ok: true, enabled}))));
+  let readRelease: () => void = () => {};
+  jest.spyOn(api, 'myPushSettings').mockImplementation(() => new Promise(r => (readRelease = () => r({enabled: true})))); // 쓰기 전 옛 값
+  await act(async () => {
+    fireEvent.press(sw()); // 끄기 시작(서버 응답 대기)
+  });
+  await act(async () => {
+    handlers.forEach(h => h('active')); // 휴대폰 설정에서 막 돌아옴 → 다시 읽기 시작
+  });
+  await act(async () => release()); // 토글 끝(서버 false)
+  await act(async () => readRelease()); // 늦게 온 옛 값(true)
+  await new Promise<void>(r => setTimeout(() => r(), 30));
+  expect(sw().props.accessibilityState.checked).toBe(false);
 });

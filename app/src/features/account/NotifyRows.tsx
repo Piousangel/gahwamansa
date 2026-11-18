@@ -4,9 +4,9 @@ import {Text20} from '../../ui/Text20';
 import {SmallButton} from '../../ui/SmallButton';
 import {color, radius, size} from '../../ui/tokens';
 import {useBusyLatch} from '../../ui/useBusyLatch';
-import {channelEnabled, openNotifySettings, readNotifyPermission, requestNotifyPermission} from '../../push/notifyNative';
+import {channelEnabled, openNotifySettings, readNotifyPermission} from '../../push/notifyNative';
 import type {AndroidPushChannel} from '../../api/contract/push';
-import {parentEnableFromSettings, pushReceive, setPushReceive} from '../../push/runtime';
+import {parentAskPermissionAgain, parentEnableFromSettings, pushReceive, setPushReceive} from '../../push/runtime';
 import {copy} from '../../copy/copy';
 
 const p = copy.push;
@@ -29,7 +29,7 @@ const KINDS: {ch: Kind; title: string}[] = [
 export function NotifyRows() {
   const [s, setS] = useState<State>(null);
   const {busy, isBusy, begin, end} = useBusyLatch();
-  // 앱 복귀(active) 때 다시 읽는 값이 진행 중인 토글을 덮지 않게(리뷰 L6): 읽기 시작 뒤 토글이 있었으면 그 결과를 버린다
+  // 앱 복귀(active) 때 다시 읽는 값이 진행 중인 토글을 덮지 않게(리뷰 L6): 읽기 시작 뒤 토글이 시작·끝났으면 그 결과를 버린다
   const toggles = useRef(0);
   const [failed, setFailed] = useState<string | null>(null); // 켬·끔 실패 한 줄(리뷰 낮음, 어르신은 토스트 대신 행 아래 글)
   const load = useCallback(async () => {
@@ -104,6 +104,7 @@ export function NotifyRows() {
       setS(prev => (prev ? {...prev, enabled: !next} : prev));
       setFailed(copy.errors.server.title);
     } finally {
+      toggles.current += 1; // 끝날 때도 올린다: 토글 중에 시작한 다시 읽기(옛 값)는 버린다(재확인 N3-② 경쟁)
       end();
     }
   };
@@ -113,13 +114,21 @@ export function NotifyRows() {
       return;
     }
     toggles.current += 1;
+    setFailed(null);
     try {
-      const perm = await requestNotifyPermission();
-      if (perm === 'granted') {
-        await parentEnableFromSettings(async () => perm); // 서버 값은 그대로 true(0037 처음 시각 유지), 토큰 등록
-      }
+      // 권한 창 → 결과 기록(push_permission_result) → 허용이면 서버 받기·토큰 등록. 허용 뒤 서버가 실패하면 한 줄(재확인 N2)
+      const {permission: perm, result} = await parentAskPermissionAgain();
       setS(prev => (prev ? {...prev, perm: perm === 'blocked' ? 'blocked' : perm === 'denied' ? 'denied' : 'ok'} : prev));
+      if (result && !result.ok) {
+        setFailed(p.system_off.ask_failed);
+      } else if (result?.ok) {
+        const on = result.enabled;
+        setS(prev => (prev ? {...prev, enabled: on} : prev));
+      }
+    } catch {
+      setFailed(p.system_off.ask_failed);
     } finally {
+      toggles.current += 1; // 끝날 때도 올린다: 토글 중에 시작한 다시 읽기(옛 값)는 버린다(재확인 N3-② 경쟁)
       end();
     }
   };
@@ -148,7 +157,8 @@ export function NotifyRows() {
       ) : null}
       {s.enabled && s.perm === 'denied' ? (
         <View testID="notify-perm-denied" style={styles.off}>
-          <Text20 accessibilityLiveRegion="polite" style={styles.sub}>{p.system_off.body}</Text20>
+          {/* 버튼은 앱 안 권한 창이라 '휴대폰 설정에서 꺼져 있어요'가 아니라 허락을 부탁하는 줄(재확인 N1, 새 키 denied_row) */}
+          <Text20 accessibilityLiveRegion="polite" style={styles.sub}>{p.system_off.denied_row}</Text20>
           <SmallButton label={p.permission.yes} onPress={askAgain} />
         </View>
       ) : null}
