@@ -553,6 +553,9 @@ isOneToOne: false
 "kakao_unlink_record":
 { Args: { "p_results": Json }; Returns: Json
                            },
+"kakao_unlink_release":
+{ Args: { "p_http"?: number,"p_ids": (number)[] }; Returns: Json
+                           },
 "kst_today":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
