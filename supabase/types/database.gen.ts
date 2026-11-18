@@ -316,14 +316,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "consent_version": string | null,"consented_at": string | null,"content_seq": number | null,"content_seq_date": string | null,"course_start_date": string,"created_at": string,"display_name": string | null,"family_id": string,"id": string,"parent_title": string | null,"role": string,"user_id": string | null
+                    "consent_version": string | null,"consented_at": string | null,"content_seq": number | null,"content_seq_date": string | null,"course_start_date": string,"created_at": string,"display_name": string | null,"family_id": string,"id": string,"parent_title": string | null,"push_consented_at": string | null,"push_enabled": boolean,"role": string,"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id": string,"id"?: string,"parent_title"?: string | null,"role": string,"user_id"?: string | null
+                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id": string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role": string,"user_id"?: string | null
                   }
                   Update: {
-                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id"?: string,"id"?: string,"parent_title"?: string | null,"role"?: string,"user_id"?: string | null
+                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id"?: string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -333,6 +333,74 @@ isOneToOne: false
       referencedRelation: "families"
       referencedColumns: ["id"]
     }
+                  ]
+                },"push_claims": {
+                  Row: {
+                    "claimed_at": string,"kind": string,"profile_id": string,"sent_on": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "claimed_at"?: string,"kind": string,"profile_id": string,"sent_on": string,"status"?: string
+                  }
+                  Update: {
+                    "claimed_at"?: string,"kind"?: string,"profile_id"?: string,"sent_on"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_claims_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"push_copy": {
+                  Row: {
+                    "body": string,"kind": string,"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"kind": string,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "body"?: string,"kind"?: string,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"push_log": {
+                  Row: {
+                    "created_at": string,"id": number,"kind": string,"profile_id": string,"sent_on": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: number,"kind": string,"profile_id": string,"sent_on": string,"status": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: number,"kind"?: string,"profile_id"?: string,"sent_on"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_log_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"push_runs": {
+                  Row: {
+                    "excluded": number,"failed": number,"id": number,"invalid": number,"kind": string,"note": string | null,"run_at": string,"sent": number,"targets": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "excluded"?: number,"failed"?: number,"id"?: number,"invalid"?: number,"kind": string,"note"?: string | null,"run_at"?: string,"sent"?: number,"targets"?: number
+                  }
+                  Update: {
+                    "excluded"?: number,"failed"?: number,"id"?: number,"invalid"?: number,"kind"?: string,"note"?: string | null,"run_at"?: string,"sent"?: number,"targets"?: number
+                  }
+                  Relationships: [
+                    
                   ]
                 },"redeem_attempts": {
                   Row: {
@@ -403,7 +471,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "give_consent":
-{ Args: { "p_version"?: string }; Returns: undefined
+{ Args: { "p_version": string }; Returns: undefined
                            },
 "issue_invite_code":
 { Args: { "p_target"?: string }; Returns: string
@@ -429,6 +497,9 @@ isOneToOne: false
 "my_profile_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"my_push_settings":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "my_role":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -444,6 +515,9 @@ isOneToOne: false
 "parent_streak":
 { Args: { "p_parent": string,"p_today"?: string }; Returns: number
                            },
+"parent_titles":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "peek_invite_code":
 { Args: { "p_code": string }; Returns: Json
                            },
@@ -453,11 +527,29 @@ isOneToOne: false
 "purge_expired_data":
 { Args: { "p_now"?: string }; Returns: Json
                            },
+"push_daily_claim":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
+"push_daily_eligible":
+{ Args: { "p_today": string }; Returns: string[]
+                           },
+"push_daily_kick":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"push_daily_targets":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
+"push_record":
+{ Args: { "p_excluded"?: number,"p_kind": string,"p_note"?: string,"p_now"?: string,"p_results": Json }; Returns: Json
+                           },
 "record_session_step":
 { Args: { "p_duration"?: number,"p_step": string }; Returns: Json
                            },
 "redeem_invite_code":
 { Args: { "p_code": string }; Returns: Json
+                           },
+"register_push_token":
+{ Args: { "p_platform"?: string,"p_token": string }; Returns: Json
                            },
 "save_answer":
 { Args: { "p_choice": string,"p_question": string }; Returns: undefined
@@ -471,8 +563,14 @@ isOneToOne: false
 "set_parent_title_for":
 { Args: { "p_parent": string,"p_title": string }; Returns: Json
                            },
+"set_push_enabled":
+{ Args: { "p_enabled": boolean }; Returns: Json
+                           },
 "start_today":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"unregister_push_token":
+{ Args: { "p_token": string }; Returns: Json
                            },
 "week_stamps_for":
 { Args: { "p_parent": string,"p_today": string }; Returns: Json
