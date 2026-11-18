@@ -4,12 +4,16 @@
 //   오디오 포커스를 잡지 않음(유튜브·라디오를 끊지 않음).
 // - 벨소리 모드: react-native-volume-manager 2.2.0 getRingerMode(Android). 읽기에는 방해 금지 권한 불필요.
 // 어느 것이든 불러오기·호출이 실패하면 null/unknown → 소리 없이 계속(화면을 막지 않음).
-import {Platform} from 'react-native';
+import {Image, Platform} from 'react-native';
 import type {Ringer} from '../lib/audioPolicy';
 import {ringerFromNative, type SfxName, type SoundHandle, type TtsEngine, type Unsubscribe} from './audioCore';
 
-/** 읽어 주기 말 빠르기·높이(어르신 기준 가정값, 실기기 QA-04 1번에서 확정) */
-const TTS_OPTIONS = {language: 'ko-KR', rate: 0.5, pitch: 1.0, ducking: true} as const;
+/**
+ * 읽어 주기 말 빠르기(리뷰 M4). 같은 숫자라도 플랫폼마다 뜻이 다르다: Android TextToSpeech 는 1.0 = 보통,
+ * iOS AVSpeechUtterance 는 기본 0.5 = 보통. 스파이크 6절 1번 후보(0.9~1.0)의 조금 느린 쪽. 실기기 QA-04 1번에서 확정(가정값).
+ */
+export const TTS_RATE = {android: 0.9, ios: 0.45} as const;
+const ttsOptions = () => ({language: 'ko-KR', rate: Platform.OS === 'ios' ? TTS_RATE.ios : TTS_RATE.android, pitch: 1.0, ducking: true});
 
 export async function getRinger(): Promise<Ringer> {
   if (Platform.OS === 'ios') {
@@ -23,36 +27,65 @@ export async function getRinger(): Promise<Ringer> {
   }
 }
 
-/** 벨소리 모드가 바뀔 때(Android). 지원하지 않으면 아무것도 하지 않는다. */
+// 벨소리 구독(리뷰 M6): volume-manager 의 removeRingerListener 는 네이티브 관찰자를 전역으로 끊는다. 그래서 네이티브 구독은
+// 하나만 두고 앱 안 구독자를 세어, 마지막 구독자가 떠날 때만 전역 해제한다(native-stack 은 이전 화면을 마운트한 채로 둔다).
+const ringerSubscribers = new Set<(r: Ringer) => void>();
+let nativeRingerSub: unknown = null;
+/** 벨소리 모드가 바뀔 때(Android). 지원하지 않으면 아무것도 하지 않는다. 해제 함수는 여러 번 불러도 한 번만 센다. */
 export function subscribeRinger(cb: (r: Ringer) => void): Unsubscribe {
+  let vm: {addRingerListener?: (f: () => void) => unknown; removeRingerListener?: (s: unknown) => void};
   try {
-    const vm = require('react-native-volume-manager');
-    const sub = vm.addRingerListener?.(() => {
-      getRinger().then(cb, () => cb('unknown'));
-    });
-    return () => {
-      try {
-        vm.removeRingerListener?.(sub);
-      } catch {
-        // 무시
-      }
-    };
+    vm = require('react-native-volume-manager');
   } catch {
     return () => {};
   }
+  const mine = (r: Ringer) => cb(r);
+  ringerSubscribers.add(mine);
+  if (ringerSubscribers.size === 1) {
+    try {
+      nativeRingerSub = vm.addRingerListener?.(() => {
+        getRinger().then(
+          r => ringerSubscribers.forEach(f => f(r)),
+          () => ringerSubscribers.forEach(f => f('unknown')),
+        );
+      });
+    } catch {
+      nativeRingerSub = null;
+    }
+  }
+  return () => {
+    if (!ringerSubscribers.delete(mine) || ringerSubscribers.size > 0) {
+      return;
+    }
+    try {
+      vm.removeRingerListener?.(nativeRingerSub);
+    } catch {
+      // 무시
+    }
+    nativeRingerSub = null;
+  };
 }
 
 let categorySet = false;
-/** 번들 소리(require 한 자산 번호 또는 res/raw 이름)를 연다. 로드 실패면 재생해도 조용하다. */
+/**
+ * 번들 소리를 연다(리뷰 H1). react-native-sound 0.13.0 은 파일 이름 문자열만 받는다(숫자면 생성자 첫 줄에서 TypeError).
+ * require 한 자산 번호는 Image.resolveAssetSource 로 주소를 풀어 넘긴다: debug = Metro http 주소, release = res/raw 이름
+ * (예 src_ui_assets_stamp — 0.13.0 은 상대 이름을 raw 자원으로 찾는다). 문자열은 res/raw 이름 그대로.
+ * 두 번째 인자는 반드시 undefined(함수를 넘기면 0.13.0 이 경로 앞에 함수 글자를 붙인다). 못 열면 null.
+ */
 export function loadSound(asset: number | string): SoundHandle | null {
   try {
+    const name = typeof asset === 'number' ? Image.resolveAssetSource(asset)?.uri : asset;
+    if (typeof name !== 'string' || name.length === 0) {
+      return null;
+    }
     const Sound = require('react-native-sound').default ?? require('react-native-sound');
     if (!categorySet) {
       Sound.setCategory?.('Ambient', true);
       categorySet = true;
     }
     let ok = true;
-    const s = new Sound(asset, typeof asset === 'string' ? Sound.MAIN_BUNDLE : undefined, (e: unknown) => {
+    const s = new Sound(name, undefined, (e: unknown) => {
       if (e) {
         ok = false;
       }
@@ -98,17 +131,18 @@ export function createTtsEngine(): TtsEngine | null {
   } catch {
     return null;
   }
-  let korean: boolean | null = null;
+  // 있음만 기억한다: 없음이면 매번 다시 물어 사용자가 한국어 음성을 설치하고 돌아온 경우를 잡는다(리뷰 L1)
+  let korean = false;
   return {
     async hasKorean() {
-      if (korean === null) {
+      if (!korean) {
         const voices = await Speech.getAvailableVoices('ko');
         korean = Array.isArray(voices) && voices.length > 0;
       }
       return korean;
     },
     speak: async text => {
-      await Speech.speak(text, TTS_OPTIONS);
+      await Speech.speak(text, ttsOptions());
     },
     stop: () => Speech.stop(),
     onStart(cb) {

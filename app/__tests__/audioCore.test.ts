@@ -1,9 +1,8 @@
 import {createAudio, ringerFromNative, type TtsEngine, type SoundHandle} from '../src/audio/audioCore';
-import {BGM_DUCK_VOLUME, readAloudAllowed} from '../src/lib/audioPolicy';
-import {createPrefs} from '../src/lib/prefs';
-import {memoryStore} from '../src/lib/kvStore';
+import {BGM_DUCK_VOLUME, readAloudAllowed, sfxAllowed} from '../src/lib/audioPolicy';
+import {stampSoundAllowed} from '../src/features/course/stampFeedback';
 
-// 공용 오디오 모듈(AU-03, dev-audio-spike 5절): 화면은 speak·playSfx·bgm 만 부른다.
+// 공용 오디오 모듈(AU-03, dev-audio-spike 5절): 화면은 useReadAloud·useBgm, 효과음은 sfx(이름) + sfxAllowed 로.
 // 정책: 읽어 주기는 사용자가 직접 누른 소리라 무음·진동 모드에서도 허용, 화면 읽기 켜짐이면 막음(R16).
 //       효과음은 설정 켜짐 + 벨소리 모드 + 읽어 주기 중 아님. 읽어 주는 동안 배경 음악 10%(덕킹).
 
@@ -33,17 +32,11 @@ function fakeTts(over: Partial<TtsEngine> = {}) {
 function fakeSound(): SoundHandle & {play: jest.Mock; setVolume: jest.Mock; stop: jest.Mock} {
   return {play: jest.fn(), stop: jest.fn(), setVolume: jest.fn(), setLoops: jest.fn(), release: jest.fn()};
 }
-function setup(over: {ringer?: Awaited<ReturnType<Parameters<typeof createAudio>[0]['ringer']>>; tts?: TtsEngine | null} = {}) {
+function setup(over: {tts?: TtsEngine | null} = {}) {
   const tts = over.tts === undefined ? fakeTts() : over.tts;
   const stamp = fakeSound();
-  const prefs = createPrefs(memoryStore());
-  const audio = createAudio({
-    tts,
-    ringer: async () => over.ringer ?? 'normal',
-    loadSfx: () => stamp,
-    prefs,
-  });
-  return {audio, tts: tts as ReturnType<typeof fakeTts> | null, stamp, prefs};
+  const audio = createAudio({tts, loadSfx: () => stamp});
+  return {audio, tts: tts as ReturnType<typeof fakeTts> | null, stamp};
 }
 
 describe('벨소리 모드 변환', () => {
@@ -66,10 +59,9 @@ describe('읽어 주기(speak)', () => {
     expect(audio.isSpeaking()).toBe(false);
   });
   test('무음·진동 모드에서도 읽어 준다(사용자가 직접 누른 소리)', async () => {
-    for (const ringer of ['silent', 'vibrate', 'unknown'] as const) {
-      const {audio} = setup({ringer});
-      expect(await audio.speak('글자', {screenReader: false})).toBe('spoken');
-    }
+    // speak 는 벨소리를 보지 않는다(입력에 없음) — 무음·진동이어도 막는 조건은 화면 읽기뿐
+    const {audio} = setup();
+    expect(await audio.speak('글자', {screenReader: false})).toBe('spoken');
   });
   test('화면 읽기가 켜져 있으면 말하지 않는다(R16, SunBubble 과 같은 판단)', async () => {
     const {audio, tts} = setup();
@@ -97,37 +89,47 @@ describe('읽어 주기(speak)', () => {
   });
 });
 
-describe('효과음(playSfx)', () => {
-  test('설정 켜짐 + 벨소리 보통일 때만 울린다', async () => {
-    const a = setup();
-    expect(await a.audio.playSfx('stamp')).toBe(true);
-    expect(a.stamp.play).toHaveBeenCalledTimes(1);
+describe('효과음 판단 한 곳(sfxAllowed, 리뷰 M3)', () => {
+  test('설정 켜짐 + 벨소리 보통 + 읽어 주기 아님일 때만', () => {
+    expect(sfxAllowed({sfxEnabled: true, ringer: 'normal', ttsSpeaking: false})).toBe(true);
+    expect(sfxAllowed({sfxEnabled: false, ringer: 'normal', ttsSpeaking: false})).toBe(false);
     for (const ringer of ['silent', 'vibrate', 'unknown'] as const) {
-      const b = setup({ringer});
-      expect(await b.audio.playSfx('stamp')).toBe(false);
-      expect(b.stamp.play).not.toHaveBeenCalled();
+      expect(sfxAllowed({sfxEnabled: true, ringer, ttsSpeaking: false})).toBe(false);
     }
-    const c = setup();
-    await c.prefs.setSfxEnabled(false);
-    expect(await c.audio.playSfx('stamp')).toBe(false);
+    expect(sfxAllowed({sfxEnabled: true, ringer: 'normal', ttsSpeaking: true})).toBe(false);
   });
-  test('읽어 주는 중에는 울리지 않는다', async () => {
-    const {audio, stamp} = setup();
+  test('도장 피드백의 판단도 같은 함수다', () => {
+    expect(stampSoundAllowed).toBe(sfxAllowed);
+  });
+  test('효과음 소리 장치는 이름별로 한 번만 열고 같이 쓴다', () => {
+    const loadSfx = jest.fn(() => fakeSound());
+    const a = createAudio({tts: null, loadSfx});
+    expect(a.sfx('stamp')).toBe(a.sfx('stamp'));
+    expect(loadSfx).toHaveBeenCalledTimes(1);
+  });
+  test('소리 파일을 못 열면 null(throw 하지 않음)', () => {
+    const a = createAudio({tts: null, loadSfx: () => { throw new Error('x'); }});
+    expect(a.sfx('stamp')).toBeNull();
+  });
+});
+
+describe('정지(리뷰 M1·L2)', () => {
+  test('stopAll 은 읽어 주기와 재생 중인 배경 음악을 모두 멈춘다', async () => {
+    const {audio, tts} = setup();
+    const track = fakeSound();
+    audio.bgm(track).play();
     await audio.speak('a', {screenReader: false});
-    expect(await audio.playSfx('stamp')).toBe(false);
-    expect(stamp.play).not.toHaveBeenCalled();
+    await audio.stopAll();
+    expect(tts!.stop).toHaveBeenCalled();
+    expect(audio.isSpeaking()).toBe(false);
+    expect(track.stop).toHaveBeenCalled();
   });
-  test('소리 파일을 못 읽거나 재생이 실패해도 throw 하지 않는다', async () => {
-    const prefs = createPrefs(memoryStore());
-    const none = createAudio({tts: null, ringer: async () => 'normal', loadSfx: () => null, prefs});
-    expect(await none.playSfx('stamp')).toBe(false);
-    const bad = createAudio({
-      tts: null,
-      ringer: async () => 'normal',
-      loadSfx: () => ({...fakeSound(), play: () => { throw new Error('x'); }}),
-      prefs,
-    });
-    expect(await bad.playSfx('stamp')).toBe(false);
+  test('새로 읽기 전에 이전 읽기를 멈춘다(두 번 눌러도 겹쳐 읽지 않음)', async () => {
+    const {audio, tts} = setup();
+    await audio.speak('하나', {screenReader: false});
+    await audio.speak('둘', {screenReader: false});
+    expect(tts!.stop).toHaveBeenCalledTimes(1);
+    expect(audio.isSpeaking()).toBe(true);
   });
 });
 

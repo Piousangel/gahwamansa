@@ -1,11 +1,12 @@
-// 공용 오디오 모듈의 판단·상태(AU-03, docs/team/dev-audio-spike.md 5절). 네이티브 라이브러리는 engines.ts 가 감싸 주입한다
-// → 이 파일은 React·네이티브를 모르고 단위 테스트로 정책을 고정한다. 화면은 speak · stopSpeaking · playSfx · bgm 만 쓴다.
-// 정책(DECISIONS 11-17·audioPolicy):
-// - 읽어 주기: 사용자가 직접 누른 소리라 벨소리 무음·진동에서도 허용, 화면 읽기 켜짐이면 막음(R16, readAloudAllowed 한 곳).
-// - 효과음: 설정 '도장 소리' 켜짐 + 벨소리 보통 + 읽어 주기 중 아님(모르면 조용히).
-// - 배경 음악: 읽어 주는 동안 10%(BGM_DUCK_VOLUME, 앱 안 덕킹), 끝나면 원래 크기.
+// 공용 오디오 모듈의 상태(AU-03, docs/team/dev-audio-spike.md 5절). 네이티브 라이브러리는 engines.ts 가 감싸 주입한다
+// → 이 파일은 React·네이티브를 모르고 단위 테스트로 규칙을 고정한다. 화면은 hooks.ts(useReadAloud·useBgm)를 쓴다.
+// 규칙(DECISIONS 11-17·audioPolicy):
+// - 읽어 주기: 사용자가 직접 누른 소리라 벨소리 무음·진동에서도 허용, 화면 읽기 켜짐이면 막음(readAloudAllowed 한 곳).
+//   새로 읽기 전에 이전 읽기를 멈춘다(겹쳐 읽지 않음).
+// - 효과음: 판단은 lib/audioPolicy sfxAllowed 한 곳. 여기는 이름별 소리 장치를 한 번만 열어 같이 쓰게(sfx)만 한다.
+// - 배경 음악: 읽어 주는 동안 10%(BGM_DUCK_VOLUME, 앱 안 덕킹). 트랙 열기·해제(release)는 useBgm 이 맡는다.
+// - stopAll: 앱이 뒤로 가면(bindAppLifecycle) 읽기·재생 중인 음악을 모두 멈춘다.
 import {BGM_DUCK_VOLUME, readAloudAllowed, type Ringer} from '../lib/audioPolicy';
-import type {Prefs} from '../lib/prefs';
 
 export type Unsubscribe = () => void;
 
@@ -34,9 +35,7 @@ export type SpeakResult = 'spoken' | 'blocked' | 'unavailable' | 'no_korean_voic
 
 type Deps = {
   tts: TtsEngine | null;
-  ringer: () => Promise<Ringer>;
   loadSfx: (name: SfxName) => SoundHandle | null;
-  prefs: Prefs;
 };
 
 /** volume-manager getRingerMode 값(0 무음 · 1 진동 · 2 보통) → Ringer. 모르면 unknown(조용한 쪽). */
@@ -57,18 +56,17 @@ export function createAudio(d: Deps) {
   d.tts?.onStart(() => setSpeaking(true));
   d.tts?.onDone(() => setSpeaking(false));
 
-  const sfx = new Map<SfxName, SoundHandle | null>();
-  const sound = (name: SfxName) => {
-    if (!sfx.has(name)) {
-      let h: SoundHandle | null = null;
-      try {
-        h = d.loadSfx(name);
-      } catch {
-        h = null;
-      }
-      sfx.set(name, h);
+  const sfxCache = new Map<SfxName, SoundHandle | null>();
+  /** 재생 중인 배경 음악(stopAll 대상) */
+  const playing = new Set<{stop(): void}>();
+
+  const stopSpeaking = async (): Promise<void> => {
+    try {
+      await d.tts?.stop();
+    } catch {
+      // 멈춤 실패는 무시
     }
-    return sfx.get(name) ?? null;
+    setSpeaking(false);
   };
 
   return {
@@ -92,6 +90,9 @@ export function createAudio(d: Deps) {
         if (!(await d.tts.hasKorean())) {
           return 'no_korean_voice';
         }
+        if (speaking) {
+          await d.tts.stop(); // 겹쳐 읽지 않게(이전 읽기의 끝 이벤트는 아래 setSpeaking(true) 앞에서 처리됨)
+        }
         setSpeaking(true); // 시작 이벤트보다 먼저 덕킹(첫 음절이 음악에 묻히지 않게)
         await d.tts.speak(text);
         return 'spoken';
@@ -101,37 +102,33 @@ export function createAudio(d: Deps) {
       }
     },
 
-    async stopSpeaking(): Promise<void> {
-      try {
-        await d.tts?.stop();
-      } catch {
-        // 멈춤 실패는 무시
-      }
-      setSpeaking(false);
+    stopSpeaking,
+
+    /** 앱이 뒤로 갈 때 등: 읽기와 재생 중인 배경 음악을 모두 멈춘다. */
+    async stopAll(): Promise<void> {
+      [...playing].forEach(p => p.stop());
+      await stopSpeaking();
     },
 
-    /** 효과음. 울렸으면 true. 실패는 화면을 막지 않는다. */
-    async playSfx(name: SfxName): Promise<boolean> {
-      try {
-        if (speaking || !(await d.prefs.sfxEnabled()) || (await d.ringer()) !== 'normal') {
-          return false;
+    /** 이름별 효과음 소리 장치(한 번만 열어 같이 씀). 낼지 말지는 호출부가 sfxAllowed 로 정한다. 못 열면 null. */
+    sfx(name: SfxName): SoundHandle | null {
+      if (!sfxCache.has(name)) {
+        let h: SoundHandle | null = null;
+        try {
+          h = d.loadSfx(name);
+        } catch {
+          h = null;
         }
-        const h = sound(name);
-        if (!h) {
-          return false;
-        }
-        h.play();
-        return true;
-      } catch {
-        return false;
+        sfxCache.set(name, h);
       }
+      return sfxCache.get(name) ?? null;
     },
 
-    /** 배경 음악 한 곡을 덕킹 규칙과 묶는다. 재생 여부(audioPolicy.bgm)는 호출부(useBgm)가 정한다. */
+    /** 배경 음악 한 곡을 덕킹 규칙과 묶는다. 재생 여부는 useBgm 이 정하고, 트랙 release 도 useBgm 이 한다. */
     bgm(track: SoundHandle) {
       let unsub: Unsubscribe | null = null;
       const volume = () => (speaking ? BGM_DUCK_VOLUME : 1);
-      return {
+      const ctl = {
         play() {
           if (unsub) {
             return;
@@ -139,20 +136,22 @@ export function createAudio(d: Deps) {
           track.setLoops(-1);
           track.setVolume(volume());
           track.play();
-          unsub = (() => {
-            const l = () => track.setVolume(volume());
-            listeners.add(l);
-            return () => {
-              listeners.delete(l);
-            };
-          })();
+          const l = () => track.setVolume(volume());
+          listeners.add(l);
+          playing.add(ctl);
+          unsub = () => {
+            listeners.delete(l);
+            playing.delete(ctl);
+          };
         },
         stop() {
           unsub?.();
           unsub = null;
           track.stop();
         },
+        isPlaying: () => unsub !== null,
       };
+      return ctl;
     },
   };
 }

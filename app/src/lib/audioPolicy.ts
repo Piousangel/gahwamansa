@@ -37,6 +37,14 @@ export const BGM_DUCK_VOLUME = 0.1;
  */
 export const readAloudAllowed = (screenReader: boolean): boolean => !screenReader;
 
+/**
+ * 효과음(도장 소리)을 낼 수 있는가 — 판단은 여기 한 곳(리뷰 M3). stampFeedback·audioPolicy.sfx 가 같이 쓴다.
+ * 설정 '도장 소리' 켜짐 + 벨소리 보통(무음·진동·모름이면 조용히) + 읽어 주는 중 아님.
+ */
+export function sfxAllowed(i: {sfxEnabled: boolean; ringer: Ringer; ttsSpeaking: boolean}): boolean {
+  return i.sfxEnabled && i.ringer === 'normal' && !i.ttsSpeaking;
+}
+
 export function audioPolicy(i: AudioInputs): AudioDecision {
   if (!i.appActive) {
     return {bgm: 'stop', bgmVolume: 1, sfx: false, ttsAllowed: false};
@@ -47,7 +55,8 @@ export function audioPolicy(i: AudioInputs): AudioDecision {
   return {
     bgm: bgmOn ? 'play' : 'stop',
     bgmVolume: i.ttsSpeaking ? BGM_DUCK_VOLUME : 1,
-    sfx: !quiet,
+    // 설정 값은 입력에 없으므로 켜짐으로 보고 판단(실제 재생 직전에는 설정까지 넣어 sfxAllowed 를 다시 부른다)
+    sfx: sfxAllowed({sfxEnabled: true, ringer: i.ringer, ttsSpeaking: i.ttsSpeaking}),
     // 읽어 주기는 사용자가 직접 누른 소리라 무음 모드에서도 허용. 화면 읽기와는 겹치므로 숨김(R16)
     ttsAllowed: readAloudAllowed(i.screenReader),
   };

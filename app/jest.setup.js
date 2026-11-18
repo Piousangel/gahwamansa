@@ -20,7 +20,12 @@ jest.mock('react-native-sound', () => {
   const instances = [];
   class Sound {
     constructor(asset, basePath, cb) {
+      // 0.13.0 처럼 엄격하게: 첫 줄에서 filename.startsWith 를 부르므로 숫자 자산은 TypeError(리뷰 H1)
+      if (typeof asset !== 'string') {
+        throw new TypeError('react-native-sound 0.13.0: filename must be a string');
+      }
       this.asset = asset;
+      this.basePath = typeof basePath === 'function' ? 'FUNCTION' : basePath;
       this.play = jest.fn();
       this.stop = jest.fn();
       this.setVolume = jest.fn();

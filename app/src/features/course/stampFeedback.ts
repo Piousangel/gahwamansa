@@ -1,8 +1,8 @@
 import {hapticConfirm} from '../../ui/haptic';
 import {prefs as defaultPrefs, type Prefs} from '../../lib/prefs';
-import type {Ringer} from '../../lib/audioPolicy';
+import {sfxAllowed, type Ringer} from '../../lib/audioPolicy';
 import {audio} from '../../audio';
-import {getRinger, loadSfx} from '../../audio/engines';
+import {getRinger} from '../../audio/engines';
 
 // P7 도장 '쾅'이 닿는 순간(180ms)의 소리·촉각(시안 P7_motion "소리·촉각·타임라인").
 // - 촉각: 시스템 촉각 1회(짧게, 시스템 진동 설정 따름). 동작 줄이기에서도 유지(움직임이 아님). 단계 체크에는 없음.
@@ -11,9 +11,8 @@ import {getRinger, loadSfx} from '../../audio/engines';
 
 export type SoundPlayer = {playStamp(): void};
 
-export function stampSoundAllowed(i: {sfxEnabled: boolean; ringer: Ringer; ttsSpeaking: boolean}): boolean {
-  return i.sfxEnabled && i.ringer === 'normal' && !i.ttsSpeaking;
-}
+/** 효과음 판단은 lib/audioPolicy sfxAllowed 한 곳(오디오 리뷰 M3). 이름은 기존 테스트·호출부 호환용. */
+export const stampSoundAllowed = sfxAllowed;
 
 type Deps = {
   player: SoundPlayer | null;
@@ -57,14 +56,10 @@ export function createStampFeedback(d: Deps) {
 }
 
 // ── 기본 연결 ──
-// 소리: 공용 오디오 모듈(src/audio, react-native-sound 0.13.0 · Ambient + mixWithOthers). 로드 실패면 null(촉각만).
-let player: SoundPlayer | null | undefined;
+// 소리: 공용 오디오 모듈의 '도장' 소리 장치(앱 전체 하나, react-native-sound 0.13.0 · Ambient + mixWithOthers). 못 열면 null(촉각만).
 function defaultPlayer(): SoundPlayer | null {
-  if (player === undefined) {
-    const h = loadSfx('stamp');
-    player = h ? {playStamp: () => h.play()} : null;
-  }
-  return player;
+  const h = audio().sfx('stamp');
+  return h ? {playStamp: () => h.play()} : null;
 }
 
 // 촉각: Android 는 시스템 촉각(앱 안 작은 네이티브 모듈 HapticModule.confirm = performHapticFeedback CONFIRM,
