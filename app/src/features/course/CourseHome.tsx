@@ -20,6 +20,7 @@ import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {useWeekStamps} from './useWeekStamps';
 import {useAfterTransition} from './useAfterTransition';
 import {useReturnFocus} from './useReturnFocus';
+import {useCourseBgm} from './useCourseBgm';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
 import {useBootLoading} from '../../app/splash';
@@ -52,6 +53,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const afterTransition = useAfterTransition(navigation);
   const firstGreeting = useFirstGreeting(linked === true, navigation);
   const {fontScale} = useWindowDimensions();
+  const music = useCourseBgm(); // AP-04: 음원(CT-04)이 없으면 available=false 라 버튼도 없다
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
   const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   useEffect(() => {
@@ -134,6 +136,14 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       <View style={styles.headGroup}>
         <View style={styles.titleRow}>
           <Header testID="date-line" label={kstDateLine()} nodeRef={titleRef} />
+          {/* 시안 PX_music: 날짜 → '음악 켜기/끄기'(글자 버튼) → 설정. 200%면 줄바꿈(titleRow wrap) */}
+          {music.available ? (
+            <TextLink
+              label={music.enabled ? copy.bgm.toggle_off : copy.bgm.toggle_on}
+              touch={64}
+              onPress={() => music.setEnabled(!music.enabled)}
+            />
+          ) : null}
           {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
           <TextLink
             label={copy.settings.open}

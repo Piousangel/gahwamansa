@@ -54,15 +54,15 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
   useImperativeHandle(
     scrollRef,
     () => ({
-      showRange(top: number, bottom: number) {
+      showRange(from: number, to: number) {
         const {view, y} = box.current;
         if (view <= 0) {
           return;
         }
-        if (bottom > y + view) {
-          bodyScroll.current?.scrollTo({y: Math.max(0, bottom - view + space.md), animated: true});
-        } else if (top < y) {
-          bodyScroll.current?.scrollTo({y: Math.max(0, top - space.md), animated: true});
+        if (to > y + view) {
+          bodyScroll.current?.scrollTo({y: Math.max(0, to - view + space.md), animated: true});
+        } else if (from < y) {
+          bodyScroll.current?.scrollTo({y: Math.max(0, from - space.md), animated: true});
         }
       },
     }),

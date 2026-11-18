@@ -17,6 +17,7 @@ import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {NotifyRows} from './NotifyRows';
+import {bgmAsset} from '../../lib/bgmAsset';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -120,6 +121,7 @@ export function ParentSettings() {
       <SettingsGroup title={t.group_sound} />
       {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
       {linked ? <NotifyRows api={api} /> : null}
+      {bgmAsset() !== null ? <BgmRow /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
@@ -147,6 +149,47 @@ export function ParentSettings() {
 // 도장 소리 토글(시안 P7_motion·P13, DECISIONS: 효과음은 도장 소리 하나라 이름 '도장 소리', 기본 켜짐). 이 기기에만 저장.
 // 행 전체가 스위치(터치 64 이상, talkback R10 "도장 소리, 스위치, 켜짐, 도장을 찍을 때 짧은 소리").
 // 저장값을 읽기 전에는 스위치를 그리지 않는다(켜짐→꺼짐 깜빡임 방지).
+// AP-04 '배경 음악' 행(시안 PX_music·P13_more): 기본 꺼짐. 음원(CT-04)이 없으면 행을 그리지 않는다(호출부)
+function BgmRow() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    prefs()
+      .bgmEnabled()
+      .then(v => alive && setOn(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggle = () => {
+    if (on === null) {
+      return;
+    }
+    setOn(!on);
+    prefs().setBgmEnabled(!on);
+  };
+  return (
+    <Pressable
+      testID="bgm-row"
+      accessibilityRole="switch"
+      accessibilityLabel={copy.bgm.settings_row}
+      accessibilityHint={copy.bgm.settings_sub}
+      accessibilityState={{checked: !!on, disabled: on === null}}
+      onPress={toggle}
+      style={({pressed}) => [styles.section, styles.toggleRow, pressed ? styles.pressed : null]}>
+      <View style={styles.toggleText}>
+        <Text20 size={24} weight="bold">{copy.bgm.settings_row}</Text20>
+        <Text20 style={styles.sub}>{copy.bgm.settings_sub}</Text20>
+      </View>
+      {on === null ? null : (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Switch value={on} onValueChange={toggle} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 function SfxRow() {
   const [on, setOn] = useState<boolean | null>(null);
   useEffect(() => {
