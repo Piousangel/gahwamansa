@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0040) · 2026-11-17
+# 서버 계약 노트 (0019~0042) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -10,6 +10,7 @@
   "parents": [                             // 연결 순서(created_at)대로, 어르신마다 1개
     { "parent_id": "uuid", "title": "엄마",  // 어르신별 호칭, 없으면 가족 호칭
       "connected": true,                   // false = 연결 끊김(프로필은 있고 기기 없음) → 배너, 응원 버튼 숨김
+      "connected_date": "2026-11-12",      // 0041: 처음 연결된 날(KST). 호칭이 겹칠 때 "11월 12일에 연결한 분"처럼 구분(재연결해도 그대로)
       "shared": true,                      // 동의 여부. false면 latest=null
       "latest": { "prompt": "…", "choice_label": "가을", "starter": "가을 이야기 들려주세요", "answered_date": "2026-11-16" } } ] }
 ```
@@ -137,6 +138,11 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
+- **카카오 연결 끊기(0042, SV-06)**: 계정 삭제(앱 `delete_my_account`·관리자 `admin_delete_account` 공통) 때 카카오 회원번호를 `kakao_unlink_queue`에 넣고, cron `kakao-unlink` 10분마다(대기 중일 때만) → Edge Function `kakao-unlink`가 앱 어드민 키로 `POST kapi.kakao.com/v1/user/unlink`.
+  - 성공·이미 해제(-101·-103)는 행 삭제(회원번호 보관 안 함), 실패는 2^n분 뒤 재시도(최대 24시간), 10번 실패하면 `gave_up_at`(운영자 확인) → 30일 뒤 파기.
+  - 환경 설정(사용자, US-12): Edge secrets `KAKAO_ADMIN_KEY`(카카오 앱 어드민 키, 저장소·채팅 금지) + 공용 `PUSH_CRON_SECRET`·Vault 값(푸시와 같음), `npx supabase functions deploy kakao-unlink`. 키가 없으면 선점하지 않는다(시도 횟수 보존).
+  - 확인: `select count(*), min(enqueued_at), max(attempts), count(gave_up_at) from kakao_unlink_queue;` 앱은 할 일 없음(탈퇴는 서버가 처리).
+- **응원·연결 알림 보강(0041)**: 문구가 없는 종류는 cron이 할 일로 세지 않고, 직전 실행이 dry-run이면 1시간 쉰다. 큐의 어르신 프로필이 지워졌으면 연결 알림을 보내지 않는다. 문구 적재 스크립트는 대상 호스트를 보여 주고 환경 이름을 다시 입력받으며(production은 호스트 재입력) 금지어(혜택·무료·할인·유료·이벤트·쿠폰·광고·"다시 오세요")가 있으면 멈춘다. 잠금 화면 내용 숨김(L3)은 앱 AU-04 채널 설정 몫.
 - **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
   ```sql
   select public.admin_delete_account('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- {ok, scope: child|parent|family} | {ok:false, reason:'not_found'}
