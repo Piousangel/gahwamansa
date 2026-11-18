@@ -28,22 +28,25 @@ export type Verdict = Status | 'config_error';
 type FcmErrorBody = { error?: { status?: string; details?: { errorCode?: string; fieldViolations?: { field?: string }[] }[] } } | null;
 
 /**
- * FCM 오류 분류(M3). 토큰을 지우는 것은 확실할 때만:
- *  - invalid_token: errorCode UNREGISTERED, 또는 INVALID_ARGUMENT 이면서 fieldViolations가 message.token을 가리킬 때
- *  - config_error: 인증·권한·프로젝트·메시지 형식 문제(401·403, UNREGISTERED 없는 404, 토큰이 아닌 INVALID_ARGUMENT, SENDER_ID_MISMATCH 등) → 실행 중단
- *  - failed: 그 밖(429·5xx 등 일시 오류)
+ * FCM 오류 분류(M3 + 재검토 R-M1). 토큰 단위 오류와 실행 전체 설정 오류를 나눈다.
+ *  - invalid_token(그 토큰 삭제): UNREGISTERED, SENDER_ID_MISMATCH(다른 Firebase 프로젝트의 토큰), message.token 필드 오류
+ *  - failed(그 토큰만 실패, 삭제 안 함): 필드가 없거나 토큰이 아닌 INVALID_ARGUMENT·400, 429·5xx 같은 일시 오류
+ *  - config_error(토큰과 무관): 401, SENDER_ID_MISMATCH가 아닌 403(PERMISSION_DENIED·THIRD_PARTY_AUTH_ERROR), UNREGISTERED 없는 404(프로젝트 오기)
+ * 실행 중단은 config_error가 **서로 다른 토큰 3개 이상**에서 날 때만(sendAll) — 토큰 한 개로 그날 알림 전체를 막지 못하게.
  */
 export function classifyFcmError(status: number, body: unknown): Verdict {
   const err = (body as FcmErrorBody)?.error;
   const details = err?.details ?? [];
   const codes = [err?.status, ...details.map((d) => d.errorCode)];
   const tokenField = details.some((d) => (d.fieldViolations ?? []).some((f) => f.field === 'message.token'));
-  if (codes.includes('UNREGISTERED')) return 'invalid_token';
+  if (codes.includes('UNREGISTERED') || codes.includes('SENDER_ID_MISMATCH')) return 'invalid_token';
   if (codes.includes('INVALID_ARGUMENT') && tokenField) return 'invalid_token';
-  if (status === 401 || status === 403 || status === 404 || codes.includes('SENDER_ID_MISMATCH')
-      || codes.includes('THIRD_PARTY_AUTH_ERROR') || codes.includes('INVALID_ARGUMENT') || status === 400) return 'config_error';
+  if (status === 401 || status === 403 || status === 404) return 'config_error';
   return 'failed';
 }
+
+/** 실행을 멈추는 설정 오류 토큰 수(서로 다른 토큰 기준). */
+export const CONFIG_ERROR_ABORT_AT = 3;
 
 async function sha256(s: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
@@ -95,12 +98,13 @@ export async function getAccessToken(sa: ServiceAccount, fetchFn: typeof fetch, 
   return json.access_token;
 }
 
-/** 대상마다 FCM으로 보낸다(동시 최대 concurrency). 설정 오류가 한 번이라도 나면 남은 발송을 멈추고(aborted), 못 보낸 대상은 failed. */
+/** 대상마다 FCM으로 보낸다(동시 최대 concurrency). 설정 오류가 서로 다른 토큰 3개에서 나면 남은 발송을 멈추고(aborted), 못 보낸 대상은 failed. */
 export async function sendAll(targets: Target[], copy: Copy, opts: { projectId: string; accessToken: string; fetchFn: typeof fetch; concurrency?: number }): Promise<{ results: Result[]; aborted: boolean }> {
   const url = `https://fcm.googleapis.com/v1/projects/${opts.projectId}/messages:send`;
   const results: Result[] = targets.map((t) => ({ profile_id: t.profile_id, token: t.token, status: 'failed' as Status }));
   let next = 0;
   let aborted = false;
+  const configTokens = new Set<string>();
   const worker = async () => {
     while (next < targets.length && !aborted) {
       const i = next++;
@@ -112,7 +116,10 @@ export async function sendAll(targets: Target[], copy: Copy, opts: { projectId: 
           body: JSON.stringify(buildMessage(t, copy)),
         });
         const v: Verdict = res.ok ? 'sent' : classifyFcmError(res.status, await res.json().catch(() => null));
-        if (v === 'config_error') aborted = true;
+        if (v === 'config_error') {
+          configTokens.add(t.token);
+          if (configTokens.size >= CONFIG_ERROR_ABORT_AT) aborted = true;
+        }
         results[i].status = v === 'config_error' ? 'failed' : v;
       } catch {
         results[i].status = 'failed';
