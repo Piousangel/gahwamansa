@@ -402,3 +402,4 @@
 ## 2026-11-19 저장 암호화·키 관리(위임) — docs/team/board/2026-11-19-encryption-keys/SUMMARY.md
 - 컬럼 암호화 없음(법정 저장 암호화 대상 미수집, Supabase AES-256 at rest). 키 경로 차단 D9~D13(새 secret 키 이행, 환경별 비밀값, Vault 화면 입력, DB SSL 강제, 셸 기록 금지), display_name 제거·감사 사유 개인정보 서버 거부, Android 기기 간 이전 차단, 키 관리 정책 v0.1(대장은 비밀번호 관리자, 연 1회·사고 시 즉시 교체)
 - 마이그레이션 번호: 0046 약관·방침 동의 기록(법률 Q2, 진행 중), 0047 개인정보 최소화·감사 가드(E1)
+- 11-19 staging 반영(사용자 승인 '테스트서버에 올려도대'): 0032~0045 push 완료. 확인: 원격 최신 0045, advisors 경고는 의도된 34·익명 로그인·유출 비밀번호 보호(콘솔)만, cron 4개(kakao-unlink·purge-expired-data·push-daily·push-events) 등록. Vault 값·Edge 함수 배포 전이라 발송 함수는 호출되지 않음. remote-checks.sql은 읽기 전용 역할에서 vault 복호화 권한 오류 — Studio(서비스 권한)에서 실행 필요(서버 줄에 수정 요청)
