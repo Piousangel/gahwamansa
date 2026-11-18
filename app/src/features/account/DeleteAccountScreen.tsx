@@ -9,6 +9,8 @@ import {BigButton} from '../../ui/BigButton';
 import {color, FONT_SCALE_MAX_BODY, radius} from '../../ui/tokens';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import type {DeleteScope} from '../types';
+import {clearAccountKeys} from '../../lib/accountStore';
+import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
 
 type Props = {role: 'parent' | 'child'};
@@ -53,7 +55,9 @@ export function DeleteAccountScreen({role}: Props) {
     setBusy(true);
     setFailed(null);
     try {
+      const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
       const r = await api.deleteMyAccount();
+      await clearAccountKeys(defaultStore(), tag); // 리뷰 M4 후속: 이 계정의 기기 기억값(N3 본 목록·C6 관심) 정리
       clear();
       navigation.dispatch(
         CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}),
