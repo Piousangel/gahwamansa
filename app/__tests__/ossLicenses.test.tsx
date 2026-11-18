@@ -15,7 +15,11 @@ const {collectJs, render: renderJson} = require('../scripts/ossLicenses.js');
 describe('목록 최신성', () => {
   test('JS 목록 = package-lock 출시 의존성(dev 제외)·LICENSE 전문 — 다르면 npm run oss:js', () => {
     const committed = fs.readFileSync(path.join(__dirname, '../src/oss/js.generated.json'), 'utf8');
-    expect(renderJson(collectJs())).toBe(committed);
+    const next = renderJson(collectJs());
+    if (next !== committed) {
+      // 리뷰 O5: 코드가 아니라 설치 상태 문제일 수 있다
+      throw new Error('src/oss/js.generated.json 이 지금 설치된 의존성과 달라요. app 에서 `npm ci`(설치가 lock 과 다를 때) 뒤 `npm run oss:js` 로 다시 만들어 커밋해 주세요.');
+    }
   });
 
   test('JS 목록에 출시 의존성은 다 있고 개발 도구는 없다', () => {
@@ -26,6 +30,9 @@ describe('목록 최신성', () => {
     }
     expect(names.has('jest')).toBe(false);
     expect(names.has('eslint')).toBe(false);
+    expect(names.has('fb-dotslash')).toBe(false); // 빌드 도구 제외(리뷰 O3)
+    const async = ossRows().find(r => r.name === '@react-native-async-storage/async-storage');
+    expect(async?.text).toMatch(/Permission is hereby granted/); // 전문 보충(리뷰 O3)
   });
 
   test('Android 목록: 비어 있지 않고 모든 모듈에 라이선스 이름이 있다(Gradle generateOssAndroid, release 빌드가 최신성 검사)', () => {

@@ -50,7 +50,10 @@ jest.mock('react-native-volume-manager', () => ({
 jest.mock('react-native-webview', () => {
   const React = require('react');
   const {View} = require('react-native');
-  const WebView = props => React.createElement(View, {...props, testID: 'webview'});
+  const WebView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({stopLoading: jest.fn()}));
+    return React.createElement(View, {...props, testID: 'webview'});
+  });
   return {__esModule: true, WebView, default: WebView};
 });
 

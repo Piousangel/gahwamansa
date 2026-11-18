@@ -429,3 +429,16 @@
 - L5: 알림 탭을 받을 때의 계정 가명값을 들고 있다가 처리할 때 다르면 버린다(기기 안 비교만, 서버·이벤트로 보내지 않음 — accountTagGuard 에 PushHost 추가). 10분 넘게 처리 못 한 탭도 버린다.
 - L6: 어르신 알림 탭은 진행 중 화면(Connect·Consent·PushPermission·DeleteAccount·DeleteDone)에서는 기다렸다가 그 화면을 떠난 뒤 처리.
 - L7: 자녀 기기에 온 어르신 종류는 버림, 역할 고르기 전 탭 버림, blocked N1, L2·L4·L5·L6 화면 테스트 추가.
+
+### 웹뷰·OSS 리뷰 반영(reviews/2026-11-18-webview-review.md) · 2026-11-18
+- M1: `ui/WebPage.decideNavigation`·`hostOf` 를 URL 파싱으로(react-native-url-polyfill 의 URL — RN 기본 URL 은 hostname 미구현): https + hostname 정확 일치 + username·password·port 비어 있음일 때만 안에서. 재현 3건(`허용:x@evil`·`허용:@evil`·`:8443`) 테스트.
+- M2: 두 번째 관문 — `onLoadStart`·`onNavigationStateChange` 에서 주소를 다시 판단, 아니면 `stopLoading()` + 웹뷰를 내리고 오류 줄. 라이브러리의 250ms 기본 허용(14.0.1·17.1.0 둘 다 `RNCWebViewClient` 에 있음 확인), 서버 리다이렉트·meta refresh 도 여기서 걸린다.
+- L1: 밖으로 보내는 것은 mailto 와 호출부가 준 `externalHosts`(기본 없음)만. 다른 호스트 https 는 막는다(누르지 않은 리다이렉트로 브라우저가 열리지 않게).
+- L4: `-PallowMissingAppInfo` 는 `-PrequireRealEnv`(build-production.sh 출시 경로)와 함께면 무시.
+- L5: `shared/useInAppWeb(navigate)` → `{open(target), busy}` — 확인(최대 4초) 동안 그 행에 진행 표시·두 번 누름 막기. P13·C7 행은 이 훅으로 연결.
+- L6: C7 `ChildAppInfo` 방침 외부 브라우저 열기는 US-03 값 투입과 같은 작업으로 L3 가 `useInAppWeb` 으로 바꿀 것(값이 들어오기 전엔 행이 숨겨져 영향 없음).
+- O1: `verifyOssLicenses` 는 production release 에서만. POM 조회 실패는 "네트워크·저장소 문제" 메시지로 따로, 낡은 목록은 달라진 패키지 몇 개를 찍는다.
+- O3: 전문 없던 런타임 패키지 3개(async-storage·fast-base64-decode·boolbase)는 저장소 LICENSE 원문을 `app/scripts/oss-supplement/` 에 고정(2026-11-18 기본 브랜치), 개발 도구 2개(@react-native/debugger-frontend·fb-dotslash) 제외 → 전문 없는 항목 0.
+- O4(법률 확인 필요, L6 레인에 전달): react-android·hermes-android AAR 안에 정적 링크된 C++ 라이브러리(folly·boost·glog·fmt·double-conversion 등)는 POM 에 없어 목록에 없다. Apache-2.0 NOTICE 요구 확인도 안 함 → questions-for-lawyer 한 줄 필요.
+- O5: jest 최신성 실패 메시지에 `npm ci` 안내.
+- L2: 14.0.1(npm latest)을 시험 — RN 0.88.1 새 아키텍처 `assembleStagingDebug` 는 성공(6분 33초)했지만 **tsc 실패**(14.0.1 의 클래스 컴포넌트 타입이 React 19.3 타입과 맞지 않아 WebView props 가 never). 타입을 단언으로 덮는 것보다 새 아키텍처 전용 17.1.0 을 유지(README: RN 0.80+ 새 아키텍처). 250ms 기본 허용은 두 판 모두 있음(M2 관문으로 막음). **실행 확인(로드·뒤로·글자 배율)은 아직** — Web 라우트로 가는 화면이 없어(P13·C7 연결 전) 열 길이 없음 → 연결 때 QA 실기기(안드로이드 9·12·15) 출시 체크 항목.

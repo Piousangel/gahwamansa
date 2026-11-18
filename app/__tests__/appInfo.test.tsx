@@ -1,6 +1,7 @@
 import React from 'react';
 import {Linking} from 'react-native';
-import {render, screen} from '@testing-library/react-native';
+import {act, render, renderHook, screen} from '@testing-library/react-native';
+import {useInAppWeb} from '../src/shared/useInAppWeb';
 import {DEFAULT_ENV, APP_INFO_KEYS, type AppEnv} from '../src/lib/env';
 import {missingAppInfo, readAppInfo, versionText} from '../src/lib/appInfo';
 import {allowedWebUrl, openInAppWeb} from '../src/shared/appLink';
@@ -80,20 +81,31 @@ describe('앱 안 웹 화면 열기', () => {
     expect(nav).toHaveBeenCalledWith('privacy');
   });
 
-  test('링크 판단: 같은 호스트 https 만 안에서, 다른 https·mailto 는 밖으로, 나머지는 막음', () => {
+  test('링크 판단(리뷰 M1·L1): URL 로 읽어 hostname 정확 일치 + 사용자 정보·포트 없음만 안에서, 밖으로는 mailto·허용 목록만', () => {
     const h = 'gahwa.example.kr';
     expect(hostOf('https://GAHWA.example.kr/x')).toBe(h);
     expect(decideNavigation('https://gahwa.example.kr/privacy.html#a', h)).toBe('load');
-    expect(decideNavigation('https://other.kr/', h)).toBe('external');
+    expect(decideNavigation('about:blank', h)).toBe('load');
+    // 리뷰 재현 케이스: 사용자 정보·포트로 호스트를 속이는 주소
+    expect(decideNavigation('https://gahwa.example.kr:x@evil.test/p', h)).toBe('block');
+    expect(decideNavigation('https://gahwa.example.kr:@evil.test/', h)).toBe('block');
+    expect(decideNavigation('https://gahwa.example.kr@evil.test/', h)).toBe('block');
+    expect(decideNavigation('https://gahwa.example.kr:8443/', h)).toBe('block');
+    expect(hostOf('https://gahwa.example.kr:x@evil.test/p')).toBeNull();
+    expect(hostOf('https://gahwa.example.kr:8443/')).toBeNull();
+    // 다른 호스트: 기본은 막음(누르지 않은 리다이렉트로 브라우저가 열리지 않게), 허용 목록이면 밖으로
+    expect(decideNavigation('https://other.kr/', h)).toBe('block');
+    expect(decideNavigation('https://other.kr/', h, ['other.kr'])).toBe('external');
+    expect(decideNavigation('https://gahwa.example.kr.evil.com/', h)).toBe('block');
     expect(decideNavigation('mailto:help@gahwa.example.kr', h)).toBe('external');
     expect(decideNavigation('http://gahwa.example.kr/', h)).toBe('block');
     expect(decideNavigation('intent://x#Intent;end', h)).toBe('block');
     expect(decideNavigation(JS_URL, h)).toBe('block');
     expect(decideNavigation('file:///etc/hosts', h)).toBe('block');
-    expect(decideNavigation('https://gahwa.example.kr.evil.com/', h)).toBe('external');
+    expect(decideNavigation('data:text/html,hi', h)).toBe('block');
   });
 
-  test('WebView 보안 설정: JS·저장소·쿠키·파일·여러 창 끔, https 만, 다른 호스트는 막고 밖으로', () => {
+  test('WebView 보안 설정: JS·저장소·쿠키·파일·여러 창 끔, https 만, 다른 호스트는 막음', () => {
     const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
     render(<WebPage url={FULL.PRIVACY_URL} errorText="x" loadingLabel="잠시만요" />);
     const w = screen.getByTestId('webview');
@@ -117,14 +129,57 @@ describe('앱 안 웹 화면 열기', () => {
     const should = w.props.onShouldStartLoadWithRequest;
     expect(should({url: 'https://gahwa.example.kr/terms.html', isTopFrame: true})).toBe(true);
     expect(should({url: 'https://other.kr/', isTopFrame: true})).toBe(false);
-    expect(open).toHaveBeenCalledWith('https://other.kr/');
+    expect(should({url: 'https://gahwa.example.kr:x@evil.test/', isTopFrame: true})).toBe(false);
     expect(should({url: 'intent://evil', isTopFrame: true})).toBe(false);
-    expect(open).toHaveBeenCalledTimes(1);
+    expect(should({url: 'mailto:help@gahwa.example.kr', isTopFrame: true})).toBe(false);
+    expect(open.mock.calls).toEqual([['mailto:help@gahwa.example.kr']]);
     open.mockRestore();
+  });
+
+  test('리뷰 M2: 로드 시작 때 주소를 다시 보고(네이티브 250ms 기본 허용·리다이렉트·meta refresh 대비) 아니면 멈추고 내용을 숨긴다', () => {
+    render(<WebPage url={FULL.PRIVACY_URL} errorText="볼 수 없어요" loadingLabel="잠시만요" />);
+    const w = screen.getByTestId('webview');
+    act(() => {
+      w.props.onLoadStart({nativeEvent: {url: FULL.PRIVACY_URL}});
+    });
+    expect(screen.getByTestId('webview')).toBeTruthy();
+    act(() => {
+      screen.getByTestId('webview').props.onLoadStart({nativeEvent: {url: 'https://evil.test/'}});
+    });
+    expect(screen.queryByTestId('webview')).toBeNull();
+    expect(screen.getByText('볼 수 없어요')).toBeTruthy();
+  });
+
+  test('리뷰 M2: 탐색 상태가 다른 주소로 바뀌어도(리다이렉트) 숨긴다', () => {
+    render(<WebPage url={FULL.PRIVACY_URL} errorText="볼 수 없어요" loadingLabel="잠시만요" />);
+    act(() => {
+      screen.getByTestId('webview').props.onNavigationStateChange({url: 'https://gahwa.example.kr:x@evil.test/'});
+    });
+    expect(screen.queryByTestId('webview')).toBeNull();
   });
 
   test('https 가 아닌 주소는 그리지 않는다', () => {
     render(<WebPage url="http://gahwa.example.kr/" errorText="x" loadingLabel="잠시만요" />);
     expect(screen.queryByTestId('webview')).toBeNull();
+  });
+
+  test('리뷰 L5: 확인하는 동안 busy(진행 표시)·두 번 누름 막음', async () => {
+    let release: (v: boolean) => void = () => {};
+    const check = () => new Promise<boolean>(r => (release = r));
+    const nav = jest.fn();
+    const info = readAppInfo(FULL);
+    const {result} = renderHook(() => useInAppWeb(nav, check, info));
+    let first: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      first = result.current.open('terms');
+    });
+    expect(result.current.busy).toBe('terms');
+    expect(await result.current.open('privacy')).toBe('busy');
+    await act(async () => {
+      release(true);
+      await first;
+    });
+    expect(result.current.busy).toBeNull();
+    expect(nav).toHaveBeenCalledWith('terms');
   });
 });

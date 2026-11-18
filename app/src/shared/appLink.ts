@@ -1,6 +1,6 @@
 // 앱 안 웹 화면 열기(AU-07, DECISIONS 11-18: 약관·방침은 앱 안에서, 외부 브라우저로 내보내지 않음). React 를 모른다.
 // 오프라인이면 화면을 열지 않고 호출부가 '인터넷이 연결되면 볼 수 있어요'(app_info.link_offline)를 띄운다(어르신 Banner·자녀 Toast).
-import {readAppInfo} from '../lib/appInfo';
+import {readAppInfo, type AppInfo} from '../lib/appInfo';
 
 export type WebTarget = 'terms' | 'privacy';
 
@@ -40,7 +40,7 @@ export async function openInAppWeb(
   target: WebTarget,
   navigate: (target: WebTarget) => void,
   check: (url: string) => Promise<boolean> = canReach,
-  info = readAppInfo(),
+  info: AppInfo = readAppInfo(),
 ): Promise<OpenResult> {
   const url = allowedWebUrl(target, info);
   if (!url) {

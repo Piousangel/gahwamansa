@@ -12,6 +12,14 @@ const crypto = require('crypto');
 
 const APP = path.join(__dirname, '..');
 const OUT = path.join(APP, 'src/oss/js.generated.json');
+// 리뷰 O3: 배포본에 전문 파일이 없는 런타임 패키지는 저장소 원문(2026-11-18 GitHub 기본 브랜치 LICENSE)을 scripts/oss-supplement 에 고정해 쓴다
+const SUPPLEMENT = {
+  '@react-native-async-storage/async-storage': 'async-storage.LICENSE.txt',
+  'fast-base64-decode': 'fast-base64-decode.LICENSE.txt',
+  boolbase: 'boolbase.LICENSE.txt',
+};
+// 앱에 들어가지 않는 개발·빌드 도구(lock 에 dev 표시가 없어 출시 의존성으로 잡히는 것)는 목록에서 뺀다
+const EXCLUDE = new Set(['@react-native/debugger-frontend', 'fb-dotslash']);
 const META_FAMILY = /^(@react-native\/|metro($|-)|hermes-|flow-|ob1$|react-devtools-core$|fb-dotslash$)/;
 const LICENSE_FILE =/^(licen[sc]e|copying|notice)([.-].*)?(\.(md|txt|markdown))?$/i;
 
@@ -46,7 +54,7 @@ function collectJs(appDir = APP) {
     }
     const name = v.name || key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length);
     const id = `${name}@${v.version}`;
-    if (seen.has(id)) {
+    if (seen.has(id) || EXCLUDE.has(name)) {
       continue;
     }
     let license = v.license;
@@ -58,8 +66,10 @@ function collectJs(appDir = APP) {
       }
     }
     // 전문 파일이 없는 Meta 패키지(react-native 묶음·metro·hermes·flow)는 같은 저작권자·같은 MIT 인 react-native 의 LICENSE 로
+    const supplement = SUPPLEMENT[name] ? path.join(__dirname, 'oss-supplement', SUPPLEMENT[name]) : null;
     const text =
       readLicenseText(path.join(appDir, key)) ??
+      (supplement ? fs.readFileSync(supplement, 'utf8').replace(/\r\n/g, '\n').trim() : null) ??
       (license === 'MIT' && META_FAMILY.test(name) ? readLicenseText(path.join(appDir, 'node_modules/react-native')) : null);
     let textId = null;
     if (text) {
@@ -80,7 +90,7 @@ function main(argv) {
   if (argv.includes('--check')) {
     const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
     if (cur !== next) {
-      console.error('오픈소스 라이선스 목록(JS)이 의존성과 달라요. app 에서 `npm run oss:js` 로 다시 만들어 커밋해 주세요.');
+      console.error('오픈소스 라이선스 목록(JS)이 의존성과 달라요. app 에서 `npm run oss:js` 로 다시 만들어 커밋해 주세요(설치가 lock 과 다르면 먼저 `npm ci`).');
       process.exit(1);
     }
     console.log('오픈소스 라이선스 목록(JS): 최신');
