@@ -349,3 +349,42 @@ type UnregisterPushToken = { ok: true; removed: number };
 | admin L6 | 한 바퀴 뒤 재고 경보 둔감 | 기록: 06시 점검에 `max_cursor`도 함께 봄(§14) |
 | 0044 Q-L2 | Vault 미설정 시 호스트 검사 생략 | 반영: §9 #17·RELEASE 필수 설정 |
 | 0035 D-L1·D-M1 | 앱 duplicate_title 매핑·staging 이전 APK | 앱·리드 몫 |
+
+## 18. staging 반영 리허설 절차(0031~0045) · production dry-run 점검 (W3, 실행은 사용자·리드 — 서버 줄은 원격 실행 안 함)
+비밀값(서비스 키·FCM JSON·카카오 어드민 키·cron 비밀)은 비밀번호 관리자에서 꺼내 쓰고 저장소·채팅·셸 기록에 남기지 않는다.
+
+### A. 준비(로컬, 서버 줄·리드)
+1. main이 0045까지 포함하는지, `supabase/ops/replay-check.sh` 통과(0001→끝 재생 + pgTAP), `scripts/gen-types.sh --check` 최신.
+2. 이번에 올라갈 번호 확인: staging은 0030까지 반영(11-18). 0031(US-05)이 이미 올라갔는지 대시보드 Database > Migrations에서 확인 → 올라갈 범위 0031(또는 0032)~0045.
+
+### B. staging 반영(사용자 — 순서 중요)
+1. **확장**: 대시보드 Database > Extensions에서 `pg_cron`, `pg_net` 켜기(0033·0042가 cron·http 호출에 씀). 마이그레이션도 `create extension if not exists`로 켜지만 권한상 대시보드에서 먼저 켜 두는 것이 안전.
+2. **Vault**(SQL Editor, 값은 붙여 넣고 바로 지우기):
+   ```sql
+   select vault.create_secret('https://<staging-ref>.supabase.co', 'project_url');
+   select vault.create_secret('<32자 이상 무작위>', 'push_cron_secret');   -- 맥에서 openssl rand -hex 32 로 만들고 비밀번호 관리자에 저장
+   ```
+3. **마이그레이션**: `scripts/db-push.sh staging` → 화면의 dry-run 목록이 위 범위와 같은지 확인 → 환경 이름·ref 재입력 → push.
+4. **확인**: SQL Editor에 `supabase/ops/remote-checks.sql`을 붙여 실행. 이 단계에서 false여도 되는 줄: 푸시 문구·응원 문장(아직 안 넣음), 파기 배치 최근 성공(다음 날 00:10 KST 이후 다시), 사진 주소(0044 이전 사진이면 아래 B-9).
+5. **함수 secrets**(맥 터미널, 값은 비밀번호 관리자에서 임시 파일로 — 저장소 밖 `~/tmp/staging.secrets`, 끝나면 삭제):
+   ```bash
+   # ~/tmp/staging.secrets 내용: PUSH_CRON_SECRET=<Vault와 같은 값>  FCM_SERVICE_ACCOUNT=<서비스 계정 JSON 한 줄>  KAKAO_ADMIN_KEY=<staging 앱 어드민 키>  PUSH_DRY_RUN=1
+   npx supabase secrets set --project-ref <staging-ref> --env-file ~/tmp/staging.secrets && rm ~/tmp/staging.secrets
+   ```
+6. **함수 배포**: `npx supabase functions deploy push-daily push-events kakao-unlink --project-ref <staging-ref>` (config.toml의 `verify_jwt = false`가 함께 적용되는지 대시보드 Functions에서 확인).
+7. **연기 시험(dry-run)**: `curl -s -X POST https://<staging-ref>.supabase.co/functions/v1/push-daily -H "x-cron-secret: <값>"` → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
+8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `SUPABASE_URL=https://<staging-ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<staging 서비스 키> node supabase/ops/load-push-copy.mjs --approved` → 환경 `staging` 입력(ref 대조).
+9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
+10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).
+11. **다시 확인**: `remote-checks.sql` 전부 true(심사 기간이면 심사 번호 줄만 예외). 결과를 staging 반영 기록에 붙인다.
+- 되돌리기: down 파일은 수동·부분이라 원칙은 **앞으로 고치기**(새 마이그레이션). 함수는 이전 커밋으로 다시 배포, cron은 `select cron.unschedule('<이름>')`로 멈춤.
+
+### C. production dry-run 점검(P1 업로드 직전, 사용자)
+- [ ] staging에서 B 전체 완료·실기기 확인 기록 있음
+- [ ] production Auth 설정 §9 1~18 완료(특히 Vault 2개, pg_cron·pg_net, 익명 한도, 카카오 "Allow users without an email")
+- [ ] `scripts/db-push.sh production` 실행 → **dry-run 목록만 확인하고**, 실제 반영할 때가 아니면 환경 이름 재입력에서 다른 값을 넣어 멈춘다(아무것도 바뀌지 않음). 목록이 0001~0045 + 이후 번호인지, staging과 같은 커밋인지
+- [ ] 스크립트의 스키마 백업이 `~/bumo-jasik-backups/`에 생겼는지(데이터 백업은 Pro 일일 백업·PITR)
+- [ ] production secrets는 staging과 **다른 값**(cron 비밀·카카오 production 앱 어드민 키·FCM production 프로젝트 서비스 계정)
+- [ ] 콘텐츠: 시드 + 사진 v2 업로드 계획, 문구 적재는 법률 리뷰 통과본으로
+- [ ] 심사 접근(§11): 심사 가족 만들기는 반영 뒤, 번호는 기본 꺼짐 확인
+- [ ] 반영 뒤 `remote-checks.sql` + `metrics.sql` ⑧·⑥ 첫날 확인, 06시 점검(§14) 시작
