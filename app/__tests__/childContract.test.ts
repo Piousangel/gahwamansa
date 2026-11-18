@@ -123,3 +123,42 @@ test('realApi: 로그인 수단은 세션 provider, 로그아웃은 SDK 정리 �
   expect(social.signOut).toHaveBeenCalledWith('kakao');
   expect(signOut).toHaveBeenCalledWith({scope: 'local'});
 });
+
+test('realApi 로그아웃(0032): 등록한 푸시 토큰이 있으면 unregister_push_token 을 signOut 보다 먼저, 없으면 부르지 않는다', async () => {
+  const {memoryStore} = require('../src/lib/kvStore');
+  const push = require('../src/lib/pushToken');
+  push.setPushTokenStoreForTest(memoryStore());
+  try {
+    const order: string[] = [];
+    const rpc = jest.fn((name: string) => {
+      order.push(name);
+      return Promise.resolve({data: {ok: true}, error: null});
+    });
+    const {sb, signOut} = sbWith(rpc);
+    signOut.mockImplementation(() => {
+      order.push('signOut');
+      return Promise.resolve({error: null});
+    });
+    await createRealApi(sb, social).signOut();
+    expect(rpc).not.toHaveBeenCalled(); // 토큰 등록 전(AU-04 전)
+    await push.savePushToken('tok-1');
+    await createRealApi(sb, social).signOut();
+    expect(order).toEqual(['signOut', 'unregister_push_token', 'signOut']);
+    expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: 'tok-1'});
+    expect(await push.readPushToken()).toBeNull();
+    // 해제가 실패해도 로그아웃은 계속
+    await push.savePushToken('tok-2');
+    rpc.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+    await createRealApi(sb, social).signOut();
+    expect(signOut).toHaveBeenCalledTimes(3);
+  } finally {
+    push.setPushTokenStoreForTest(null);
+  }
+});
+
+test('realApi set_parent_title(0035 D-L1): duplicate_title 은 일반 오류가 아니라 호칭 중복으로', async () => {
+  const rpc = jest.fn(() => Promise.resolve({data: {ok: false, reason: 'duplicate_title'}, error: null}));
+  expect(await createRealApi(sbWith(rpc).sb, social).setParentTitle('엄마')).toEqual({ok: false, reason: 'duplicate_title'});
+  rpc.mockImplementationOnce(() => Promise.resolve({data: {ok: false, reason: 'invalid_title'}, error: null}));
+  expect(await createRealApi(sbWith(rpc).sb, social).setParentTitle('x')).toEqual({ok: false, reason: 'invalid_title'});
+});

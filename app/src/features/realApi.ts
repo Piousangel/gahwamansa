@@ -7,6 +7,7 @@ import {parseLogEventResult} from '../api/contract/events';
 import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
+import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
@@ -329,7 +330,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async setParentTitle(title) {
       const {data, error} = await sb.rpc('set_parent_title', {p_title: title});
       if (error) fail('set_parent_title', error);
-      return data.ok ? {ok: true} : {ok: false, reason: 'invalid_title'};
+      return data.ok ? {ok: true} : {ok: false, reason: data.reason === 'duplicate_title' ? 'duplicate_title' : 'invalid_title'};
     },
     async setParentTitleFor(parentId, title) {
       const {data, error} = await sb.rpc('set_parent_title_for', {p_parent: parentId, p_title: title});
@@ -364,6 +365,16 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       return p === 'kakao' || p === 'google' || p === 'email' ? p : null;
     },
     async signOut() {
+      // 푸시 토큰 해제가 먼저(0032: 로그아웃 뒤에는 auth.uid 가 없어 해제가 실패한다). 등록한 토큰이 없으면 부르지 않는다. 실패해도 로그아웃은 계속
+      const token = await readPushToken();
+      if (token) {
+        try {
+          await sb.rpc('unregister_push_token', {p_token: token});
+        } catch {
+          // 무시(서버 파기 배치가 오래된 토큰을 지운다)
+        }
+        await clearPushToken();
+      }
       // 소셜 SDK 세션 정리(실패해도 계속) → 이 기기 세션만 지운다(다른 기기 로그인은 그대로)
       try {
         const {data} = await sb.auth.getSession();

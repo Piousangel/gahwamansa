@@ -122,7 +122,9 @@ export interface Api {
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
   // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
   fetchChildSummary(): Promise<ChildSummary>;
-  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>; // 가족 기본 호칭(연결 전)
+  // 가족 기본 호칭(연결 전, 어르신이 아직 없어 set_parent_title_for 를 쓸 수 없을 때만). 0035부터 겹치면 duplicate_title.
+  // set_parent_title 은 폐기 예정 — 어르신이 있으면 setParentTitleFor 를 쓴다
+  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'duplicate_title'}>;
   // 어르신 한 분의 호칭: set_parent_title_for(p_parent, p_title)(0019)
   // duplicate_title(0028): 같은 가족 다른 어르신이 이미 그 호칭으로 보임
   setParentTitleFor(parentId: string, title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'invalid_target' | 'duplicate_title'}>;

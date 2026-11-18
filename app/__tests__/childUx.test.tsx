@@ -241,3 +241,15 @@ describe('C0 연령 안내', () => {
     expect(screen.getByText('만 14세 이상이 쓰는 앱이에요')).toBeTruthy();
   });
 });
+
+describe('호칭 고르기(가족 기본 호칭) D-L1', () => {
+  test('서버가 duplicate_title 이면 "같은 이름이 이미 있어요" 안내(일반 오류 아님)', async () => {
+    const api = createFakeApi({who: 'child'});
+    jest.spyOn(api, 'setParentTitle').mockResolvedValue({ok: false, reason: 'duplicate_title'});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByLabelText('엄마'), {timeout: 8000});
+    fireEvent.press(screen.getByLabelText('엄마'));
+    await press('번호 만들기');
+    await waitFor(() => screen.getByText('같은 이름이 이미 있어요. 다른 이름을 골라 주세요'));
+  });
+});

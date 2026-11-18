@@ -71,6 +71,7 @@ export function ChildSettings() {
     setSaving(true);
     setModalError(null);
     try {
+      // 어르신이 있으면 set_parent_title_for(가족 기본 호칭 set_parent_title 은 폐기 예정, 연결 전에만)
       const r = editing.parentId ? await api.setParentTitleFor(editing.parentId, picked) : await api.setParentTitle(picked);
       if (!r.ok) {
         // 서버도 같은 호칭을 막는다(0028 duplicate_title). 앱이 먼저 막지만 다른 기기에서 바뀐 경우 시트 안에 알린다
