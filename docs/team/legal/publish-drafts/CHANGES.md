@@ -121,3 +121,4 @@
 | 새 문서 `../app-privacy-label.md`: Play 대조표 행 번호 → App Store 분류·연결·추적·목적, iOS 행 i1~i3 | Apple App Privacy 안내(https://developer.apple.com/app-store/app-privacy-details/, 11-19 조회) |
 | `../official-consult-checklist.md` A-1~A-3, `../lawyer-packet.md` §3 iOS 항목, `../data-safety-form.md` §6 | 감사 N4 "변호사 묶음에 미리 넣기" |
 | (11-19) 리드 결정 3건(위임) 반영: Apple 로그인은 이메일만 요청, 고른 답·응원은 App Store "사용자 콘텐츠 > 기타 사용자 콘텐츠", Apple 토큰 보관 30일(카카오 큐와 같음). Apple 개인정보 문의 경로·연결 끊기 메뉴 경로·iOS 백업 제외 여부는 확인 전이라 자리표시 유지 | 리드 결정(PR #6) |
+| (11-19) PR #6 리뷰(조건부) 반영: M1 라벨 "연결" 정의를 Apple 기준(계정·기기·신원에 연결되어 수집되는지)으로, #15·#16·진단 2행 기본값 "연결 예". M2 Apple 연결 해제 설계(리드 결정, 최소 보관): 로그인 때 refresh token 저장 안 함 → 삭제 때 재인증으로 새 code → 서버가 즉시 교환·해제·폐기 → 실패 시 재시도 큐 30일 상한. 부록 4절 행·6절 로그인 회사 문장·삭제 안내 1·3절, 라벨 i3, A-2·변호사 묶음 질문을 맞춤. 재인증 실패 안내 초안 추가. L: §0 ③ 낮춤, #17·지원 문서 인용을 11-19 조회 원문으로, i3 단정 삭제, 구글 iOS 이름 스코프 확인 추가 | `reviews/2026-11-19-pr6-review.md` |
