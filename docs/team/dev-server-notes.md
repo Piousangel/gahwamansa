@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0046) · 2026-11-17
+# 서버 계약 노트 (0019~0047) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -159,7 +159,7 @@ type UnregisterPushToken = { ok: true; removed: number };
   select public.admin_delete_answers('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- 어르신 답·코스 기록·코스 이벤트(0043) {ok, answers, sessions, events} | not_found·not_parent
   ```
   - 계정 삭제 규칙은 앱 `delete_my_account`와 같은 공통 함수(`account_delete_core`): 자녀가 남으면 본인만, 마지막 자녀면 가족 전체 + 어르신 익명 인증 계정, 대상 인증 계정까지.
-  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관).
+  - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관). 0047부터 사유·처리자에 `@`나 9자리 이상 숫자가 있으면 서버가 `pii_in_args`로 거부한다.
   - 사유·처리자 필수(`reason_required`·`operator_required`). 처리마다 `admin_audit`(처리자·시각·대상·가족·사유) — 대상이 지워져도 남는다. 0043부터 서비스 역할도 감사 표에 쓰기·수정·삭제·비우기 권한이 없고(쓰기는 admin RPC만), 1년 지나면 파기 배치만 지운다. 파기 함수는 미래 기준 시각을 거부(`future_now`). 공통 삭제 함수는 서비스 역할도 직접 못 부른다. 월 1회 점검: `select * from admin_audit where at > now() - interval '1 month' order by at;`
   - 처리 기한: 목표 7일·상한 10일(DECISIONS 11-17). 본인 확인 방법은 정책 문서 기준(삭제 안내 페이지).
 - **콘텐츠 추가(0040, SV-08)**: `node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason ...]` (`--check`는 게이트만).
@@ -314,7 +314,11 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 ## 14. 06시 운영 점검 항목(서버, PM-07 루틴에 붙여 쓰기)
 매일(평일) Studio SQL Editor에서 확인하고 이상이 있으면 서버 줄에 알린다.
-1. **카카오 연결 끊기**(재검토 R-M1): `supabase/ops/metrics.sql` ⑧ — `gave_up > 0`이면 운영자가 원인(어드민 키·카카오 응답)을 보고 수동 해제 후 행 처리. `config_error_runs_7d > 0`이면 `KAKAO_ADMIN_KEY` secret 확인(키 오류는 시도 횟수를 쓰지 않고 1시간마다 다시 시도). `oldest_waiting`이 하루를 넘으면 cron·함수 배포 확인.
+1. **카카오 연결 끊기**(재검토 R-M1, 보안 회의 D2·E7 — 포기 행은 **당일** 처리): `supabase/ops/metrics.sql` ⑧.
+   - `gave_up > 0`이면 `select * from kakao_unlink_gave_up;`(0047, **회원번호 없이** id·시도·마지막 HTTP만)로 확인 → 원인이 어드민 키면 `KAKAO_ADMIN_KEY` 교체 후 `select admin_kakao_unlink_retry(<id>, '<사유: 키 교체 뒤 재시도(날짜)>', '<처리자>');` → 다음 회차(10분)에 다시 해제.
+   - 카카오 쪽 문제로 계속 실패하면 카카오 개발자 콘솔에서 수동으로 연결을 끊고 `select admin_kakao_unlink_resolve(<id>, '<사유: 콘솔 수동 해제(날짜)>', '<처리자>');`로 행을 지운다(회원번호 보관 안 함). 둘 다 감사 행이 남는다.
+   - 운영 SQL·대장에 회원번호를 출력·기록하지 않는다(서비스 역할도 큐의 회원번호 열을 직접 읽지 못함, 0047). 수동 해제에 번호가 꼭 필요하면 Studio(postgres)에서 그 한 건만 보고 바로 닫는다.
+   - `config_error_runs_7d > 0`이면 `KAKAO_ADMIN_KEY` secret 확인(키 오류는 시도 횟수를 쓰지 않고 1시간마다 다시 시도). `oldest_waiting`이 하루를 넘으면 cron·함수 배포 확인.
 2. **푸시**: ⑥ — `runs_with_note`(config_error·oauth_failed·invalid_ratio_hold)가 있으면 FCM 서비스 계정·프로젝트 확인. 일일 알림 `sent`가 0인데 대상이 있으면 `push_copy` 적재 여부(no_copy) 확인.
 3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
