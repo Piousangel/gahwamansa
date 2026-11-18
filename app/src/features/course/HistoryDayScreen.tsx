@@ -28,7 +28,7 @@ export function HistoryDayScreen({route}: NativeStackScreenProps<ParentParams, '
       }>
       <View style={styles.polaroid}>
         {showImage ? (
-          <Image source={{uri: day.photo.image_url}} style={styles.photo} accessibilityLabel={`${day.photo.caption}, ${appCopy.ai_photo_label}`} onError={() => setFailed(true)} />
+          <Image source={{uri: day.photo.image_url}} style={styles.photo} accessibilityLabel={copy.history.photo_a11y.split('{caption}').join(day.photo.caption)} onError={() => setFailed(true)} />
         ) : (
           <View style={[styles.photo, styles.pending]}>
             <Icon name="icon-photo" size={40} color={color.inkSub} />

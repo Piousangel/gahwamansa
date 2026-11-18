@@ -26,7 +26,7 @@ afterEach(() => {
   (AccessibilityInfo.isReduceMotionEnabled as unknown as jest.Mock).mockImplementation(() => Promise.resolve(false));
 });
 
-const OPEN = '오늘 사진, 마을 입구 나무, AI가 만든 그림, 두 번 눌러 크게 보기';
+const OPEN = '오늘 사진, 마을 입구 나무, AI가 만든 그림';
 async function toPhoto(opts: FakeOptions = {}) {
   const api = createFakeApi({linked: true, consented: true, realImage: true, ...opts});
   render(<AppRoot api={api} role="parent" restore />);

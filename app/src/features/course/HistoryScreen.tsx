@@ -79,7 +79,10 @@ function DayCard({day, onPress}: {day: HistoryDay; onPress: () => void}) {
     <Pressable
       testID={`history-item-${day.session_date}`}
       accessibilityRole="button"
-      accessibilityLabel={h.day_a11y.split('{날짜}').join(date)}
+      // 카드 하나로 읽기(copy 11-17): 날짜·고른 답·낱말. '자세히 보기'는 버튼 역할 안내와 겹쳐 뺌
+      accessibilityLabel={(day.choice_label ? h.date_a11y.split('{답}').join(day.choice_label) : h.date_a11y_no_choice)
+        .split('{날짜}').join(date)
+        .split('{낱말}').join(day.photo.keyword)}
       onPress={onPress}
       style={({pressed}) => [styles.card, pressed ? styles.pressed : null]}>
       <View style={styles.thumb} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

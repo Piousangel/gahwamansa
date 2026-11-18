@@ -438,7 +438,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     android(34, true);
     await openSettings();
     await waitFor(() => screen.getByTestId('child-notify-row'));
-    expect(screen.getByLabelText('알림, 가족 휴대폰과 연결되거나 연결이 풀리면 알려 드려요')).toBeTruthy();
+    expect(screen.getByLabelText('알림, 가족 휴대폰과 연결되면 알려 드려요')).toBeTruthy();
     expect(screen.queryByRole('button', {name: /알림이 휴대폰 설정에서/})).toBeNull();
   });
 

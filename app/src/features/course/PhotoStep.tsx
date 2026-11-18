@@ -92,7 +92,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
           </>
         )
       }>
-      {/* B1: 폴라로이드 전체(캡션 포함)가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림, 두 번 눌러 크게 보기' */}
+      {/* B1: 폴라로이드 전체(캡션 포함)가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
       <Pressable
         ref={polaroidRef}
         testID="photo-polaroid"
@@ -100,6 +100,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         accessible={canZoom}
         accessibilityRole={canZoom ? 'button' : undefined}
         accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
+        accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
         onPress={openZoom}
         style={[styles.polaroid, {maxWidth: frameW}]}>
         {photo.image_url.startsWith('pending://') || imageFailed ? (

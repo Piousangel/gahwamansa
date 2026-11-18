@@ -59,7 +59,7 @@ test('한 날: 날짜 제목·사진(캡션·AI가 만든 그림)·"봄과 가�
   await home({parentDays: [d1, d2]});
   await press('지난 날 보기');
   await waitFor(() => screen.getByTestId('history-item-2026-11-19'));
-  await press('11월 19일 목요일, 자세히 보기');
+  await press('11월 19일 목요일, 고른 답 가을, 낱말 감나무');
   await waitFor(() => screen.getByRole('header', {name: '11월 19일 목요일'}));
   expect(screen.getByText('감 익는 마당')).toBeTruthy();
   expect(screen.getByText('AI가 만든 그림')).toBeTruthy();
@@ -73,7 +73,7 @@ test('한 날 · 보여 주지 않은 날: 고른 답 줄만 빠진다', async (
   await home({parentDays: [d1, d2]});
   await press('지난 날 보기');
   await waitFor(() => screen.getByTestId('history-item-2026-11-18'));
-  await press('11월 18일 수요일, 자세히 보기');
+  await press('11월 18일 수요일, 낱말 느티나무');
   await waitFor(() => screen.getByRole('header', {name: '11월 18일 수요일'}));
   expect(screen.queryByText(/고른 답/)).toBeNull();
   expect(screen.getByLabelText('낱말, 느티나무')).toBeTruthy();
