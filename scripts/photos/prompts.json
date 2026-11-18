@@ -225,7 +225,7 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 16,
@@ -241,7 +241,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 17,
@@ -249,7 +249,7 @@
    "scene": "학교 복도 끝에 달린 종, 창으로 든 햇빛",
    "subject": "a small brass school bell hanging from a wooden bracket at the end of an old wooden school corridor, sunlight through windows, quiet empty hallway",
    "caption": "수업 시작 종",
-   "check": "**종**: 놋쇠 종과 매단 줄이 또렷하고 화면 중앙. 게시물·시간표 글자 없음, 아이들 없음",
+   "check": "**학교종**: 놋쇠 종과 매단 줄이 또렷하고 화면 중앙. 게시물·시간표 글자 없음, 아이들 없음",
    "tags": {
     "season": "any",
     "season_cue": "none",
@@ -257,7 +257,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 18,
@@ -273,7 +273,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 19,
@@ -289,7 +289,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 20,
@@ -305,7 +305,7 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 21,
@@ -321,7 +321,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 22,
@@ -337,7 +337,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 23,
@@ -353,7 +353,7 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 24,
@@ -369,7 +369,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 25,
@@ -385,7 +385,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 26,
@@ -401,14 +401,14 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 27,
    "orig": 25,
-   "scene": "탁자 위 꽃다발",
+   "scene": "탁자 위 꽃다발(결혼식 전제 없음)",
    "subject": "a hand-tied bouquet of simple flowers wrapped in plain paper on a small table covered with a white cloth, soft indoor window light, no guest book, no cards, no lettering",
-   "caption": "결혼식 날 꽃",
+   "caption": "탁자 위 꽃다발",
    "check": "**꽃다발**: 꽃다발이 화면 중앙 크게. 방명록·카드·리본 글자 없음, 사람 없음, 종교 장식 없음",
    "tags": {
     "season": "any",
@@ -417,7 +417,7 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 28,
@@ -433,7 +433,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 29,
@@ -449,7 +449,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   },
   {
    "day": 30,
@@ -465,7 +465,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤. 캡션·낱말 최종은 WR-09)"
+   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
   }
  ],
  "tags_note": "tags: season(spring|summer|autumn|winter|any), season_cue(text=캡션·질문에 계절이 박힘 / image=사진에만 / none), place(country|city|any), era(7080=1970~80년대), city_variant_ok(같은 낱말로 도시판 사진을 만들 수 있음). 개인화 회의 2026-11-17 빌드 1 #1. 2026-11-17 계절 점검으로 14칸 재배치(orig=writer.md 원본 일차)"
