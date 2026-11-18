@@ -7,10 +7,10 @@ export const EVENT_NAMES = [
   'consent_shown', 'parent_consent_accepted', 'parent_consent_declined',
   'course_step_completed', 'course_completed', 'child_report_viewed',
   'invite_share_tapped', 'consent_revoked', 'account_deleted', 'cheer_sent', 'push_permission_result',
-  // 0034(서버 L4 추가 중, 같은 철자 임시): B1 사진 크게 보기 {day_index}
-  'photo_zoom_opened',
   // 연결 퍼널(0029, ease-and-joy E). redeem 성공은 parent_code_redeemed. 번호 값은 어떤 속성에도 넣지 않는다
   'link_opened', 'referrer_found', 'code_prefilled',
+  // 빌드 1 추가(0034, migrations/20261116000034_events_build1.sql): C6 시트·관심, B1 크게 보기, 자녀 첫 답, 알림 열림
+  'paid_sheet_opened', 'paid_interest_tapped', 'photo_zoom_opened', 'child_first_answer_viewed', 'push_opened',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
@@ -23,7 +23,9 @@ export type EventProps = Partial<{
   step: 'photo' | 'question' | 'hangul';
   reason: 'expired' | 'used' | 'locked' | 'invalid' | 'rate_limited' | 'busy' | 'already_linked' | 'not_parent_device';
   channel: 'kakao' | 'sms' | 'copy' | 'share_sheet' | 'other';
-  result: 'granted' | 'denied';
+  result: 'granted' | 'denied' | 'matched' | 'kept' | 'skipped'; // 뒤 3개 0029(P6 맞게 씀·이대로 마침·넘어감)
+  plan: 'monthly' | 'yearly' | 'gift'; // 0034 C6 가격 3안
+  push_kind: 'daily' | 'cheer_arrived' | 'parent_connected' | 'parent_reconnected'; // 0034 = push_copy.kind
   message_key: 'love_you' | 'warm_day' | 'thanks_always' | 'peaceful_day';
   consent_version: string; // v2 형식
   app_version: string; // 1.0.0 또는 1.0.0-12

@@ -41,7 +41,7 @@ const loadPhoto = async () => {
   });
 };
 
-test('계약: photo_zoom_opened 이벤트 이름(0034, 같은 철자 임시 추가)', () => {
+test('계약: photo_zoom_opened 이벤트 이름(0034 정식)', () => {
   expect(EVENT_NAMES).toContain('photo_zoom_opened');
 });
 

@@ -56,7 +56,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     setZoom(true);
     setHint(false);
     prefs().markZoomOpened();
-    track(api, 'photo_zoom_opened', {day_index: content?.day_index ?? 0}); // 0034(같은 철자 임시)
+    track(api, 'photo_zoom_opened', {day_index: content?.day_index ?? 0}); // 0034
   };
   const closeZoom = () => {
     setZoom(false);
