@@ -80,3 +80,14 @@ export function courseHomeShown() {
     screen.getByText('오늘의 코스');
   }
 }
+
+// P9 2단계(감사 H1, DECISIONS 153): P9 화면의 '모두 지우기' → 확인 상자 '정말 모두 지울까요?'의 '모두 지우기'
+export async function confirmDeleteAll() {
+  await act(async () => {
+    fireEvent.press(screen.getByRole('button', {name: '모두 지우기'}));
+  });
+  const box = await waitFor(() => screen.getByTestId('delete-confirm2'));
+  await act(async () => {
+    fireEvent.press(within(box).getByRole('button', {name: '모두 지우기'}));
+  });
+}

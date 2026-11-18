@@ -6,7 +6,7 @@ import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
 import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press, toHomeConsented, confirmDeleteAll} from '../testUtils/flow';
 import {color} from '../src/ui/tokens';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
 
@@ -362,7 +362,7 @@ describe('기기 도장 정리(낮음)', () => {
     await press('설정');
     await press('모두 지우기');
     await waitFor(() => screen.getByText('모두 지울까요?'));
-    await press('모두 지우기');
+    await confirmDeleteAll();
     await waitFor(() => screen.getByText('모두 지웠어요'));
     await waitFor(async () => expect(await local.read()).toEqual([]));
     setLocalStampsForTest(null);

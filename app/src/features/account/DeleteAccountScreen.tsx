@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, TextInput, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
@@ -14,10 +14,11 @@ import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {prefs} from '../../lib/prefs';
+import {Dialog} from '../../ui/Dialog';
 
 type Props = {role: 'parent' | 'child'};
 
-// 단계별 경고. "그만둘래요"가 주 버튼. 어르신: 확인 1번(설정의 모두 지우기가 앞 단계). 자녀: 계정 지우기 -> (마지막 자녀면 '지우기' 입력) -> 계정 지우기.
+// 단계별 경고. "그만둘래요"가 주 버튼. 어르신: P9 화면(1단계) → 확인 상자 '정말 모두 지울까요? / 되돌릴 수 없어요'(2단계, DECISIONS 153·감사 H1). 자녀: 계정 지우기 -> (마지막 자녀면 '지우기' 입력) -> 계정 지우기.
 export function DeleteAccountScreen({role}: Props) {
   const navigation = useNavigation();
   const {api, clear} = useSession();
@@ -25,6 +26,8 @@ export function DeleteAccountScreen({role}: Props) {
   const [typed, setTyped] = useState('');
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<Message | null>(null);
+  const [confirm2, setConfirm2] = useState(false); // 어르신 2단계 확인 상자
+  const yesRef = useRef<React.ComponentRef<typeof View>>(null);
   const child = role === 'child';
   const dp = copy.delete.parent;
   const dc = copy.delete.child;
@@ -75,8 +78,8 @@ export function DeleteAccountScreen({role}: Props) {
   // 표준 화면 틀: 경고 내용은 본문(스크롤), 안전한 "그만둘래요"(주)와 위험 외곽선 버튼은 하단 고정.
   // 실패하면 하단에 오류 패널 + "다시 하기"(위험 외곽선, 같은 지우기를 다시 시도)를 둔다.
   const dangerButton = !child ? (
-    // 어르신: 설정의 "모두 지우기"가 첫 단계라 여기서는 한 번만 확인한다(2차 확정 P9)
-    <BigButton variant="danger" label={dp.yes} loading={busy} onPress={run} />
+    // 어르신: 이 화면이 1단계, 누르면 2단계 확인 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
+    <BigButton variant="danger" label={dp.yes} loading={busy} buttonRef={yesRef} onPress={() => setConfirm2(true)} />
   ) : stage === 1 ? (
     <BigButton variant="danger" label={dc.danger} disabled={scope === null} onPress={() => setStage(2)} />
   ) : (
@@ -117,7 +120,7 @@ export function DeleteAccountScreen({role}: Props) {
       ) : (
         <>
           <Text20 size={28} weight="bold" accessibilityRole="header">{dp.title}</Text20>
-          <Text20 size={24}>{dp.body}</Text20>
+          <Text20 size={24}>{dp.step1_body}</Text20>
         </>
       )}
 
@@ -133,6 +136,27 @@ export function DeleteAccountScreen({role}: Props) {
           />
         </>
       ) : null}
+      {child ? null : (
+        <Dialog
+          visible={confirm2}
+          title={dp.step2_title}
+          warningLabel={dp.step2_body}
+          actions={[
+            {label: dp.cancel, onPress: () => setConfirm2(false)},
+            {
+              label: dp.yes,
+              kind: 'danger',
+              onPress: () => {
+                setConfirm2(false);
+                run();
+              },
+            },
+          ]}
+          onBack={() => setConfirm2(false)}
+          returnFocusRef={yesRef}
+          testID="delete-confirm2"
+        />
+      )}
     </Screen>
   );
 }
