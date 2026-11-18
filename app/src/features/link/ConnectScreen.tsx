@@ -17,7 +17,8 @@ import {formatCode} from '../../ui/codeInputLogic';
 import {BELOW_LINE_H, KEY_MIN, keypadKeyHeight} from './keypadFit';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
-import {consumeInvite} from '../../lib/linkSources';
+import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
+import type {Prefill} from './useConnectFlow';
 import type {ConnectState, FailKind} from './connectMachine';
 
 // 안내 패널 문구: 번호 문제는 기존 확정 문구(5절, copy-v3 11-3 "P1c 만료·사용됨" 재사용), 잠김은 rate_limited, 인터넷·서버는 공통
@@ -52,14 +53,28 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const back = fromCourse ? () => navigation.goBack() : resetRole;
   // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
   const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
-  const prefill = route.params?.prefill;
+  // 밖에서 들어온 번호: 처음엔 경로 값, 화면이 떠 있는 동안 새 링크가 오면 그 번호(AP-09, 리뷰 H1).
+  // initialParams 는 경로를 처음 만들 때만 쓰이므로 링크 저장소를 직접 구독한다. 지금 값(구독 즉시 1회)·지움(visible false)은 무시
+  const [prefill, setPrefill] = useState<Prefill | undefined>(route.params?.prefill);
+  useEffect(() => {
+    let first = true;
+    const off = subscribeInvite(b => {
+      if (!first && b.visible && b.code && b.source) {
+        const next = {code: b.code, source: b.source};
+        setPrefill(prev => (prev && prev.code === next.code && prev.source === next.source ? prev : next));
+      }
+    });
+    first = false;
+    return off;
+  }, []);
   const flow = useConnectFlow(api, prefill);
   const {state, edit, redeem, retry} = flow;
-  // 미리 채운 번호는 한 번 쓰면 기기에서 지운다(연결됨·쓸 수 없는 번호·다른 번호 쓰기). 띠도 함께 사라진다
+  // 미리 채운 번호는 한 번 쓰면 기기에서 지운다(연결됨·쓸 수 없는 번호·다른 번호 쓰기). 띠도 함께 사라진다.
+  // 실패는 그 번호의 결과일 때만(연결 중 새 링크가 와 있으면 그 새 번호는 지우지 않고 실패 뒤에 적용, 리뷰 M1)
   const prefillDone =
     !!prefill &&
     (state.kind === 'ok' ||
-      (state.kind === 'failed' && (state.reason === 'expired' || state.reason === 'used' || state.reason === 'not_parent_device' || state.reason === 'already_linked')) ||
+      (state.kind === 'failed' && state.code === prefill.code && (state.reason === 'expired' || state.reason === 'used' || state.reason === 'not_parent_device' || state.reason === 'already_linked')) ||
       (state.kind === 'idle' && state.inline === 'invalid' && state.code === prefill.code));
   useEffect(() => {
     if (prefillDone) {

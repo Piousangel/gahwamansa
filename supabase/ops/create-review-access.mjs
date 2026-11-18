@@ -14,6 +14,13 @@ if (!url || !key) {
   console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
   process.exit(3);
 }
+// 대상 확인: app/env/<환경>.env ref와 호스트 대조(production은 호스트 재입력)
+const {confirmTarget} = await import('./target-check.mjs');
+const {dirname, join} = await import('node:path');
+const {fileURLToPath} = await import('node:url');
+if (['create', 'enable', 'disable', 'cleanup'].includes(cmd)) {
+  await confirmTarget(join(dirname(fileURLToPath(import.meta.url)), '..', '..'), url, `심사 접근 ${cmd}`);
+}
 
 async function rpc(name, body) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {

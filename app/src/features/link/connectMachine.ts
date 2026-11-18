@@ -27,7 +27,8 @@ export type ConnectEvent =
   | {type: 'redeemed'; result: RedeemResult}
   | {type: 'error'; offline: boolean}
   | {type: 'other'} // 다른 번호 쓰기: 비우고 처음부터
-  | {type: 'retry'}; // 안내 패널의 버튼(다시 하기·알겠어요)
+  | {type: 'retry'} // 안내 패널의 버튼(다시 하기·알겠어요)
+  | {type: 'prefill'; code: string}; // 화면이 떠 있는 동안 새 초대 링크(AP-09)
 
 export const initialConnect = (code = ''): ConnectState => ({kind: 'idle', code, inline: null});
 
@@ -86,6 +87,9 @@ export function connectReducer(s: ConnectState, e: ConnectEvent): ConnectState {
         return {kind: 'failed', code: s.code, reason: e.offline ? 'offline' : 'server', step: 'redeem', title: s.title};
       }
       return s;
+    case 'prefill':
+      // 새 링크 번호로 처음부터(확인·실패 화면이어도). 연결 중·연결됨은 그대로(서버만 연결되는 구멍 방지)
+      return s.kind === 'redeeming' || s.kind === 'ok' ? s : {kind: 'idle', code: e.code, inline: null};
     case 'other':
       // 연결 중에는 버리지 않는다(서버는 연결됐는데 화면만 빈 번호 쓰기로 가는 구멍, 리뷰 M1)
       return s.kind === 'redeeming' ? s : initialConnect();

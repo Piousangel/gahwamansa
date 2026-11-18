@@ -436,3 +436,11 @@ enabled = true
 # 일일 푸시(0033 SV-02): cron이 x-cron-secret 헤더로 부르므로 JWT 검증을 끄고 함수 안에서 비밀값을 확인한다.
 [functions.push-daily]
 verify_jwt = false
+
+# 응원 도착·연결 알림(0038 SV-03): push-daily와 같이 x-cron-secret으로만 연다.
+[functions.push-events]
+verify_jwt = false
+
+# 카카오 연결 끊기(0042 SV-06): cron이 x-cron-secret으로 부른다.
+[functions.kakao-unlink]
+verify_jwt = false

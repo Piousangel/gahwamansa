@@ -2,7 +2,7 @@
 // secrets(환경마다, 사용자): PUSH_CRON_SECRET(Vault push_cron_secret과 같은 값), FCM_SERVICE_ACCOUNT(서비스 계정 JSON 전체),
 //   선택 PUSH_DRY_RUN=1(보내지 않고 대상 수만). PUSH_CRON_SECRET은 32자 이상 무작위. SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY는 런타임이 넣어 준다.
 // 로그에 토큰·개인 id를 찍지 않는다(요약 숫자만).
-import { runDaily, safeEqual, type ServiceAccount } from './lib.mts';
+import { runDaily, safeEqual, type ServiceAccount } from '../_shared/push.mts';
 
 const env = (k: string) => Deno.env.get(k) ?? '';
 
