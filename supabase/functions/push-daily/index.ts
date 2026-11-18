@@ -1,6 +1,6 @@
 // Edge Function push-daily: pg_cron(0033 push_daily_kick) → 여기 → FCM. JWT 검증 대신 x-cron-secret 헤더로만 연다(config.toml verify_jwt=false).
 // secrets(환경마다, 사용자): PUSH_CRON_SECRET(Vault push_cron_secret과 같은 값), FCM_SERVICE_ACCOUNT(서비스 계정 JSON 전체),
-//   선택 PUSH_DRY_RUN=1(보내지 않고 대상 수만). SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY는 런타임이 넣어 준다.
+//   선택 PUSH_DRY_RUN=1(보내지 않고 대상 수만). PUSH_CRON_SECRET은 32자 이상 무작위. SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY는 런타임이 넣어 준다.
 // 로그에 토큰·개인 id를 찍지 않는다(요약 숫자만).
 import { runDaily, safeEqual, type ServiceAccount } from './lib.mts';
 
@@ -20,16 +20,24 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<unknown
   return res.json();
 }
 
+// 서비스 계정: 없으면 null(dry-run). 형식이 틀리면 오류 — JSON.parse 메시지에는 입력 조각(개인키 일부)이 들어가므로 로그에 원문을 남기지 않는다(L8).
+class ServiceAccountInvalid extends Error {}
 function serviceAccount(): ServiceAccount | null {
   const raw = env('FCM_SERVICE_ACCOUNT');
   if (!raw) return null;
-  const sa = JSON.parse(raw) as ServiceAccount;
-  return sa.client_email && sa.private_key && sa.project_id ? sa : null;
+  let sa: ServiceAccount;
+  try {
+    sa = JSON.parse(raw) as ServiceAccount;
+  } catch {
+    throw new ServiceAccountInvalid('service_account_invalid');
+  }
+  if (!sa.client_email || !sa.private_key || !sa.project_id) throw new ServiceAccountInvalid('service_account_invalid');
+  return sa;
 }
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method_not_allowed', { status: 405 });
-  if (!safeEqual(req.headers.get('x-cron-secret') ?? '', env('PUSH_CRON_SECRET'))) {
+  if (!(await safeEqual(req.headers.get('x-cron-secret') ?? '', env('PUSH_CRON_SECRET')))) {
     return new Response('forbidden', { status: 403 });
   }
   try {
@@ -37,7 +45,9 @@ Deno.serve(async (req) => {
     console.log(JSON.stringify({ fn: 'push-daily', ...summary }));
     return Response.json(summary);
   } catch (e) {
-    console.error(JSON.stringify({ fn: 'push-daily', error: String((e as Error).message ?? e) }));
+    // 알려진 오류 이름만 남긴다(원문 메시지에 비밀 조각이 섞일 수 있음)
+    const msg = e instanceof ServiceAccountInvalid ? 'service_account_invalid' : String((e as Error).message ?? e).slice(0, 80).replace(/[^a-z0-9_:.-]/gi, '_');
+    console.error(JSON.stringify({ fn: 'push-daily', error: msg }));
     return new Response('error', { status: 500 });
   }
 });

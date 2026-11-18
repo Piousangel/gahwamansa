@@ -27,6 +27,8 @@ insert into public.profiles (id, user_id, family_id, role, consented_at) values
   ('7033b000-0000-0000-0000-0000000000a6', '70330000-0000-0000-0000-0000000000a6', '7033f000-0000-0000-0000-000000000001', 'parent', now()),
   ('7033b000-0000-0000-0000-0000000000c7', '70330000-0000-0000-0000-0000000000c7', '7033f000-0000-0000-0000-000000000007', 'child', null),
   ('7033b000-0000-0000-0000-0000000000a7', '70330000-0000-0000-0000-0000000000a7', '7033f000-0000-0000-0000-000000000007', 'parent', now());
+-- 0036부터 '알림 받기'(N1) 시각이 있어야 대상: 다른 조건만 시험하도록 모두 받기 상태로 둔다
+update public.profiles set push_consented_at = now() where id::text like '7033b000%' and role = 'parent';
 update public.profiles set push_enabled = false where id = '7033b000-0000-0000-0000-0000000000a3';
 insert into public.daily_sessions (family_id, parent_id, session_date, completed_steps, completed_at) values
   ('7033f000-0000-0000-0000-000000000001', '7033b000-0000-0000-0000-0000000000a5', public.kst_today(), '{photo,question,hangul}', now());

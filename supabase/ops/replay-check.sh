@@ -10,7 +10,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 WORK="$(mktemp -d)"
 LOG="${TMPDIR:-/tmp}/bumo-replay-check.log"
-PROJECT="bumo-jasik-replay"
+PROJECT="bumo-jasik-replay-$$" # 실행마다 고유(두 레인이 동시에 돌려도 서로의 스택을 지우지 않게)
 
 cleanup() {
   npx --yes supabase stop --workdir "$WORK" --no-backup >/dev/null 2>&1 || true
@@ -28,11 +28,20 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
 {
   echo "== replay-check $(date '+%Y-%m-%d %H:%M:%S') HEAD=$(git -C "$ROOT" rev-parse --short HEAD)"
   echo "== 마이그레이션 $(ls "$ROOT/supabase/migrations" | wc -l | tr -d ' ')개, 테스트 $(ls "$ROOT/supabase/tests" | wc -l | tr -d ' ')개"
-  npx --yes supabase start --workdir "$WORK" \
-    -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >/dev/null 2>&1
+  if ! npx --yes supabase start --workdir "$WORK" \
+    -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1; then
+    echo "== 임시 스택 시작 실패 — 마지막 출력(키 줄 제외):"
+    grep -v -i -E "key|secret|jwt|new version|recommend" "$WORK/start.log" | tail -15
+    exit 1
+  fi
   echo "== 임시 스택 시작($PROJECT, db 55322)"
   echo "== db reset(임시 스택만)"
-  npx --yes supabase db reset --workdir "$WORK" 2>&1 | grep -E "^Applying migration|^Seeding|ERROR|Finished" | tail -4
+  if ! npx --yes supabase db reset --workdir "$WORK" >"$WORK/reset.log" 2>&1; then
+    echo "== db reset 실패 — 마지막 출력:"
+    grep -v -i "new version\|recommend" "$WORK/reset.log" | tail -15
+    exit 1
+  fi
+  grep -E "^Applying migration|^Seeding|Finished" "$WORK/reset.log" | tail -4 || true
   echo "== test db"
   npx --yes supabase test db --workdir "$WORK" 2>&1 | grep -v -i "new version\|recommend" | grep -E "not ok|Failed|Wstat|Tests=|Result|ERROR" || true
 } 2>&1 | tee "$LOG"

@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0035) · 2026-11-17
+# 서버 계약 노트 (0019~0036) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -108,15 +108,17 @@ type UnregisterPushToken = { ok: true; removed: number };
 ```
 - 어르신·자녀 모두(가족에 연결된 사용자). 연결 전 기기는 `no_profile` → 앱은 연결 성공 뒤 다시 등록한다.
 - 언제 부르나: 알림 권한 허용 직후·앱 시작 시·FCM 토큰 갱신 시 등록(멱등). 로그아웃·알림 끄기 시 해제. 계정 지우기는 서버가 정리하므로 따로 안 불러도 된다.
-- 같은 토큰을 다른 계정이 등록하면 이전 계정의 행은 지워진다(한 기기 한 역할, 오배달 방지). 사용자당 최근 5개만.
+- 같은 토큰을 다른 계정이 등록하면 이전 계정의 행은 지워진다(한 기기 한 역할, 오배달 방지). **연결 전 계정이 등록해도(no_profile) 이전 계정 행은 지워진다**(0036). 토큰은 표 전체에서 유일. 사용자당 최근 5개, 270일 넘게 갱신 안 된 토큰은 파기 배치가 지운다.
+- 로그아웃 순서: `unregister_push_token` → 그다음 `signOut`(로그아웃 뒤에는 auth.uid가 없어 해제가 실패한다).
 - `device_tokens`는 앱이 직접 쓸 수 없다(읽기는 본인 것만). 기존에 직접 insert하던 코드가 있으면 이 RPC로 바꿔야 한다.
 
 ### set_push_enabled(p_enabled boolean) / my_push_settings()  (0033, 설정 "알림")
 ```ts
-// sb.rpc('set_push_enabled', { p_enabled: false }) → { ok: true; enabled: boolean } | { ok: false; reason: 'no_profile' }
-// sb.rpc('my_push_settings') → { enabled: boolean | null }   // 연결 전 기기는 null
+// sb.rpc('set_push_enabled', { p_enabled: true|false }) → { ok: true; enabled: boolean } | { ok: false; reason: 'no_profile' | 'invalid' }
+// sb.rpc('my_push_settings') → { enabled: boolean | null }   // = 실제로 받는 상태(켬 + 받기 시각), 연결 전 기기는 null
 ```
-- 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다. 기본 켬.
+- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). `false`면 시각이 지워진다. `null`은 `invalid`.
+- 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다.
 - 시스템 알림 권한과는 별개다(권한 거부면 애초에 토큰이 없음). 토큰 해제(`unregister_push_token`)는 로그아웃용.
 
 ## 3. 공통
@@ -136,8 +138,12 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 ## 4. 운영·서버 전용 (앱 호출 불가)
 - 콘텐츠 표 쓰기(0035): authenticated·anon은 insert·update·delete·truncate 권한 자체가 없다. 콘텐츠는 서비스 역할(시드·스크립트)만.
+- 0036: public **모든 표**에서 authenticated·anon의 TRUNCATE·REFERENCES·TRIGGER 회수 + postgres 기본 권한에서도 제거(새 표에 자동 적용). pgTAP이 전 표를 감시.
 - 사진 버킷 `content-photos`: **AI 콘텐츠 사진 전용, 가족 개인 사진 금지**(공개 버킷). JPEG만·2MB. 가족 사진(빌드 2)은 비공개 버킷·RLS로 따로.
 - **일일 푸시(0033, SV-02)**: cron `push-daily` 00:00 UTC(09:00 KST) → `push_daily_kick()`(pg_net) → Edge Function `supabase/functions/push-daily` → FCM HTTP v1.
+  - **0036 선점**: 실제 발송은 `push_daily_claim(p_now)`가 대상을 `push_claims(kind, sent_on, profile_id)`에 먼저 선점하고 그 토큰만 돌려준다 — 동시 실행·재시도·기록 실패에도 같은 날 같은 어르신께 한 번만(실패하면 그날 재시도 안 함). `push_daily_targets`는 선점 없는 미리보기(dry-run·운영 확인용).
+  - 대상 조건에 0036 `push_consented_at`(N1 받기 시각) 추가.
+  - **0036 오류 처리**: 토큰 삭제는 FCM `UNREGISTERED` 또는 `message.token` 필드 오류일 때만. 401·403·프로젝트 404·토큰 아닌 INVALID_ARGUMENT는 설정 오류 → 그 자리에서 발송 중단, 선점분 failed, `push_runs.note='config_error'`(OAuth 실패는 `oauth_failed`). 서버도 한 실행의 무효가 5개 이상·절반 초과면 토큰을 지우지 않는다(`invalid_ratio_hold`).
   - 대상 `push_daily_targets(p_now)`: 연결·동의한 어르신, 알림 켬, 심사 가족 아님, 오늘 코스 안 마침, 오늘 아직 안 보냄, 토큰 있음. KST 08:00~20:59 밖이면 빈 목록.
   - 문구 `push_copy(kind: daily·cheer_arrived·parent_connected·parent_reconnected, title ≤30, body ≤60)`: 라이터 확정(WR-02)·법률 리뷰 뒤 서비스 역할로 넣는다. **비어 있으면 보내지 않는다**(no_copy 기록).
   - 기록 `push_record`: 토큰별 `push_log`(31일) + 실행 요약 `push_runs`(대상·보냄·실패·무효·제외, 13개월). 무효 토큰(UNREGISTERED·INVALID_ARGUMENT)은 즉시 삭제.
@@ -197,7 +203,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 콘솔 경고 2건(익명 로그인 허용·유출 비밀번호 보호)은 DB가 아니라 Auth 설정이라 `docs/team/RELEASE.md` §9 사용자 체크리스트에 적었다.
 
 ## 8. 재생 검증·원격 확인 (SV-09)
-- **로컬 순차 재생**: `supabase/ops/replay-check.sh` — 공유 DB(54322)를 건드리지 않고 별도 임시 스택(project_id `bumo-jasik-replay`, db 55322)에서 `db reset`(0001→끝 + 시드) → `test db` → 스택 삭제. 로그는 저장소 밖 `${TMPDIR}/bumo-replay-check.log`. 11-18 결과: 마이그레이션 31개 재생 + pgTAP 29파일 **446/446 PASS**(리뷰 M3 해소).
+- **로컬 순차 재생**: `supabase/ops/replay-check.sh` — 공유 DB(54322)를 건드리지 않고 별도 임시 스택(project_id `bumo-jasik-replay-<pid>` 실행마다 고유, db 55322 — 포트가 같아 동시에 두 개는 못 돌림)에서 `db reset`(0001→끝 + 시드) → `test db` → 스택 삭제. 로그는 저장소 밖 `${TMPDIR}/bumo-replay-check.log`. 11-18 결과: 마이그레이션 31개 재생 + pgTAP 29파일 **446/446 PASS**(리뷰 M3 해소).
 - **원격 확인(staging, 리드·사용자 실행 — SQL Editor)**:
   ```sql
   -- 파기 배치가 하루 이상 지난 뒤: 성공 1회 이상
