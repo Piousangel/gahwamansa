@@ -13,6 +13,7 @@ import {DevMenuContext, isDevMenuAllowed, registerDevSessionCleaner} from './dev
 import {ALL_DEV_KEYS, createSessionSlots, type DevRole} from './sessionSlots';
 import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily';
 import type {FakeDevHooks} from '../features/fakeApi';
+import {bgmPreview, setBgmPreview} from '../lib/bgmAsset';
 
 // 번들 검사 표식(scripts/check-dev-menu-bundle.sh): production 번들에 이 글자가 있으면 실패
 export const DEV_MENU_IMPL_MARKER = 'bumojasik-dev-menu-impl';
@@ -30,6 +31,9 @@ const T = {
   nextDay: '하루 넘기기',
   serverOnly: '서버 기록·날짜는 앱에서 바꿀 수 없어요. 로컬 DB면 SQL 로(supabase/README)',
   stamps: '이 기기 도장(미연결) 지우기',
+  bgmOn: '배경 음악 미리 듣기 켜기(이 실행 동안)',
+  bgmOff: '배경 음악 미리 듣기 끄기',
+  bgmHint: '코스 홈·마친 화면에 음악 버튼이 생겨요. 화면을 다시 열면 보여요(공개 전 실기기 청취 확인용)',
   close: '닫기',
   done: '했어요',
   noChild: '자녀 세션이 없어요. 자녀로 로그인한 뒤 다시 해 주세요',
@@ -202,6 +206,15 @@ export function DevMenuHost({api, children}: Props) {
                   setMsg(T.done);
                 })} />
 
+                {/* AP-04: 음원 공개 전 실기기 스피커 청취 확인(lib/bgmAsset RELEASED 전에는 이 실행 동안만) */}
+                <BigButton
+                  variant="secondary"
+                  label={bgmPreview() ? T.bgmOff : T.bgmOn}
+                  onPress={() => {
+                    setBgmPreview(!bgmPreview());
+                    setMsg(T.bgmHint);
+                  }}
+                />
                 {msg ? <Text20 weight="bold" accessibilityLiveRegion="polite">{msg}</Text20> : null}
                 <BigButton label={T.close} onPress={() => setVisible(false)} />
               </ScrollView>

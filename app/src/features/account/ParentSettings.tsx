@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Linking, Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
+import {Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
 import {prefs} from '../../lib/prefs';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -13,10 +13,11 @@ import {SettingsGroup, SettingsRow} from '../../ui/SettingsRow';
 import {color, radius, size} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
-import {APP_VERSION, CONTACT_EMAIL} from '../../lib/appInfo';
+import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {NotifyRows} from './NotifyRows';
+import {AppInfoRows} from './AppInfoRows';
 import {bgmAsset} from '../../lib/bgmAsset';
 
 const t = copy.settings;
@@ -120,13 +121,12 @@ export function ParentSettings() {
       )}
       <SettingsGroup title={t.group_sound} />
       {/* 알림 행(AU-04 뒤 법률 규칙 ③): 연결된 어르신만. 켬/끔 = set_push_enabled */}
-      {linked ? <NotifyRows api={api} /> : null}
+      {linked ? <NotifyRows /> : null}
       {bgmAsset() !== null ? <BgmRow /> : null}
       <SfxRow />
       <SettingsGroup title={t.group_app} />
-      {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
-      <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
-      <ContactRow />
+      {/* 앱 정보 한 목록(법률 in-app-notices §3, AP-06): 약관·방침(앱 안 웹)·오픈소스·AI·병원 아님·사업자·문의하기 */}
+      <AppInfoRows />
       {/* 버전 줄: staging·개발 빌드에서만 7번 탭 → 개발자 메뉴(devGate). production 은 누르지 않는 글 행(화면 읽기에 '사용 안 함'으로 읽히지 않게) */}
       <SettingsRow
         testID={versionTap ? 'version-tap' : 'version-line'}
@@ -188,29 +188,6 @@ function BgmRow() {
         </View>
       )}
     </Pressable>
-  );
-}
-
-// '문의하기'(법률 Q4, 2026-11-19): 열람·정정·삭제 요청도 이 경로로 받는다(시행령 제41조②2호 — 수집 창구와 같은 쉬운 경로).
-// 메일 앱을 열 때 제목 "[가화만사성] 내 정보 보기·지우기 요청"을 채운다. 주소(CONTACT_EMAIL)가 아직 없으면 행은 보이되
-// 누를 수 없고 '준비하고 있어요' 한 줄(자리표시로 숨기지 않음, 감사 M8 규칙).
-function ContactRow() {
-  const ai = copy.app_info;
-  const mail = CONTACT_EMAIL;
-  if (!mail) {
-    return <SettingsRow testID="settings-row-contact" title={ai.contact} sub={`${ai.contact_pending}\n${ai.contact_request_hint}`} />;
-  }
-  const open = () => {
-    Linking.openURL(`mailto:${mail}?subject=${encodeURIComponent(ai.contact_request_subject)}`).catch(() => {});
-  };
-  return (
-    <SettingsRow
-      testID="settings-row-contact"
-      title={ai.contact}
-      sub={`${ai.contact_sub} · ${mail}\n${ai.contact_request_hint}`}
-      accessibilityHint={ai.contact_request_hint}
-      onPress={open}
-    />
   );
 }
 

@@ -206,7 +206,7 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
     for (const h of ['가족', '알림과 소리', '앱']) {
       expect(screen.getByRole('header', {name: h})).toBeTruthy();
     }
-    const order = ['가족에게 답 보여 주기, 보여 주는 중이에요', '연결된 가족', '도장 소리', '앱 정보, 앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요', '모두 지우기'];
+    const order = ['가족에게 답 보여 주기, 보여 주는 중이에요', '연결된 가족', '도장 소리', '오픈소스 라이선스', '모두 지우기']; // 앱 구역은 앱 정보 한 목록(AP-06)
     const labels = screen.UNSAFE_root
       .findAll(n => typeof n.props?.accessibilityLabel === 'string' && order.includes(n.props.accessibilityLabel) && n.props.accessibilityRole)
       .map(n => n.props.accessibilityLabel);
