@@ -85,3 +85,17 @@
 - M1(읽어 주기 시작 경합)은 몇 줄 수정이라 같이 고치기를 권장한다.
 - 낮음은 후속으로 처리한다.
 - jest는 부하로 인한 시간 초과만 있었고, 실패한 suite만 다시 돌리면 모두 통과했다.
+
+## 재확인 (2026-11-18, 고정 커밋 4109c00: 02c16a7·ce15b04·d69b657·dc03e21·61fa6a5·4109c00)
+
+- 실행: worktree(4109c00, jest 캐시 별도)에서 tsc 통과, jest `--maxWorkers=2` 1회 95 suites / 921 tests 통과(68초). 최신 main과 merge-tree 충돌 없음.
+
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| H1 알림 한 행 | 해결 | `NotifyRows`가 '알림' 한 행(`push.settings_row`, switch 역할, set_push_enabled)으로 바뀌었다. 켜 둔 상태에서 휴대폰 채널이 꺼진 종류만 행 아래에 `channel_row`(여럿이면 ', ')와 '휴대폰 설정 열기'(한 종류면 그 채널 화면, 둘이면 앱 알림 화면)를 보인다. 앱 알림 전체가 꺼진 상태 행은 그대로. 켬·끔 실패 한 줄(polite)도 추가돼 L5도 해결 |
+| M1 읽어 주기 대기 | 해결 | 누른 즉시 `pendingRef`로 잠그고(대기 중 다시 누르면 무시), `left` ref(blur·언마운트에서 true, focus에서 false)를 보고 소리 크기 확인 뒤 떠났으면 읽지 않는다. 실패 안내도 떠난 뒤에는 띄우지 않는다. 대기 중 라벨이 '멈추기'로 보이지만 누르면 무시된다. 확인 시간이 짧아 영향 미미(낮음) |
+| Screen `scrollRef` 공용 변경 | 영향 없음 | 선택 prop이고 `useImperativeHandle`로 `showRange`만 노출한다. 본문 ScrollView에 ref를 하나 더했을 뿐이며 기존에 붙어 있던 ref는 없었다. 쓰지 않는 화면은 동작이 같다. top·bottom 없이 한 겹으로 쓰는 화면에서 이 ref를 쓰면 `box.view`가 0이라 아무 일도 하지 않는다(현재 호출부는 설정 하나) |
+| lint 70(69+1) | 레이어 위반 아님 | 늘어난 1건은 `CourseDone.tsx:211` `@typescript-eslint/no-shadow`(BGM 권유 effect의 지역 변수 `let alive`가 위쪽 `alive` ref를 가림). `no-restricted-imports`(레이어) 67건은 기존 그대로이고, 새 파일 `useCourseBgm`·`bgmAsset`은 위반이 없다. 지역 변수 이름만 바꾸면 69로 돌아온다(낮음) |
+| BGM 숨김(`bgmAsset() === null`) | 소리·요소 없음 | `useBgm`은 asset이 null이면 트랙을 열지 않는다(load·play 없음). 화면 요소도 모두 그리지 않는다: P3 음악 켜기/끄기·P7 권유와 미리 듣기 대화상자·P13 배경 음악 행. P7 권유 1회 기록(`markBgmOffered`)도 `musicAvailable` 조건 뒤라 기록하지 않는다. 다만 `useAudioInputs`는 그대로 돌아 코스 홈·마친 화면에서 벨소리 모드 읽기와 네이티브 벨소리 구독이 생긴다. 소리는 아니지만 불필요한 구독이라, asset이 null이면 건너뛰기를 권장(낮음) |
+
+**재확인 판정: 합치기 가능.** H1·M1 해결, 공용 Screen 변경은 영향 없음, lint 증가분은 레이어 위반이 아닌 이름 가림 1건. 낮음 3건(대기 중 '멈추기' 라벨, `alive` 이름 가림, 음원 없을 때 벨소리 구독)은 후속으로 처리. P5 읽어 주기 위치는 디자인이 수용했다.
