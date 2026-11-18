@@ -26,3 +26,4 @@ app/src/lib/config.local.ts
 
 # AI 사진 원본(검수 전, 커밋 제외)
 content/photos-raw/
+content/audio-raw/

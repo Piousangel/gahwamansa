@@ -50,7 +50,7 @@
    "day": 4,
    "orig": 7,
    "scene": "마당 감나무에 주홍빛 감이 가득",
-   "subject": "a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn",
+   "subject": "a persimmon tree in a farmhouse yard, branches heavy with bright orange persimmons, tiled low roof behind, clear afternoon light, late autumn, clear open sky with absolutely no power lines, no electric wires, no utility poles, no plastic sheets, no tarps, no blue objects",
    "caption": "감 익는 마당",
    "check": "**감**: 주홍 감이 여러 개 크게 보이고 둥근 모양·꼭지가 분명. 사과·귤로 오인되면 불합격",
    "tags": {
@@ -59,7 +59,8 @@
     "place": "country",
     "era": "7080",
     "city_variant_ok": true
-   }
+   },
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 5,
@@ -185,7 +186,7 @@
    "day": 13,
    "orig": 15,
    "scene": "우물가 두레박과 돌로 쌓은 우물",
-   "subject": "a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer",
+   "subject": "a stone-walled village well with a wooden bucket on a rope (durebak) hanging above, bright midday light, summer, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "우물가 한낮",
    "check": "**두레박**: 줄에 매달린 나무 두레박이 우물 위에 눈에 띄게. 줄·도르래 구조가 이어져 보일 것(끊김 오류 점검)",
    "tags": {
@@ -194,13 +195,14 @@
     "place": "country",
     "era": "7080",
     "city_variant_ok": false
-   }
+   },
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 14,
    "orig": 18,
    "scene": "여름 저녁 마당 평상 위 수박 한 통",
-   "subject": "a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional",
+   "subject": "a wooden outdoor platform bench (pyeongsang) in a yard with one whole watermelon on it, warm evening light, summer dusk, fireflies optional, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "여름 저녁 평상",
    "check": "**평상**: 평상(나무 널 바닥, 낮은 다리)이 화면 가로로 크게. 수박은 보조 한 통. 모기장·글자 금지",
    "tags": {
@@ -209,13 +211,14 @@
     "place": "country",
     "era": "7080",
     "city_variant_ok": true
-   }
+   },
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 15,
    "orig": 2,
    "scene": "장날 아침 좌판 위 채소 바구니들",
-   "subject": "several woven bamboo baskets filled with radishes, potatoes and green onions on a low wooden market stall, dirt market street, soft overcast morning light, no seasonal fruit",
+   "subject": "several woven bamboo baskets filled with radishes, potatoes and green onions on a low wooden market stall, dirt market street, soft overcast morning light, no seasonal fruit, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "장날 아침",
    "check": "**바구니**: 대나무 바구니 3~5개가 앞쪽 중앙에 크게, 엮은 결이 보임. 가격표·간판·포장지 글자 없음, 사람은 없거나 멀리 뒷모습",
    "tags": {
@@ -225,13 +228,13 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 16,
    "orig": 4,
    "scene": "시골 정류장에 서 있는 버스, 흙길",
-   "subject": "an old rounded 1970s country bus parked at a simple roadside stop on a dirt road, rice fields behind, soft overcast midday light, no destination sign, no number plate, no lettering anywhere on the bus",
+   "subject": "an old rounded 1970s country bus parked at a simple roadside stop on a dirt road, rice fields behind, soft overcast midday light, no destination sign, no number plate, no lettering anywhere on the bus, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "버스 오는 길",
    "check": "**버스**: 버스 한 대가 옆모습으로 화면 1/3 이상. 행선지판·번호판·차체 글자 없음(2배 확대 확인), 승객 얼굴 없음, 아스팔트·현대 승용차 없음",
    "tags": {
@@ -241,7 +244,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 17,
@@ -257,13 +260,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 18,
    "orig": 17,
    "scene": "아침 마당에 세워진 대나무 빗자루",
-   "subject": "a bamboo broom leaning against a mud wall in a swept dirt yard, neat sweep lines on the ground, soft early morning light",
+   "subject": "a bamboo broom leaning against a mud wall in a swept dirt yard, neat sweep lines on the ground, soft early morning light, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "마당 쓰는 아침",
    "check": "**빗자루**: 대나무 빗자루 한 자루가 세워져 길게 보임. 사람 없음(집안일 성 역할 배치 금지), 낙엽·눈 같은 계절 단서 없음",
    "tags": {
@@ -273,7 +276,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 19,
@@ -289,7 +292,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 20,
@@ -305,13 +308,13 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 21,
    "orig": 19,
    "scene": "대청마루에 놓인 선풍기와 부채",
-   "subject": "an old metal electric fan and a round paper hand fan on a wide wooden open floor (daecheong maru) of a Korean house, bright summer afternoon, no brand or logo on the fan",
+   "subject": "an old metal electric fan and a round paper hand fan on a wide wooden open floor (daecheong maru) of a Korean house, bright summer afternoon, no brand or logo on the fan, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "대청마루 여름",
    "check": "**선풍기**: 철제 선풍기가 화면 중앙, 날개 대칭 확인. 상표·글자 없음, 플라스틱 현대 선풍기 금지",
    "tags": {
@@ -321,7 +324,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 22,
@@ -337,13 +340,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 23,
    "orig": 20,
    "scene": "장터 국밥집 앞 큰 솥과 국자",
-   "subject": "a huge black iron cauldron with steaming soup and a long ladle resting on its rim outside a simple market eatery, gentle steam, soft daylight, no signboard",
+   "subject": "a huge black iron cauldron with steaming soup and a long ladle resting on its rim outside a simple market eatery, gentle steam, soft daylight, no signboard, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "장터 국밥집",
    "check": "**국자**: 긴 국자가 솥 위에 또렷. 간판·차림표 글자 없음, 사람 얼굴 없음, 김은 부드럽게(연기·불 강조 금지)",
    "tags": {
@@ -353,7 +356,7 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 24,
@@ -369,13 +372,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 25,
    "orig": 24,
    "scene": "마당에 걸린 가마솥, 하얀 김",
-   "subject": "a large black iron cauldron (gamasot) set into a clay hearth in a farmhouse yard, white steam rising softly, lid half open, calm daylight, only a tiny ember glow, no flames",
+   "subject": "a large black iron cauldron (gamasot) set into a clay hearth in a farmhouse yard, white steam rising softly, lid half open, calm daylight, only a tiny ember glow, no flames, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "가마솥 김",
    "check": "**가마솥**: 가마솥이 화면 중앙 크게, 뚜껑과 손잡이 또렷. 불길·연기·검댕 강조 없음, 사람 없음",
    "tags": {
@@ -385,13 +388,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 26,
    "orig": 28,
    "scene": "맑은 냇가 바위 위에 놓인 낚싯대",
-   "subject": "a simple bamboo fishing rod resting on a smooth rock beside a clear shallow stream, pebbles under the water, soft summer daylight",
+   "subject": "a simple bamboo fishing rod resting on a smooth rock beside a clear shallow stream, pebbles under the water, soft summer daylight, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "냇가 낚시",
    "check": "**낚싯대**: 대나무 낚싯대가 화면을 가로질러 길게, 끝까지 끊김 없이. 잡힌 물고기·사람 없음",
    "tags": {
@@ -401,7 +404,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 27,
@@ -417,13 +420,13 @@
     "era": "7080",
     "city_variant_ok": true
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 28,
    "orig": 26,
    "scene": "잔치하는 앞마당에 쳐진 천막과 긴 상",
-   "subject": "a white canvas awning set up in a farmhouse front yard with long low tables laid with plates of food, empty of people, bright soft daylight",
+   "subject": "a white canvas awning set up in a farmhouse front yard with long low tables laid with plates of food, empty of people, bright soft daylight, clear open sky with absolutely no power lines, no electric wires, no utility poles, evenly lit frame with only a very light vignette, no colorful cushions",
    "caption": "잔치하는 앞마당",
    "check": "**앞마당**: 천막과 긴 상이 놓인 마당 전체가 보임. 사람 없음(또는 멀리 작은 뒷모습 1명), 현수막·글자 없음, 제사상 아님",
    "tags": {
@@ -433,13 +436,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 29,
    "orig": 29,
    "scene": "마당 한쪽 닭장과 아침 햇살",
-   "subject": "a small wooden chicken coop with a few hens in a farmhouse yard, a basket with brown eggs nearby, warm early morning sunlight",
+   "subject": "a small wooden chicken coop with a few hens in a farmhouse yard, a basket with brown eggs nearby, warm early morning sunlight, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "닭장 아침",
    "check": "**닭장**: 나무 닭장이 화면 중앙, 닭 2~4마리 형태 정상(다리·부리 오류 점검). 사람 없음",
    "tags": {
@@ -449,13 +452,13 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   },
   {
    "day": 30,
    "orig": 30,
    "scene": "저녁 노을 속 흙담 골목, 멀리 걷는 작은 사람",
-   "subject": "a narrow village alley between low mud-and-stone walls at sunset, warm orange sky, one small distant figure seen from behind walking away",
+   "subject": "a narrow village alley between low mud-and-stone walls at sunset, warm orange sky, one small distant figure seen from behind walking away, clear open sky with absolutely no power lines, no electric wires, no utility poles",
    "caption": "흙담 골목 저녁",
    "check": "**흙담**: 흙담이 양옆으로 길게 이어지고 질감이 보임. 사람은 멀리 작은 뒷모습 1명까지, 전선·전봇대 없음",
    "tags": {
@@ -465,7 +468,7 @@
     "era": "7080",
     "city_variant_ok": false
    },
-   "status": "draft(CT-01, 생성은 사용자 비용 승인 Q-05 뒤). 문구는 supabase/seed_content_30d.sql(WR-09)"
+   "status": "generated 2026-11-18(gemini-nano-banana-2.1, Q-05), 검수 content/review.md"
   }
  ],
  "tags_note": "tags: season(spring|summer|autumn|winter|any), season_cue(text=캡션·질문에 계절이 박힘 / image=사진에만 / none), place(country|city|any), era(7080=1970~80년대), city_variant_ok(같은 낱말로 도시판 사진을 만들 수 있음). 개인화 회의 2026-11-17 빌드 1 #1. 2026-11-17 계절 점검으로 14칸 재배치(orig=writer.md 원본 일차)"
