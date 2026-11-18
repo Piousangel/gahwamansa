@@ -1,0 +1,52 @@
+# F6(AU-12 ④) 응원 왕복: C4 응원 시트 → 문장 하나 → 토스트 → 어르신 전환 → P3 진입 시 P8 응원 상자 → 알겠어요.
+# fake: sendCheer 성공이 같은 fake 의 어르신 안 읽은 응원(get_my_cheers)에 쌓인다.
+appId: com.bumojasik.app.staging
+name: F6 응원 왕복
+tags:
+  - child
+  - parent
+  - required
+---
+- runFlow:
+    file: ../common/child-to-wait.yaml
+    env:
+      PREFIX: f6
+- runFlow:
+    file: ../common/child-linked-home.yaml
+    env:
+      PREFIX: f6
+- tapOn: '응원 보내기'
+- extendedWaitUntil:
+    visible: '어떤 말을 보낼까요\?'
+    timeout: 10000
+- takeScreenshot: f6-c4-sheet
+- tapOn: '늘 고마워요'
+- extendedWaitUntil:
+    visible: '엄마께 보냈어요'
+    timeout: 10000
+- takeScreenshot: f6-c4-toast
+# U10: 취소 가능 시간(토스트 4~6초) 뒤에 실제로 보낸다 → 토스트가 사라질 때까지 기다림
+- extendedWaitUntil:
+    notVisible: '엄마께 보냈어요'
+    timeout: 15000
+# 어르신으로: 자녀 설정 → 앱 정보 → 버전 7번
+- tapOn: '설정'
+- scrollUntilVisible:
+    element: '앱 정보'
+    direction: DOWN
+- tapOn: '앱 정보'
+- runFlow:
+    file: ../common/dev-menu.yaml
+    env:
+      ROLE_LABEL: '어르신으로'
+- extendedWaitUntil:
+    visible: '코스 보기'
+    timeout: 15000
+- tapOn: '코스 보기'
+- extendedWaitUntil:
+    visible: '가족이 보낸 응원이에요'
+    timeout: 15000
+- assertVisible: '늘 고마워요'
+- takeScreenshot: f6-p8
+- tapOn: '알겠어요'
+- assertNotVisible: '가족이 보낸 응원이에요'

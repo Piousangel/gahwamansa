@@ -239,7 +239,10 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         return {ok: false, reason: 'daily_limit'};
       }
       cheersSent.set(parentId, n + 1);
-      return {ok: true, cheerId: `cheer-${parentId}-${n + 1}`};
+      // 같은 fake 안에서 어르신 쪽이 받게(개발자 메뉴 역할 전환 → P8, Maestro F6 응원 왕복). 서버 send_cheer → get_my_cheers 와 같은 흐름
+      const cheerId = `cheer-${parentId}-${n + 1}`;
+      unread = [{id: cheerId, message_key: key, sent_at: new Date().toISOString()}, ...unread];
+      return {ok: true, cheerId};
     },
     async createFamily() {
       childFamily = true;

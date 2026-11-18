@@ -184,3 +184,32 @@
 
 ## SV-12 형제 시나리오(sibling_scenario.test.sql)
 - 두 자녀가 같은 답을 보고, 응원 한도를 따로 쓰고, 미리보기 범위가 child이고, 한 명이 지우면 본인만·마지막이면 가족 전체와 어르신 익명 계정까지 지워지고, 보낸 응원이 함께 지워지는 것까지 종단으로 단언한다. 충분하다.
+
+---
+
+# 재검토 4 — 0044 카카오 해제·콘텐츠 재검토 반영 · 커밋 64ea074
+
+- 검증: 64ea074의 `supabase/`·`scripts/`만 꺼내 임시 스택(`bumo-admin-rev4`, 575xx, 공유 54322 미사용)에서 실행. **0001~0044 44개 재생 + 시드 성공, pgTAP Files=44, Tests=680, PASS**(보고 수치와 같음). kakao 단위 테스트 **5/5**. 끝나고 스택 제거. 추가 재현은 rollback 트랜잭션 안에서 실행.
+
+## 판정: **합치기 가능(조건 없음)**. R-M1 조건 충족, 높음·중간 0, 새 낮음 2
+
+## 반영 확인
+
+| 항목 | 반영 내용 | 확인 |
+|---|---|---|
+| R-M1 키 오류 | 401·403·-401이면 `config`로 분류해 회차를 멈춘다. 못 한 항목은 `kakao_unlink_release`로 선점을 풀고(attempts −1, 1시간 뒤), `push_runs(kind='kakao_unlink', note='config_error')`에 남긴다. 정상 회차도 완료·재시도·포기 수를 기록한다. 운영 점검 §14-1과 metrics ⑧(대기·포기·가장 오래된 대기·7일 config_error·해제 수) 추가 | 재현 K2: release → attempts 0, 1시간 뒤, last_http 401, push_runs config_error 1행 ✅. 단위 테스트 5/5 ✅ |
+| K-L1 재가입 | claim 직전에 같은 provider_id의 identity가 큐 적재 이후에 만들어졌으면 해제하지 않고 행을 지운다 | 재현 K1: 재가입한 회원번호는 선점되지 않고 다른 회원번호만 선점 ✅ |
+| K-L2 큐 쓰기 | service_role의 insert·update·delete·truncate·시퀀스 권한 회수(select만 남김) | 직접 delete `permission denied` ✅ |
+| R-L1 사진 주소 | https만 허용. Vault `project_url`이 있으면 그 호스트만 허용 | http 거부 ✅, Vault가 있을 때 외부 호스트 거부·`<ref>.supabase.co.evil.example` 같은 닮은 호스트 거부 ✅ |
+| R-L2 주소 변경 감사 | `content_photos.image_url` 변경 시 트리거가 `admin_audit(content_image_url, day_index, host)`를 남긴다. 월 점검 §14-5 | 감사 행 생성 ✅. 처리자 값은 아래 Q-L1 |
+
+## 새 낮음
+
+| # | 파일:줄 | 내용 | 권장 |
+|---|---|---|---|
+| Q-L1 | 0044:22 | 감사 트리거가 security definer라서 `current_user`가 언제나 함수 소유자 **`postgres`**다. service_role이 주소를 바꿔도 처리자가 `postgres`로 남는다(재현 I1). 같은 definer 안에서 `current_setting('role')`은 `service_role`을 돌려준다(확인). Studio(postgres)에서 바꾸면 `none`이 된다 | `coalesce(nullif(current_setting('role', true), 'none'), session_user)`로 바꾸고 테스트에 처리자 단언 추가 |
+| Q-L2 | 0044:113-124 | Vault에 `project_url`이 없으면 https 형식만 검사해서 외부 호스트가 통과한다(재현 P1, 로컬 기준). staging·production은 푸시 cron 때문에 Vault 값이 이미 필요하므로 실제 위험은 작다. 반대로 로컬(http://127.0.0.1)에서는 게시 스크립트가 늘 `invalid_item`이 된다 | dev-server-notes에 "Vault project_url이 없으면 호스트를 검사하지 않음, 로컬 게시는 pgTAP로만 확인" 한 줄 추가 |
+
+## 참고(조치 불필요)
+- `kakao_unlink_release`는 반복 호출해도 attempts가 0 아래로 내려가지 않는다(greatest). service_role 전용이라 남용 경로는 없다. 키 오류가 30일 넘게 이어지면 큐 행은 적재 후 30일 파기로 사라진다. 이제는 ⑧ `config_error_runs_7d`와 `oldest_waiting`으로 먼저 드러난다.
+- metrics ⑥(푸시 종류별 요약)에 `kakao_unlink` 행이 함께 나온다. 해석할 때 `where kind <> 'kakao_unlink'`를 넣으면 깔끔하다(낮음 미만).

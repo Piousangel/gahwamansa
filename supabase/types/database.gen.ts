@@ -6,7 +6,21 @@ export type Database = {
   
   "public": {
           Tables: {
-            "answers": {
+            "admin_audit": {
+                  Row: {
+                    "action": string,"at": string,"detail": NonNullable<Json>,"id": number,"operator": string,"reason": string,"target_family": string | null,"target_profile": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"at"?: string,"detail"?: NonNullable<Json>,"id"?: number,"operator": string,"reason": string,"target_family"?: string | null,"target_profile"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"at"?: string,"detail"?: NonNullable<Json>,"id"?: number,"operator"?: string,"reason"?: string,"target_family"?: string | null,"target_profile"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"answers": {
                   Row: {
                     "answered_at": string,"choice": string,"family_id": string,"id": string,"parent_id": string,"question_id": string,"session_date": string
                   }
@@ -294,6 +308,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"kakao_unlink_queue": {
+                  Row: {
+                    "attempts": number,"enqueued_at": string,"gave_up_at": string | null,"id": number,"kakao_user_id": string,"last_http": number | null,"next_attempt_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"enqueued_at"?: string,"gave_up_at"?: string | null,"id"?: number,"kakao_user_id": string,"last_http"?: number | null,"next_attempt_at"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"enqueued_at"?: string,"gave_up_at"?: string | null,"id"?: number,"kakao_user_id"?: string,"last_http"?: number | null,"next_attempt_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"notification_queue": {
                   Row: {
                     "created_at": string,"family_id": string,"id": number,"kind": string,"payload": NonNullable<Json>,"sent_at": string | null
@@ -433,14 +461,40 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "content_runway": {
+                  Row: {
+                    "active_days": number | null,"max_cursor": number | null,"remaining_new_days": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
-            "admin_cleanup_review_family":
+            "account_delete_core":
+{ Args: { "p_profile": string }; Returns: Json
+                           },
+"admin_check_args":
+{ Args: { "p_operator": string,"p_reason": string }; Returns: undefined
+                           },
+"admin_cleanup_review_family":
 { Args: { "p_family": string }; Returns: Json
                            },
 "admin_create_review_family":
 { Args: { "p_child_users": (string)[],"p_max_uses"?: number }; Returns: Json
+                           },
+"admin_delete_account":
+{ Args: { "p_operator": string,"p_profile": string,"p_reason": string }; Returns: Json
+                           },
+"admin_delete_answers":
+{ Args: { "p_operator": string,"p_profile": string,"p_reason": string }; Returns: Json
+                           },
+"admin_publish_content":
+{ Args: { "p_days": Json,"p_operator": string,"p_reason": string }; Returns: Json
+                           },
+"admin_retire_content":
+{ Args: { "p_day": number,"p_operator": string,"p_reason": string }; Returns: Json
                            },
 "admin_set_review_code":
 { Args: { "p_enabled": boolean,"p_family": string }; Returns: number
@@ -489,6 +543,18 @@ isOneToOne: false
                            },
 "issue_invite_code":
 { Args: { "p_target"?: string }; Returns: string
+                           },
+"kakao_unlink_claim":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: Json
+                           },
+"kakao_unlink_kick":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
+"kakao_unlink_record":
+{ Args: { "p_results": Json }; Returns: Json
+                           },
+"kakao_unlink_release":
+{ Args: { "p_http"?: number,"p_ids": (number)[] }; Returns: Json
                            },
 "kst_today":
 { Args: Record<PropertyKey, never>; Returns: string

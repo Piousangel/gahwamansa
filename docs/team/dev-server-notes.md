@@ -298,3 +298,12 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 기준: 가족의 모든 자녀가 테스트 도메인 메일(example.test·example.com·example.org·*.test, 앱 개발자 메뉴와 같은 표식). 실제 계정 자녀가 섞인 가족은 건너뛰고 수만 알린다. 메일·id는 출력하지 않는다.
 - 방법: 자녀마다 `admin_delete_account`(공통 삭제 규칙) → 마지막 자녀에서 가족 전체 + 어르신 익명 계정. 처리마다 감사 행(사유 "<환경> 테스트 가족 정리(개발자 메뉴)").
 - 로컬 확인(11-18): 공유 스택에서 미리보기만 실행 — 테스트 가족 7개 식별(통합 테스트가 만든 것), 삭제는 하지 않음. 실제 삭제는 0039 반영된 staging에서 리드·사용자가 1회.
+
+## 14. 06시 운영 점검 항목(서버, PM-07 루틴에 붙여 쓰기)
+매일(평일) Studio SQL Editor에서 확인하고 이상이 있으면 서버 줄에 알린다.
+1. **카카오 연결 끊기**(재검토 R-M1): `supabase/ops/metrics.sql` ⑧ — `gave_up > 0`이면 운영자가 원인(어드민 키·카카오 응답)을 보고 수동 해제 후 행 처리. `config_error_runs_7d > 0`이면 `KAKAO_ADMIN_KEY` secret 확인(키 오류는 시도 횟수를 쓰지 않고 1시간마다 다시 시도). `oldest_waiting`이 하루를 넘으면 cron·함수 배포 확인.
+2. **푸시**: ⑥ — `runs_with_note`(config_error·oauth_failed·invalid_ratio_hold)가 있으면 FCM 서비스 계정·프로젝트 확인. 일일 알림 `sent`가 0인데 대상이 있으면 `push_copy` 적재 여부(no_copy) 확인.
+3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트).
+4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
+5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
+- 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).

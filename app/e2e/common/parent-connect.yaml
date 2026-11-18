@@ -1,0 +1,37 @@
+# 공용: 어르신 첫 연결(새 설치 → 첫 화면 → 부모님 → 번호 123456 → P1c → 연결 → 동의 '좋아요' → 코스 홈)
+# fake 코드 규칙 123456 성공(dev-app-notes 6a). 캡처 이름 앞머리는 부르는 흐름이 PREFIX 로 넘긴다.
+appId: com.bumojasik.app.staging
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- takeScreenshot: ${PREFIX}-fs
+- tapOn: '부모님 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '가족에게 받은.*'
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-p1-0
+- tapOn: '1'
+- tapOn: '2'
+- tapOn: '3'
+- takeScreenshot: ${PREFIX}-p1-3
+- tapOn: '4'
+- tapOn: '5'
+- tapOn: '6'
+- extendedWaitUntil:
+    visible: '이 번호로 연결하기'
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-p1c
+- tapOn: '이 번호로 연결하기'
+- extendedWaitUntil:
+    visible: '고른 답을.*나눠요'
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-p2
+- tapOn: '좋아요'
+- extendedWaitUntil:
+    visible: '사진 보기.*'
+    timeout: 10000
