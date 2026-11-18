@@ -1,0 +1,30 @@
+/**
+ * @jest-environment node
+ */
+// 레이어 규칙 기준선(ARCHITECTURE 2절, 계획 12 1-3). lint 는 warn 이라 npm run lint 가 막지 못하므로 여기서 수를 지킨다.
+// 늘면 실패: 새 import 를 shared/·ui/·state/ 쪽으로 옮긴다. 줄면 실패: 아래 숫자를 내려 기준선을 갱신한다(.eslintrc.js 주석도).
+declare const __dirname: string;
+type LintMessage = {ruleId: string | null; message: string};
+type LintResult = {messages: LintMessage[]};
+const {ESLint}: {ESLint: new (o: {cwd: string}) => {lintFiles(p: string[]): Promise<LintResult[]>}} = require('eslint');
+const path: {join(...p: string[]): string} = require('path');
+
+const BASELINE = {app: 54, crossFeature: 7, uiDeps: 1};
+
+jest.setTimeout(120000);
+
+test('레이어 위반 수가 기준선과 같다', async () => {
+  const eslint = new ESLint({cwd: path.join(__dirname, '..')});
+  const results = await eslint.lintFiles(['src/**/*.{ts,tsx}']);
+  const msgs = results.flatMap(r => r.messages.filter(m => m.ruleId === 'no-restricted-imports').map(m => m.message));
+  const count = (needle: string) => msgs.filter(m => m.includes(needle)).length;
+  expect({
+    app: count('조립 계층'),
+    crossFeature: count('기능 간'),
+    uiDeps: count('ui/ 는'),
+  }).toEqual(BASELINE);
+  // 위 세 갈래 밖의 레이어 위반(아래 계층→features, contract 의 React·copy)은 0
+  expect(msgs.length).toBe(BASELINE.app + BASELINE.crossFeature + BASELINE.uiDeps);
+});
+
+export {};
