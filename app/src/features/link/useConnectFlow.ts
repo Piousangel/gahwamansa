@@ -17,11 +17,12 @@ function track(api: Api, name: EventName, props?: EventProps) {
 // 밖에서 들어온 번호는 6자리 숫자만 받는다(리뷰 L1). 형식이 다르면 없는 것으로 본다
 const validPrefill = (p?: Prefill): Prefill | undefined => (p && /^[0-9]{6}$/.test(p.code) ? p : undefined);
 
-// TODO(App Links): 화면이 떠 있는 동안 새 링크가 열리면(params 변경) 지금은 처음 값만 쓴다
+// 화면이 떠 있는 동안 새 링크가 열리면(params 변경, AP-09) 그 번호로 바꿔 바로 확인한다. 연결 중·연결됨이면 바꾸지 않는다
 export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
   const prefill = validPrefill(rawPrefill);
   const [state, dispatch] = useReducer(connectReducer, prefill?.code ?? '', initialConnect);
   const seq = useRef(0);
+  const prefilledChecked = useRef(false);
   const alive = useRef(true);
   useEffect(
     () => () => {
@@ -30,17 +31,33 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
     [],
   );
 
-  // 밖에서 들어온 번호: 경로 이벤트 + 채움 이벤트(한 번). 확인은 바로(손 입력이 아니므로 기다리지 않음)
-  const prefilled = useRef(false);
+  // 밖에서 들어온 번호: 링크마다(경로·번호가 바뀔 때마다) 경로 이벤트 + 채움 이벤트 한 번. 확인은 바로(손 입력이 아니므로 기다리지 않음)
+  const appliedKey = useRef<string | null>(null);
+  const kindRef = useRef(state.kind);
+  kindRef.current = state.kind;
+  const prefillCode = prefill?.code;
+  const prefillSource = prefill?.source;
   useEffect(() => {
-    if (!prefill || prefilled.current) {
+    if (!prefillCode || !prefillSource) {
       return;
     }
-    prefilled.current = true;
-    const source = prefill.source;
-    track(api, source === 'app_link' ? 'link_opened' : 'referrer_found', source === 'app_link' ? {source} : undefined);
-    track(api, 'code_prefilled', {source});
-  }, [api, prefill]);
+    const key = `${prefillSource}:${prefillCode}`;
+    if (appliedKey.current === key) {
+      return;
+    }
+    const first = appliedKey.current === null;
+    if (!first && (kindRef.current === 'redeeming' || kindRef.current === 'ok')) {
+      return; // 연결 중·연결됨: 새 링크로 바꾸지 않는다
+    }
+    appliedKey.current = key;
+    if (!first) {
+      seq.current += 1; // 진행 중 확인은 버린다
+      prefilledChecked.current = false; // 새 번호도 기다리지 않고 바로 확인
+      dispatch({type: 'prefill', code: prefillCode});
+    }
+    track(api, prefillSource === 'app_link' ? 'link_opened' : 'referrer_found', prefillSource === 'app_link' ? {source: prefillSource} : undefined);
+    track(api, 'code_prefilled', {source: prefillSource});
+  }, [api, prefillCode, prefillSource]);
 
   const peek = useCallback(
     async (code: string) => {
@@ -63,7 +80,6 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
     [api],
   );
 
-  const prefilledChecked = useRef(false);
   const auto = shouldAutoCheck(state);
   const code = state.code;
   useEffect(() => {
