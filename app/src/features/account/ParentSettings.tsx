@@ -5,7 +5,7 @@ import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native'
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
+import {Screen, type ScreenScroll} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
@@ -31,6 +31,12 @@ export function ParentSettings() {
   const fromDeclined = route.params?.expand === 'resume' && !consented && linked;
   const [confirm, setConfirm] = useState<Confirm>(fromDeclined ? 'resume' : 'none');
   const resumeTitleRef = useRef<React.ComponentRef<typeof View>>(null);
+  // 감사 M3: 확인 패널이 열리면 패널 끝(실행 버튼)까지 보이게 본문을 스크롤한다(하단 고정 '돌아가기'에 가려지지 않게)
+  const scroll = useRef<ScreenScroll>(null);
+  const showPanel = (e: {nativeEvent: {layout: {y: number; height: number}}}) => {
+    const {y, height} = e.nativeEvent.layout;
+    scroll.current?.showRange(y, y + height);
+  };
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,6 +62,7 @@ export function ParentSettings() {
   // 표준 화면 틀: 설정 내용은 본문(스크롤), "돌아가기"만 하단 고정.
   return (
     <Screen
+      scrollRef={scroll}
       initialFocusRef={fromDeclined ? resumeTitleRef : undefined} // '다시 정하기'로 왔으면 첫 포커스는 확인 제목(화면 제목 대신, 순서 보장)
       top={
         <>
@@ -79,14 +86,14 @@ export function ParentSettings() {
           />
           {notice ? <Text20 accessibilityLiveRegion="polite">{notice}</Text20> : null}
           {confirm === 'stop' ? (
-            <View style={styles.confirm}>
+            <View testID="settings-confirm" style={styles.confirm} onLayout={showPanel}>
               <Text20 size={26} weight="bold">{t.stop_title}</Text20>
               <Text20>{t.stop_body}</Text20>
               <BigButton label={t.keep} onPress={() => setConfirm('none')} />
               <BigButton variant="secondary" label={t.stop} loading={busy} onPress={() => run(() => api.withdrawConsent(), false, t.stopped)} />
             </View>
           ) : confirm === 'resume' ? (
-            <View style={styles.confirm}>
+            <View testID="settings-confirm" style={styles.confirm} onLayout={showPanel}>
               <View ref={resumeTitleRef} accessible accessibilityRole="header" accessibilityLabel={t.resume_confirm}>
                 <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
               </View>

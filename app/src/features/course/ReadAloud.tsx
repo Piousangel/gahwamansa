@@ -32,7 +32,17 @@ export function ReadAloud({text, onSpeaking, testID = 'read-aloud'}: {text: stri
   const {allowed, speaking, speak, stop} = useReadAloud();
   const [notice, setNotice] = useState<Notice>(null);
   const started = useRef(false); // 이 버튼이 시작한 읽기인가(다른 화면이 읽는 중이면 '멈추기'로 바꾸지 않음)
-  const mine = speaking && started.current;
+  // 누른 순간부터 읽기 시작까지(소리 크기 확인 중): 진행 표시·두 번 누름 잠금. 그 사이 화면을 떠나면 읽지 않는다(리뷰 M1)
+  const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
+  const left = useRef(false); // 이 화면을 떠났거나(blur) 사라짐(언마운트)
+  useEffect(() => {
+    left.current = false;
+    return () => {
+      left.current = true;
+    };
+  }, []);
+  const mine = (speaking && started.current) || pending;
   useEffect(() => {
     if (!speaking) {
       started.current = false;
@@ -50,33 +60,57 @@ export function ReadAloud({text, onSpeaking, testID = 'read-aloud'}: {text: stri
     if (!navigation) {
       return undefined;
     }
-    return navigation.addListener('blur', () => {
+    const offFocus = navigation.addListener('focus', () => {
+      left.current = false;
+    });
+    const offBlur = navigation.addListener('blur', () => {
+      left.current = true;
       if (started.current) {
         started.current = false;
         stopRef.current();
       }
     });
+    return () => {
+      offFocus();
+      offBlur();
+    };
   }, [navigation]);
 
   if (!allowed) {
     return null;
   }
   const press = async () => {
-    if (mine) {
+    if (pendingRef.current) {
+      return; // 소리 크기 확인 중 다시 누름은 무시(읽기 한 번)
+    }
+    if (speaking && started.current) {
       started.current = false;
       await stop();
       return;
     }
+    pendingRef.current = true;
+    setPending(true);
     setNotice(null);
-    if ((await getMediaVolume()) === 0) {
-      setNotice('muted');
-      return;
-    }
-    started.current = true;
-    const r = await speak(text);
-    if (r !== 'spoken') {
-      started.current = false;
-      setNotice(r === 'no_korean_voice' ? 'no_korean' : r === 'blocked' ? null : 'failed');
+    try {
+      const volume = await getMediaVolume();
+      if (left.current) {
+        return; // 기다리는 사이 화면을 떠났다: 떠난 화면에서 읽지 않는다
+      }
+      if (volume === 0) {
+        setNotice('muted');
+        return;
+      }
+      started.current = true;
+      const r = await speak(text);
+      if (r !== 'spoken') {
+        started.current = false;
+        if (!left.current) {
+          setNotice(r === 'no_korean_voice' ? 'no_korean' : r === 'blocked' ? null : 'failed');
+        }
+      }
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
     }
   };
   return (
@@ -84,6 +118,7 @@ export function ReadAloud({text, onSpeaking, testID = 'read-aloud'}: {text: stri
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={mine ? t.stop : t.button}
+        accessibilityState={{busy: pending}}
         onPress={press}
         style={({pressed}) => [styles.button, pressed ? styles.pressed : null]}>
         <Icon name="icon-speaker" size={28} color={color.action} />

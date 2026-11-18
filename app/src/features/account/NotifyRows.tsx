@@ -6,7 +6,7 @@ import {color, radius, size} from '../../ui/tokens';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {channelEnabled, openNotifySettings, readNotifyPermission} from '../../push/notifyNative';
 import type {AndroidPushChannel} from '../../api/contract/push';
-import type {Api} from '../types';
+import {isOffline, type Api} from '../types';
 import {copy} from '../../copy/copy';
 
 const p = copy.push;
@@ -26,6 +26,7 @@ const KINDS: {ch: Kind; title: string}[] = [
 export function NotifyRows({api}: {api: Api}) {
   const [s, setS] = useState<State>(null);
   const {busy, begin, end} = useBusyLatch();
+  const [failed, setFailed] = useState<string | null>(null); // 켬·끔 실패 한 줄(리뷰 낮음, 어르신은 토스트 대신 행 아래 글)
   const load = useCallback(async () => {
     try {
       const [settings, perm, daily, cheer] = await Promise.all([
@@ -65,11 +66,16 @@ export function NotifyRows({api}: {api: Api}) {
     }
     const next = !s.enabled;
     setS({...s, enabled: next}); // 바로 보이게, 실패하면 되돌림
+    setFailed(null);
     try {
       const r = await api.setPushEnabled(next);
       setS(prev => (prev ? {...prev, enabled: r.ok ? r.enabled : !next} : prev));
-    } catch {
+      if (!r.ok) {
+        setFailed(copy.errors.server.title);
+      }
+    } catch (e) {
       setS(prev => (prev ? {...prev, enabled: !next} : prev));
+      setFailed(isOffline(e) ? copy.errors.offline.title : copy.errors.server.title);
     } finally {
       end();
     }
@@ -92,6 +98,11 @@ export function NotifyRows({api}: {api: Api}) {
           <Switch value={!!s.enabled} onValueChange={toggle} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
         </View>
       </Pressable>
+      {failed ? (
+        <Text20 testID="notify-failed" accessibilityLiveRegion="polite" weight="bold" style={styles.failed}>
+          {failed}
+        </Text20>
+      ) : null}
       {/* 켜 둔 상태에서 휴대폰 채널이 꺼진 종류만 행 아래에 안내(꺼 둔 상태면 어차피 오지 않으므로 생략) */}
       {s.enabled
         ? offKinds.map(k => (
@@ -124,6 +135,7 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', alignItems: 'center', minHeight: size.touchMin},
   pressed: {backgroundColor: color.actionSoft},
   off: {gap: 8},
+  failed: {color: color.dangerInk},
   text: {flex: 1, gap: 4},
   sub: {color: color.inkSub},
 });

@@ -28,7 +28,7 @@ test("'알림' 한 행(켜짐), 누르면 set_push_enabled(false), 다시 누르
     fireEvent.press(sw());
   });
   expect(set).toHaveBeenCalledWith(false);
-  await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(false));
+  await waitFor(() => expect(sw().props.accessibilityState).toMatchObject({checked: false, disabled: false})); // 저장 끝(잠금 풀림)
   await act(async () => {
     fireEvent.press(sw());
   });
@@ -43,6 +43,7 @@ test('끄기에 실패하면 원래 값으로 돌아간다', async () => {
     fireEvent.press(sw());
   });
   await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
+  expect(screen.getByTestId('notify-failed')).toBeTruthy(); // 행 아래 한 줄 안내
 });
 
 test('앱 알림이 휴대폰에서 꺼짐: 스위치 대신 "알림 / 휴대폰 설정에서 꺼져 있어요 / 휴대폰 설정 열기"', async () => {
