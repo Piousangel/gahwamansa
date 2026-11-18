@@ -33,3 +33,22 @@ AI 옛날 사진(14장 → 30장)은 에셋 디자이너가 아니라 AI 사진 
 | 파일 | 출처·라이선스 | 비고 |
 |---|---|---|
 | `app/src/ui/assets/stamp.wav` | **직접 합성**(외부 소리 없음, 저작권 문제 없음). 생성 스크립트 `design-system/assets/sound/make-stamp-wav.py`(seed 7, 다시 만들면 같은 파일) | P7 나무 도장 "통" 200ms, 22050Hz 16bit 모노, 낮은 몸통 150→110Hz + 나무 공명 420Hz + 4ms 딸깍. 실기기 소리 확인 필요 |
+
+## 8. 배경 음악(BGM) 생성 기록 · 2026-11-18 (DECISIONS 11-19 Q-05 승인, bgm-proposal A안)
+| 파일 | 쓰는 곳 | 모델·날짜 | 후보·선택 | 후처리 | 측정 | sha256 |
+|---|---|---|---|---|---|---|
+| content/audio/bgm_home.m4a | P3 오늘 코스 화면 | lyria-3-clip-preview(Gemini API 유료 키) · 2026-11-18 | 2개 중 c2(시작·중간·끝 RMS가 -14dB로 고름, LRA 1.9) | 30.00초로 자름, 앞뒤 20ms 페이드(루프 이음 클릭 방지), loudnorm -18 LUFS·TP -1.5, 모노 AAC 80kbps(m4a, faststart) | -19.8 LUFS · 피크 -2.0 dBFS · 314KB | d97a821a55a05d15a92a1171473fbf687c2a7723fcddde94b3ffe5efc898f3ca |
+| content/audio/bgm_done.m4a | P7 코스를 마친 화면 | 같음 | 2개 중 c2(RMS 고름, LRA 1.6) | 같음 | -19.2 LUFS · 피크 -3.3 dBFS · 310KB | 9c17918d528c319ba80b5d474528bfe67a3d448f8bb55d10d65d32dd3fc5b4da |
+- 프롬프트: scripts/music/prompts.json(연주곡만, 가수·곡명·장르 상표 없음, 드럼·가사·급변 없음, 처음·끝 없는 루프). 생성: `node scripts/music/gen-music.mjs --track bgm-home --out bgm-home-c1`(원본 MP3 44.1kHz 스테레오 30.77초는 content/audio-raw, 커밋 제외).
+- 반복: 앱이 무한 반복 재생(AP-04). 앱 재생 음량 30%·시작 2초 페이드(AP-04) 기준으로 파일 자체는 -18 LUFS 근처에 맞춤.
+- 권리: Gemini API 추가 약관상 Google은 결과물 소유권을 주장하지 않음, 모든 출력에 SynthID(들리지 않음) 포함·제거하지 않음. 비슷한 곡이 다른 사람에게 생성될 수 있음(bgm-proposal §1 불확실 그대로). 출처 고지: `app_info.ai_music`·`bgm.offer_source`.
+- **사람 귀 확인 필요**: 이번 선택은 음량·고름 측정으로만 했다(라이터는 소리를 듣지 못함). 가사·목소리 유무, 루프 이음매, 분위기는 사용자·디자이너가 실기기 스피커로 들어 보고 바꿀지 정한다(후보 c1은 content/audio-raw에 남김).
+- 비용: 4회 × $0.04 = $0.16(공식 가격표 기준).
+
+## 9. AI 사진 생성 기록 · 2026-11-18 (Q-05: 15~30일 16장 + 4·13·14일 재생성 3장)
+- 모델 gemini-nano-banana-2.1(Gemini API 유료 키), 5:4·1K, 프롬프트 scripts/photos/prompts.json(공통 base + 날짜별 subject, 바깥 장면은 "no power lines, no utility poles" 추가, 4일은 "no plastic sheets, no blue objects", 28일은 "only a very light vignette" 추가).
+- 생성: `node scripts/photos/gen-photo.mjs --day N`(날마다 지정, --all 안 씀). 후보 43장(기본 2장 × 19일 − 실패 1 + 4·25·28일 추가 2장씩), 원본 PNG는 content/photos-raw(커밋 제외).
+- 검수: photo-curator.md §4 16항, 전체 + 부분 확대(하늘 전선·벽 글자·플라스틱), 검수자 L5 콘텐츠(Claude), 결과·선택 후보·sha256은 content/review.md.
+- 후처리: JPEG(yuvj420p) 1152×928, 150KB 이하가 될 때까지 품질 조정(102~146KB). SynthID는 그대로.
+- 옛 4·13·14일(전선)은 content/photos/archive/day-NN-2026-11-17.jpg로 보관.
+- 비용(공식 가격표): 사진 43장 × $0.0336 ≈ $1.44, 음악 4회 × $0.04 = $0.16, 합계 약 $1.60.
