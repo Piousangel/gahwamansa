@@ -1,0 +1,1 @@
+-- 0034 되돌리기(수동): event_prop_ok·log_event를 0029 정의로 다시 실행한다(새 이름 5개·plan·push_kind 제거). 테이블 변경 없음.

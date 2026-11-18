@@ -1,4 +1,4 @@
-# 서버 계약 노트 (0019~0033) · 2026-11-17
+# 서버 계약 노트 (0019~0034) · 2026-11-17
 앱 개발 줄이 쓰는 RPC 시그니처·반환 형태. 모두 `supabase.rpc(name, args)`. anon(로그인 전)은 전부 실행 불가(42501).
 역할 위반은 예외(`child_required`·`parent_required`), 사용자 입력 문제는 `{ok:false, reason}`로 돌려준다(앱이 문구로 바꿈).
 날짜는 서버 KST(`kst_today()`) 기준, `YYYY-MM-DD` 문자열. 기존 RPC는 하위 호환(키 추가만).
@@ -119,14 +119,15 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
-- 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result, link_opened, referrer_found, code_prefilled`(마지막 3개 0029).
-- 속성 키(최대 8개, 이 목록만): `role_guess, app_version, install_source, login_method, purpose, ttl_hours, reason, attempt_no, consent_version, step, day_index, duration_sec, tts_used, is_first, days_since_connect, channel, result, message_key, source`(source는 0029).
+- 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result, link_opened, referrer_found, code_prefilled`(마지막 3개 0029), `paid_sheet_opened, paid_interest_tapped, photo_zoom_opened, child_first_answer_viewed, push_opened`(0034).
+- 속성 키(최대 8개, 이 목록만): `role_guess, app_version, install_source, login_method, purpose, ttl_hours, reason, attempt_no, consent_version, step, day_index, duration_sec, tts_used, is_first, days_since_connect, channel, result, message_key, source, plan, push_kind`(source는 0029, plan·push_kind는 0034).
 - 값은 키별 형식만(리뷰 L2, 문장 차단):
   - 숫자(0 이상 정수): `ttl_hours, attempt_no, day_index, duration_sec, days_since_connect` / 참거짓: `tts_used, is_first`
   - `role_guess` parent·child / `login_method` kakao·google·email / `purpose` parent_code·reconnect·sibling / `step` photo·question·hangul
   - `reason` expired·used·locked·invalid·rate_limited·busy·already_linked·not_parent_device / `channel` kakao·sms·copy·share_sheet·other / `result` granted·denied·matched·kept·skipped(뒤 3개 0029, P6 자판 쓰기: 맞게 씀·이대로 마침·넘어감)
-  - `message_key` 응원 키 4개 / `consent_version` `v2` 형식 / `app_version` `1.0.0` 또는 `1.0.0-12` / `install_source` 영문 소문자로 시작·숫자 포함 1~16자(0029부터 숫자만은 불가) / `source`(0029) app_link·referrer·manual
+  - `message_key` 응원 키 4개 / `consent_version` `v2` 형식 / `app_version` `1.0.0` 또는 `1.0.0-12` / `install_source` 영문 소문자로 시작·숫자 포함 1~16자(0029부터 숫자만은 불가) / `source`(0029) app_link·referrer·manual / `plan`(0034) monthly·yearly·gift / `push_kind`(0034) daily·cheer_arrived·parent_connected·parent_reconnected
 - `{ok:true}` | `{ok:false, reason:'invalid_name'|'invalid_props'|'rate_limited'|'no_user'}`(예외 아님 → 계측 실패가 화면을 막지 않음). 가족·역할은 서버가 채움. 프로필 없는 기기(설치 직후 익명 로그인)도 기록 가능.
+- 빌드 1 추가(0034): `paid_sheet_opened{}` C6 시트 열림, `paid_interest_tapped{plan}` C6 소식 받기(관심 표시만), `photo_zoom_opened{day_index}` B1, `child_first_answer_viewed{days_since_connect}` 자녀가 연결 후 처음 답을 봄(전환 분모, 처음 1회만 보내기는 앱 몫), `push_opened{push_kind}` 알림을 눌러 앱을 엶. **앱 계약 `events.ts`(L4)에 이 이름·값을 같은 철자로 추가해야 한다.**
 - 연결 퍼널(0029): `link_opened{source}` 링크로 앱이 열림, `referrer_found{}` 설치 경로에서 번호를 찾음, `code_prefilled{source}` 번호 칸이 채워짐, 연결 성공은 기존 `parent_code_redeemed`. **번호 값은 어떤 키로도 보낼 수 없다**(code 키 없음, source는 3개 값만).
 - 호출 상한: 기기(인증 uid의 sha256 가명키)당 24시간 200건(가정값). 지워진 계정의 남은 토큰은 `no_user`. 보관 14개월(0023 배치).
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
