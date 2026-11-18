@@ -55,10 +55,9 @@ export function DeleteAccountScreen({role}: Props) {
       return;
     }
     setFailed(null);
+    const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
     try {
-      const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
-      const r = await api.deleteMyAccount();
-      await clearAccountKeys(defaultStore(), tag); // 리뷰 M4 후속: 이 계정의 기기 기억값(N3 본 목록·C6 관심) 정리
+      const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
       clear();
       prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
       navigation.dispatch(

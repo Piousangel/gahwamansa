@@ -135,6 +135,8 @@ export interface Api {
   // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
   getLoginMethod(): Promise<LoginMethod | null>;
   // 기기 기억값을 계정별로 나누는 가명값(auth user id 의 sha256 앞 16자, 리뷰 M4). 로그인 전이면 null
+  // 주의(재검토 R3): 솔트 없는 해시라 user id 로 되짚을 수 있다 → 기기 안 저장 키에만 쓴다. 서버·이벤트·로그로 보내지 않는다
+  // (accountTagGuard 테스트가 쓰는 파일을 고정한다)
   accountTag(): Promise<string | null>;
   // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
   signOut(): Promise<void>;

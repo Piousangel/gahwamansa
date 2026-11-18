@@ -371,3 +371,15 @@
 - **AP-03(읽어 주기) 연결 때 할 일 — 재검토 R1**: native-stack 은 다음 화면으로 갈 때(push) 이전 화면을 언마운트하지 않으므로, 언마운트 정지만으로는 P4→P5 처럼 다음 단계로 넘어갈 때 읽기가 이어진다. AP-03 은 화면 이탈(`useIsFocused` false 또는 `navigation.addListener('blur')`) 때 `stop()` 을 부를 것(테스트: 읽는 중 다음 단계로 이동 → stop 호출).
 - 자산: react-native-sound 0.13.0 은 문자열 파일 이름만 받는다 → require 번호는 `Image.resolveAssetSource().uri`(debug Metro http, release res/raw 이름). release 경로 실제 재생은 미확인(QA-04).
 - 속도 TTS Android 0.9 / iOS 0.45(같은 숫자의 뜻이 다름), 덕킹 10%(절대값 — BGM 기본 30%·페이드는 AP-04 에서 정함). 통화 수신 중 TTS·BGM 정지는 라이브러리 포커스 처리가 비어 있어 미보장(QA-04 5번).
+
+### 로드맵 L3 W2(AC-03·AC-07·AC-08) · 11-18
+- 계정 삭제(`DeleteAccountScreen`)도 지우기 전에 `accountTag` → 삭제 → `clearAccountKeys`(리뷰 M4 후속).
+- AC-03 N3 푸시 탭(`features/home/pushOpen.ts`): `handleChildPushOpen(api, data, toAlbum)` — data{kind}(0038, 개인 id 없음) 검사 → `push_opened{push_kind}` → 연결·재연결이면 앨범 탭 + 앱 안 배너 한 번 건너뜀(본 목록은 갱신). **AU-04 연결 지점**: 알림 탭 리스너(앱이 꺼져 있다 열림·백그라운드에서 열림)에서 자녀면 이 함수를 `navigation.navigate('Tabs', {screen: 'Album'})`와 함께 부른다. 자녀도 권한 허용 때 `set_push_enabled(true)`(0036/0038 대상 조건) — AU-04 권한 흐름에서. 재연결 문구(push.reconnected)는 푸시에만, 앱 안 배너는 처음 연결 문구만.
+- AC-07 확인(코드 기준, 실기기는 QA-06):
+  - 구글: `@react-native-google-signin` 17.0.0 공개판 `GoogleSignin.signIn`(Credential Manager 기반 One Tap 은 유료 모듈이라 미사용). nonce 미지원이라 토큰·요청 모두 nonce 없음 — Supabase 는 nonce 없는 토큰을 받는다. 위험: 재사용 방지 약함(토큰 수명 1시간·aud 검사로 완화). 실기기에서 로그인·취소·재로그인 확인 필요.
+  - 카카오: OIDC ID 토큰 + nonce(원문은 Supabase, SHA-256 hex 는 SDK). PKCE 는 네이티브 SDK(카카오톡 앱·계정 로그인) 내부 흐름이라 앱 코드에서 설정할 것이 없음 → 실기기·카카오 콘솔에서 확인 대상.
+  - 같은 이메일 자동 연결: Supabase 는 같은 확인된 이메일의 구글·이메일 OTP 를 한 사용자로 합친다(끌 수 없음, DECISIONS). 카카오는 이메일을 받지 않아 합쳐지지 않는다. `enable_manual_linking = false`. 실기기에서 구글↔이메일 같은 주소로 같은 가족이 보이는지 확인 필요.
+  - 어르신 여러 명 홈·로그아웃: 화면 테스트 추가(두 분 카드 → 설정 → 로그아웃 → 역할 선택).
+- AC-08 복사: RN 코어 Clipboard 유지(D-11). Android 13+ 는 시스템이 복사 확인을 띄우므로 앱 토스트 생략·화면 읽기 1회, 12 이하는 '복사했어요' 토스트(`ui/clipboard.systemShowsCopyNotice`).
+- L5 닫기 키(`child.home.title_sheet.close`) 문구는 리드가 라이터 확정 요청 목록에 올림.
+- 재검토 R1: 응원 대기 중 홈이 언마운트되면 보내고 그 '취소' 토스트를 hide(id). R2: 로그아웃·계정 삭제는 가명값을 먼저 받고 finally 에서 계정 키 정리(signOut·삭제 실패여도). R3: accountTag 는 솔트 없는 해시 → 기기 안 키에만, 서버·이벤트·로그 금지(주석 + __tests__/accountTagGuard: 쓰는 파일 고정·logEvent/rpc/console 줄에 tag 없음).

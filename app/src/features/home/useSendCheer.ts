@@ -27,6 +27,8 @@ export function useSendCheer(api: Api, onReload: () => void) {
   const busy = useRef(false);
   const pending = useRef<{fire: () => void; toastId: number} | null>(null);
   const screenReader = useScreenReader();
+  const hideRef = useRef(hide);
+  hideRef.current = hide;
 
   const deliver = useCallback(
     async (key: CheerKey, targets: ChildParent[], already: CheerResultRow[] = [], announced = false) => {
@@ -117,12 +119,16 @@ export function useSendCheer(api: Api, onReload: () => void) {
     return () => sub.remove();
   }, [hide]);
 
-  // 화면을 떠나면 기다리던 응원은 바로 보낸다
+  // 화면을 떠나면 기다리던 응원은 바로 보내고, 남은 '취소' 토스트를 거둔다(재검토 R1: 보낸 뒤 취소가 보이지 않게)
   useEffect(
     () => () => {
-      pending.current?.fire();
+      const p = pending.current;
+      if (p) {
+        p.fire();
+        hideRef.current(p.toastId);
+      }
     },
-    [],
+    [], // 언마운트 때만(hide 가 바뀌어도 기다리던 응원을 일찍 보내지 않게)
   );
 
   return {send, sending};

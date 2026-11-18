@@ -134,3 +134,14 @@ test('리뷰 M4 후속: 계정 삭제도 지우기 전에 계정 가명값을 �
   expect(order).toEqual(['tag', 'delete']);
   clear.mockRestore();
 });
+
+test('재검토 R2: 삭제(또는 그 뒤 로그아웃)가 실패해도 계정별 기억값 정리는 실행', async () => {
+  const accountStore = require('../src/lib/accountStore');
+  const clear = jest.spyOn(accountStore, 'clearAccountKeys');
+  const api = createFakeApi({consented: true, accountTag: 'acc-del2'});
+  jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new Error('signOut failed'));
+  await openParentDelete(api);
+  await press('모두 지우기');
+  await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-del2'));
+  clear.mockRestore();
+});

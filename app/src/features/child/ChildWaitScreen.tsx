@@ -10,7 +10,8 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {useToast} from '../../ui/Toast';
 import {SmallButton} from '../../ui/SmallButton';
-import {copyText} from '../../ui/clipboard';
+import {copyText, systemShowsCopyNotice} from '../../ui/clipboard';
+import {announce} from '../../ui/a11y';
 import {Icon} from '../../ui/assets/icons';
 import {assetRegistry} from '../../ui/assets/registry';
 import {appCopy, copy, withTitle} from '../../copy/copy';
@@ -74,7 +75,11 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const copyCode = () => {
     if (code && copyText(code.code)) {
-      show({text: w.copied});
+      if (systemShowsCopyNotice()) {
+        announce(w.copied); // 시스템 확인과 겹치지 않게 토스트는 생략, 화면 읽기에는 한 번 알린다
+      } else {
+        show({text: w.copied});
+      }
     }
   };
   const settings = () => navigation.navigate('Settings');

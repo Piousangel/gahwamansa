@@ -110,15 +110,16 @@ export function ChildSettings() {
     if (!beginBusy()) {
       return;
     }
+    const tag = await api.accountTag().catch(() => null); // 로그아웃 뒤에는 세션이 없어 먼저 받아 둔다
     try {
-      const tag = await api.accountTag().catch(() => null); // 로그아웃 뒤에는 세션이 없어 먼저 받아 둔다
       await api.signOut();
-      await clearAccountKeys(defaultStore(), tag); // 리뷰 M4: 이 계정의 기기 기억값(N3 본 목록·C6 관심) 정리
       setLogout(false);
       resetRole(); // 첫 화면(역할 선택)으로
     } catch (e) {
       endBusy();
       setModalError(failText(e)); // 대화상자 안에 알린다
+    } finally {
+      await clearAccountKeys(defaultStore(), tag); // 리뷰 M4·재검토 R2: signOut 이 실패해도 이 계정의 기기 기억값은 정리
     }
   };
   const logoutBody = method
