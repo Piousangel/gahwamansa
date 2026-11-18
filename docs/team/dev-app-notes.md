@@ -419,3 +419,13 @@
 - 최신성 검사: jest `ossLicenses.test`(JS 목록을 다시 만들어 커밋본과 비교 — npm 의존성을 바꾸고 안 만들면 실패) + **release 빌드 preBuild 가 `verifyOssLicenses`**(Android·JS 둘 다, 낡으면 빌드 실패). 디버그 빌드는 검사하지 않음.
 - 화면: 라우트 `Oss`(어르신·자녀 스택 한 줄씩) `app/OssScreen` — 이전 바·제목(app_info.oss)·안내 한 줄(app_info.oss_intro) + 행(이름 버전·라이선스), 누르면 그 자리에서 전문(없으면 라이선스 주소, 글자로만) 펼침. 목록 파일(약 280KB)은 화면을 열 때 처음 읽는다(`lib/ossLicenses.ossRows`). `appInfo.OSS_LICENSES_READY = true` — P13(AP-06)·C7(L3) 행에서 `navigate('Oss')`.
 - OFL 서체를 번들하면(DZ-08) 서체 3종을 JS 목록 밖에서 따로 넣어야 한다(npm 패키지가 아님) — 그때 `scripts/ossLicenses.js` 에 고정 항목 추가.
+
+### AU-04 리뷰 반영(reviews/2026-11-18-app-push-review.md 낮음 L1~L7 + M1 API) · 2026-11-18
+- **M1(끄기 토글) API**: P13(L2)·C7(L3) 토글은 `push/runtime` 의 `pushReceive()`(서버 my_push_settings: true·false·null 연결 전·'offline') 로 초기값, `setPushReceive(on)`(set_push_enabled, 실패는 `{ok:false, reason:'offline'|'no_profile'|'invalid'}`) 로 바꾼다. 끄면 이 계정 N1 기억이 'off'(다시 묻지 않음·재시도 없음), 켜면 'yes' + 권한이 있으면 토큰 등록. 토큰 해제는 하지 않음(로그아웃용). DECISIONS 11-18: FCM 공급자 병합 전 두 토글이 main 에 있어야 함.
+- L1: N1 '알려 주세요' 뒤 시스템 창이 뜨지 않으면(blocked·unknown) 닫지 않고 `push.system_off.body` + '휴대폰 설정 열기'(앱 알림 설정), '괜찮아요'로 닫기. 창에서 '허용 안함'(denied)은 닫는다. **재노출 규칙**: 이 계정에서 답했으면(yes·no·off) N1 은 다시 뜨지 않는다. 재설치하면 기기 기억이 없어 서버가 false 면 다시 뜬다(누르기 전에는 켜지지 않음). 다시 켜기·휴대폰 꺼짐 안내는 P13.
+- L2(리드 결정): 자녀 받기 동의는 `useNotifyPermission.open`(C3 '알림 켜기'·C7 행)을 **눌렀을 때만** `childNotifyOptIn` — 시스템 창 결과와 상관없이 서버 동의, 허용이면 토큰 등록. 권한이 이미 허용인 기기라도 앱 시작 때는 토큰만 등록한다. `push_child_on_v1` 키 삭제.
+- L3: 어르신 `yes_pending` 재시도는 서버 값 먼저(true 면 기억만 'yes', null 이면 두고, false 면 'yes_pending' 일 때만 다시). 앱에서 끄면 'off' 라 재시도하지 않는다. 자녀 자동 켜기는 L2 로 없어짐. 서버에 '끈 시각'이 없어 재설치 뒤 "안 켬/껐음" 구분은 못 함 — N1 을 다시 보여 줄 뿐 자동으로 켜지 않는다.
+- L4 방침: 연결 전 어르신도 권한이 있으면 토큰 등록을 부른다(서버가 no_profile 이어도 같은 토큰의 다른 계정 행을 지움, 0036 — 해제 못 한 이전 계정 알림 차단). no_profile 은 정상 결과로 무시하고 기기에 저장하지 않는다(로그아웃 해제 대상 아님).
+- L5: 알림 탭을 받을 때의 계정 가명값을 들고 있다가 처리할 때 다르면 버린다(기기 안 비교만, 서버·이벤트로 보내지 않음 — accountTagGuard 에 PushHost 추가). 10분 넘게 처리 못 한 탭도 버린다.
+- L6: 어르신 알림 탭은 진행 중 화면(Connect·Consent·PushPermission·DeleteAccount·DeleteDone)에서는 기다렸다가 그 화면을 떠난 뒤 처리.
+- L7: 자녀 기기에 온 어르신 종류는 버림, 역할 고르기 전 탭 버림, blocked N1, L2·L4·L5·L6 화면 테스트 추가.
