@@ -46,6 +46,16 @@ const inDock = (id: string) => {
   return !!dock && within(dock).queryByTestId(id) !== null;
 };
 
+const pad = async (h: number) =>
+  act(async () => {
+    fireEvent(screen.getByTestId('keypad-pinned'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+  });
+const firstHeight = () => StyleSheet.flatten(screen.getByTestId('connect-first').props.style).height as number | undefined;
+const titleSize = () => StyleSheet.flatten(screen.getByRole('header').props.style).fontSize;
+// 2단계(하단 고정 = 위 6 + 링크 줄 64 + 아래 max(28, 16+inset))를 뺀 창. 360×640 제스처 내비: 위 116(TopSafe 52 + 이전 바 64)
+const FADE = 28;
+const TOP_ROWS = 32 + 16 + 60 + 16; // 제목 22 한 줄 + 간격 + 안심 2줄 + 간격(묶음 안 키패드 영역 y)
+
 test('0단계(기준 기기 100%): 스크롤 없이 6칸·키 4줄이 남은 높이에 맞춰진다, 링크·약관은 하단 고정', async () => {
   dims(411, 914);
   await openConnect();
@@ -56,76 +66,113 @@ test('0단계(기준 기기 100%): 스크롤 없이 6칸·키 4줄이 남은 높
   expect(inDock('legal-line')).toBe(true);
 });
 
-// 리뷰 H1(11-19): 2단계부터 스크롤을 켜고 첫 화면 묶음 = 잰 창 높이로 고정 → 약관·링크는 첫 화면 밖(묶음 아래)
-describe('리뷰 H1·디자인 9절 H3: 좌표로 본 P1 공간 단계', () => {
-  test('360×640(창 536): 2단계에서 묶음 높이 = 창 − 위 여백, 키 4줄의 아래 끝이 창 안, 약관은 묶음 밖(스크롤 아래)', async () => {
-    dims(360, 640); // 높이 700 미만 → 측정 전에도 2단계
+// 재리뷰(11-19) 재현 B: 첫 측정의 키패드 높이는 키 높이를 정하기 전 기본 배치(키 68·간격 8·칸 아래 16 ≈ 422)로 잰 값
+test('재현 B(H2): 기본 배치로 잰 키패드 높이(422)로는 판정하지 않는다 — 영역 410 이면 키 68 로 0단계 유지', async () => {
+  dims(411, 914);
+  await openConnect();
+  await pad(422); // keyH 없이 잰 값(실제 순서: 키패드 → 영역)
+  await area(140, 410);
+  expect(titleSize()).toBe(28); // 0단계(제목 28) 유지
+  expect(keyH()).toBe(68);
+  await pad(keypadH(68)); // 키 68 로 다시 그린 실제 높이 = 410
+  expect(titleSize()).toBe(28);
+  // 같은 키 높이에서 실제로 넘치면('모두 / 지움' 두 줄) 그때 다음 단계
+  await pad(keypadH(68) + 30);
+  expect(titleSize()).toBe(22);
+});
+
+describe('재리뷰 H1·M3: 실제 이벤트 순서(영역 → 창)로 본 P1 공간 단계', () => {
+  test('재현 A(H1): 2단계 실패 → 3단계 전환 커밋의 옛 묶음 영역으로는 판정하지 않고, 3단계 창에서 키 12개가 들어가면 3단계에 머문다', async () => {
+    dims(360, 640); // 높이 700 미만 → 2단계부터
     await openConnect();
-    expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true);
-    await viewport(536); // 9절: 가용 약 600 − 상단 바 64
-    const first = screen.getByTestId('connect-first');
-    const firstH = StyleSheet.flatten(first.props.style).height as number;
-    expect(firstH).toBe(532);
-    const top = 32 + 16 + 60 + 16; // 제목 22 한 줄 + 간격 + 안심 2줄 + 간격
-    await area(top, firstH - top);
+    await area(TOP_ROWS, 0); // 창을 알기 전(묶음 숨김) 영역 — 판정 안 함
+    await viewport(430); // 2단계 창(하단 고정 링크 줄 제외)
+    const first2 = 430 - 4 - FADE;
+    expect(firstHeight()).toBe(first2);
+    await area(TOP_ROWS, first2 - TOP_ROWS); // 302 − … 키 64 로도 모자람
+    expect(screen.queryByTestId('screen-dock')).toBeNull(); // → 3단계
+    // 같은 커밋에서 오는, 옛(2단계) 창으로 만든 묶음 안 영역 — 이것으로 판정하면 4단계로 떨어진다(버그)
+    await area(TOP_ROWS, first2 - TOP_ROWS - 4);
+    await viewport(560); // 3단계 진짜 창(하단 고정이 빠져 커짐, 모의 inset 0)
+    const first3 = 560 - 4 - FADE;
+    expect(firstHeight()).toBe(first3);
+    await area(TOP_ROWS, first3 - TOP_ROWS);
+    expect(firstHeight()).toBe(first3); // 4단계(묶음 고정 해제)가 아니다
     const k = keyH();
     expect(k).toBeGreaterThanOrEqual(64);
-    expect(top + keypadH(k)).toBeLessThanOrEqual(firstH); // 0·지움 줄까지 첫 화면 안
-    expect(within(first).getByLabelText('숫자 0')).toBeTruthy();
-    expect(within(first).getByLabelText('한 칸 지우기')).toBeTruthy();
-    expect(within(first).queryByTestId('legal-line')).toBeNull(); // 약관은 묶음 아래(첫 화면 밖)
-    expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+    // 좌표: 키패드 묶음 아래 끝(영역 y + 칸 + 키 4줄)이 흐림 위(창 − 위 여백 − 흐림) 안
+    expect(TOP_ROWS + keypadH(k)).toBeLessThanOrEqual(560 - 4 - FADE);
+    expect(within(screen.getByTestId('connect-first')).queryByTestId('legal-line')).toBeNull(); // 약관은 묶음 밖
+    expect(within(screen.getByTestId('connect-first')).queryByTestId('connect-links')).toBeNull();
   });
 
-  test('묶음에 안 들어가면 3단계(하단 고정 없음, 링크도 묶음 아래) → 그래도 안 되면 4단계(키 64 + 스크롤, 묶음 고정 해제)', async () => {
+  test('3단계 창에서도 안 들어가면 4단계(키 64 + 스크롤, 묶음 고정 해제), 칸 + 키 1~9 세 줄은 첫 화면 안', async () => {
     dims(320, 640);
     await openConnect();
-    await viewport(480);
-    expect(inDock('connect-links')).toBe(true); // 2단계: 링크는 아직 하단 고정
-    await area(150, 300); // 키 64 로도 안 들어감
-    expect(screen.queryByTestId('screen-dock')).toBeNull(); // 3단계
-    const first = screen.getByTestId('connect-first');
-    expect(within(first).queryByTestId('connect-links')).toBeNull();
-    expect(within(screen.getByTestId('screen-body')).getByTestId('connect-links')).toBeTruthy();
-    await viewport(560); // 하단 고정이 빠져 창이 커짐(창은 화면 맨 아래까지 → 아래 안전 영역·여백을 뺀다, 모의 inset 0)
-    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).height).toBe(560 - 4 - 4);
-    await area(170, 330); // 여전히 모자람 → 4단계
+    await viewport(400);
+    await area(150, 400 - 4 - FADE - 150);
+    expect(screen.queryByTestId('screen-dock')).toBeNull();
+    await area(150, 200); // 옛 묶음 영역(무시)
+    await viewport(520);
+    await area(150, 520 - 4 - FADE - 150); // 338: 키 64 로도 모자람
     expect(keyH()).toBe(64);
-    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).height).toBeUndefined();
-    // 320×640 4단계: 칸 + 키 1~9 세 줄의 아래 끝이 창 안(9절 "1~9 보임")
-    const y = 170;
-    expect(y + 68 + 12 + BELOW_LINE_H + 3 * (64 + 6)).toBeLessThanOrEqual(560);
+    expect(firstHeight()).toBeUndefined();
+    expect(150 + 68 + 12 + BELOW_LINE_H + 3 * (64 + 6)).toBeLessThanOrEqual(520); // 9절 "1~9 보임"(4단계는 위 여백 최소)
     expect(screen.getByTestId('connect-safe')).toBeTruthy(); // U4
   });
 
-  test('실측 반영: 계산상 들어가도 키패드 실제 높이(두 줄 글자 키)가 영역보다 크면 다음 단계로', async () => {
+  test('재리뷰 L1: 이 단계의 창 높이를 알기 전에는 묶음을 숨기고 약관·링크를 그리지 않는다(겹친 한 프레임 방지)', async () => {
     dims(360, 640);
     await openConnect();
-    await viewport(536);
-    await area(124, keypadH(66)); // 계산식으로는 키 66 이 들어감
-    expect(inDock('connect-links')).toBe(true); // 아직 2단계
-    await act(async () => {
-      fireEvent(screen.getByTestId('keypad-pinned'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: keypadH(66) + 30}}});
-    });
-    expect(screen.queryByTestId('screen-dock')).toBeNull(); // '모두 / 지움' 두 줄로 넘침 → 3단계
+    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBe(0);
+    expect(screen.queryByTestId('legal-line')).toBeNull();
+    await viewport(430);
+    expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBeUndefined();
+    expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
   });
 
-  test('읽기·시선 순서: 제목 → 안심 줄 → 키패드 → 링크 → 약관, 링크는 제목 위로 가지 않는다(M5)', async () => {
+  test('재리뷰 M1: 2·3단계 묶음은 아래 흐림(28)만큼 짧다 — 마지막 키 줄이 흐림 밑에 깔리지 않게', async () => {
+    const {SCREEN_FADE_H} = require('../src/ui/Screen');
+    expect(SCREEN_FADE_H).toBe(FADE);
+    dims(360, 640);
+    await openConnect();
+    await viewport(430);
+    expect(firstHeight()).toBe(430 - 4 - SCREEN_FADE_H);
+  });
+
+  test('읽기·시선 순서(3단계): 제목 → 안심 줄 → 키패드 → 링크 → 약관, 링크는 제목 위로 가지 않는다(M5)', async () => {
     dims(320, 640);
     await openConnect();
-    await viewport(480);
-    await area(150, 300);
+    await viewport(400);
+    await area(150, 200);
+    await viewport(520);
     const ids = ['connect-safe', 'keypad-area', 'connect-links', 'legal-line'];
     const found = screen.root.findAll((n: {props: {testID?: string}}) => ids.includes(n.props.testID ?? ''), {deep: true});
     expect([...new Set(found.map((n: {props: {testID?: string}}) => n.props.testID))]).toEqual(ids);
   });
 
-  test('200%: 측정 전에도 2단계(약관 줄은 본문 끝), 창을 알기 전에는 키패드 영역을 재지 않는다', async () => {
-    dims(411, 914, 2);
+  test('재리뷰 L2: 스크롤 단계에서 \'번호가 없어요\' 안내는 묶음 밖(링크 근처)에 나오고 보이게 스크롤한다', async () => {
+    dims(320, 640);
     await openConnect();
-    await area(150, 300); // 창 높이를 모르는 동안은 무시
-    expect(inDock('connect-links')).toBe(true);
-    expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+    await viewport(400);
+    await area(150, 200);
+    await viewport(520);
+    await press('번호가 없어요');
+    const help = screen.getByTestId('connect-help');
+    expect(within(screen.getByTestId('connect-first')).queryByTestId('connect-help')).toBeNull();
+    expect(help).toBeTruthy();
+  });
+
+  test('재리뷰 L5: 글자 크기가 바뀌면 단계를 처음부터 다시 잰다', async () => {
+    const spy = dims(411, 914);
+    await openConnect();
+    await area(140, 300); // 0단계 실패 → 1단계
+    expect(titleSize()).toBe(22);
+    spy.mockReturnValue({width: 411, height: 914, scale: 2, fontScale: 1.3});
+    await act(async () => {
+      fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 600}}});
+    });
+    await waitFor(() => expect(titleSize()).toBe(28)); // 0단계부터 다시
   });
 });
 

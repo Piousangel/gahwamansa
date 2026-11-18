@@ -7,6 +7,8 @@ import {ScreenTitleContext} from './screenTitle';
 import {useReportDock} from './toastPlacement';
 
 const FADE_H = 28; // §15: 본문이 넘치면 아래 28 높이 페이드로 "더 있음"
+/** 아래 '더 있음' 흐림 높이(첫 화면에 꼭 보여야 할 묶음이 이 밑에 깔리지 않게 빼는 데 쓴다, P1) */
+export const SCREEN_FADE_H = FADE_H;
 const TITLE_FOCUS_MS = 300; // talkback-spec R2: 화면 진입 300ms 뒤 제목에 접근성 포커스
 
 type Props = {

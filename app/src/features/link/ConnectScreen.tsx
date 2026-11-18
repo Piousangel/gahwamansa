@@ -7,7 +7,7 @@ import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
+import {Screen, SCREEN_FADE_H, type ScreenScroll} from '../../ui/Screen';
 import {color, layout, radius} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
@@ -96,53 +96,80 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   //   → 4단계 키 64 + 본문 스크롤, 묶음 간격 16→12. 링크를 이전 바 줄(제목 위)로 올리던 옛 단계는 폐기(감사 M5).
   //   리뷰 H1(11-19): 2단계부터 본문 스크롤을 켜고 '첫 화면 묶음'(제목·안심 줄·키패드 영역)의 높이를 잰 본문 창 높이로 고정한다.
   //   그래서 본문 끝으로 옮긴 약관·링크는 첫 화면 밖(아래로 스크롤)에 놓이고, 키패드 영역은 창 높이를 거의 다 쓴다(9절 예산 592).
-  //   기대: S25 0단계, 360×740 1단계, 360×640 3단계(키 12개 전부), 320×640 4단계(1~9 보임). 안심 줄·칸 아래 줄은 숨기지 않는다(U4)
+  //   기대(재리뷰 M2 판정, dev-app-notes): S25 0단계, 360×740 1단계, 360×640 3단계 또는 4단계(기기 inset 에 따라), 320×640 4단계.
+  //   어떤 크기에서도 첫 화면에 칸과 키 1~9 는 보인다(9절 원칙). 안심 줄·칸 아래 줄은 숨기지 않는다(U4)
   //   글자 150% 이상·화면 높이 700 미만은 측정 전에도 2단계부터(넘치는 첫 화면을 그리지 않게)
+  // 재리뷰 H1·H2(11-19): 단계 판정은 '지금 단계에서 잰 값'끼리만 한다. onLayout 은 값을 기록만 하고, 판정은 아래 effect 한 곳에서.
+  //   - 창 높이(view)는 잰 단계를 함께 기록 → 하단 고정 구성이 바뀐 직후 옛 창 높이로 판정하지 않는다(3단계 건너뜀 방지)
+  //   - 키패드 영역(area)은 잰 단계·그때의 묶음 높이를 함께 기록 → 묶음 높이가 바뀌기 전에 잰 영역은 쓰지 않는다
+  //   - 키패드 실제 높이(pad)는 그때의 키 높이를 함께 기록 → 같은 키 높이로 잰 값일 때만 영역과 비교('모두 / 지움' 두 줄 실측 대응)
   const {height: winH, fontScale} = useWindowDimensions();
   const compact = fontScale >= 1.5 || winH < 700;
+  const startLevel = compact ? 2 : 0;
   const [keyH, setKeyH] = useState<number | undefined>(undefined);
-  const [level, setLevel] = useState(compact ? 2 : 0);
+  const [level, setLevel] = useState(startLevel);
   const [help, setHelp] = useState(false);
   const legalInBody = level >= 2;
   const noDock = level >= 3;
   const overflow = level >= 4;
   const scroll = level >= 2;
-  const [viewH, setViewH] = useState(0); // 본문 창 높이(Screen onViewport)
+  const [view, setView] = useState<{h: number; level: number} | null>(null); // 본문 창 높이(Screen onViewport)
+  const [area, setArea] = useState<{h: number; level: number; firstH: number} | null>(null);
+  const [pad, setPad] = useState<{h: number; keyH: number | undefined; level: number} | null>(null);
   const insets = useSafeAreaInsets();
-  // 첫 화면 묶음 높이: 창 − 위 여백. 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
-  const firstH = Math.max(0, viewH - FIRST_PAD - (noDock ? insets.bottom + FIRST_PAD : 0));
-  // 실측(11-19): 글자 키('모두 / 지움')가 두 줄이 되면 그 줄이 키 높이보다 커진다 → 계산식만 믿지 않고 키패드 실제 높이도 영역과 비교한다
-  const areaH = useRef(0);
-  const padH = useRef(0);
-  const escalate = () => {
-    if (level < 3) {
-      setLevel(l => l + 1);
-    } else {
-      setKeyH(KEY_MIN);
-      setLevel(4);
+  const scrollRef = useRef<ScreenScroll>(null);
+  const viewH = view && view.level === level ? view.h : 0; // 다른 단계에서 잰 창 높이는 쓰지 않는다
+  // 첫 화면 묶음 높이: 창 − 위 여백 − 아래 흐림(재리뷰 M1: Screen 의 '더 있음' 흐림 28 이 마지막 키 줄을 덮지 않게).
+  // 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
+  const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : 0;
+  const measured = !scroll || viewH > 0; // 2단계부터는 이 단계의 창 높이를 안 뒤에 그린다(재리뷰 L1: 높이 0 묶음·겹친 약관 줄 한 프레임 방지)
+
+  // 창·글자 크기가 바뀌면 처음부터 다시 잰다(재리뷰 L5, 원 L8: 단계가 올라가기만 하던 것)
+  const dimsKey = `${winH}|${fontScale}`;
+  const lastDims = useRef(dimsKey);
+  useEffect(() => {
+    if (lastDims.current !== dimsKey) {
+      lastDims.current = dimsKey;
+      setLevel(startLevel);
+      setKeyH(undefined);
+      setArea(null);
+      setPad(null);
     }
-  };
-  const checkReal = () => {
-    if (!overflow && areaH.current > 0 && padH.current > areaH.current + 1) {
+  }, [dimsKey, startLevel]);
+
+  useEffect(() => {
+    if (overflow || !area || area.level !== level) {
+      return;
+    }
+    if (scroll && (viewH === 0 || area.firstH !== firstH)) {
+      return; // 이 단계의 창 높이로 정한 묶음에서 잰 영역이 올 때까지 기다린다
+    }
+    const escalate = () => {
+      if (level < 3) {
+        setLevel(level + 1);
+      } else {
+        setKeyH(KEY_MIN);
+        setLevel(4);
+      }
+    };
+    const k = keypadKeyHeight(area.h - BELOW_LINE_H);
+    if (k === null) {
+      escalate();
+    } else if (k !== keyH) {
+      setKeyH(k); // 이 키 높이로 다시 그린 키패드의 실제 높이를 받은 뒤 비교한다
+    } else if (pad && pad.level === level && pad.keyH === keyH && pad.h > area.h + 1) {
       escalate();
     }
+  }, [area, pad, view, level, keyH, overflow, scroll, viewH, firstH]);
+
+  const onViewport = (h: number) => setView(v => (v && v.h === h && v.level === level ? v : {h, level}));
+  const onArea = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setArea({h, level, firstH});
   };
   const onKeypad = (e: LayoutChangeEvent) => {
-    padH.current = e.nativeEvent.layout.height;
-    checkReal();
-  };
-  const onArea = (e: LayoutChangeEvent) => {
-    if (overflow || (scroll && viewH === 0)) {
-      return; // 2단계부터는 창 높이를 안 뒤에 잰다(묶음 높이가 정해진 뒤)
-    }
-    areaH.current = e.nativeEvent.layout.height;
-    const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
-    if (k !== null) {
-      setKeyH(k);
-      checkReal();
-    } else {
-      escalate();
-    }
+    const h = e.nativeEvent.layout.height;
+    setPad({h, keyH, level});
   };
 
   const ok = state.kind === 'ok';
@@ -211,7 +238,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       fill={!scroll}
       scrollEnabled={scroll}
       dense={overflow}
-      onViewport={setViewH}
+      onViewport={onViewport}
+      scrollRef={scrollRef}
       top={<BackBar onBack={back} />}
       bottom={
         noDock ? undefined : (
@@ -224,11 +252,11 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: firstH} : null, !scroll ? styles.fillFirst : null]}>
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: firstH} : null, !scroll ? styles.fillFirst : null, measured ? null : styles.hidden]}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
         </Text20>
-        {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
+        {help && !scroll ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
         {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4) */}
         <Text20 testID="connect-safe">{copy.safe.money}</Text20>
         <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
@@ -239,8 +267,14 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         </View>
       </View>
       {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
-      {noDock ? links : null}
-      {legalInBody ? <LegalLine /> : null}
+      {measured && noDock ? links : null}
+      {/* 재리뷰 L2: 스크롤 단계에서는 '번호가 없어요' 안내를 묶음(고정 높이) 안이 아니라 링크 근처에 두고, 열면 보이게 스크롤한다 */}
+      {measured && scroll && help ? (
+        <Text20 testID="connect-help" accessibilityLiveRegion="polite" onLayout={e => scrollRef.current?.showRange(e.nativeEvent.layout.y, e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
+          {copy.connect.no_code_help}
+        </Text20>
+      ) : null}
+      {measured && legalInBody ? <LegalLine /> : null}
     </Screen>
   );
 }
@@ -289,6 +323,7 @@ const styles = StyleSheet.create({
   first: {gap: 16},
   firstDense: {gap: 12},
   fillFirst: {flex: 1, minHeight: 0},
+  hidden: {opacity: 0},
   pinned: {position: 'absolute', top: 0, left: 0, right: 0},
   links: {flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 24},
   title: {color: color.inkTitle},
