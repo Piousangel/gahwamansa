@@ -160,6 +160,30 @@ if (appLinkHostDebug) {
     logger.warn("경고: -PappLinkHostDebug=${appLinkHostDebug} → debug 빌드에만 App Links host 를 덮어씁니다(release 는 env 파일 값)")
 }
 def appLinkPlaceholders = { String h -> [appLinkHost: h ?: "applinks.invalid", appLinksEnabled: h ? "true" : "false"] }
+
+/**
+ * 앱 정보 값(AU-07, 선택·공개 값): 이용약관·방침 URL, 문의 메일, 사업자 정보. 원본 app/env/<flavor>.env, 앱은 src/lib/appInfo.ts.
+ * - 형식이 틀리면 빌드 실패(https URL만, 메일, 사업자등록번호 000-00-00000, 글자는 80자 안·따옴표/꺾쇠/줄바꿈 없음)
+ * - 빠지면 화면에서 그 행을 숨기고 빌드 경고. production release 는 실패(G-INT "값이 없어 숨겨진 앱 정보 행 0")
+ *   — 확인용 빌드만 -PallowMissingAppInfo
+ */
+def APP_INFO_RULES = [
+    TERMS_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
+    PRIVACY_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
+    CONTACT_EMAIL: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+    BIZ_NAME: /[^\n"<>]{1,80}/,
+    BIZ_CEO: /[^\n"<>]{1,80}/,
+    BIZ_REG_NO: /\d{3}-\d{2}-\d{5}/,
+    BIZ_ADDRESS: /[^\n"<>]{1,80}/,
+]
+appEnvs.each { name, e ->
+    APP_INFO_RULES.each { k, re ->
+        def v = (e[k] ?: "").toString().trim()
+        if (v && !(v ==~ re)) throw new GradleException("${name}.env: ${k} 형식이 아니에요: ${v}")
+        e[k] = v
+    }
+}
+def missingAppInfo = { Map e -> APP_INFO_RULES.keySet().findAll { !e[it] } }
 // 리뷰 M2: 같은 카카오 키면 두 앱이 같은 kakao{키}://oauth 를 받아 한 폰에 같이 설치 시 웹 로그인 복귀가 엉킨다
 if (appEnvs.staging.KAKAO_NATIVE_APP_KEY == appEnvs.production.KAKAO_NATIVE_APP_KEY) {
     logger.warn("경고: staging·production 카카오 네이티브 키가 같아요. 두 앱을 한 폰에 같이 설치하면 카카오 웹 로그인 복귀가 엉킬 수 있어요. staging 키 발급·등록은 docs/team/RELEASE.md '외부 콘솔 등록'.")
@@ -233,7 +257,7 @@ def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost, 
         VERSION_CODE: versionCode,
         GIT_SHA: appGitSha,
         BUILD_TYPE: release ? "release" : "debug",
-    ]
+    ] + APP_INFO_RULES.keySet().collectEntries { [(it): e[it] ?: ""] }
     def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
     generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +
             "export default ${body};\n", "UTF-8")
@@ -368,12 +392,22 @@ android.applicationVariants.configureEach { variant ->
             logger.warn("경고: app/env/${variant.flavorName}.env 가 없어 ${e.SOURCE}(예시 값)로 빌드합니다. 이 앱은 서버에 붙지 못해요.")
         }
     }
+    // AU-07: 빠진 앱 정보 값은 경고, production release 는 실패(G-INT)
+    def checkAppInfo = {
+        def missing = missingAppInfo(e)
+        if (!missing) return
+        if (variant.flavorName == "production" && isRelease && !e.PLACEHOLDER && !project.hasProperty("allowMissingAppInfo")) {
+            throw new GradleException("production.env: 앱 정보 값이 없어요(설정 화면에서 숨겨짐): ${missing.join(', ')}. G-INT 전 필수(US-03·US-04). 확인용이면 -PallowMissingAppInfo")
+        }
+        logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 숨겨지는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
+    }
     def generate = {
         checkPlaceholder()
+        checkAppInfo()
         writeEnvTs(e, vName, vCode, linkHost, isRelease)
     }
-    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값 검사만(네이티브 컴파일 전에 일찍 실패)
-    variant.preBuildProvider.configure { doFirst { isRelease ? checkPlaceholder() : generate() } }
+    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패)
+    variant.preBuildProvider.configure { doFirst { isRelease ? { checkPlaceholder(); checkAppInfo() }() : generate() } }
     def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
     tasks.matching { it.name == bundleTask }.configureEach { t ->
         // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)

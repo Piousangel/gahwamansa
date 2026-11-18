@@ -32,7 +32,8 @@
     "react-native-sound": "0.13.0",
     "react-native-svg": "^15.16.1",
     "react-native-url-polyfill": "^4.0.0",
-    "react-native-volume-manager": "2.2.0"
+    "react-native-volume-manager": "2.2.0",
+    "react-native-webview": "17.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

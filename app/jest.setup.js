@@ -46,6 +46,14 @@ jest.mock('react-native-volume-manager', () => ({
   removeRingerListener: jest.fn(),
 }));
 
+// 앱 안 웹 화면(AU-07): 네이티브 뷰 대신 받은 설정을 그대로 가진 View(테스트가 보안 설정·주소를 확인)
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const {View} = require('react-native');
+  const WebView = props => React.createElement(View, {...props, testID: 'webview'});
+  return {__esModule: true, WebView, default: WebView};
+});
+
 // 네이티브 소셜 로그인 모듈 모킹(실기기 로그인은 리드가 확인)
 jest.mock('@react-native-kakao/core', () => ({initializeKakaoSDK: jest.fn(() => Promise.resolve())}));
 jest.mock('@react-native-kakao/user', () => ({

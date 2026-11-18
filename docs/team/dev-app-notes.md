@@ -402,3 +402,12 @@
 - 자녀 `useNotifyPermission.notifyFlags.promptReady = true`. 12 이하 앱 단위 끔도 '꺼짐'으로 본다(네이티브 확인, 이전 ASSUMED 해소). 거절(다시 묻지 않음)·앱 끔이면 휴대폰 알림 설정(채널 화면 우선)으로.
 - `TextLink` 를 `ui/TextLink` 로 올림(N1 이 씀). `features/link/TextLink` 는 다시 내보내기만 — AU-10 에서 호출부 교체 후 삭제.
 - **Firebase 붙일 때 할 일(별도 항목)**: `@react-native-firebase/app`·`messaging` 정확 고정, flavor별 `google-services.json`(gitignore) + gradle 플러그인, 매니페스트 meta-data `com.google.firebase.messaging.default_notification_channel_id = daily`, `createFcmTokenSource`(getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage), 알림 거부 기기의 Firebase 설치 ID 생성 여부(QA-07), 실기기 수신 QA-07.
+
+### AU-07 앱 정보 상수·앱 안 웹 화면 · 2026-11-18 (웹뷰 보안 리뷰 대상)
+- 값: `app/env/<flavor>.env` 공개 값 `TERMS_URL·PRIVACY_URL·CONTACT_EMAIL·BIZ_NAME·BIZ_CEO·BIZ_REG_NO·BIZ_ADDRESS` → Gradle 이 형식 검사·`env.generated.ts` → `lib/appInfo.readAppInfo()`(앱도 형식을 다시 보고 틀리면 숨김). 사업자 정보는 넷 다 있어야 구역을 보임. 버전 `"1.0.0 (n)"`(versionName·versionCode, 개발 실행은 '1.0.0'). 기존 `APP_VERSION·PRIVACY_URL·CONTACT_EMAIL` 내보내기는 호환용으로 유지.
+- 빠진 값: 빌드 경고(매 빌드), production release 는 실패(G-INT), `-PallowMissingAppInfo` 로만 우회. 지금 staging·production 모두 비어 있음(US-03·US-04 대기) → 행이 숨겨짐.
+- `react-native-webview@17.1.0`(정확 고정, 2026-11-04 배포 = 14일). 17.x 는 새 아키텍처 전용·RN 0.80+(README) — RN 0.88 새 아키텍처와 맞음. npm `latest` 태그는 14.0.1(구·신 둘 다)이고 17.x 는 `next` 태그라는 점은 기록해 둔다(빌드·실기기에서 문제가 나면 14.0.1 로 내림). **권한 추가 없음**(라이브러리 매니페스트: Chrome 결제 intent `<queries>` 3개, `${applicationId}.fileprovider`(exported=false)뿐 — 병합 매니페스트 확인).
+- 화면: 라우트 `Web: {target: 'terms'|'privacy'}`(어르신·자녀 스택 한 줄씩) — 파라미터는 주소가 아니라 종류, 주소는 앱 정보 상수에서만. `app/WebScreen`(이전 바 + 제목) + `ui/WebPage`(웹뷰 본문).
+- 웹뷰 설정: `javaScriptEnabled=false`(정적 고지 페이지, site/*.html 스크립트 0), DOM 저장소·쿠키·캐시 끔(`incognito`), 파일 접근 3종 끔, `mixedContentMode=never`, 여러 창 끔, 위치 끔, `originWhitelist=https://*`, 주입 JS·onMessage 없음(브리지 없음). 탐색: 같은 호스트 https 만 안에서, 다른 https·mailto 는 사용자가 누른 것만 휴대폰 앱으로, intent·javascript·file·http 는 막음. 글자: `textZoom` = 휴대폰 글자 배율.
+- 열기: `shared/appLink.openInAppWeb(target, navigate)` — 값 없으면 `unavailable`, 그 주소에 HEAD 4초로 닿지 않으면 `offline`(화면을 열지 않음 → 호출부가 `app_info.link_offline`: 어르신 Banner·자녀 Toast), 닿으면 `navigate(target)`. 로드 실패는 화면 안 한 줄(같은 문구).
+- **연결은 AP-06(P13)·L3(C7) 몫**: 지금 C7 `ChildAppInfo` 는 방침을 외부 브라우저(`Linking.openURL`)로 연다 → `openInAppWeb('privacy', t => navigation.navigate('Web', {target: t}))` 로 바꿀 것.
