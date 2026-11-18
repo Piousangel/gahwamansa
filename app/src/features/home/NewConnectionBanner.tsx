@@ -6,7 +6,8 @@ import {copy, withTitle} from '../../copy/copy';
 import {color, FONT_SCALE_MAX, radius, size} from '../../ui/tokens';
 import type {Api, ChildParent} from '../types';
 import {defaultStore, type KeyValueStore} from '../../lib/kvStore';
-import {newConnection, parseSeen, SEEN_PARENTS_KEY} from './newConnection';
+import {newConnection, parseSeen} from './newConnection';
+import {accountKey, SEEN_PARENTS_KEY} from '../../lib/accountStore';
 
 const n = copy.child.n3;
 export const BANNER_MS = 6000;
@@ -25,9 +26,14 @@ export function NewConnectionBanner({api, onView, store: given}: {api: Api; onVi
     }
     busy.current = true;
     try {
+      const tag = await api.accountTag();
+      if (!tag) {
+        return; // 계정을 모르면 기억할 곳이 없다 → 배너 없음
+      }
+      const key = accountKey(SEEN_PARENTS_KEY, tag);
       const sum = await api.fetchChildSummary();
-      const r = newConnection(parseSeen(await store.getItem(SEEN_PARENTS_KEY)), sum.parents);
-      await store.setItem(SEEN_PARENTS_KEY, JSON.stringify(r.nextSeen));
+      const r = newConnection(parseSeen(await store.getItem(key)), sum.parents);
+      await store.setItem(key, JSON.stringify(r.nextSeen));
       if (r.banner) {
         setBanner(r.banner);
       }

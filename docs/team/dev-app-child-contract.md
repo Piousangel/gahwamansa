@@ -19,5 +19,5 @@
 - 남은 일: 연결 때 기본 호칭이 겹친 어르신에게 호칭 바꾸기 권하기(서버 노트 §1) — 디자인 결정 필요.
 - 아직 부르지 않는 것: `log_event`(0022, 자녀 화면 이벤트 `cheer_sent`·`child_report_viewed`·`invite_share_tapped`는 U14에서), 푸시(U15, C3 알림 켜기 줄은 권한 훅 자리만).
 
-## ASSUMED (서버 요청)
-- `child_summary().parents[].connected_date`(YYYY-MM-DD, KST): 그 어르신이 가족에 연결된 날. C4 호칭 겹침 시트의 "{월}월 {일}일에 연결된 분이에요"에 쓴다. 없으면 날짜 문장 없이 "이 이름으로 화면에 보여요". 앱: `ChildParent.connectedDate`.
+## child_summary 연결한 날 (서버 0041, server-l1-launch)
+- `child_summary().parents[].connected_date`(YYYY-MM-DD, KST): 그 어르신이 처음 연결된 날(재연결해도 그대로). C4 호칭 겹침 시트의 "{월}월 {일}일에 연결된 분이에요"에 쓴다. 없으면(0041 전 서버) 날짜 문장 없이 "이 이름으로 화면에 보여요". 앱: `ChildParent.connectedDate`.

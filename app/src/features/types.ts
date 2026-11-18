@@ -18,7 +18,7 @@ export type ChildParent = {
   latest: LatestAnswer | null;
   // 고른 답에 맞춘 첫마디 한 문장(기능 회의 B3, 서버 0027 child_summary parents[].latest.starter). 없으면 null → 줄 숨김
   starter: string | null;
-  // 이 어르신이 가족에 연결된 날(KST). ASSUMED(서버 요청): child_summary parents[].connected_date — 없으면 null(C4 이름 고르기 시트 날짜 줄 생략)
+  // 이 어르신이 가족에 연결된 날(KST). 서버 0041 child_summary parents[].connected_date(처음 연결된 날, 재연결해도 그대로) — 없으면 null(C4 이름 고르기 시트 날짜 줄 생략)
   connectedDate?: string | null;
 };
 export type ChildSummary = {
@@ -134,6 +134,8 @@ export interface Api {
   sendCheer(parentId: string, key: CheerKey): Promise<SendCheerResult>;
   // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
   getLoginMethod(): Promise<LoginMethod | null>;
+  // 기기 기억값을 계정별로 나누는 가명값(auth user id 의 sha256 앞 16자, 리뷰 M4). 로그인 전이면 null
+  accountTag(): Promise<string | null>;
   // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
   signOut(): Promise<void>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다

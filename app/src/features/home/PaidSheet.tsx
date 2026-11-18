@@ -6,11 +6,11 @@ import {announce} from '../../ui/a11y';
 import {copy} from '../../copy/copy';
 import {color, radius} from '../../ui/tokens';
 import {defaultStore, type KeyValueStore} from '../../lib/kvStore';
+import {accountKey, PAID_INTEREST_KEY} from '../../lib/accountStore';
 import {isQuietEventFailure, type EventName} from '../../api/contract/events';
 import type {Api} from '../types';
 
 const t = copy.paid;
-export const PAID_INTEREST_KEY = 'paid_interest_v1';
 
 // 예정 가격(법률 §2: "예정 가격"으로만). 결제는 빌드 1 밖이라 표시만 한다.
 // TODO(가격 확정): biz.md 가정값(월 3,900원·연 34,900원). 선물 이용권 가격은 정해진 값이 없어 한 달 값으로 둠 — 리드·사업 확인 필요
@@ -51,11 +51,16 @@ export function PaidSheet({
   const [justNow, setJustNow] = useState(false);
 
   useEffect(() => {
-    store
-      .getItem(PAID_INTEREST_KEY)
-      .then(v => setDone(v === '1'))
+    let alive = true;
+    api
+      .accountTag()
+      .then(tag => (tag ? store.getItem(accountKey(PAID_INTEREST_KEY, tag)) : null))
+      .then(v => alive && setDone(v === '1'))
       .catch(() => {});
-  }, [store]);
+    return () => {
+      alive = false;
+    };
+  }, [store, api]);
 
   useEffect(() => {
     if (visible) {
@@ -71,7 +76,10 @@ export function PaidSheet({
     setDone(true);
     setJustNow(true);
     track(api, 'paid_interest_tapped'); // 고르기가 없어 plan 은 싣지 않는다
-    store.setItem(PAID_INTEREST_KEY, '1').catch(() => {});
+    api
+      .accountTag()
+      .then(tag => (tag ? store.setItem(accountKey(PAID_INTEREST_KEY, tag), '1') : undefined))
+      .catch(() => {});
     announce(t.toast);
   };
 

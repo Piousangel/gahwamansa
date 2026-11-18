@@ -145,6 +145,97 @@ describe('U10 응원 취소', () => {
       handlers.forEach(h => h('background'));
     });
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
+    expect(screen.queryByRole('button', {name: '취소'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
+  });
+
+  test('리뷰 M2: 토스트가 끝나는 순간 보내고, 그때부터 \'취소\'는 비활성(늦은 취소로 조용히 보내지는 틈 없음)', async () => {
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    await pickCheer(api);
+    const undo = screen.getByRole('button', {name: '취소'});
+    expect(undo.props.accessibilityState?.disabled).toBe(false);
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 4050));
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    const late = screen.queryByRole('button', {name: '취소'});
+    if (late) {
+      expect(late.props.accessibilityState?.disabled).toBe(true); // 사라지는 중에도 누를 수 없음
+      fireEvent.press(late);
+    }
+    expect(screen.queryByText('응원을 보내지 않았어요')).toBeNull();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Toast onExpire·시트 동안 멈춤(리뷰 M2·L3)', () => {
+  function Shower({sheet, onExpire, onAct}: {sheet?: boolean; onExpire: () => void; onAct: () => void}) {
+    const {show} = useToast();
+    return (
+      <>
+        <Text onPress={() => show({text: '대기', durationMs: 1000, onExpire, action: {label: '되돌리기', onPress: onAct}})}>띄우기</Text>
+        <Text onPress={() => show({text: '다른 것'})}>바꾸기</Text>
+        <BottomSheet visible={!!sheet} title="시트" closeLabel="닫기" onClose={() => {}} />
+      </>
+    );
+  }
+  test('시간이 끝나면 onExpire 한 번, 행동을 누르면 onExpire 없음, 다른 토스트로 바뀌면 onExpire', async () => {
+    jest.useFakeTimers();
+    try {
+      const onExpire = jest.fn();
+      const onAct = jest.fn();
+      render(
+        <ToastProvider>
+          <Shower onExpire={onExpire} onAct={onAct} />
+        </ToastProvider>,
+      );
+      fireEvent.press(screen.getByText('띄우기'));
+      await act(async () => {
+        jest.advanceTimersByTime(1100);
+      });
+      expect(onExpire).toHaveBeenCalledTimes(1);
+      fireEvent.press(screen.getByText('띄우기'));
+      fireEvent.press(screen.getByRole('button', {name: '되돌리기'}));
+      expect(onAct).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+      expect(onExpire).toHaveBeenCalledTimes(1);
+      fireEvent.press(screen.getByText('띄우기'));
+      fireEvent.press(screen.getByText('바꾸기'));
+      expect(onExpire).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('시트가 열린 동안은 시간을 세지 않는다(닫히면 그때부터)', async () => {
+    jest.useFakeTimers();
+    try {
+      const onExpire = jest.fn();
+      const {rerender} = render(
+        <ToastProvider>
+          <Shower sheet onExpire={onExpire} onAct={() => {}} />
+        </ToastProvider>,
+      );
+      fireEvent.press(screen.getByText('띄우기'));
+      await act(async () => {
+        jest.advanceTimersByTime(3000);
+      });
+      expect(onExpire).not.toHaveBeenCalled();
+      rerender(
+        <ToastProvider>
+          <Shower onExpire={onExpire} onAct={() => {}} />
+        </ToastProvider>,
+      );
+      expect(screen.getByText('대기')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(1100);
+      });
+      expect(onExpire).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -186,7 +277,8 @@ describe('C4 호칭 겹침', () => {
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByText('두 분이 같은 이름으로 보여요. 새로 연결된 분의 이름을 골라 주세요'));
     const chips = screen.getByTestId('title-dup-chips'); // 시안: 칩 줄(부모님 고르기), 새로 연결된 분 칩이 현재
-    expect(chips.props.accessibilityLabel).toBe('부모님 고르기');
+    expect(chips.props.accessibilityLabel).toBe('연결된 분 이름, 부모님, 부모님. 새로 연결된 분은 두 번째예요'); // 라이터 11-14, 한 덩어리
+    expect(chips.props.accessible).toBe(true);
     expect(within(chips).getAllByText('부모님')).toHaveLength(2);
     await press('이름 고르기');
     const sheet = screen.getByTestId('title-dup-sheet');
@@ -222,7 +314,7 @@ describe('N3 앱 안 배너', () => {
 
   test('배너: "{호칭} 폰과 연결됐어요" + 본문 + 보기, 보기를 누르면 닫히고 앨범으로', async () => {
     const store = memoryStore();
-    await store.setItem('seen_parent_ids_v1', JSON.stringify(['parent-1']));
+    await store.setItem('seen_parent_ids_v1:fake-account', JSON.stringify(['parent-1'])); // 리뷰 M4: 계정별 키
     const api = createFakeApi({parents: [{title: '엄마'}, {title: '아빠'}]});
     const onView = jest.fn();
     render(<NewConnectionBanner api={api} onView={onView} store={store} />);
@@ -309,6 +401,13 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     Object.defineProperty(RN.Platform, 'OS', {value: OS, configurable: true, writable: true});
     Object.defineProperty(RN.Platform, 'Version', {value: Version, configurable: true, writable: true});
   };
+  const {notifyFlags} = require('../src/features/child/useNotifyPermission');
+  beforeEach(() => {
+    notifyFlags.promptReady = true; // AU-04 뒤 동작
+  });
+  afterAll(() => {
+    notifyFlags.promptReady = false;
+  });
   function android(version: number, granted: boolean) {
     setPlatform('android', version);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(granted);
@@ -357,5 +456,93 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     await waitFor(() => screen.getByTestId('wait-notify'), {timeout: 8000});
     expect(screen.getByLabelText('연결되면 알려 드릴게요')).toBeTruthy(); // Android 렌더는 글자 대신 읽기 라벨로 찾는다
     expect(screen.getByRole('button', {name: '알림 켜기'})).toBeTruthy();
+  });
+});
+
+describe('리뷰 M1: AU-04 전에는 알림 꺼짐 안내를 숨긴다', () => {
+  test('Android 13+ 거절 상태여도 C3 줄·C7 행 없음(플래그 꺼짐)', async () => {
+    const RN = require('react-native');
+    const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+    Object.defineProperty(RN.Platform, 'OS', {value: 'android', configurable: true, writable: true});
+    Object.defineProperty(RN.Platform, 'Version', {value: 34, configurable: true, writable: true});
+    const check = jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    try {
+      const {readNotifyState, notifyFlags} = require('../src/features/child/useNotifyPermission');
+      expect(notifyFlags.promptReady).toBe(false);
+      expect(await readNotifyState()).toBe('unknown');
+      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+      await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}), {timeout: 8000});
+      await act(async () => {});
+      expect(screen.queryByTestId('wait-notify')).toBeNull();
+      expect(check).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(RN.Platform, 'OS', {value: orig.OS, configurable: true, writable: true});
+      Object.defineProperty(RN.Platform, 'Version', {value: orig.Version, configurable: true, writable: true});
+    }
+  });
+});
+
+describe('리뷰 M4: 기기 기억값은 계정별, 로그아웃 때 정리', () => {
+  test('다른 계정은 앞 계정의 본 목록을 쓰지 않는다(처음이면 배너 없음), 계정을 모르면 배너 없음', async () => {
+    const store = memoryStore();
+    await store.setItem('seen_parent_ids_v1:acc-a', JSON.stringify(['parent-1']));
+    const api = createFakeApi({parents: [{title: '엄마'}, {title: '아빠'}], accountTag: 'acc-b'});
+    render(<NewConnectionBanner api={api} onView={() => {}} store={store} />);
+    await waitFor(async () => expect(await store.getItem('seen_parent_ids_v1:acc-b')).toBe(JSON.stringify(['parent-1', 'parent-2'])));
+    expect(screen.queryByTestId('n3-banner')).toBeNull();
+    screen.unmount();
+    const none = memoryStore();
+    render(<NewConnectionBanner api={createFakeApi({parents: [{title: '엄마'}], accountTag: null})} onView={() => {}} store={none} />);
+    await act(async () => {});
+    expect(screen.queryByTestId('n3-banner')).toBeNull();
+  });
+
+  test('C6 관심 남김은 계정별(다른 계정은 다시 \'관심 있어요\')', async () => {
+    const {PaidSheet} = require('../src/features/home/PaidSheet');
+    const store = memoryStore();
+    await store.setItem('paid_interest_v1:acc-a', '1');
+    render(<PaidSheet api={createFakeApi({accountTag: 'acc-a'})} visible onClose={() => {}} store={store} />);
+    await waitFor(() => screen.getByRole('button', {name: '관심 남김'}));
+    screen.unmount();
+    render(<PaidSheet api={createFakeApi({accountTag: 'acc-b'})} visible onClose={() => {}} store={store} />);
+    await act(async () => {});
+    expect(screen.getByRole('button', {name: '관심 있어요'})).toBeTruthy();
+  });
+
+  test('clearAccountKeys: 그 계정 키만 지운다', async () => {
+    const {clearAccountKeys} = require('../src/lib/accountStore');
+    const store = memoryStore();
+    await store.setItem('seen_parent_ids_v1:a', '[]');
+    await store.setItem('paid_interest_v1:a', '1');
+    await store.setItem('paid_interest_v1:b', '1');
+    await clearAccountKeys(store, 'a');
+    expect(await store.getItem('seen_parent_ids_v1:a')).toBeNull();
+    expect(await store.getItem('paid_interest_v1:a')).toBeNull();
+    expect(await store.getItem('paid_interest_v1:b')).toBe('1');
+  });
+
+  test('자녀 로그아웃: 세션을 지우기 전에 계정 가명값을 받아 두고, 로그아웃 뒤 그 계정 키를 정리', async () => {
+    const accountStore = require('../src/lib/accountStore');
+    const clear = jest.spyOn(accountStore, 'clearAccountKeys');
+    const api = createFakeApi({consented: true, parentTitle: '엄마', accountTag: 'acc-z'});
+    const order: string[] = [];
+    jest.spyOn(api, 'accountTag').mockImplementation(async () => {
+      order.push('tag');
+      return 'acc-z';
+    });
+    const so = api.signOut.bind(api);
+    jest.spyOn(api, 'signOut').mockImplementation(async () => {
+      order.push('signOut');
+      await so();
+    });
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
+    await press('로그아웃');
+    const buttons = screen.getAllByRole('button', {name: '로그아웃'});
+    fireEvent.press(buttons[buttons.length - 1]);
+    await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-z'));
+    expect(order.indexOf('tag')).toBeLessThan(order.indexOf('signOut'));
   });
 });

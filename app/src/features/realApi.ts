@@ -317,7 +317,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
           ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
           : null,
         starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
-        connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // ASSUMED(서버 요청, dev-app-notes)
+        connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // 0041(처음 연결된 날). 옛 서버면 null
       }));
       const first = parents[0];
       return {
@@ -363,6 +363,11 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       if (error) fail('세션 확인', error);
       const p = data.session?.user.app_metadata?.provider;
       return p === 'kakao' || p === 'google' || p === 'email' ? p : null;
+    },
+    async accountTag() {
+      const {data} = await sb.auth.getSession();
+      const id = data.session?.user.id;
+      return id ? sha256Hex(id).slice(0, 16) : null;
     },
     async signOut() {
       // 푸시 토큰 해제가 먼저(0032: 로그아웃 뒤에는 auth.uid 가 없어 해제가 실패한다). 등록한 토큰이 없으면 부르지 않는다. 실패해도 로그아웃은 계속

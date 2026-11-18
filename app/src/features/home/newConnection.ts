@@ -3,7 +3,7 @@
 // 처음(목록 없음)에는 지금 어르신을 모두 본 것으로 두고 배너를 띄우지 않는다(첫 연결은 C3 '연결됐어요' 화면이 알린다).
 import type {ChildParent} from '../types';
 
-export const SEEN_PARENTS_KEY = 'seen_parent_ids_v1';
+export {SEEN_PARENTS_KEY} from '../../lib/accountStore'; // 키는 계정별(accountKey)
 
 export function newConnection(seen: string[] | null, parents: ChildParent[]): {banner: ChildParent | null; nextSeen: string[]} {
   const ids = parents.filter(p => p.parentId).map(p => p.parentId);

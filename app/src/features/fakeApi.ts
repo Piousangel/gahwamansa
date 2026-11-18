@@ -68,6 +68,7 @@ export type FakeOptions = {
   eventResult?: 'rate_limited' | 'no_user' | 'invalid_props' | 'offline'; // logEvent 결과(기본 ok)
   parentDays?: HistoryDay[]; // 어르신 지난 날(parent_history, 최신순). 기본 없음
   failParentHistory?: number; // parentHistory 가 처음 N번 실패(오프라인)
+  accountTag?: string | null; // 기기 기억값 계정 가명값(기본 'fake-account')
 };
 export type FakeParent = {
   parentId?: string;
@@ -186,6 +187,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
     },
     async whoAmI() {
       return who ?? (emailVerified ? 'child' : linked ? 'parent' : 'none');
+    },
+    async accountTag() {
+      return opts.accountTag === undefined ? 'fake-account' : opts.accountTag;
     },
     async getLoginMethod() {
       return opts.loginMethod === undefined ? 'kakao' : opts.loginMethod;

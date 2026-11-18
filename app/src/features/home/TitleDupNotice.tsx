@@ -50,11 +50,12 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
 
   return (
     <View style={styles.wrap}>
-    <View testID="title-dup-chips" style={styles.chips} accessibilityLabel={h.title_dup_chips_a11y}>
+    {/* 라이터 11-14(리뷰 M3): 칩은 누를 수 없는 표시용 → 줄 전체를 한 덩어리로 읽고 칩 각각은 읽지 않는다 */}
+    <View testID="title-dup-chips" style={styles.chips} accessible accessibilityLabel={chipsA11y(parents, dup.target.parentId)}>
       {parents.map(p => {
         const cur = p.parentId === dup.target.parentId;
         return (
-          <View key={p.parentId} style={[styles.chip, cur ? styles.chipOn : null]} accessibilityState={{selected: cur}}>
+          <View key={p.parentId} style={[styles.chip, cur ? styles.chipOn : null]}>
             <Text20 weight="bold" style={cur ? styles.chipOnText : styles.chipText}>{p.title}</Text20>
           </View>
         );
@@ -75,7 +76,7 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
         visible={open}
         title={t.title}
         body={hint}
-        closeLabel={copy.child.cheer.close}
+        closeLabel={t.close}
         onClose={() => setOpen(false)}
         error={error}
         primary={{label: t.save, onPress: save, disabled: !picked || saving}}
@@ -106,6 +107,14 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
 }
 
 const withName = (tpl: string, name: string) => tpl.split('{이름}').join(name);
+
+// "연결된 분 이름, 부모님, 부모님. 새로 연결된 분은 두 번째예요" — {순서}는 첫·두·세(keyboard.count_words, 첫째만 '첫')
+export function chipsA11y(parents: ChildParent[], targetId: string): string {
+  const n = parents.findIndex(p => p.parentId === targetId) + 1;
+  const words = copy.keyboard.count_words;
+  const order = n === 1 ? '첫' : words[n - 1] ?? String(n);
+  return h.title_dup_chips_a11y.split('{이름들}').join(parents.map(p => p.title).join(', ')).split('{순서}').join(order);
+}
 
 const styles = StyleSheet.create({
   wrap: {gap: 14},
