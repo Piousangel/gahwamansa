@@ -374,3 +374,4 @@
 - 11-18 관리자 감사 사유 칸 운영 규칙: 개인정보 금지, 요청 번호(문의 접수 번호)만. 방침·삭제 안내에 삭제 예외 2건 명시(카카오 회원번호 연결 끊기 큐 최대 30일, 관리자 감사 기록 대상 ID·사유 1년)
 - 11-18 AU-07(앱 정보 URL·사업자 값 상수) 앞당김. G-INT 관문에 "값이 없어 숨겨진 앱 정보 행 0" 확인 추가
 - 11-18 main의 app/node_modules 재설치(npm ci)는 리드가 공지한 뒤에만(여러 worktree가 공유해 테스트 대량 실패 사례). 새 의존성 레인은 자기 worktree에 독립 설치
+- 11-18 AU-04는 토큰 공급자 인터페이스(push/tokenSource)+fake 토큰으로 먼저 구현. @react-native-firebase 설치·google-services.json 연결은 사용자 Firebase 준비(US-10) 후 별도 항목
