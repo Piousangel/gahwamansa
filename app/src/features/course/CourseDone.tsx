@@ -255,13 +255,15 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
             </Animated.View>
           ) : null}
         </View>
-        {/* 제목·문구는 함께 페이드(시안 mo-text) */}
-        <Animated.View testID="p7-text" style={[styles.textGroup, {opacity: v.text}]}>
-          <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
-          {body ? (
-            <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>
-          ) : null}
-        </Animated.View>
+        {/* 감사 M9·디자인 판정(리드 승인, 시안 P7_motion 수정): 제목은 첫 프레임부터 보인다. 페이드는 둘째 줄만 */}
+        <View style={styles.textGroup}>
+          <Text20 testID="p7-title" size={32} weight="bold" accessibilityRole="header" style={styles.text}>{d.title}</Text20>
+          <Animated.View testID="p7-text" style={{opacity: v.text}}>
+            {body ? (
+              <Text20 size={22} weight="bold" style={styles.text} accessibilityLiveRegion="polite">{body}</Text20>
+            ) : null}
+          </Animated.View>
+        </View>
         {days ? (
           <StampRow days={days} todayIdx={todayIdx} hideIdx={full && phase !== 'done' ? todayIdx : undefined} cellRef={cellRef} />
         ) : null}

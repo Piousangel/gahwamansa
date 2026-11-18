@@ -41,7 +41,8 @@ test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
   expect(screen.getByText('오늘 코스예요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
   expect(screen.getByTestId('date-line')).toBeTruthy();
-  await waitFor(() => screen.getByText('이번 주 도장')); // 미연결도 기기 로컬 도장 줄(리드 결정)
+  await new Promise<void>(r => setTimeout(() => r(), 30));
+  expect(screen.queryByText('이번 주 도장')).toBeNull(); // 기기 로컬 도장 0 → 줄 숨김(감사 M1·디자인 판정)
   expect(week).not.toHaveBeenCalled();
   expect(screen.getAllByTestId('stitch', {includeHiddenElements: true}).length).toBeGreaterThanOrEqual(1);
   expect(screen.queryByText(/연속/)).toBeNull();
@@ -63,7 +64,7 @@ test('도장: 서버의 이번 주 완료 날짜만큼 붙는다(띄엄띄엄, �
 });
 
 test('오늘 코스를 마치면 도장 줄을 다시 불러온다', async () => {
-  const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question']});
+  const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question'], weekDone: [0]}); // 찍은 날이 있어야 줄이 보인다(감사 M1)
   const week = jest.spyOn(api, 'getWeekStamps');
   render(<AppRoot api={api} role="parent" restore />);
   await waitFor(() => screen.getByText('이번 주 도장'));

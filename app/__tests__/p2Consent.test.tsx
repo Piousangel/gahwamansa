@@ -32,17 +32,18 @@ function order(): string[] {
   return out.filter((x, i) => x !== out[i - 1]);
 }
 
-test('네 줄은 카드 안 체크 행: 행 간격 8, 체크 32 는 첫 줄 정렬(위 맞춤)', async () => {
+test('체크 카드 3줄(행 간격 8, 체크 32 는 첫 줄 정렬) + 카드 밖 ⓘ 한 줄(싫어요 안내, 디자인 판정 M2 ②)', async () => {
   await toConsent();
   const card = screen.getByTestId('consent-points');
   expect(StyleSheet.flatten(card.props.style).gap).toBe(8);
   const rows = within(card).getAllByTestId('consent-point');
-  expect(rows).toHaveLength(4);
+  expect(rows).toHaveLength(3);
   for (const r of rows) {
     expect(StyleSheet.flatten(r.props.style).alignItems).toBe('flex-start');
     expect(within(r).getByTestId('icon-check', {includeHiddenElements: true}).props.width).toBe(32);
   }
-  expect(within(rows[3]).getByText(FOURTH)).toBeTruthy();
+  expect(within(screen.getByTestId('consent-info')).getByText(FOURTH)).toBeTruthy();
+  expect(within(card).queryByText(FOURTH)).toBeNull();
 });
 
 test('동의 실패: 오류 상자는 하단 버튼 바로 위(본문 밖), 읽기 순서는 넷째 줄 → 오류 → 좋아요', async () => {

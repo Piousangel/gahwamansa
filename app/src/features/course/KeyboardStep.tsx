@@ -14,7 +14,6 @@ import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
-import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 import {StepHeader} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
@@ -188,7 +187,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       ) : (
         <SkipLink label={k.skip} disabled={busy} onPress={complete} />
       )}
-      {open ? null : <ToCourseHomeLink onPress={toCourseHome} disabled={busy} />}
+      {/* 감사 L4·디자인 판정: P6 은 '오늘 코스로'(U13)를 숨긴다 — '오늘은 넘어갈게요'와 뜻이 겹쳐 오터치 */}
     </>
   );
 

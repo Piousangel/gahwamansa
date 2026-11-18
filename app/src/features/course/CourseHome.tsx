@@ -121,7 +121,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const greeting = all
     ? preview
       ? c.done_unlinked
-      : c.done_today
+      : c.done_today.replace('. ', '.\n') // 감사 L1: 마침표 뒤 줄바꿈(어절 중간에서 끊기지 않게)
     : done.length === 1
       ? c.left_two
       : done.length === 2
@@ -214,7 +214,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         {/* 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄 */}
         {all && preview ? <Text20 weight="bold" style={styles.sub}>{c.done_unlinked_sub}</Text20> : null}
       </View>
-      {week ? <StampRow days={stampsFromDates(week.weekStart, week.doneDates)} todayIdx={todayIdx} /> : null}
+      {/* 감사 M1·디자인 판정: 찍은 날이 0이면 도장 줄을 숨긴다(빈 칸 7개는 정보가 없고 '아직'으로 읽힘) */}
+      {week && week.doneDates.length > 0 ? <StampRow days={stampsFromDates(week.weekStart, week.doneDates)} todayIdx={todayIdx} /> : null}
       <View testID="course-steps" style={styles.steps}>
         {STEPS.map(s => {
           const status = done.includes(s.step) ? 'done' : current?.step === s.step ? 'now' : 'wait';

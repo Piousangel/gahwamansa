@@ -160,11 +160,12 @@ test('건너뛰기 안내는 이미 봤으면 다시 나오지 않는다', async
   expect(screen.queryByTestId('p7-skip-hint')).toBeNull();
 });
 
-test('제목도 문구와 같은 페이드 묶음 안(처음엔 투명), 판정 전에는 시작하지 않는다', async () => {
+test('제목은 첫 프레임부터 보이고(감사 M9, 페이드 묶음 밖), 둘째 줄만 처음엔 투명, 판정 전에는 시작하지 않는다', async () => {
   const go = holdMotion();
   await finish();
   const group = () => screen.getByTestId('p7-text');
-  expect(within(group()).getByText('오늘 코스를 마쳤어요')).toBeTruthy();
+  expect(within(group()).queryByText('오늘 코스를 마쳤어요')).toBeNull();
+  expect(screen.getByTestId('p7-title')).toBeTruthy();
   expect(within(group()).getByText(/도장을 찍었어요|오늘 첫 도장을 찍었어요/)).toBeTruthy();
   expect(StyleSheet.flatten(group().props.style).opacity).toBe(0);
   expect(vibrate).not.toHaveBeenCalled(); // 동작 줄이기 판정 전: 아무 연출도 시작하지 않음

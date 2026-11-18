@@ -85,13 +85,20 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
       {/* 시안 P2: 흰 카드 안 체크 행. 행 간격 8, 체크 32 는 첫 줄에 맞춤(여러 줄이어도 위 정렬).
           본문은 Screen 스크롤 영역이라 150% 이상에서 넘치면 아래 흐림이 보이고, 버튼은 하단 고정이라 끝까지 안 읽어도 누를 수 있다 */}
       <View testID="consent-points" style={styles.card}>
-        {copy.consent.body.map(t => (
+        {copy.consent.body.slice(0, 3).map(t => (
           <View key={t} testID="consent-point" style={styles.point}>
             <Icon name="icon-check" size={32} color={color.done} />
             <Text20 size={22} style={styles.pointText}>{t}</Text20>
           </View>
         ))}
       </View>
+      {/* 넷째 줄(싫어요를 누르면 보이는 것)은 체크 목록과 성격이 달라 카드 바로 아래 'ⓘ' 한 줄(디자인 판정 M2 ②, 법률 노출 #7) */}
+      {copy.consent.body.slice(3).map(t => (
+        <View key={t} testID="consent-info" style={styles.point}>
+          <Icon name="icon-info" size={28} color={color.inkSub} />
+          <Text20 style={styles.infoText}>{t}</Text20>
+        </View>
+      ))}
       <Text20 size={22} style={styles.sub}>{copy.consent.reassure}</Text20>
     </Screen>
   );
@@ -103,6 +110,7 @@ const styles = StyleSheet.create({
   point: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 60},
   pointText: {flex: 1, minWidth: 0, color: color.inkTitle},
   sub: {color: color.inkSub},
+  infoText: {flex: 1, minWidth: 0, color: color.inkSub},
   error: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: color.card, borderWidth: 4, borderColor: color.danger, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16},
   errorText: {flex: 1, gap: 6},
   errorTitle: {color: color.dangerInk},

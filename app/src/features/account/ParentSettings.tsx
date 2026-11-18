@@ -185,8 +185,8 @@ function SfxRow() {
 // '가족에게 답 보여 주기' 행: 이름·상태(한 덩어리 글) + 오른쪽 동사 버튼. 보여 주는 중 '그만 보여 주기'(흰 바탕+테두리),
 // 보여 주지 않는 중 '다시 보여 주기'(채움). 누르면 행 아래에 확인을 펼친다(expanded 로 읽힘).
 function ShareRow({consented, expanded, onPress}: {consented: boolean; expanded: boolean; onPress: () => void}) {
-  const {fontScale} = useWindowDimensions();
-  const wide = fontScale >= 2;
+  const {fontScale, width} = useWindowDimensions();
+  const wide = fontScale >= 1.5 || width <= 360; // 감사 M3: 150% 이상 또는 폭 360 이하면 쌓기
   const status = consented ? t.shared_now : t.not_shared_now;
   const verb = consented ? t.stop : t.resume;
   return (
