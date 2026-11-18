@@ -546,3 +546,58 @@ describe('리뷰 M4: 기기 기억값은 계정별, 로그아웃 때 정리', ()
     expect(order.indexOf('tag')).toBeLessThan(order.indexOf('signOut'));
   });
 });
+
+describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
+  const RN = require('react-native');
+  const {color} = require('../src/ui/tokens');
+  const inDock = (id: string) => {
+    const dock = screen.queryByTestId('screen-dock');
+    return !!dock && within(dock).queryByTestId(id) !== null;
+  };
+  const toEmailStage = async () => {
+    await press('이메일로 시작하기');
+    await waitFor(() => screen.getByRole('button', {name: '인증번호 받기'}));
+  };
+
+  test('C0: 연령 줄은 inkSub, 이메일 화면에도 약관 줄 아래 연령 줄(100%는 하단 고정 안)', async () => {
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2, fontScale: 1}); // jest 모의 기본 글자 배율은 2
+    render(<AppRoot api={createFakeApi()} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('age-notice'));
+    expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(color.inkSub);
+    expect(inDock('age-notice')).toBe(true);
+    await toEmailStage();
+    expect(screen.getByTestId('legal-child')).toBeTruthy();
+    expect(screen.getByTestId('age-notice')).toBeTruthy();
+    expect(inDock('legal-child')).toBe(true);
+  });
+
+  test('C0: 글자 150% 이상이면 약관·연령 줄을 함께 본문 끝으로', async () => {
+    const dims = {width: 360, height: 640, scale: 2, fontScale: 1.5};
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue(dims);
+    render(<AppRoot api={createFakeApi()} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('age-notice'));
+    expect(inDock('legal-child')).toBe(false);
+    expect(inDock('age-notice')).toBe(false);
+  });
+
+  test('C6: 누르면 버튼 위 초록 면 + 체크 한 줄, 화면 읽기 1회, 다시 열면 한 줄 없이 관심 남김', async () => {
+    const {PaidSheet} = require('../src/features/home/PaidSheet');
+    const a11y = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    const store = memoryStore();
+    const api = createFakeApi({accountTag: 'acc-c6'});
+    const {rerender} = render(<PaidSheet api={api} visible onClose={() => {}} store={store} />);
+    await act(async () => {});
+    a11y.mockClear();
+    await press('관심 있어요');
+    const done = screen.getByTestId('paid-done');
+    expect(StyleSheet.flatten(done.props.style).backgroundColor).toBe(color.doneSoft);
+    expect(within(done).getByText('관심을 남겼어요. 지금은 결제되지 않아요')).toBeTruthy();
+    expect(a11y.mock.calls.filter(c => c[0] === '관심을 남겼어요. 지금은 결제되지 않아요')).toHaveLength(1);
+    rerender(<PaidSheet api={api} visible={false} onClose={() => {}} store={store} />);
+    rerender(<PaidSheet api={api} visible onClose={() => {}} store={store} />);
+    await waitFor(() => screen.getByRole('button', {name: '관심 남김'}));
+    expect(screen.queryByTestId('paid-done')).toBeNull();
+  });
+});

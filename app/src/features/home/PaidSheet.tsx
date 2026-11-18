@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {BottomSheet} from '../../ui/BottomSheet';
 import {Text20} from '../../ui/Text20';
+import {Icon} from '../../ui/assets/icons';
 import {announce} from '../../ui/a11y';
 import {copy} from '../../copy/copy';
 import {color, radius} from '../../ui/tokens';
@@ -32,7 +33,7 @@ const price = (tpl: string, v: string) => tpl.split('{가격}').join(v);
 
 // C6 곧 유료 시트(빌드 1 축소형, DECISIONS 148): 예정 가격 3안(고르기 없음, 누르는 모양 아님) + '관심 있어요' 한 버튼.
 // 결제·연락처·푸시 동의 없음. 누르면 관심 표시(paid_interest_tapped) 후 버튼은 '관심 남김'(비활성), 이 기기에 기억한다.
-// 시안은 시트 위 토스트지만 시트(Modal) 위에는 토스트가 그려지지 않고 U2 가 시트 동안 토스트를 숨기므로 같은 문장을 시트 안 한 줄로 보인다.
+// 확인 표시는 시트 위 토스트 대신 시트 안 버튼 위 한 줄(디자인 판정 11-18 ③ 수용, 시안 갱신됨).
 export function PaidSheet({
   api,
   visible,
@@ -55,7 +56,11 @@ export function PaidSheet({
     api
       .accountTag()
       .then(tag => (tag ? store.getItem(accountKey(PAID_INTEREST_KEY, tag)) : null))
-      .then(v => alive && setDone(v === '1'))
+      .then(v => {
+        if (alive && v === '1') {
+          setDone(true); // 켜기만(늦게 온 읽기가 방금 누른 '관심 남김'을 되돌리지 않게)
+        }
+      })
       .catch(() => {});
     return () => {
       alive = false;
@@ -102,9 +107,13 @@ export function PaidSheet({
         <Text20 style={styles.label}>{t.plan_gift_sub}</Text20>
       </View>
       {justNow ? (
-        <Text20 testID="paid-done" weight="bold">
-          {t.toast}
-        </Text20>
+        // 디자인 판정 11-18 ③: 버튼 바로 위 초록 면 + 체크 한 줄. 화면 읽기는 announce 1회(포커스 이동 없음), 다시 열면 없음
+        <View testID="paid-done" style={styles.done}>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Icon name="icon-check" size={22} color={color.doneInk} />
+          </View>
+          <Text20 weight="bold" style={styles.doneText}>{t.toast}</Text20>
+        </View>
       ) : null}
     </BottomSheet>
   );
@@ -114,4 +123,6 @@ const styles = StyleSheet.create({
   notice: {color: color.inkTitle},
   prices: {backgroundColor: color.paperSoft, borderRadius: radius.card, padding: 16, gap: 4, marginTop: 8},
   label: {color: color.inkSub},
+  done: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.doneSoft, borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 14, marginTop: 8},
+  doneText: {flex: 1, color: color.doneInk},
 });

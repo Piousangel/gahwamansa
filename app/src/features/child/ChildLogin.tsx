@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {StyleSheet, TextInput} from 'react-native';
+import {StyleSheet, TextInput, useWindowDimensions, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {BackBar} from '../../app/BackBar';
@@ -23,6 +23,7 @@ const CODE_VALID_MS = 10 * 60 * 1000; // 메일 템플릿 기준 유효 10분
 export function ChildLogin() {
   const navigation = useNavigation();
   const {api, resetRole} = useSession();
+  const large = useWindowDimensions().fontScale >= 1.5; // 150% 이상이면 약관·연령 줄을 본문 끝으로(하단 고정을 지킨다)
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [stage, setStage] = useState<'choose' | 'email' | 'code'>('choose');
@@ -135,6 +136,14 @@ export function ChildLogin() {
     setNote(null);
   }, []);
 
+  // 약관 줄 + 연령 줄(디자인 판정 ②: 연령은 안내라 inkSub). 선택·이메일 두 화면에 같게
+  const legalLines = (
+    <View>
+      <Text20 testID="legal-child" style={styles.legal}>{copy.legal.agree_child}</Text20>
+      <Text20 testID="age-notice" style={[styles.legal, styles.age]}>{copy.legal.age_notice}</Text20>
+    </View>
+  );
+
   if (stage === 'choose') {
     // 시안 C0 "카카오로 시작해요": 카카오(주) → 구글 → 이메일로 받기(보조 링크). 이전은 역할 선택
     return (
@@ -144,9 +153,8 @@ export function ChildLogin() {
           <>
             <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
             <SocialButton kind="google" label={t.google} disabled={busy} onPress={() => social('google')} />
-            {/* 시안 C0: 소셜 버튼 아래 약관 한 줄(11-1 #1b). 연령 안내는 시안에 없어 약관 줄 아래 한 줄(디자인 확인 항목) */}
-            <Text20 testID="legal-child" style={styles.legal}>{copy.legal.agree_child}</Text20>
-            <Text20 testID="age-notice" style={styles.legal}>{copy.legal.age_notice}</Text20>
+            {/* 시안 C0: 소셜 버튼 → 약관 줄 → 연령 줄(디자인 판정 11-18 ②) → 이메일 링크. 150% 이상이면 두 줄은 본문 끝으로 */}
+            {large ? null : legalLines}
             <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
           </>
         }>
@@ -159,6 +167,7 @@ export function ChildLogin() {
             {note === t.failed.title ? <Text20>{t.failed.body}</Text20> : null}
           </>
         ) : null}
+        {large ? legalLines : null}
       </Screen>
     );
   }
@@ -167,7 +176,12 @@ export function ChildLogin() {
     return (
       <Screen
         top={<BackBar onBack={toChoose} />}
-        bottom={<BigButton label={t.send} disabled={busy} onPress={() => send(false)} />}>
+        bottom={
+          <>
+            <BigButton label={t.send} disabled={busy} onPress={() => send(false)} />
+            {large ? null : legalLines}
+          </>
+        }>
         <Text20 size={28} weight="bold">{t.title}</Text20>
         <Text20>{t.hint}</Text20>
         <TextInput
@@ -183,6 +197,7 @@ export function ChildLogin() {
           style={styles.input}
         />
         {noteView}
+        {large ? legalLines : null}
       </Screen>
     );
   }
@@ -208,5 +223,6 @@ export function ChildLogin() {
 
 const styles = StyleSheet.create({
   legal: {textAlign: 'center', color: color.ink, marginVertical: 4},
+  age: {color: color.inkSub},
   input: {minHeight: 64, fontSize: 22, borderBottomWidth: 4, borderColor: color.action, borderRadius: radius.input, backgroundColor: color.paperSoft, paddingHorizontal: 12, marginVertical: 12, color: color.ink},
 });
