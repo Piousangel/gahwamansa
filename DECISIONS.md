@@ -414,3 +414,13 @@
 ## 2026-11-19 GitHub 저장소
 - Piousangel/gahwamansa 비공개(사용자 선택). main만 push, 작업 브랜치는 리뷰 통과 후 main으로 합쳐 push
 - push 전 커밋 기록 전체 비밀값 검사: 비밀 파일·키 패턴 0건(RN 기본 debug.keystore, 테스트 코드의 PEM 조립 문자열만)
+
+## 2026-11-19 staging 반영 0046~0049 (사용자 승인 "올려")
+- db push 4개 적용, 원격 최신 0049. remote-checks(읽기 전용) true 20줄: definer 36개·anon 0, 뷰 쓰기 0, display_name 제거, 연결 전 삭제 경로, vault 앱 접근 0, 파기 배치 하루 이내 성공 등
+- 예상된 false: Vault project_url·push_cron_secret 미입력, 약관·방침 게시 버전 없음(G-PUB 때 admin_publish_terms_version), 응원 문장·푸시 문구 미적재(법률 확인 뒤), auth 감사 로그 0건(빌드 2 F3)
+
+## 2026-11-19 작업 방식: PR (사용자 제안)
+- 레인 작업은 브랜치를 origin(Piousangel/gahwamansa, 비공개)에 push하고 `gh pr create`로 PR을 연다. 설명: 목적·변경·검증 결과·`리뷰: <레벨> — N건 중 M건 반영`
+- 독립 리뷰어는 리뷰 파일을 같은 PR 브랜치에 커밋(또는 PR 코멘트). 작성자≠리뷰어 원칙 유지
+- 병합은 리드가 `gh pr merge --merge`(이력 보존). main 직접 커밋은 리드의 기록 문서·충돌 해결·타입 재생성만
+- 원격 DB 반영·비밀값·결제는 PR과 별개로 매번 사용자 승인
