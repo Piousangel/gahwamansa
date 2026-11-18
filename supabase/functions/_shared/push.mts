@@ -1,25 +1,29 @@
-// push-daily 순수 로직(Deno·Node 공용: fetch·WebCrypto만 사용). 진입점은 index.ts, 테스트는 lib.test.mts(node --test).
+// 푸시 공용 로직(Deno·Node 공용: fetch·WebCrypto만 사용). 진입점 push-daily/index.ts·push-events/index.ts, 테스트 push.test.mts(node --test).
+// 0038부터 서버가 대상마다 kind·channel·title·body(자리값 채운 확정 문구)를 준다. copy는 일일 알림의 '문구 있음' 판단용.
 // 계약: 0036 push_daily_claim()(선점)·push_record(…, p_note). FCM HTTP v1(https://firebase.google.com/docs/cloud-messaging/send/v1-api).
 // 리뷰 반영(2026-11-18-push-tokens-review): M3 무효 토큰은 UNREGISTERED·message.token 오류만, 설정 오류는 즉시 중단·기록, L6 해시 비교.
 
-export type Target = { profile_id: string; token: string; platform: string };
+export type Kind = 'daily' | 'cheer_arrived' | 'parent_connected' | 'parent_reconnected';
+export type Target = { profile_id: string; token: string; platform: string; kind?: Kind; channel?: string; title?: string; body?: string | null };
 export type Copy = { title: string; body: string };
 export type Targets = { window_open: boolean; copy: Copy | null; targets: Target[]; excluded: number };
 export type Status = 'sent' | 'failed' | 'invalid_token';
-export type Result = { profile_id: string; token: string; status: Status };
+export type Result = { profile_id: string; token: string; status: Status; kind?: Kind };
 export type ServiceAccount = { client_email: string; private_key: string; project_id: string };
 
-/** 앱 알림 채널 id(AU-04 푸시 클라이언트가 같은 id로 채널을 만든다). */
+/** 앱 알림 채널 id(AU-04가 같은 id로 만든다): daily·cheer·family. 서버가 대상마다 channel을 주고, 없으면 daily. */
 export const ANDROID_CHANNEL_ID = 'daily';
 
-/** FCM v1 메시지 본문. 데이터에는 종류만(개인정보·번호 없음). */
-export function buildMessage(t: Target, copy: Copy, kind = 'daily') {
+/** FCM v1 메시지 본문. 대상의 채운 문구(없으면 copy)·채널·종류만(개인 id·번호 없음). 본문이 비면 제목만. */
+export function buildMessage(t: Target, copy: Copy | null, kind: Kind = 'daily') {
+  const title = t.title ?? copy?.title ?? '';
+  const body = t.body === undefined ? copy?.body : t.body ?? undefined;
   return {
     message: {
       token: t.token,
-      notification: { title: copy.title, body: copy.body },
-      android: { priority: 'normal', notification: { channel_id: ANDROID_CHANNEL_ID } },
-      data: { kind },
+      notification: body ? { title, body } : { title },
+      android: { priority: 'normal', notification: { channel_id: t.channel ?? ANDROID_CHANNEL_ID } },
+      data: { kind: t.kind ?? kind },
     },
   };
 }
@@ -99,9 +103,9 @@ export async function getAccessToken(sa: ServiceAccount, fetchFn: typeof fetch, 
 }
 
 /** 대상마다 FCM으로 보낸다(동시 최대 concurrency). 설정 오류가 서로 다른 토큰 3개에서 나면 남은 발송을 멈추고(aborted), 못 보낸 대상은 failed. */
-export async function sendAll(targets: Target[], copy: Copy, opts: { projectId: string; accessToken: string; fetchFn: typeof fetch; concurrency?: number }): Promise<{ results: Result[]; aborted: boolean }> {
+export async function sendAll(targets: Target[], copy: Copy | null, opts: { projectId: string; accessToken: string; fetchFn: typeof fetch; concurrency?: number }): Promise<{ results: Result[]; aborted: boolean }> {
   const url = `https://fcm.googleapis.com/v1/projects/${opts.projectId}/messages:send`;
-  const results: Result[] = targets.map((t) => ({ profile_id: t.profile_id, token: t.token, status: 'failed' as Status }));
+  const results: Result[] = targets.map((t) => ({ profile_id: t.profile_id, token: t.token, status: 'failed' as Status, ...(t.kind ? { kind: t.kind } : {}) }));
   let next = 0;
   let aborted = false;
   const configTokens = new Set<string>();
@@ -170,4 +174,41 @@ export async function runDaily(deps: RunDeps): Promise<RunSummary> {
   const { results, aborted } = await sendAll(t.targets, t.copy, { projectId: sa.project_id, accessToken, fetchFn: deps.fetchFn });
   const rec = (await deps.rpc('push_record', { p_kind: 'daily', p_results: results, p_excluded: t.excluded, p_note: aborted ? 'config_error' : null })) as { sent: number; failed: number; invalid: number; note?: string };
   return { status: aborted ? 'config_error' : 'done', ...rec, excluded: t.excluded };
+}
+
+export type EventsSummary =
+  | { status: 'window_closed' | 'no_targets' | 'dry_run' }
+  | { status: 'done' | 'config_error'; sent: number; failed: number; invalid: number; note?: string | null };
+
+/**
+ * 응원 도착(N2)·연결/재연결(N3) 실행(0038 push_events_claim). 선점(=처리 표시)은 서버가 하므로 dry-run이면 아무것도 부르지 않는다.
+ * 결과는 종류별로 push_record에 남긴다. 설정 오류·OAuth 실패 처리는 일일 알림과 같다.
+ */
+export async function runEvents(deps: RunDeps): Promise<EventsSummary> {
+  if (deps.dryRun || !deps.serviceAccount) return { status: 'dry_run' };
+  const t = (await deps.rpc('push_events_claim', {})) as { window_open: boolean; targets: Target[] };
+  if (!t.window_open) return { status: 'window_closed' };
+  if (t.targets.length === 0) return { status: 'no_targets' };
+  const sa = deps.serviceAccount;
+  let results: Result[];
+  let note: string | null = null;
+  try {
+    const accessToken = await getAccessToken(sa, deps.fetchFn);
+    const sent = await sendAll(t.targets, null, { projectId: sa.project_id, accessToken, fetchFn: deps.fetchFn });
+    results = sent.results;
+    if (sent.aborted) note = 'config_error';
+  } catch {
+    results = t.targets.map((x) => ({ profile_id: x.profile_id, token: x.token, status: 'failed' as Status, kind: x.kind }));
+    note = 'oauth_failed';
+  }
+  const total = { sent: 0, failed: 0, invalid: 0 };
+  const kinds = [...new Set(results.map((r) => r.kind ?? 'daily'))];
+  for (const kind of kinds) {
+    const part = results.filter((r) => (r.kind ?? 'daily') === kind).map(({ profile_id, token, status }) => ({ profile_id, token, status }));
+    const rec = (await deps.rpc('push_record', { p_kind: kind, p_results: part, p_excluded: 0, p_note: note })) as { sent: number; failed: number; invalid: number };
+    total.sent += rec.sent;
+    total.failed += rec.failed;
+    total.invalid += rec.invalid;
+  }
+  return { status: note ? 'config_error' : 'done', ...total, note };
 }
