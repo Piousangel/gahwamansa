@@ -34,7 +34,7 @@
 A pgcrypto+Vault(차선) / B Edge AES-GCM+HMAC(미래 ②대상 시 채택) / C pgsodium TCE(금지 — 폐기 예정) / D 플랫폼 저장 암호화(현행)
 
 ## 4. 키 관리 정책 v0.1
-- 비밀값 대장: 값은 비밀번호 관리자에만, 저장소엔 이름 목록만(Supabase secret 키 Edge용·ops용 분리, DB 비밀번호, push_cron_secret, project_url, FCM_SERVICE_ACCOUNT, KAKAO_ADMIN_KEY, 카카오·구글 Client Secret, SMTP, 업로드 키스토어, Supabase access token, Gemini 키)
+- 비밀값 대장: 값은 비밀번호 관리자에만, 저장소엔 이름 목록만(Supabase secret 키 Edge용·ops용 분리, DB 비밀번호, push_cron_secret, project_url, FCM_SERVICE_ACCOUNT, KAKAO_ADMIN_KEY, 카카오·구글 Client Secret, SMTP, 업로드 키스토어, Supabase access token, Gemini 키, (빌드 2 iOS) Apple Sign in with Apple .p8 키·Services ID, APNs .p8 키 — iOS 감사 N4·U6)
 - 규칙: ①production 사용은 보호책임자 1명(Owner, MFA), 앱 역할은 Vault·서비스 키 접근 0 ②staging·production 모든 비밀값 다름(같으면 출시 관문 실패) ③Vault는 대시보드 화면, Edge는 `supabase secrets set --env-file <저장소 밖 임시 파일>` 후 삭제, 명령줄 인자·`VAR=값 명령`·curl 헤더에 비밀 금지(불가피하면 앞 공백 + `setopt HIST_IGNORE_SPACE`) ④로그에 키·토큰·회원번호·이메일·초대 번호 금지, 운영 SQL 식별자는 끝 4자리 ⑤교체: 유출·의심·인원 변경 즉시, 그 외 연 1회, staging 리허설 선행 ⑥백업: Supabase Pro 일일 백업, 새 프로젝트로 덤프 복원 시 Vault 복호화 불가 → 대장 값으로 재생성 ⑦유출 대응 5단계(교체·폐기 → 접근 확인 → 대장 기록 → 내부관리계획 §9 → 같은 경로 정리) ⑧분기 자기 점검(키 노출 grep, 교체일, 환경별 값, MFA)
 - push_cron_secret 교체: 새 값 생성 → 09시 피해 Edge secrets 교체 → Vault 교체 → push_runs로 정상화 확인(빌드 2: _NEXT 무중단)
 
