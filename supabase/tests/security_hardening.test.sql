@@ -17,8 +17,9 @@ select ok(has_function_privilege('authenticated', 'public.my_profile_id()', 'exe
 select ok((select proconfig::text from pg_proc where oid = 'public.kst_today()'::regprocedure) like '%search_path=%',
           'kst_today의 search_path가 고정돼 있다');
 select is(public.kst_today(), (now() at time zone 'Asia/Seoul')::date, 'kst_today 결과는 그대로다');
-select ok((select qual from pg_policies where tablename = 'device_tokens' and policyname = 'tokens_own') ilike '%select auth.uid()%',
-          'tokens_own 정책은 (select auth.uid())로 한 번만 평가한다');
+-- 0032에서 tokens_own(for all)이 tokens_read(select)로 바뀌었다(쓰기는 RPC만). initplan 형태는 그대로 유지돼야 한다.
+select ok((select qual from pg_policies where tablename = 'device_tokens' and policyname = 'tokens_read') ilike '%select auth.uid()%',
+          'device_tokens 읽기 정책은 (select auth.uid())로 한 번만 평가한다');
 
 -- 동작: RLS가 그대로 걸린다(helper·정책 변경 뒤에도)
 insert into auth.users (id, aud, role, is_anonymous) values
