@@ -415,3 +415,10 @@
 - features/child/FamilyPushRow: 켬 = set_push_enabled(true) + 토큰 등록, 끔 = set_push_enabled(false). 상태 = my_push_settings + 휴대폰 family 채널(channelEnabled). 권한 거절이면 켜는 길(시스템 창·설정), 채널만 꺼져 있으면 그 채널 설정 열기. 실패하면 되돌리고 토스트. 연결 전(enabled null)·상태 모름은 숨김.
 - 자녀 받기 동의는 누를 때만: C3 '알림 켜기'(시스템 창 허용 뒤) 또는 C7 토글. app/PushHost 의 자녀 시작 동기화는 토큰 등록만(권한 허용만으로 set_push_enabled(true) 하던 것 제거).
 - C7 앱 정보의 방침 링크 → AU-07 openInAppWeb 교체는 그 브랜치가 main 에 들어온 뒤(대기).
+
+### ux-audit 리뷰(2026-11-19) 반영 · 11-19
+- H1 P1: 2단계부터 본문 스크롤을 켜고 첫 화면 묶음(제목·안심 줄·키패드 영역, testID connect-first) 높이를 잰 창 높이로 고정(Screen onViewport). 하단 고정이 없으면 창이 화면 맨 아래까지라 아래 안전 영역도 뺀다. 약관·링크는 묶음 아래(첫 화면 밖). 계산식(4×키+138) 외에 키패드 실제 높이(keypad-pinned onLayout)가 영역보다 크면 다음 단계 — 실측에서 '모두 / 지움' 두 줄로 마지막 줄이 키 높이보다 커지는 것을 확인했기 때문.
+- 테스트: connectFit 을 onLayout 모의 좌표(창·영역 y·높이) 기준으로 다시 씀(상수 합산 자기 확인 삭제).
+- 에뮬레이터 실측(gahwa_small, emulator-5556, METRO_PORT 8091, DP_SIZE=360x640, app/e2e/audit/p1-fit.yaml): 이 에뮬레이터는 adb reverse 가 아니라 10.0.2.2:8081 로 번들을 받아 다른 레인 Metro(8081) 코드가 실린다 → 앱 데이터를 지우고 debug_http_host=10.0.2.2:8091 을 적어 두고 실행(p1-fit 은 clearState 없음). 1차(안전 영역 보정 전): 키 0~9 는 있으나 마지막 줄이 제스처 막대·흐림에 반쯤 가림 → 안전 영역 보정·실제 높이 비교 추가. **보정 뒤 재실측은 기기 부하(load 40)로 에뮬레이터 시스템 서비스가 멈춰 끝내지 못함(재실행 필요)**. 320×640 은 못 돌림.
+- M1 FS: 디자인 9절대로 줄 단위 — 사진 영역이 8 미만이면 기능 줄을 셋째 → 둘째 → 첫째 순으로 하나씩 숨기고 다시 잰다. 150% 이상은 기능 3줄·사진 숨김, 소개 한 줄 유지.
+- M2 약관 링크(구조만): 주소가 있으면 줄 높이 48(누름 영역), 문장은 한 번 읽고 TalkBack 동작(accessibilityActions)으로 이용약관 → 처리방침을 연다, 여는 곳은 onOpen 주입(기본 밖 브라우저 → L4-2 useInAppWeb 병합 뒤 교체). 주소 없으면 일반 글자.

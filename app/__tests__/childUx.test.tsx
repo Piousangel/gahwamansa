@@ -800,6 +800,23 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     expect(screen.queryAllByRole('link')).toHaveLength(0); // 누를 수 없는데 링크처럼 보이지 않게
   });
 
+  test('리뷰 M2 구조: 링크가 있으면 줄 높이 48(누름 영역), 문장은 한 번 읽고 TalkBack 동작으로 각 링크를 연다, 여는 곳은 주입(앱 안 웹 화면 자리)', () => {
+    const {LegalText, LEGAL_LINK_LINE_H} = require('../src/ui/LegalText');
+    const {legalLinks} = require('../src/shared/legalLinks');
+    const onOpen = jest.fn();
+    const text = '연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요';
+    render(<LegalText testID="legal" text={text} links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} onOpen={onOpen} />);
+    const line = screen.getByTestId('legal');
+    expect(LEGAL_LINK_LINE_H).toBeGreaterThanOrEqual(48);
+    expect(StyleSheet.flatten(line.props.style).lineHeight).toBe(LEGAL_LINK_LINE_H);
+    expect(line.props.accessibilityLabel).toBe(text);
+    expect(line.props.accessibilityActions.map((x: {label: string}) => x.label)).toEqual(['이용약관', '개인정보 처리방침']); // 순서: 문장 → 이용약관 → 처리방침
+    fireEvent(line, 'accessibilityAction', {nativeEvent: {actionName: 'link-0'}});
+    expect(onOpen).toHaveBeenCalledWith('https://t.example', '이용약관');
+    fireEvent.press(screen.getAllByRole('link')[1]);
+    expect(onOpen).toHaveBeenLastCalledWith('https://p.example', '개인정보 처리방침');
+  });
+
   test('C4 호칭 겹침 시트도 같은 격자(막힌 이름 비활성)', async () => {
     render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));

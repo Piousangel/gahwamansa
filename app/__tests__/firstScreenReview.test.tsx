@@ -148,13 +148,19 @@ test('자녀 쪽(설정 → 앱 정보)에도 AI 고지', async () => {
   await waitFor(() => screen.getByText('앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요'));
 });
 
-test('감사 M4 재현: 높이 640(700 미만) 100% 는 기능 줄을 반쯤 잘리게 두지 않고 통째로 숨긴다(소개 한 줄은 유지)', () => {
+test('리뷰 M1·디자인 9절 M4: 높이가 모자라면 기능 줄을 셋째 → 둘째 → 첫째 순으로 줄 단위로 숨긴다(소개 한 줄은 유지)', async () => {
   mockHeight = 640;
   render(<AppRoot api={createFakeApi()} />);
+  const lines = () => [0, 1, 2].filter(i => screen.queryByTestId(`intro-icon-circle-${i}`, {includeHiddenElements: true})).length;
+  expect(lines()).toBe(3);
+  const fire = async (h: number) =>
+    act(async () => {
+      fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+    });
+  await fire(0); // 사진 영역이 남지 않음 = 기능 줄이 질문 밑으로 밀림
+  expect(lines()).toBe(2);
+  expect(screen.queryByTestId('intro-icon-circle-2', {includeHiddenElements: true})).toBeNull(); // 셋째 줄부터
+  await fire(40); // 들어감 → 더 숨기지 않음
+  expect(lines()).toBe(2);
   expect(screen.getByText('하루 한 장, 우리 집 앨범')).toBeTruthy();
-  expect(screen.queryByTestId('intro-icon-circle-1', {includeHiddenElements: true})).toBeNull();
-  mockHeight = 780;
-  screen.unmount();
-  render(<AppRoot api={createFakeApi()} />);
-  expect(screen.getByTestId('intro-icon-circle-1', {includeHiddenElements: true})).toBeTruthy(); // 높이가 되면 기능 줄 그대로
 });

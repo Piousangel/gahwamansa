@@ -26,6 +26,8 @@ type Props = {
   initialFocusRef?: React.RefObject<unknown>;
   /** 본문 스크롤 연결점(감사 M3): 펼친 확인 패널처럼 새로 나타난 영역을 보이게 한다. top·bottom 은 본문 안 y */
   scrollRef?: React.Ref<ScreenScroll>;
+  /** 본문 보이는 높이(스크롤 창, dp)를 알린다 — 첫 화면 안에 꼭 들어가야 할 묶음 높이를 정할 때(감사 H3 P1) */
+  onViewport?: (h: number) => void;
 };
 
 export type ScreenScroll = {
@@ -35,7 +37,7 @@ export type ScreenScroll = {
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, initialFocusRef, scrollRef}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, initialFocusRef, scrollRef, onViewport}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -133,7 +135,10 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={64}
             onScroll={onScroll}
-            onLayout={e => measure({view: e.nativeEvent.layout.height})}
+            onLayout={e => {
+              measure({view: e.nativeEvent.layout.height});
+              onViewport?.(Math.round(e.nativeEvent.layout.height));
+            }}
             onContentSizeChange={(_w, h) => measure({content: h})}
             contentContainerStyle={[styles.bodyPad, dense ? styles.dense : null, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}

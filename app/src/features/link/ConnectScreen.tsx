@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {LayoutChangeEvent, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Icon} from '../../ui/assets/icons';
 import {focusLater} from '../../ui/screenTitle';
 import {CommonActions} from '@react-navigation/native';
@@ -7,7 +8,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
 import {Screen} from '../../ui/Screen';
-import {color, radius} from '../../ui/tokens';
+import {color, layout, radius} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CodeEntry} from './CodeEntry';
@@ -93,6 +94,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
   //   디자인 판정(감사 문서 9절 H3, 11-18): 1단계 제목 28→22 → 2단계 약관 줄을 본문 끝으로 → 3단계 링크 줄도 키패드 아래로(하단 고정 없음)
   //   → 4단계 키 64 + 본문 스크롤, 묶음 간격 16→12. 링크를 이전 바 줄(제목 위)로 올리던 옛 단계는 폐기(감사 M5).
+  //   리뷰 H1(11-19): 2단계부터 본문 스크롤을 켜고 '첫 화면 묶음'(제목·안심 줄·키패드 영역)의 높이를 잰 본문 창 높이로 고정한다.
+  //   그래서 본문 끝으로 옮긴 약관·링크는 첫 화면 밖(아래로 스크롤)에 놓이고, 키패드 영역은 창 높이를 거의 다 쓴다(9절 예산 592).
   //   기대: S25 0단계, 360×740 1단계, 360×640 3단계(키 12개 전부), 320×640 4단계(1~9 보임). 안심 줄·칸 아래 줄은 숨기지 않는다(U4)
   //   글자 150% 이상·화면 높이 700 미만은 측정 전에도 2단계부터(넘치는 첫 화면을 그리지 않게)
   const {height: winH, fontScale} = useWindowDimensions();
@@ -103,18 +106,42 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const legalInBody = level >= 2;
   const noDock = level >= 3;
   const overflow = level >= 4;
-  const onArea = (e: LayoutChangeEvent) => {
-    if (overflow) {
-      return;
-    }
-    const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
-    if (k !== null) {
-      setKeyH(k);
-    } else if (level < 3) {
+  const scroll = level >= 2;
+  const [viewH, setViewH] = useState(0); // 본문 창 높이(Screen onViewport)
+  const insets = useSafeAreaInsets();
+  // 첫 화면 묶음 높이: 창 − 위 여백. 하단 고정이 없으면 스크롤 창이 화면 맨 아래(제스처 막대 밑)까지 가므로 아래 안전 영역도 뺀다(에뮬레이터 실측 11-19)
+  const firstH = Math.max(0, viewH - FIRST_PAD - (noDock ? insets.bottom + FIRST_PAD : 0));
+  // 실측(11-19): 글자 키('모두 / 지움')가 두 줄이 되면 그 줄이 키 높이보다 커진다 → 계산식만 믿지 않고 키패드 실제 높이도 영역과 비교한다
+  const areaH = useRef(0);
+  const padH = useRef(0);
+  const escalate = () => {
+    if (level < 3) {
       setLevel(l => l + 1);
     } else {
       setKeyH(KEY_MIN);
       setLevel(4);
+    }
+  };
+  const checkReal = () => {
+    if (!overflow && areaH.current > 0 && padH.current > areaH.current + 1) {
+      escalate();
+    }
+  };
+  const onKeypad = (e: LayoutChangeEvent) => {
+    padH.current = e.nativeEvent.layout.height;
+    checkReal();
+  };
+  const onArea = (e: LayoutChangeEvent) => {
+    if (overflow || (scroll && viewH === 0)) {
+      return; // 2단계부터는 창 높이를 안 뒤에 잰다(묶음 높이가 정해진 뒤)
+    }
+    areaH.current = e.nativeEvent.layout.height;
+    const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
+    if (k !== null) {
+      setKeyH(k);
+      checkReal();
+    } else {
+      escalate();
     }
   };
 
@@ -181,9 +208,10 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   return (
     <Screen
       key="entry"
-      fill={!overflow}
-      scrollEnabled={overflow}
+      fill={!scroll}
+      scrollEnabled={scroll}
       dense={overflow}
+      onViewport={setViewH}
       top={<BackBar onBack={back} />}
       bottom={
         noDock ? undefined : (
@@ -193,16 +221,21 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
           </>
         )
       }>
-      <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
-        {TITLE}
-      </Text20>
-      {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
-      {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4). 모자라면 뒤 단계(제목 줄임·링크 위로·스크롤)로 */}
-      <Text20 testID="connect-safe">{copy.safe.money}</Text20>
-      <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
-        {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
-        <View style={overflow ? null : styles.pinned}>
-          <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
+      {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
+      <View
+        testID="connect-first"
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {height: firstH} : null, !scroll ? styles.fillFirst : null]}>
+        <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
+          {TITLE}
+        </Text20>
+        {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
+        {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4) */}
+        <Text20 testID="connect-safe">{copy.safe.money}</Text20>
+        <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
+          {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(4단계에서는 보통 배치) */}
+          <View testID="keypad-pinned" style={overflow ? null : styles.pinned} onLayout={onKeypad}>
+            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
+          </View>
         </View>
       </View>
       {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
@@ -248,9 +281,14 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
 const TITLE = copy.connect.title.replace('써 주세요', '써\u00A0주세요');
 // 연결 중 이전(리뷰 M1): 화면을 바꾸지 않고 하드웨어 뒤로도 삼킨다
 const noop = () => {};
+// 본문 위 여백(layout.bodyPadding.top). 첫 화면 묶음 = 창 높이 − 이 여백
+const FIRST_PAD = layout.bodyPadding.top;
 
 const styles = StyleSheet.create({
   area: {flex: 1, minHeight: 0, overflow: 'hidden'},
+  first: {gap: 16},
+  firstDense: {gap: 12},
+  fillFirst: {flex: 1, minHeight: 0},
   pinned: {position: 'absolute', top: 0, left: 0, right: 0},
   links: {flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 24},
   title: {color: color.inkTitle},
