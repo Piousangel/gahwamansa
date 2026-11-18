@@ -1,0 +1,38 @@
+# 어르신 첫 연결(fake API): 첫 화면 → 부모님 → 번호 화면 → 123456 → 확인(P1c) → 연결 → 동의 화면
+# fake 코드 규칙: 123456 성공(docs/team/dev-app-notes.md 6a). 문구는 app/src/copy/copy.ko.json 기준 —
+# 문구가 바뀌면 이 파일도 바꾼다(문구 대신 testID 로 찾는 규칙은 e2e/README.md).
+appId: com.bumojasik.app.staging
+name: 어르신 첫 연결(번호 → 동의)
+tags:
+  - parent
+  - smoke
+---
+- launchApp:
+    clearState: true
+# 막 켠 에뮬레이터의 시스템 ANR 창("… isn't responding")이 앱을 덮으면 기다리기로 닫는다(앱 결함 아님)
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 30000
+- takeScreenshot: 01-first
+- tapOn: '부모님 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '가족에게 받은.*'
+    timeout: 10000
+- takeScreenshot: 02-connect
+- tapOn: '1'
+- tapOn: '2'
+- tapOn: '3'
+- tapOn: '4'
+- tapOn: '5'
+- tapOn: '6'
+- extendedWaitUntil:
+    visible: '이 번호로 연결하기'
+    timeout: 10000
+- takeScreenshot: 03-confirm
+- tapOn: '이 번호로 연결하기'
+- extendedWaitUntil:
+    visible: '고른 답을.*나눠요'
+    timeout: 10000
+- takeScreenshot: 04-consent
