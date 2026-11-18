@@ -83,6 +83,7 @@ app(조립: AppRoot·Stack·Provider)  →  features/<기능>  →  api · ui ·
 ## 10. 금지 패턴
 - features에서 `app/` import, 기능 간 import, 화면 간 직접 import
 - `realApi` 밖 supabase-js 호출, `data as X` 단언만으로 서버 응답 신뢰(검증기 통과 필수)
+  - 예외 1곳: `app/src/dev`(staging·local 개발자 메뉴, production 번들에서 Metro 가 제외)는 auth 세션 조작(getSession·setSession·signInWithPassword·_removeSession)만 직접 한다. 데이터 조회·쓰기는 Api 로.
 - 계약 타입을 클라이언트마다 손으로 따로 쓰기, 서버 문자열 상수를 앱에 오타 가능한 리터럴로 복제
 - 문구 원본·사본 동시 수기 편집, 화면 안 하드코딩 문구·헥스 색
 - 마이그레이션 번호 예약·건너뛰기, 이미 원격에 간 마이그레이션 수정(새 마이그레이션으로 고친다)

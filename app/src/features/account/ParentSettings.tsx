@@ -13,6 +13,8 @@ import {SettingsGroup, SettingsRow} from '../../ui/SettingsRow';
 import {color, radius, size} from '../../ui/tokens';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
+import {APP_VERSION} from '../../lib/appInfo';
+import {useAppVersionTaps} from '../../dev/devGate';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -26,6 +28,7 @@ export function ParentSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const versionTap = useAppVersionTaps();
 
   const run = async (action: () => Promise<void>, next: boolean, done: string | null) => {
     if (busy) {
@@ -110,8 +113,14 @@ export function ParentSettings() {
       <SfxRow />
       <SettingsGroup title={t.group_app} />
       {/* 앱 정보: AI 그림 고지(화면은 아직 없음 — 보조 글로) */}
-      {/* TODO(dev-menu 합칠 때): 버전 줄은 SettingsRow 로 이 아래에, devGate 허용(staging·개발)일 때만 onPress=versionTap, production 은 누르지 않는 글 행 */}
       <SettingsRow testID="settings-row-app" title={t.app_info} sub={t.ai_notice} />
+      {/* 버전 줄: staging·개발 빌드에서만 7번 탭 → 개발자 메뉴(devGate). production 은 누르지 않는 글 행(화면 읽기에 '사용 안 함'으로 읽히지 않게) */}
+      <SettingsRow
+        testID={versionTap ? 'version-tap' : 'version-line'}
+        title={t.version.split('{버전}').join(APP_VERSION)}
+        onPress={versionTap}
+        noChevron
+      />
       {linked ? (
         <SettingsRow
           testID="settings-row-delete"
