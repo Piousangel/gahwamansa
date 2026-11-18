@@ -54,3 +54,34 @@
 - 잠금 화면 PRIVATE는 사용자가 '민감한 알림 내용 숨기기'를 켰을 때만 효과가 있다(Android 기본은 모두 표시). 주석에 그렇게 적혀 있어 기대치가 맞다.
 - 채널 중요도·공개 범위는 만든 뒤 앱이 바꿀 수 없다 → 바꾸려면 새 채널 id + 서버 `push_channel` 동시 변경(dev-app-notes에 기록됨).
 - Firebase 전 real 빌드에서도 N1이 떠서 OS 권한을 받지만 알림은 오지 않는다. 비공개 테스트 공지에 한 줄 넣으면 혼란이 적다.
+
+---
+
+## 재확인 — 3e46fe3 (L1~L7 + 끄기 API)
+
+### 실행한 검증
+- 고정 커밋 3e46fe3을 `git archive`로 스크래치에 풀고(worktree HEAD는 이미 6d64152로 진행돼 있고, 다른 줄이 그 worktree에서 `npm ci`를 돌리던 중이라 끝난 뒤) worktree의 `node_modules`를 연결해 1회 실행.
+  - `npx tsc --noEmit` → **exit 0**
+  - `npx jest --testPathIgnorePatterns __integration__ --maxWorkers=2 --cacheDirectory=<스크래치>` → **Test Suites 89/90, Tests 902/903 — 1 실패**: `__tests__/deleteAccount.test.tsx` "리뷰 M4 후속: 계정 삭제도 지우기 전에 계정 가명값을 받아 두고…"(단독 실행 시 같은 파일 2건 실패, 재현됨). 기대 `['tag','delete']`, 실제 `['tag','tag','tag','delete','tag']`.
+  - 원인: L4로 `ready = role==='child' || role==='parent'`가 되어 연결 전·후 어르신 모두 `sync → retryPending → accountTag()`를, L5로 알림 대기 처리도 `accountTag()`를 부른다. 테스트의 `accountTag` 감시가 PushHost 호출까지 센다. 동작상 해는 없다(기기 안 해시 읽기, 서버·로그로 나가지 않음 — accountTagGuard 통과). 다만 **커밋 자체의 단위 테스트가 빨간 상태**다.
+
+### 지적별 상태
+| 지적 | 상태 | 근거 |
+|---|---|---|
+| M1 앱 안 끄기 | **API 해소, 화면은 남음** | `runtime.setPushReceive(on)`·`pushReceive()`. 끄면 N1 기억 'off'. P13 어르신 토글 화면은 아직 없음(AP-06), 자녀 C7은 ux-audit `FamilyPushRow`(321041f) |
+| L1 N1 blocked | 해소 | blocked·unknown이면 닫지 않고 `system_off` 문구 + '휴대폰 설정 열기'. denied는 사용자 선택대로 닫음. 재노출 규칙 주석화 |
+| L2 자녀 동의 | 해소 | 시작 동기화는 토큰 등록만. `childNotifyOptIn`은 '알림 켜기'를 눌렀을 때만(12 이하 설정 열기 경로 포함). 누른 것 = 동의(DECISIONS 11-18, 456a857) |
+| L3 재활성 금지 | 해소(잔여 낮음) | `retryPending`이 서버 값을 먼저 보고 'off'는 재시도하지 않음. **잔여**: 'yes_pending'인데 서버가 false면(다른 기기에서 끈 경우와 "아직 안 켬"을 구분할 수 없음) 다시 켠다. 어르신은 기기 하나가 보통이라 수용 |
+| L4 연결 전 등록 | 해소 | 권한이 있으면 역할만 정해지면 등록(no_profile 정상) |
+| L5 계정 넘어감 | 해소 | 받을 때 계정 태그 ≠ 처리 때 태그면 버림(자녀), 10분 TTL. 어르신은 태그 비교 없이 TTL만 — 데이터가 kind뿐이라 수용 |
+| L6 진행 중 화면 | 해소 | Connect·Consent·PushPermission·DeleteAccount·DeleteDone에서는 reset하지 않고 대기 |
+| L7 테스트 | 해소 | 로그인 전 버림·자녀 기기 어르신 종류 버림·blocked N1·계정 바뀜 버림·TTL 단언 추가(pushClient.test +145줄) |
+
+### ux-audit(자녀 레인)와의 충돌·중복
+- `git merge-tree 3e46fe3 ux-audit` → **`app/src/app/PushHost.tsx` 내용 충돌**(+ appInfo.ts·dev-app-notes.md). 두 쪽 모두 같은 sync 블록에서 `childPermissionGranted`를 지웠고 의도는 같다(자녀 시작 = 토큰 등록만). 3e46fe3 쪽(역할 무관 등록·retryPending은 어르신만)을 남기면 ux-audit 쪽 변경은 흡수된다.
+- 중복: ux-audit `FamilyPushRow`는 `api.setPushEnabled` + `registerToken`을 직접 부른다. 3e46fe3의 `setPushReceive`와 하는 일이 같다(자녀는 N1 기억 키를 쓰지 않아 결과 차이 없음). 병합 때 FamilyPushRow를 `setPushReceive`로 바꾸면 경로가 하나로 준다(선택). C3 '알림 켜기'와 C7 토글이 둘 다 true를 보내도 멱등(0037 처음 시각 유지)이라 해는 없다.
+
+### 재확인 판정
+- **조건부 — 테스트 1건 빨강을 고친 뒤 합치기 가능.** `deleteAccount.test.tsx`의 순서 단언을 PushHost 호출을 빼고 세도록(예: DeleteAccount 경로 호출만 기록, 또는 PushHost에 `source`/역할 주입으로 sync 생략) 고치고 jest 전체 초록을 확인할 것.
+- 보안·동의 측면 새 지적 없음(높음·중간 0). 원 M1은 API 준비 완료, P13 토글 화면(AP-06)은 Firebase 공급자 병합 전 조건으로 유지.
+- 병합 순서: 3e46fe3 → ux-audit(PushHost 충돌은 3e46fe3 쪽으로 해결, FamilyPushRow는 setPushReceive로 정리 권장).
