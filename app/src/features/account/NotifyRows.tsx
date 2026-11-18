@@ -104,16 +104,19 @@ export function NotifyRows({api}: {api: Api}) {
         </Text20>
       ) : null}
       {/* 켜 둔 상태에서 휴대폰 채널이 꺼진 종류만 행 아래에 안내(꺼 둔 상태면 어차피 오지 않으므로 생략) */}
-      {s.enabled
-        ? offKinds.map(k => (
-            <View key={k.ch} testID={`notify-off-${k.ch}`} style={styles.off}>
-              <Text20 accessible accessibilityLabel={`${k.title}, ${p.system_off.row}`} style={styles.sub}>
-                {`${k.title} · ${p.system_off.row}`}
-              </Text20>
-              <SmallButton label={p.system_off.open_parent} onPress={() => openNotifySettings(k.ch as AndroidPushChannel)} />
-            </View>
-          ))
-        : null}
+      {s.enabled && offKinds.length > 0 ? (
+        // 새 키 push.system_off.channel_row(main 11-18): '{채널} 알림은 휴대폰 설정에서 꺼져 있어요', 여럿이면 ', '로 잇는다.
+        // 버튼은 한 종류면 그 채널 화면, 둘 이상이면 앱 알림 화면
+        <View testID="notify-off" style={styles.off}>
+          <Text20 accessibilityLiveRegion="polite" style={styles.sub}>
+            {p.system_off.channel_row.split('{채널}').join(offKinds.map(k => k.title).join(', '))}
+          </Text20>
+          <SmallButton
+            label={p.system_off.open_parent}
+            onPress={() => (offKinds.length === 1 ? openNotifySettings(offKinds[0].ch as AndroidPushChannel) : openNotifySettings())}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -59,17 +59,28 @@ test('앱 알림이 휴대폰에서 꺼짐: 스위치 대신 "알림 / 휴대폰
   expect(open).toHaveBeenCalledWith();
 });
 
-test('응원 채널만 휴대폰에서 꺼짐: 행 아래 그 종류 안내 + 그 채널 설정 열기', async () => {
+test('응원 채널만 휴대폰에서 꺼짐: 행 아래 "응원 알림은 휴대폰 설정에서 꺼져 있어요" + 그 채널 설정 열기', async () => {
   jest.spyOn(notify, 'channelEnabled').mockImplementation(async ch => ch !== 'cheer');
   const open = jest.spyOn(notify, 'openNotifySettings').mockResolvedValue();
   await settings();
-  const off = await waitFor(() => screen.getByTestId('notify-off-cheer'));
-  expect(screen.queryByTestId('notify-off-daily')).toBeNull();
-  expect(within(off).getByLabelText('응원, 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
+  const off = await waitFor(() => screen.getByTestId('notify-off'));
+  expect(within(off).getByText('응원 알림은 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
   await act(async () => {
     fireEvent.press(within(off).getByRole('button', {name: '휴대폰 설정 열기'}));
   });
   expect(open).toHaveBeenCalledWith('cheer');
+});
+
+test('두 채널 다 꺼짐: ", "로 이은 한 줄 + 앱 알림 화면 열기', async () => {
+  jest.spyOn(notify, 'channelEnabled').mockResolvedValue(false);
+  const open = jest.spyOn(notify, 'openNotifySettings').mockResolvedValue();
+  await settings();
+  const off = await waitFor(() => screen.getByTestId('notify-off'));
+  expect(within(off).getByText('오늘의 사진, 응원 알림은 휴대폰 설정에서 꺼져 있어요')).toBeTruthy();
+  await act(async () => {
+    fireEvent.press(within(off).getByRole('button', {name: '휴대폰 설정 열기'}));
+  });
+  expect(open).toHaveBeenCalledWith();
 });
 
 test('연결 전 기기(설정 값 없음)는 알림 행이 없다', async () => {
