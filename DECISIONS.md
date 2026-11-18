@@ -439,3 +439,4 @@
 - 팀 추천 채택(위임): Apple 로그인 제공(4.8), iPhone 전용(iPad 끔, 빌드 2 설정 때), 아이폰 초대는 번호 직접 입력(Install Referrer 없음)
 - 사용자 결정 대기: Apple Developer 가입(연 99달러, 개인/법인), 앱 이름 선점 시기, APNs 키 발급, iOS 빌드·TestFlight용 iPhone
 - 빌드 2 주의(감사 문서): iOS 알림 켜기는 앱이 먼저 권한을 요청해야 설정 항목이 생김, 스와이프 뒤로 가기가 useBackAction 우회, SceneDelegate openURLContexts
+- (디자인 N5, 11-19) 자녀 로그인 Apple 버튼 자리 확정: iPhone에서만(`Platform.OS === 'ios'`) 구글 아래 '카카오 → 구글 → Apple' 순서, 세 버튼 같은 높이 56·폭·반경 12·글자 크기. Apple은 검정 스타일·문구 'Apple로 로그인'·공식 로고 자산. 320×640·글자 200%는 하단 고정 없이 한 스크롤로 세 버튼이 첫 화면. 시안 `docs/design/v3/screens/child/C0_login_ios.dc.html`(canvas 등록), 규정 `design-system/assets/third-party-login/GUIDELINES.md` Apple 절. 앱 구현은 B2
