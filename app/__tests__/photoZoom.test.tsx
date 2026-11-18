@@ -100,16 +100,16 @@ test('첫 안내: 한 번 열기 전까지 보이고, 열면 다시 안 보인�
 });
 
 test('첫 안내: 열지 않으면 P4 세 번째 방문까지만', async () => {
-  await prefs.countPhotoVisit();
-  await prefs.countPhotoVisit(); // 이미 두 번 방문
+  await prefs.countPhotoVisit('2026-11-01');
+  await prefs.countPhotoVisit('2026-11-02'); // 이미 두 번(다른 날) 방문
   await toPhoto();
   await loadPhoto();
   await waitFor(() => screen.getByText('사진을 누르면 크게 보여요')); // 세 번째
   expect(await prefs.photoVisits()).toBe(3);
   const p2 = createPrefs(memoryStore());
-  await p2.countPhotoVisit();
-  await p2.countPhotoVisit();
-  await p2.countPhotoVisit();
+  await p2.countPhotoVisit('2026-11-01');
+  await p2.countPhotoVisit('2026-11-02');
+  await p2.countPhotoVisit('2026-11-03');
   setPrefsForTest(p2);
   screen.unmount();
   await toPhoto();
@@ -118,8 +118,9 @@ test('첫 안내: 열지 않으면 P4 세 번째 방문까지만', async () => {
   expect(screen.queryByText('사진을 누르면 크게 보여요')).toBeNull(); // 네 번째
 });
 
-test('보기 전용(B2) P4 에서도 같은 크게 보기', async () => {
+test('보기 전용(B2) P4 에서도 같은 크게 보기, 계측·방문 수는 0(리드 결정, 리뷰 M2·L3)', async () => {
   const api = createFakeApi({linked: true, consented: true, realImage: true, completedSteps: ['photo', 'question', 'hangul']});
+  const log = jest.spyOn(api, 'logEvent');
   render(<AppRoot api={api} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   await press('오늘 코스 다시 보기');
@@ -127,4 +128,39 @@ test('보기 전용(B2) P4 에서도 같은 크게 보기', async () => {
   await loadPhoto();
   await press(OPEN);
   await waitFor(() => screen.getByTestId('zoom-view'));
+  expect(log.mock.calls.filter(c => c[0] === 'photo_zoom_opened')).toHaveLength(0);
+  expect(await prefs.photoVisits()).toBe(0);
+});
+
+test('방문 수는 같은 날 다시 들어와도 한 번만', async () => {
+  await toPhoto();
+  await waitFor(async () => expect(await prefs.photoVisits()).toBe(1));
+  await press('오늘 코스로 돌아가기');
+  await waitFor(() => screen.getByTestId('date-line'));
+  await pressCourseNext();
+  await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
+  await new Promise<void>(r => setTimeout(() => r(), 30));
+  expect(await prefs.photoVisits()).toBe(1);
+});
+
+test('포커스: 열면 사진 라벨로, 닫으면 폴라로이드로. 읽기 순서는 사진 → 닫기', async () => {
+  await toPhoto();
+  await loadPhoto();
+  const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
+  const focusedIds = () => send.mock.calls.map(c => (c[0] as unknown as {props?: {testID?: string}})?.props?.testID);
+  await press(OPEN);
+  await waitFor(() => expect(focusedIds()).toContain('zoom-photo'), {timeout: 2000});
+  // 사진이 닫기보다 앞(트리 순서 = 읽기 순서)
+  const view = screen.getByTestId('zoom-view');
+  const order: string[] = [];
+  const walk = (n: {props?: {testID?: string; accessibilityLabel?: string}; children?: unknown[]}) => {
+    if (n.props?.testID === 'zoom-photo') order.push('photo');
+    if (n.props?.accessibilityLabel === '닫기') order.push('close');
+    (n.children ?? []).forEach(ch => typeof ch === 'object' && ch && walk(ch as never));
+  };
+  walk(view as never);
+  expect(order.filter((x, i) => x !== order[i - 1])).toEqual(['photo', 'close']);
+  send.mockClear();
+  await press('닫기');
+  await waitFor(() => expect(focusedIds()).toContain('photo-polaroid'), {timeout: 2000});
 });

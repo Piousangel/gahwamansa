@@ -44,7 +44,7 @@ test('화면이 떠 있는 동안 새 링크: 번호를 바꾸고 바로 확인,
   }
 });
 
-test('연결 중에 새 링크가 와도 바꾸지 않는다', async () => {
+test('연결 중에 새 링크가 와도 바꾸지 않고, 연결되면 버린다', async () => {
   const api = createFakeApi({parentTitle: '엄마', childFamily: true});
   let release: () => void = () => {};
   jest.spyOn(api, 'redeemInviteCode').mockImplementation(() => new Promise(r => (release = () => r({ok: true, family_id: 'f', profile_id: 'p'}))));
@@ -63,6 +63,7 @@ test('연결 중에 새 링크가 와도 바꾸지 않는다', async () => {
   expect(result.current.state.code).toBe('123456');
   await act(async () => release());
   expect(result.current.state.kind).toBe('ok');
+  expect(result.current.state.code).toBe('123456'); // 연결됐으면 보류한 링크는 버린다
 });
 
 test('형식이 다른 새 링크(6자리 숫자 아님)는 무시', () => {

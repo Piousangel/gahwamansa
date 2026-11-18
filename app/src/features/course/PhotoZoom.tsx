@@ -42,17 +42,7 @@ export function PhotoZoom({visible, uri, caption, onClose}: {visible: boolean; u
   const label = p.zoom_a11y.split('{caption}').join(caption);
   return (
     <Modal testID="zoom-modal" visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
-      <Animated.View testID="zoom-view" style={[styles.root, {opacity, paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.lg}]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={p.zoom_close}
-          onPress={onClose}
-          hitSlop={8}
-          style={({pressed}) => [styles.close, pressed ? styles.pressed : null]}>
-          <Text20 size={22} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.closeText}>
-            {p.zoom_close}
-          </Text20>
-        </Pressable>
+      <Animated.View testID="zoom-view" style={[styles.root, {opacity, paddingTop: insets.top + space.sm + size.touchMin, paddingBottom: insets.bottom + space.lg}]}>
         {/* 사진: 누르는 요소가 아니다(다시 눌러 닫기 없음). 읽기는 한 덩어리 라벨 */}
         <Animated.View testID="zoom-photo" ref={titleRef} accessible accessibilityRole="image" accessibilityLabel={label} style={[styles.photoWrap, {transform: [{scale}]}]}>
           <Image source={{uri}} style={styles.photo} resizeMode="contain" />
@@ -63,6 +53,17 @@ export function PhotoZoom({visible, uri, caption, onClose}: {visible: boolean; u
             {appCopy.ai_photo_label}
           </Text20>
         </Animated.View>
+        {/* 읽기 순서: 사진 → 닫기(시안 11절 2c). 닫기는 뒤에 두고 위 왼쪽에 절대 위치(리뷰 L1) */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={p.zoom_close}
+          onPress={onClose}
+          hitSlop={8}
+          style={({pressed}) => [styles.close, {top: insets.top + space.sm}, pressed ? styles.pressed : null]}>
+          <Text20 size={22} weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.closeText}>
+            {p.zoom_close}
+          </Text20>
+        </Pressable>
       </Animated.View>
     </Modal>
   );
@@ -70,7 +71,7 @@ export function PhotoZoom({visible, uri, caption, onClose}: {visible: boolean; u
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: color.paper, paddingHorizontal: space.screenX},
-  close: {alignSelf: 'flex-start', minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', paddingHorizontal: space.sm},
+  close: {position: 'absolute', left: space.screenX, minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', paddingHorizontal: space.sm},
   pressed: {opacity: 0.6},
   closeText: {color: color.ink},
   photoWrap: {flex: 1, justifyContent: 'center', gap: space.sm},

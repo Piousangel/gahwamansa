@@ -16,6 +16,7 @@ import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {useFinishStep} from './useFinishStep';
 import {PhotoZoom} from './PhotoZoom';
 import {track} from './track';
+import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
 import {focusLater} from '../../ui/screenTitle';
 
@@ -31,18 +32,20 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
   const {api, content} = useSession();
-  // B1 첫 안내(DZ-06): 크게 보기를 한 번 열 때까지, 열지 않아도 P4 세 번째 방문까지만. 시간으로 사라지지 않는다
+  // B1 첫 안내(DZ-06): 크게 보기를 한 번 열 때까지, 열지 않아도 P4 세 번째 방문까지만. 시간으로 사라지지 않는다.
+  // 방문은 진행 모드 첫 진입만 센다(같은 날 다시 들어온 것·보기 전용은 세지 않음, 리뷰 L3)
   useEffect(() => {
     let alive = true;
-    Promise.all([prefs().zoomOpened(), prefs().countPhotoVisit()]).then(([opened, visits]) => {
+    const visits = review ? prefs().photoVisits() : prefs().countPhotoVisit(kstYmd());
+    Promise.all([prefs().zoomOpened(), visits]).then(([opened, n]) => {
       if (alive) {
-        setHint(!opened && visits <= 3);
+        setHint(!opened && n <= 3);
       }
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [review]);
   // 사진 높이는 화면 높이의 28% 이하(QA B4: 작은 화면에서 회상 질문이 더 보이게). 틀 폭 = 사진 높이 x 272/236 + 안쪽 14x2
   const {height: winH} = useWindowDimensions();
   const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236) + 28);
@@ -56,7 +59,9 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     setZoom(true);
     setHint(false);
     prefs().markZoomOpened();
-    track(api, 'photo_zoom_opened', {day_index: content?.day_index ?? 0}); // 0034
+    if (!review) {
+      track(api, 'photo_zoom_opened', {day_index: content?.day_index ?? 0}); // 0034. 보기 전용은 계측 0(리드 결정, 리뷰 M2)
+    }
   };
   const closeZoom = () => {
     setZoom(false);

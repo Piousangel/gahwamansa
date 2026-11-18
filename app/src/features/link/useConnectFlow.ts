@@ -32,9 +32,10 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
   );
 
   // 밖에서 들어온 번호: 링크마다(경로·번호가 바뀔 때마다) 경로 이벤트 + 채움 이벤트 한 번. 확인은 바로(손 입력이 아니므로 기다리지 않음)
+  // 연결 중에 온 링크는 보류: 연결이 실패로 끝나면(kind 가 바뀌어 effect 가 다시 돌면) 그때 적용하고 이벤트도 그때 보낸다(리뷰 M1). 연결됨이면 버린다
   const appliedKey = useRef<string | null>(null);
-  const kindRef = useRef(state.kind);
-  kindRef.current = state.kind;
+  const kind = state.kind;
+  const initialCode = useRef(prefill?.code); // 리듀서를 이 번호로 시작했다(처음 적용은 이벤트만)
   const prefillCode = prefill?.code;
   const prefillSource = prefill?.source;
   useEffect(() => {
@@ -45,19 +46,19 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
     if (appliedKey.current === key) {
       return;
     }
-    const first = appliedKey.current === null;
-    if (!first && (kindRef.current === 'redeeming' || kindRef.current === 'ok')) {
-      return; // 연결 중·연결됨: 새 링크로 바꾸지 않는다
+    const fresh = !(appliedKey.current === null && prefillCode === initialCode.current);
+    if (fresh && (kind === 'redeeming' || kind === 'ok')) {
+      return; // 연결 중(보류)·연결됨: 아직 바꾸지 않는다
     }
     appliedKey.current = key;
-    if (!first) {
+    if (fresh) {
       seq.current += 1; // 진행 중 확인은 버린다
       prefilledChecked.current = false; // 새 번호도 기다리지 않고 바로 확인
       dispatch({type: 'prefill', code: prefillCode});
     }
     track(api, prefillSource === 'app_link' ? 'link_opened' : 'referrer_found', prefillSource === 'app_link' ? {source: prefillSource} : undefined);
     track(api, 'code_prefilled', {source: prefillSource});
-  }, [api, prefillCode, prefillSource]);
+  }, [api, prefillCode, prefillSource, kind]);
 
   const peek = useCallback(
     async (code: string) => {
