@@ -688,6 +688,10 @@
     },
     "contact": "문의하기",
     "contact_sub": "메일로 보내요",
+    "_status_contact_request": "임시(앱 L2, 법률 Q4 2026-11-19): contact_request_* 3개는 라이터 확인 전. 제목은 법률 답변 원문",
+    "contact_request_subject": "[가화만사성] 내 정보 보기·지우기 요청",
+    "contact_request_hint": "내 정보를 보거나 고치거나 지우고 싶을 때도 메일로 알려 주세요",
+    "contact_pending": "문의 메일 주소를 준비하고 있어요",
     "version": "버전 {버전}",
     "link_offline": "인터넷이 연결되면 볼 수 있어요"
   },
