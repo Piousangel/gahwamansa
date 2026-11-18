@@ -13,9 +13,10 @@ export const TOAST_MS = 6000;
 
 type ToastAction = {label: string; onPress: () => void};
 /** 오류는 "다시 하기"가 필수(리뷰 M3: 자동으로 안 사라지니 닫을 길이 있어야 함). 누르면 토스트를 닫고 부른다 */
+// durationMs: 이 토스트만 표시 시간을 따로(예: 응원 '취소' 가능 시간과 같게, UX U10). 없으면 TOAST_MS
 export type ToastOptions =
-  | {text: string; kind?: 'info'; action?: ToastAction}
-  | {text: string; kind: 'error'; action: ToastAction};
+  | {text: string; kind?: 'info'; action?: ToastAction; durationMs?: number}
+  | {text: string; kind: 'error'; action: ToastAction; durationMs?: number};
 type ToastApi = {show: (o: ToastOptions) => void; hide: () => void};
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -93,7 +94,7 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
     if (toast.kind === 'error' && toast.action) {
       return;
     }
-    const t = setTimeout(hide, TOAST_MS);
+    const t = setTimeout(hide, toast.durationMs ?? TOAST_MS);
     return () => clearTimeout(t);
     // 토스트가 바뀔 때만(id) 다시 시작한다
     // eslint-disable-next-line react-hooks/exhaustive-deps

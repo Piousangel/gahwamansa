@@ -144,6 +144,9 @@ export function ChildLogin() {
           <>
             <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
             <SocialButton kind="google" label={t.google} disabled={busy} onPress={() => social('google')} />
+            {/* 시안 C0: 소셜 버튼 아래 약관 한 줄(11-1 #1b). 연령 안내는 시안에 없어 약관 줄 아래 한 줄(디자인 확인 항목) */}
+            <Text20 testID="legal-child" style={styles.legal}>{copy.legal.agree_child}</Text20>
+            <Text20 testID="age-notice" style={styles.legal}>{copy.legal.age_notice}</Text20>
             <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
           </>
         }>
@@ -204,5 +207,6 @@ export function ChildLogin() {
 }
 
 const styles = StyleSheet.create({
+  legal: {textAlign: 'center', color: color.ink, marginVertical: 4},
   input: {minHeight: 64, fontSize: 22, borderBottomWidth: 4, borderColor: color.action, borderRadius: radius.input, backgroundColor: color.paperSoft, paddingHorizontal: 12, marginVertical: 12, color: color.ink},
 });

@@ -1,15 +1,22 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {AppState, PixelRatio} from 'react-native';
 import {copy, withTitle} from '../../copy/copy';
 import {useToast} from '../../ui/Toast';
+import {useScreenReader} from '../../ui/a11y';
 import {CheerKey, ChildParent, isOffline} from '../types';
 import type {Api} from '../types';
 import {CheerResultRow, summarizeCheer} from './cheerLogic';
 
 const c = copy.child.cheer;
-export const CHEER_UNDO_MS = 3000;
 
-// 응원 보내기(리뷰 M3 + UX U10): 문장을 누르면 확인 없이 "{호칭}께 보냈어요 · 취소" 토스트를 띄우고 3초 뒤 실제로 보낸다.
-// 3초 안에 '취소'를 누르면 보내지 않는다. 화면을 떠나도 기다리던 응원은 그때 바로 보낸다(사용자가 고른 것을 잃지 않게).
+// 리드 결정(11-18 U10): '취소'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 화면 읽기가 켜졌거나 글자 200% 이상이면 6초
+export function cheerUndoMs(screenReader: boolean, fontScale: number): number {
+  return screenReader || fontScale >= 2 ? 6000 : 4000;
+}
+
+// 응원 보내기(리뷰 M3 + UX U10): 문장을 누르면 확인 없이 "{호칭}께 보냈어요 · 취소" 토스트를 띄우고, 토스트가 떠 있는 동안
+// 기다렸다가 실제로 보낸다(그동안 send_cheer 를 부르지 않아 취소한 응원은 하루 한도에 안 셈). '취소'를 누르면 보내지 않는다.
+// 화면을 떠나거나 앱이 백그라운드로 가면 기다리던 응원은 그때 바로 보낸다(사용자가 고른 것을 잃지 않게).
 // 보낼 때는 연결된 어르신 한 분씩, 분마다 결과를 따로 받는다(한 분 실패가 다른 분 성공을 지우지 않음).
 // "다시 하기"는 이번에 이미 받은 분을 건너뛴다(하루 한도를 중복으로 쓰지 않게). 기다리는 중·보내는 중에는 다시 누르기 무시.
 export function useSendCheer(api: Api, onReload: () => void) {
@@ -17,6 +24,7 @@ export function useSendCheer(api: Api, onReload: () => void) {
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
   const pending = useRef<{timer: ReturnType<typeof setTimeout>; fire: () => void} | null>(null);
+  const screenReader = useScreenReader();
 
   const deliver = useCallback(
     async (key: CheerKey, targets: ChildParent[], already: CheerResultRow[] = [], announced = false) => {
@@ -69,9 +77,11 @@ export function useSendCheer(api: Api, onReload: () => void) {
         setSending(false);
         deliver(key, targets, [], true);
       };
-      pending.current = {timer: setTimeout(fire, CHEER_UNDO_MS), fire};
+      const ms = cheerUndoMs(screenReader, PixelRatio.getFontScale());
+      pending.current = {timer: setTimeout(fire, ms), fire};
       setSending(true);
       show({
+        durationMs: ms,
         text: withTitle(c.sent, targets.map(p => p.title).join('·')),
         action: {
           label: c.undo,
@@ -80,14 +90,24 @@ export function useSendCheer(api: Api, onReload: () => void) {
               clearTimeout(pending.current.timer);
               pending.current = null;
               setSending(false);
-              show({text: c.cancelled});
+              show({text: c.undone});
             }
           },
         },
       });
     },
-    [deliver, show],
+    [deliver, show, screenReader],
   );
+
+  // 앱이 백그라운드로 가면 기다리던 응원을 바로 보낸다(리드 결정 11-18)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', st => {
+      if (st !== 'active') {
+        pending.current?.fire();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // 화면을 떠나면 기다리던 응원은 바로 보낸다
   useEffect(

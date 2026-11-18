@@ -4,7 +4,7 @@ import {Text20} from '../../ui/Text20';
 import {SmallButton} from '../../ui/SmallButton';
 import {BottomSheet} from '../../ui/BottomSheet';
 import {useToast} from '../../ui/Toast';
-import {copy, withTitle} from '../../copy/copy';
+import {copy} from '../../copy/copy';
 import {color, radius, size} from '../../ui/tokens';
 import {isOffline, PARENT_TITLES} from '../types';
 import type {Api} from '../types';

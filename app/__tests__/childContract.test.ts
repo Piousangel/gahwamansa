@@ -76,8 +76,8 @@ test('realApi: child_summary 의 parent_id·title·connected·starter 를 읽고
   );
   const s = await createRealApi(sbWith(rpc).sb, social).fetchChildSummary();
   expect(s.parents).toEqual([
-    {parentId: 'p1', title: '엄마', shared: true, connected: false, latest: {prompt: null, choiceLabel: '봄', answeredDate: '2026-11-15'}, starter: '봄나물 뭐 좋아하세요?'},
-    {parentId: '', title: '부모님', shared: false, connected: true, latest: null, starter: null}, // L2: shared:false 면 답 안 씀, L3: id 없으면 ''
+    {parentId: 'p1', title: '엄마', shared: true, connected: false, latest: {prompt: null, choiceLabel: '봄', answeredDate: '2026-11-15'}, starter: '봄나물 뭐 좋아하세요?', connectedDate: null},
+    {parentId: '', title: '부모님', shared: false, connected: true, latest: null, starter: null, connectedDate: null}, // L2: shared:false 면 답 안 씀, L3: id 없으면 ''
   ]);
 });
 
