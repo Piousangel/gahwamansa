@@ -92,3 +92,10 @@ select q.day_index, q.option_a, q.option_b, count(*) as answers,
  where not f.is_review
  group by q.day_index, q.option_a, q.option_b
  order by q.day_index;
+
+-- ⑧ 카카오 연결 끊기(0042·0044): 대기·포기 건수와 최근 7일 실행 기록(설정 오류 회차 포함). 포기가 1건이라도 있으면 운영자 확인(dev-server-notes §14)
+select (select count(*) from public.kakao_unlink_queue where gave_up_at is null) as waiting,
+       (select count(*) from public.kakao_unlink_queue where gave_up_at is not null) as gave_up,
+       (select min(enqueued_at) from public.kakao_unlink_queue where gave_up_at is null) as oldest_waiting,
+       (select count(*) from public.push_runs where kind = 'kakao_unlink' and note = 'config_error' and run_at > now() - interval '7 days') as config_error_runs_7d,
+       (select coalesce(sum(sent), 0) from public.push_runs where kind = 'kakao_unlink' and run_at > now() - interval '7 days') as unlinked_7d;
