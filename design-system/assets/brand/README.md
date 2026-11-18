@@ -45,4 +45,4 @@
 
 ## 앱 반영 시(이번 작업 범위 밖)
 - 기존 `drawable/ic_launcher_foreground.xml`(벡터)과 `splash_symbol.xml`을 PNG 레이어로 교체(그림자 블러는 VectorDrawable로 옮길 수 없음). `styles.xml`의 `windowSplashScreenAnimatedIcon`은 `@drawable/splash_icon`으로
-- `app/src/ui/assets/brandSymbol.tsx`의 XML을 `symbol-flat.svg` 내용으로 교체. 해+폴라로이드 `symbol-sun-polaroid.svg`는 은퇴
+- (반영 완료, 2026-11-17 결정) 앱 안 심볼은 전부 **3D 상세판**(`png/symbol-3d-*` 40dp @2x·@3x, 스플래시 164dp). 평면판은 앱 화면에 쓰지 않음(위 표). 해+폴라로이드 `symbol-sun-polaroid.svg`는 은퇴
