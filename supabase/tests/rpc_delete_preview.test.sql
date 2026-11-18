@@ -29,7 +29,7 @@ select is((public.delete_scope_preview()) ->> 'scope', 'parent', '어르신은 p
 select pg_temp.act_as('a2000000-0000-0000-0000-0000000000c1', false);
 select is((public.delete_scope_preview()) ->> 'scope', 'family', '마지막 자녀는 family(가족 전체)');
 select pg_temp.act_as('a9000000-0000-0000-0000-0000000000a1', true);
-select throws_like($$ select public.delete_scope_preview() $$, '%no_profile%', '프로필이 없으면 거부');
+select is((public.delete_scope_preview()) ->> 'scope', 'none', '프로필이 없으면 none(0049 P20, 이전 no_profile)');
 reset role;
 -- 이 테스트가 만든 가족만 센다(로컬 DB에 통합 테스트 데이터가 남아 있어도 결과가 같게)
 select is((select count(*)::int from public.profiles

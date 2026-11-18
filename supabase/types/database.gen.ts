@@ -358,14 +358,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "consent_version": string | null,"consented_at": string | null,"content_seq": number | null,"content_seq_date": string | null,"course_start_date": string,"created_at": string,"display_name": string | null,"family_id": string,"id": string,"parent_title": string | null,"push_consented_at": string | null,"push_enabled": boolean,"role": string,"user_id": string | null
+                    "consent_version": string | null,"consented_at": string | null,"content_seq": number | null,"content_seq_date": string | null,"course_start_date": string,"created_at": string,"family_id": string,"id": string,"parent_title": string | null,"push_consented_at": string | null,"push_enabled": boolean,"role": string,"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id": string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role": string,"user_id"?: string | null
+                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"family_id": string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role": string,"user_id"?: string | null
                   }
                   Update: {
-                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"display_name"?: string | null,"family_id"?: string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role"?: string,"user_id"?: string | null
+                    "consent_version"?: string | null,"consented_at"?: string | null,"content_seq"?: number | null,"content_seq_date"?: string | null,"course_start_date"?: string,"created_at"?: string,"family_id"?: string,"id"?: string,"parent_title"?: string | null,"push_consented_at"?: string | null,"push_enabled"?: boolean,"role"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -458,6 +458,34 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"terms_agreements": {
+                  Row: {
+                    "agreed_at": string,"id": number,"privacy_version": string,"role": string,"terms_version": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agreed_at"?: string,"id"?: number,"privacy_version": string,"role": string,"terms_version": string,"user_id": string
+                  }
+                  Update: {
+                    "agreed_at"?: string,"id"?: number,"privacy_version"?: string,"role"?: string,"terms_version"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"terms_versions": {
+                  Row: {
+                    "kind": string,"published_at": string,"version": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "kind": string,"published_at"?: string,"version": string
+                  }
+                  Update: {
+                    "kind"?: string,"published_at"?: string,"version"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -467,6 +495,20 @@ isOneToOne: false
                   }
                   ComputedFields: never
                   Relationships: [
+                    
+                  ]
+                },"kakao_unlink_gave_up": {
+                  Row: {
+                    "attempts": number,"enqueued_at": string,"gave_up_at": string | null,"id": number,"last_http": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "attempts"?: number | null,"enqueued_at"?: string | null,"gave_up_at"?: string | null,"id"?: number | null,"last_http"?: number | null
+                         }
+                        Update: {
+                           "attempts"?: number | null,"enqueued_at"?: string | null,"gave_up_at"?: string | null,"id"?: number | null,"last_http"?: number | null
+                         }
+                        Relationships: [
                     
                   ]
                 }
@@ -490,8 +532,20 @@ isOneToOne: false
 "admin_delete_answers":
 { Args: { "p_operator": string,"p_profile": string,"p_reason": string }; Returns: Json
                            },
+"admin_delete_user":
+{ Args: { "p_operator": string,"p_reason": string,"p_user": string }; Returns: Json
+                           },
+"admin_kakao_unlink_resolve":
+{ Args: { "p_id": number,"p_operator": string,"p_reason": string }; Returns: Json
+                           },
+"admin_kakao_unlink_retry":
+{ Args: { "p_id": number,"p_operator": string,"p_reason": string }; Returns: Json
+                           },
 "admin_publish_content":
 { Args: { "p_days": Json,"p_operator": string,"p_reason": string }; Returns: Json
+                           },
+"admin_publish_terms_version":
+{ Args: { "p_kind": string,"p_operator": string,"p_reason": string,"p_version": string }; Returns: Json
                            },
 "admin_retire_content":
 { Args: { "p_day": number,"p_operator": string,"p_reason": string }; Returns: Json
@@ -586,6 +640,9 @@ isOneToOne: false
 "my_role":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"my_terms_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "my_week_stamps":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -643,8 +700,14 @@ isOneToOne: false
 "push_render":
 { Args: { "p_fallback"?: string,"p_template": string,"p_vars": Json }; Returns: string
                            },
+"push_text_clean":
+{ Args: { "p": string }; Returns: boolean
+                           },
 "record_session_step":
 { Args: { "p_duration"?: number,"p_step": string }; Returns: Json
+                           },
+"record_terms_agreement":
+{ Args: { "p_privacy_version": string,"p_terms_version": string }; Returns: Json
                            },
 "redeem_invite_code":
 { Args: { "p_code": string }; Returns: Json
@@ -672,6 +735,9 @@ isOneToOne: false
                            },
 "unregister_push_token":
 { Args: { "p_token": string }; Returns: Json
+                           },
+"user_delete_core":
+{ Args: { "p_user": string }; Returns: Json
                            },
 "week_stamps_for":
 { Args: { "p_parent": string,"p_today": string }; Returns: Json
