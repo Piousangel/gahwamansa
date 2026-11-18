@@ -17,6 +17,8 @@ type Props = {
   justDone?: boolean;
   /** 방금 '지금 할 차례'가 된 행: 테이프가 왼쪽 8에서 미끄러져 240ms(160ms 지연) */
   tapeIn?: boolean;
+  /** 누를 수 있는 행의 ref(돌아왔을 때 포커스 복귀, D-10) */
+  pressRef?: React.Ref<React.ComponentRef<typeof Pressable>>;
 };
 
 // 명세 §7 + 시안 P3 v4 리듬 규칙(D).
@@ -25,7 +27,7 @@ type Props = {
 // - 제목·상태는 바닥선 정렬, 좁으면 상태가 다음 줄 왼쪽으로. 줄바꿈된 행은 가운데(alignContent center).
 // now: 선택 면 + 4px action + 제목 위 "지금 할 차례"(뒤에 마스킹테이프, 글자는 기울이지 않음). wait 상태 글자는 보통 굵기 inkSub.
 // 동작 줄이기면 크기·이동 없이 200ms 페이드만. 진동·소리 없음(단계마다 울리면 남발).
-export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn}: Props) {
+export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn, pressRef}: Props) {
   const label = `${title}, ${statusLabel}`;
   const tape = useTapeSize();
   if (status === 'now') {
@@ -70,6 +72,7 @@ export function StepRow({title, status, statusLabel, onPress, justDone, tapeIn}:
   if (onPress) {
     return (
       <Pressable
+        ref={pressRef}
         accessibilityRole="button"
         accessibilityLabel={label}
         onPress={onPress}

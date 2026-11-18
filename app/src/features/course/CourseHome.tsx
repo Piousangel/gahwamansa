@@ -19,6 +19,7 @@ import {CheerDialog} from './CheerDialog';
 import {kstDateLine, kstWeekdayIndex, stampsFromDates} from './stamps';
 import {useWeekStamps} from './useWeekStamps';
 import {useAfterTransition} from './useAfterTransition';
+import {useReturnFocus} from './useReturnFocus';
 import {Stitch} from '../../ui/assets/album';
 import {TextLink} from '../link/TextLink';
 import {useBootLoading} from '../../app/splash';
@@ -50,6 +51,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const prevDone = useRef<StepName[] | null>(null);
   const afterTransition = useAfterTransition(navigation);
   const firstGreeting = useFirstGreeting(linked === true);
+  // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
+  const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -90,17 +93,27 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const all = done.length === 3;
   const current = STEPS.find(s => !done.includes(s.step));
   // 다 마친 뒤 '오늘 다시 보기'(ease-and-joy B, 동결 P4_zoom_review·P5_P6_review): 세 단계 보기 전용, 기록 호출 0
-  const review = (route: StepRoute) => navigation.navigate(route, {review: true});
+  const review = (route: StepRoute, from: string) => {
+    mark(from);
+    navigation.navigate(route, {review: true});
+  };
   const dock = current ? (
     <>
       <Stitch width="100%" />
-      <BigButton label={c.step[current.step]} onPress={() => navigation.navigate(current.route)} />
+      <BigButton
+        label={c.step[current.step]}
+        buttonRef={bind('dock')}
+        onPress={() => {
+          mark('dock');
+          navigation.navigate(current.route);
+        }}
+      />
     </>
   ) : all ? (
     <>
       <Stitch width="100%" />
       {/* 디자인 W0 L3: 보조 64 + 사진 아이콘 32(명세 §1) */}
-      <BigButton variant="secondary" icon="icon-photo" label={c.review_link} onPress={() => review('PhotoStep')} />
+      <BigButton variant="secondary" icon="icon-photo" label={c.review_link} buttonRef={bind('dock')} onPress={() => review('PhotoStep', 'dock')} />
     </>
   ) : undefined;
   const todayIdx = kstWeekdayIndex();
@@ -121,21 +134,42 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         <View style={styles.titleRow}>
           <Header testID="date-line" label={kstDateLine()} nodeRef={titleRef} />
           {/* 설정은 연결 여부와 상관없이 늘 보인다(QA B3, 시안 P3) */}
-          <TextLink label={copy.settings.open} icon="icon-settings" touch={64} onPress={() => navigation.navigate('Settings')} />
+          <TextLink
+            label={copy.settings.open}
+            icon="icon-settings"
+            touch={64}
+            pressRef={bind('settings')}
+            onPress={() => {
+              mark('settings');
+              navigation.navigate('Settings');
+            }}
+          />
         </View>
         {/* P15 진입(시안: 날짜 줄 아래 글자 링크). 미연결 기기는 서버 기록이 없으므로 숨김 */}
         {preview ? null : (
           <View style={styles.historyLink}>
-            <TextLink label={c.history_link} touch={64} onPress={() => navigation.navigate('History')} />
+            <TextLink
+              label={c.history_link}
+              touch={64}
+              pressRef={bind('history')}
+              onPress={() => {
+                mark('history');
+                navigation.navigate('History');
+              }}
+            />
           </View>
         )}
         {preview ? (
           // 미연결 띠(시안 P3 v4 미연결 보드·talkback "날짜 다음"): 띠 전체가 하나의 버튼. 번호 화면을 위에 쌓아 '이전'이면 여기로(QA B2)
           <Pressable
             testID="course-strip"
+            ref={bind('strip')}
             accessibilityRole="button"
             accessibilityLabel={c.disconnected_banner}
-            onPress={() => navigation.push('Connect', {from: 'course'})}
+            onPress={() => {
+              mark('strip');
+              navigation.push('Connect', {from: 'course'});
+            }}
             style={({pressed}) => [styles.strip, pressed ? styles.stripPressed : null]}>
             <Text20 weight="bold" style={styles.stripText}>{c.disconnected_banner}</Text20>
             <View style={styles.stripLink}>
@@ -148,7 +182,15 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           <View testID="course-declined" style={styles.declined}>
             <Text20 weight="bold" style={styles.declinedText}>{c.declined_banner}</Text20>
             {/* 디자인 W0 ③: 설정을 '다시 보여 주기' 확인이 펼쳐진 채로 연다(한 번 누르면 끝) */}
-            <TextLink label={c.declined_link} touch={size.touchMin} onPress={() => navigation.navigate('Settings', {expand: 'resume'})} />
+            <TextLink
+              label={c.declined_link}
+              touch={size.touchMin}
+              pressRef={bind('declined')}
+              onPress={() => {
+                mark('declined');
+                navigation.navigate('Settings', {expand: 'resume'});
+              }}
+            />
           </View>
         ) : null}
       </View>
@@ -174,7 +216,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           const status = done.includes(s.step) ? 'done' : current?.step === s.step ? 'now' : 'wait';
           const statusLabel = status === 'done' ? c.status.done : status === 'now' ? c.status.now : c.status.later;
           // 다 마친 뒤 했어요 행 '›' → 그 단계 보기 전용
-          const onPress = all ? () => review(s.route) : undefined;
+          const onPress = all ? () => review(s.route, `row-${s.step}`) : undefined;
           return (
             <StepRow
               key={s.step}
@@ -182,6 +224,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
               status={status}
               statusLabel={statusLabel}
               onPress={onPress}
+              pressRef={all ? bind(`row-${s.step}`) : undefined}
               justDone={!all && justDone === s.step}
               tapeIn={!!justDone && status === 'now'}
             />

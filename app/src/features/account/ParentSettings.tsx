@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
-import {focusLater} from '../../ui/screenTitle';
+import {FOCUS_DELAY_MS, focusLater} from '../../ui/screenTitle';
 import {prefs} from '../../lib/prefs';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -35,7 +35,8 @@ export function ParentSettings() {
     if (!fromDeclined) {
       return undefined;
     }
-    return focusLater(() => resumeTitleRef.current);
+    // Screen 이 마운트 300ms 뒤 화면 제목에 포커스하므로 그 뒤에 확인 제목으로(마지막 포커스가 이긴다, AP-11). 화면 읽기는 포커스한 요소로 스크롤한다
+    return focusLater(() => resumeTitleRef.current, FOCUS_DELAY_MS + 200);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const {busy, isBusy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
