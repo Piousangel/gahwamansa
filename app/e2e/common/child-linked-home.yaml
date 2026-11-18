@@ -11,6 +11,10 @@ appId: com.bumojasik.app.staging
     env:
       TARGET: '앱 정보'
 - tapOn: '앱 정보'
+# C7 앱 정보 화면이 뜰 때까지(설정 화면의 '버전 1.0.0' 보조 글을 버전 줄로 잘못 누르지 않게, 2026-11-19 재검증에서 발견)
+- extendedWaitUntil:
+    visible: 'AI가 만든 것'
+    timeout: 10000
 - runFlow:
     file: dev-menu.yaml
     env:

@@ -72,8 +72,13 @@ REDUCE_MOTION=1 app/e2e/run.sh audit/audit-points.yaml   # 애니메이션 0(동
 5. 문구 키가 바뀌면 그 문구로 찾는 flow 도 같은 커밋에서 고친다(copy.ko.json 원본 기준).
 
 ## 안정화 기록(2026-11-18, F6 불안정 · 감사 하네스 후속)
-- **원인 1 — 시스템 ANR 창**: 첫 화면은 떴는데 "Process system isn't responding" 창이 위를 덮어 60초 대기가 실패(맥이 빌드·jest 로 바쁠 때 에뮬레이터가 느려져 뜸). → `run.sh` 가 실행 동안 `settings global hide_error_dialogs=1`(앞 값 보관, 끝나면 되돌림) + 공용 `common/wait-first-screen.yaml`(10초씩 최대 120초, 사이마다 `dismiss-system-dialogs`).
-- **원인 2 — 빠른 스크롤이 행을 누름**: `scrollUntilVisible` 이 화면 가운데서 빠르게 끌어 어르신 설정의 '연결된 가족' 행이 눌려 P16 으로 넘어감(그래서 버전 줄을 못 찾음). → `common/edge-scroll.yaml`(왼쪽 3% 가장자리에서 600ms 로 끌기), 개발자 메뉴 진입(`dev-menu.yaml`)도 같은 방식 + 7번 탭은 `waitToSettleTimeoutMs: 200`.
+- **원인 1 — 시스템 ANR 창**: 첫 화면은 떴는데 "Process system isn't responding" 창이 위를 덮어 60초 대기가 실패(맥이 빌드·jest 로 바쁠 때 에뮬레이터가 느려져 뜸). → `run.sh` 가 실행 동안 `settings global hide_error_dialogs=1`(앞 값을 읽은 경우에만 바꾸고 끝나면 되돌림, `HIDE_DIALOGS=0` 으로 끔) + 공용 `common/wait-first-screen.yaml`(10초씩 최대 120초, 사이마다 **시스템 창만** 닫기). 숨김은 모든 앱의 창을 숨기므로 `run.sh` 가 실행 전 `logcat -c`, 끝나면 `ANR in <앱>`·`am_anr`·`FATAL EXCEPTION … Process: <앱>` 이 있으면 **흐름이 통과해도 실패**(`out/<시각>/anr-crash.txt`·`logcat.txt`).
+- **같은 기기에 두 실행을 겹치지 않는다**(되돌릴 값이 엉킴, 리뷰 L2). 강제 종료(kill -9)면 되돌리지 못한다 — `-read-only` 로 켠 에뮬레이터는 끌 때 원래대로.
+- **원인 2 — 빠른 스크롤이 행을 누름**: `scrollUntilVisible` 이 화면 가운데서 빠르게 끌어 어르신 설정의 '연결된 가족' 행이 눌려 P16 으로 넘어감(그래서 버전 줄을 못 찾음). → `common/edge-scroll.yaml`(왼쪽 9% 에서 600ms 로 천천히 끌기 — 효과는 느린 속도. 9% 는 제스처 내비 뒤로 영역 밖), 개발자 메뉴 진입(`dev-menu.yaml`)도 같은 방식 + 7번 탭은 `waitToSettleTimeoutMs: 200`. gahwa_parent 는 **제스처 내비**(`navbar.gestural`)이고 이 기기에서 검증했다.
 - **원인 3 — Metro 연결**: 에뮬레이터가 바쁠 때 앱이 Metro 를 못 찾아 "Unable to load script"(자산 번들 없음). 맥이 한가할 때 다시 돌리면 통과 — E2E 는 빌드·jest 와 동시에 돌리지 않는다. gahwa_parent 는 `adb reverse` 대신 10.0.2.2:8081 로 붙는 것으로 보여(감사 §8) `METRO_PORT` 는 8081 그대로 둔다.
-- F1: 자판이 이미 닫힌 상태의 `hideKeyboard` 가 '뒤로'가 되어 앱을 벗어난 1회 → 버튼이 가려졌을 때만 닫기. F9: 2차 확인 제목 '정말 모두 지울까요?'(Maestro 정규식은 글 전체 일치).
-- 결과: emulator-5554(gahwa_parent, read-only) `ANDROID_SERIAL` 지정, F6 단독 통과 2회, 5개 전체 2회 중 1회 F1 만 실패(위 원인) → 수정 뒤 **5/5 통과(6분 30초)**.
+- F1: 자판이 이미 닫힌 상태의 `hideKeyboard` 가 '뒤로'가 되어 앱을 벗어난 1회 → 버튼이 가려졌을 때만 닫기(자판이 열려 있어도 버튼이 보이면 `f1-p6` 캡처에 자판이 남을 수 있음, 리뷰 L5). F9: 2차 확인 '정말 모두 지울까요?' 를 `extendedWaitUntil` 로 기다린 뒤 누름(필수 단계 — 사라지면 실패, 리뷰 M2).
+- `wait-first-screen` 은 앱이 크래시해 런처로 나가도 120초를 다 쓴 뒤 실패한다(거짓 통과는 아님, 리뷰 L4).
+- **원인 4 — env.generated.ts 덮어쓰기(빌드)**: `assembleStagingDebug` 그래프에 `:app:preProductionDebugBuild` 가 늘 끼어 나중 쪽이 `env.generated.ts` 를 production 값으로 덮음 → Metro 앱이 production 처럼 동작해 개발자 메뉴가 막힘(F5·F6 '개발자 메뉴' 실패, 그전 통과는 순서 운). → `app/build.gradle` generate 가 요청 작업 이름의 변형만 씀.
+- **원인 5 — 설정→앱 정보 전환 경쟁**: 전환 중 설정 행의 '버전 1.0.0' 보조 글을 버전 줄로 눌러 탭이 사라짐 → 앱 정보('AI가 만든 것')가 뜬 뒤 탭.
+- 결과(2026-11-19, emulator-5554 gahwa_parent 제스처 내비, read-only, 맥 한가할 때): `HIDE_DIALOGS=0` **5/5 통과**(6분 29초, 앱 ANR·크래시 0) → 숨김 없이도 통과 = 120초 대기 루프와 부하 분리로 충분, 숨김은 안전망. 기본(숨김) **5/5 통과**(6분 41초, ANR·크래시 0).
+- 참고: 맥이 바쁠 때(11-18 22:20) F1 실패 순간 logcat 에 **우리 앱 ANR**(P6 자판 'a' 입력 KeyEvent 5초 대기)이 있었다. 부하 없는 위 두 실행에서는 재현 안 됨 — 어르신 레인 전달.

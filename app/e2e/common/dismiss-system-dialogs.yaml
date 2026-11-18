@@ -1,10 +1,10 @@
 # 에뮬레이터 시스템 창 정리(앱 밖). 없으면 아무것도 하지 않는다.
-# 창 제목 예: "Process system isn't responding"(따옴표 종류와 무관하게 responding 으로 찾는다)
+# 시스템 프로세스 창만 닫는다("Process system isn't responding"). 우리 앱의 ANR 창은 닫지 않고, run.sh 가 logcat 으로 실패 처리한다(리뷰 M1)
 appId: com.bumojasik.app.staging
 ---
 - repeat:
     times: 3
     while:
-      visible: ".*responding.*"
+      visible: ".*Process system.*responding.*"
     commands:
       - tapOn: 'Wait'

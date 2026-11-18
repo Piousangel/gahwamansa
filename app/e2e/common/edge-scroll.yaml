@@ -1,4 +1,4 @@
-# 공용: ${TARGET}(정규식)이 보일 때까지 왼쪽 가장자리(3%, 누를 것이 없는 자리)에서 천천히 끌어 올린다(최대 8번).
+# 공용: ${TARGET}(정규식)이 보일 때까지 왼쪽 9%(제스처 내비 뒤로 영역 밖)에서 천천히(600ms) 끌어 올린다 — 효과는 느린 속도(행이 전체 폭이라 '누를 것 없는 자리'는 아님, 리뷰 M3)(최대 8번).
 # scrollUntilVisible 은 화면 가운데에서 빠르게 스와이프해 그 자리 행을 누른 것으로 잡힐 수 있다(2026-11-18 F6 안정화).
 appId: com.bumojasik.app.staging
 ---
@@ -8,7 +8,7 @@ appId: com.bumojasik.app.staging
       notVisible: ${TARGET}
     commands:
       - swipe:
-          start: 3%, 75%
-          end: 3%, 35%
+          start: 9%, 75%
+          end: 9%, 35%
           duration: 600
 - assertVisible: ${TARGET}
