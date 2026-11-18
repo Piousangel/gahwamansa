@@ -39,9 +39,10 @@ export function LegalText({text, links, style, testID}: {text: string; links: Le
     );
     rest = rest.slice(h.at + h.l.label.length);
   }
+  // 링크가 없으면 문자열 하나로(Text20 이 Android 읽기 라벨·어절 줄바꿈을 그대로 붙이게)
   return (
     <Text20 testID={testID} style={style}>
-      {parts}
+      {parts.length === 1 && typeof parts[0] === 'string' ? parts[0] : parts}
     </Text20>
   );
 }

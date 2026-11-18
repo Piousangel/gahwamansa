@@ -36,7 +36,9 @@ test('어르신 번호 화면: 본문 스크롤 없이 6칸·키 4줄이 남은 
   }
 });
 
-test('작은 화면: 제목 크기 → 하단 고정을 빼고 링크·약관을 키패드 아래로 → 그래도 모자라면 키 64 + 스크롤(잘리지 않음), 안심 줄은 끝까지 남는다(U4)', async () => {
+test('작은 화면(디자인 9절): 제목 22 → 약관 줄 본문 끝 → 링크도 키패드 아래(하단 고정 없음) → 키 64 + 스크롤, 안심 줄은 끝까지(U4)', async () => {
+  // 기준 기기(411×914, 글자 100%)에서 측정으로 한 단계씩(jest 모의 기본 글자 배율은 2라 처음부터 2단계가 된다)
+  jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 411, height: 914, scale: 2.6, fontScale: 1});
   await openConnect();
   expect(screen.getByTestId('connect-safe')).toBeTruthy();
   await layout(4 * 60 + 104);
@@ -44,11 +46,14 @@ test('작은 화면: 제목 크기 → 하단 고정을 빼고 링크·약관을
   const {StyleSheet} = require('react-native');
   expect(StyleSheet.flatten(screen.getByRole('header').props.style).fontSize).toBe(22);
   await layout(4 * 60 + 104);
-  expect(screen.queryByTestId('screen-dock')).toBeNull(); // 감사 H3: 하단 고정(약관 줄)이 키패드를 가리지 않게 뺀다
-  expect(screen.getByTestId('connect-links')).toBeTruthy();
-  expect(screen.getByTestId('legal-line')).toBeTruthy();
+  // 2단계: 약관 줄은 본문 끝, 링크는 아직 하단 고정
+  expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+  expect(within(screen.getByTestId('screen-dock')).getByTestId('connect-links')).toBeTruthy();
   await layout(4 * 60 + 104);
-  expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 마지막 수단
+  expect(screen.queryByTestId('screen-dock')).toBeNull(); // 3단계: 하단 고정 없음(감사 H3), 링크도 키패드 아래
+  expect(within(screen.getByTestId('screen-body')).getByTestId('connect-links')).toBeTruthy();
+  await layout(4 * 60 + 104);
+  expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 4단계: 마지막 수단
   expect(screen.getByLabelText('숫자 0')).toBeTruthy();
   expect(screen.getByTestId('connect-safe')).toBeTruthy();
 });
@@ -75,36 +80,18 @@ test('링크 두 개는 하단 영역에서 한 줄에 나란히', async () => {
   expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('row');
 });
 
-// 실기기 예산(dp, P1 v4 "다음" 없음). 위 = max(inset, 24) + 이전 바 64, 본문 = 위 4 + 제목 두 줄(28 → 68, 22 → 58) + gap 16
-// (+ 안심 줄 30 + gap 16) + 아래 8, 하단 = 위 6 + 링크 줄 64 + 약관 줄 34 + max(28, 16 + inset).
-// 2단계(감사 H3): 하단 고정 없이 링크 줄 64 + 약관 줄 34 가 본문 끝으로, 아래는 안전 여백만
-const keypadArea = (H: number, insetTop: number, insetBottom: number, lv: number) => {
-  const top = Math.max(insetTop, 24) + 64;
-  const body = 4 + (lv >= 1 ? 58 : 68) + 16 + 46 + 8 + (lv >= 2 ? 64 + 34 : 0); // 안심 줄 30 + gap 16 은 늘 있다(U4)
-  const dock = lv >= 2 ? Math.max(28, 16 + insetBottom) : 6 + 64 + 34 + Math.max(28, 16 + insetBottom);
-  return H - top - body - dock;
-};
-// 칸 68 + 칸 아래 안내 한 줄(BELOW_LINE_H) + 키 4줄
-const allFour = (area: number) => {
-  const k = keypadKeyHeight(area - BELOW_LINE_H);
-  return k !== null && 4 * k + 104 + BELOW_LINE_H <= area && k >= 64;
-};
-// 0 그대로, 1 제목 22, 2 하단 고정 없이 링크·약관을 본문 끝으로. 셋 다 안 되면 3단계(스크롤)
-const firstFit = (H: number, it: number, ib: number) => [0, 1, 2].find(lv => allFour(keypadArea(H, it, ib, lv)));
-
-test('갤럭시 S25(780dp, 상단 24·하단 48): 안심 줄을 둔 채 2단계(링크·약관 본문 끝)에서 4줄 모두 들어간다', () => {
-  expect(firstFit(780, 24, 48)).toBe(2);
+// 디자인 판정 9절 H3 예산(가용 높이, dp): 3단계(하단 고정 없음) = 상단 64 + 제목 22 한 줄 32 + 안심 2줄 60 + 간격 12×4
+// + 칸 68 + 12 + 칸 아래 34 + 키 4×64 + 3×6 = 592 → 360×640(가용 약 600)에서 키 12개 전부. 기기별 실제 단계는 측정(onLayout)이 정하고
+// S25 0·360×740 1·320×640 4단계는 에뮬레이터 감사(audit-points)로 확인한다
+test('디자인 9절 H3: 360×640 가용 600 안에 3단계 묶음(키 64) 592 가 들어간다', () => {
+  const stage3 = 64 + 32 + 60 + 12 * 4 + 68 + 12 + 34 + 4 * 64 + 3 * 6;
+  expect(stage3).toBe(592);
+  expect(stage3).toBeLessThanOrEqual(600);
+  expect(keypadKeyHeight(4 * 64 + 104)).toBe(64);
 });
 
-test('360x640dp 제스처 내비게이션(하단 16): 안심 줄 유지(U4)로 100%에서도 3단계(스크롤) — 디자인 확인 항목', () => {
-  expect(firstFit(640, 24, 16)).toBeUndefined();
-});
+const StyleSheetFlat = (st: unknown) => require('react-native').StyleSheet.flatten(st);
 
-test('360x640dp 3버튼 내비게이션(하단 48): 64 키로는 안 들어가 4단계(스크롤)로 잘리지 않게 한다', () => {
-  expect(firstFit(640, 24, 48)).toBeUndefined();
-});
-
-// 감사 2026-11-18 H3·M5·M6 재현 조건(320×640·360×640 100%, 글자 200%): 하단 고정 약관 줄이 키패드를 가리지 않고, 링크는 제목 위로 가지 않는다
 describe('감사 H3·M5: 작은 화면·큰 글자 P1', () => {
   const RN = require('react-native');
   const order = (ids: string[]) => {
@@ -120,6 +107,9 @@ describe('감사 H3·M5: 작은 화면·큰 글자 P1', () => {
       jest.spyOn(RN, 'useWindowDimensions').mockReturnValue(dims);
       try {
         await openConnect();
+        // 측정 전에도 2단계(약관 줄 본문): 하단 고정이 키패드를 가리는 첫 화면을 그리지 않는다
+        expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+        await layout(4 * 60 + 104); // 감사 재현: 키 4줄이 남은 높이에 안 들어감
         expect(screen.queryByTestId('screen-dock')).toBeNull();
         for (const d of '0123456789') {
           expect(screen.getByLabelText(`숫자 ${d}`)).toBeTruthy();
@@ -135,11 +125,12 @@ describe('감사 H3·M5: 작은 화면·큰 글자 P1', () => {
     });
   }
 
-  test('M6: 글자 키(모두 지움·지움)는 한 줄 고정 + 줄여 맞춤(최소 20)', async () => {
+  test('M6: 글자 키(모두 지움)는 어절 단위로만 줄바꿈(Android 는 음절 사이 WJ), 글자 22 이상', async () => {
+    const {keepAllChildren} = require('../src/ui/koreanText');
+    expect(keepAllChildren('모두 지움', 'android')).toBe('모\u2060두 지\u2060움');
     await openConnect();
     const k = screen.getByTestId('key-모두 지움');
-    expect(k.props.numberOfLines).toBe(1);
-    expect(k.props.adjustsFontSizeToFit).toBe(true);
-    expect(26 * k.props.minimumFontScale).toBeGreaterThanOrEqual(20);
+    expect(k.props.lineBreakStrategyIOS).toBe('hangul-word');
+    expect(StyleSheetFlat(k.props.style).fontSize).toBeGreaterThanOrEqual(22);
   });
 });

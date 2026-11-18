@@ -650,23 +650,23 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
     expect(out).toHaveBeenCalledTimes(1);
   });
 
-  test('AC-08: Android 13+ 는 시스템 복사 확인이 떠서 앱 토스트 생략(화면 읽기 1회), 12 이하는 토스트', async () => {
+  test('AC-08·감사 L2: 복사하면 토스트 대신 번호 카드 바로 위 인라인 \'복사했어요\' 띠(2초, polite) — 시스템 클립보드 미리보기와 겹치지 않음', async () => {
     const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
-    const a11y = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
     try {
-      setPlatform('android', 33);
-      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
-      a11y.mockClear();
-      await press('복사하기');
-      expect(screen.queryByTestId('toast')).toBeNull();
-      expect(a11y.mock.calls.filter(c => c[0] === '복사했어요')).toHaveLength(1);
-      screen.unmount();
-      setPlatform('android', 32);
-      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
-      await press('복사하기');
-      await waitFor(() => screen.getByTestId('toast'));
+      for (const v of [33, 32]) {
+        setPlatform('android', v);
+        render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+        await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+        await press('복사하기');
+        expect(screen.queryByTestId('toast')).toBeNull();
+        const band = screen.getByTestId('wait-copied');
+        expect(band.parent?.parent?.props.accessibilityLiveRegion ?? band.parent?.props.accessibilityLiveRegion).toBe('polite');
+        await act(async () => {
+          await new Promise<void>(r => setTimeout(() => r(), 2100));
+        });
+        expect(screen.queryByTestId('wait-copied')).toBeNull();
+        screen.unmount();
+      }
     } finally {
       setPlatform(orig.OS, orig.Version);
     }
@@ -712,5 +712,53 @@ describe('재검토 R1·R2', () => {
     const buttons = screen.getAllByRole('button', {name: '로그아웃'});
     fireEvent.press(buttons[buttons.length - 1]);
     await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-r2'));
+  });
+});
+
+describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
+  const RN = require('react-native');
+  test('M10: C1 호칭은 높이 56·2열 격자(7개), \'‹ 이전\'은 역할 선택으로', async () => {
+    const {CHOICE_H} = require('../src/ui/ChoiceGrid');
+    expect(CHOICE_H).toBe(56);
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    const group = screen.getByTestId('title-group');
+    expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row');
+    expect(within(group).getAllByRole('radio')).toHaveLength(7);
+    await press('이전 화면으로 가기');
+    await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
+  });
+
+  test('M10: C2 \'‹ 이전\'은 C1 으로, 연결 기다리기는 대기 화면 하나만 남긴다', async () => {
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    await press('번호 만들기');
+    await waitFor(() => screen.getByRole('button', {name: '이전 화면으로 가기'}));
+    await press('이전 화면으로 가기');
+    await waitFor(() => screen.getByTestId('title-group'));
+  });
+
+  test('M7: 약관 줄의 두 낱말은 주소가 있으면 링크(굵게·밑줄·읽기 역할 링크), 없으면 일반 글자', () => {
+    const {LegalText} = require('../src/ui/LegalText');
+    const {legalLinks} = require('../src/shared/legalLinks');
+    const open = jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(true);
+    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} />);
+    const links = screen.getAllByRole('link');
+    expect(links.map(l => l.props.children)).toEqual(['이용약관', '개인정보 처리방침']);
+    expect(StyleSheet.flatten(links[0].props.style)).toMatchObject({fontWeight: 'bold', textDecorationLine: 'underline'});
+    fireEvent.press(links[1]);
+    expect(open).toHaveBeenCalledWith('https://p.example');
+    screen.unmount();
+    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: null, privacy: null})} />);
+    expect(screen.queryAllByRole('link')).toHaveLength(0); // 누를 수 없는데 링크처럼 보이지 않게
+  });
+
+  test('C4 호칭 겹침 시트도 같은 격자(막힌 이름 비활성)', async () => {
+    render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));
+    await press('이름 고르기');
+    const grid = screen.getByTestId('title-dup-options');
+    expect(StyleSheet.flatten(grid.props.style).flexDirection).toBe('row');
+    expect(within(grid).getByLabelText('엄마, 이미 쓰는 이름, 사용할 수 없음').props.accessibilityState.disabled).toBe(true);
   });
 });

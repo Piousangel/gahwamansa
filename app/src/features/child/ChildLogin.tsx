@@ -13,6 +13,8 @@ import {OtpField} from './OtpField';
 import {SocialButton} from './SocialButton';
 import {TextLink} from '../link/TextLink';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {LegalText} from '../../ui/LegalText';
+import {legalLinks} from '../../shared/legalLinks';
 
 const t = copy.login;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -143,7 +145,7 @@ export function ChildLogin() {
   // 약관 줄 + 연령 줄(디자인 판정 ②: 연령은 안내라 inkSub). 선택·이메일 두 화면에 같게
   const legalLines = (
     <View>
-      <Text20 testID="legal-child" style={styles.legal}>{copy.legal.agree_child}</Text20>
+      <LegalText testID="legal-child" style={styles.legal} text={copy.legal.agree_child} links={legalLinks()} />
       <Text20 testID="age-notice" style={[styles.legal, styles.age]}>{copy.legal.age_notice}</Text20>
     </View>
   );

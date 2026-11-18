@@ -62,12 +62,12 @@ describe('C3 연결 대기', () => {
     expect(notify).toBeLessThan(text.indexOf('매일 이런 사진과 질문이 가요'));
   });
 
-  test('복사하기 → 복사했어요 토스트', async () => {
+  test('복사하기 → 번호 카드 위 \'복사했어요\' 띠(감사 L2, 토스트 아님)', async () => {
     const spy = jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
     await openWait(waitApi());
     await press('복사하기');
     expect(spy).toHaveBeenCalledWith('123456');
-    expect(within(screen.getByTestId('toast')).getByText('복사했어요')).toBeTruthy();
+    expect(within(screen.getByTestId('wait-copied')).getByText('복사했어요')).toBeTruthy();
   });
 
   test('번호 기간이 지나면 안내 상자 + 새 번호 만들기, 만들면 토스트와 "전에 보낸 번호" 안내', async () => {

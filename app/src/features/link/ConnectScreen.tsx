@@ -91,16 +91,18 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   };
 
   // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
-  //   1단계 제목 28→22 → 2단계 하단 고정을 없애고 링크 두 개·약관 줄을 키패드 아래 본문 끝으로 → 3단계 키 64 + 본문 스크롤.
-  //   감사 H3·M5(11-18): 하단 고정 약관 줄이 키패드를 가리고(320·360×640), 링크가 제목 위로 올라가던 옛 2단계(이전 바 줄)를 없앴다.
-  //   높이가 부족한 화면(글자 150% 이상 또는 화면 높이 700 미만)은 처음부터 2단계. 안심 줄은 어느 단계에서도 숨기지 않는다(UX U4)
+  //   디자인 판정(감사 문서 9절 H3, 11-18): 1단계 제목 28→22 → 2단계 약관 줄을 본문 끝으로 → 3단계 링크 줄도 키패드 아래로(하단 고정 없음)
+  //   → 4단계 키 64 + 본문 스크롤, 묶음 간격 16→12. 링크를 이전 바 줄(제목 위)로 올리던 옛 단계는 폐기(감사 M5).
+  //   기대: S25 0단계, 360×740 1단계, 360×640 3단계(키 12개 전부), 320×640 4단계(1~9 보임). 안심 줄·칸 아래 줄은 숨기지 않는다(U4)
+  //   글자 150% 이상·화면 높이 700 미만은 측정 전에도 2단계부터(넘치는 첫 화면을 그리지 않게)
   const {height: winH, fontScale} = useWindowDimensions();
   const compact = fontScale >= 1.5 || winH < 700;
   const [keyH, setKeyH] = useState<number | undefined>(undefined);
   const [level, setLevel] = useState(compact ? 2 : 0);
   const [help, setHelp] = useState(false);
-  const noDock = level >= 2;
-  const overflow = level >= 3;
+  const legalInBody = level >= 2;
+  const noDock = level >= 3;
+  const overflow = level >= 4;
   const onArea = (e: LayoutChangeEvent) => {
     if (overflow) {
       return;
@@ -108,11 +110,11 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
     if (k !== null) {
       setKeyH(k);
-    } else if (level < 2) {
+    } else if (level < 3) {
       setLevel(l => l + 1);
     } else {
       setKeyH(KEY_MIN);
-      setLevel(3);
+      setLevel(4);
     }
   };
 
@@ -181,12 +183,13 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       key="entry"
       fill={!overflow}
       scrollEnabled={overflow}
+      dense={overflow}
       top={<BackBar onBack={back} />}
       bottom={
         noDock ? undefined : (
           <>
             {links}
-            <LegalLine />
+            {legalInBody ? null : <LegalLine />}
           </>
         )
       }>
@@ -203,12 +206,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         </View>
       </View>
       {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
-      {noDock ? (
-        <>
-          {links}
-          <LegalLine />
-        </>
-      ) : null}
+      {noDock ? links : null}
+      {legalInBody ? <LegalLine /> : null}
     </Screen>
   );
 }
