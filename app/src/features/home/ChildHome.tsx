@@ -11,6 +11,8 @@ import {BigButton} from '../../ui/BigButton';
 import {BottomSheet} from '../../ui/BottomSheet';
 import {useToast} from '../../ui/Toast';
 import {useSendCheer} from './useSendCheer';
+import {findTitleDup} from './titleDup';
+import {TitleDupNotice} from './TitleDupNotice';
 import {appCopy, copy, withTitle} from '../../copy/copy';
 import {color, radius, size} from '../../ui/tokens';
 import {CHILD_CHEER_KEYS, ChildParent, ChildSummary} from '../types';
@@ -45,6 +47,7 @@ export function ChildHome() {
   const list = info ? cards(info) : [];
   const many = list.length > 1;
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
+  const dup = findTitleDup(list);
 
   const makeCode = async (p: ChildParent) => {
     if (making) {
@@ -100,6 +103,8 @@ export function ChildHome() {
                   <BigButton variant="secondary" label={h.disconnected.button} loading={making} onPress={() => makeCode(p)} />
                 </View>
               ))}
+            {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
+            {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
             {list.map(p => (
               <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />
             ))}

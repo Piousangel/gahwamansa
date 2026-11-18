@@ -113,3 +113,24 @@ test('자녀: 사전 조회가 실패하면 가장 강한 경고로 대체한다
   await press('계정 지우기');
   expect(screen.getByRole('button', {name: '계정 지우기'})).toBeDisabled();
 });
+
+test('리뷰 M4 후속: 계정 삭제도 지우기 전에 계정 가명값을 받아 두고, 지운 뒤 그 계정의 기기 기억값을 정리', async () => {
+  const accountStore = require('../src/lib/accountStore');
+  const clear = jest.spyOn(accountStore, 'clearAccountKeys');
+  const api = createFakeApi({consented: true, accountTag: 'acc-del'});
+  const order: string[] = [];
+  jest.spyOn(api, 'accountTag').mockImplementation(async () => {
+    order.push('tag');
+    return 'acc-del';
+  });
+  const del = api.deleteMyAccount.bind(api);
+  jest.spyOn(api, 'deleteMyAccount').mockImplementation(async () => {
+    order.push('delete');
+    return del();
+  });
+  await openParentDelete(api);
+  await press('모두 지우기');
+  await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-del'));
+  expect(order).toEqual(['tag', 'delete']);
+  clear.mockRestore();
+});

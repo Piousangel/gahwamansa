@@ -165,7 +165,7 @@ test('자녀 홈: child_summary 로 동의한 어르신의 최근 답을 본다(
   expect(Object.keys(sum).sort()).toEqual(['latest', 'parentTitle', 'parents', 'shared']);
   // 어르신별(0019·0021·0027): 단계·연속일·참여 여부 키가 없다
   expect(sum.parents).toHaveLength(1);
-  expect(Object.keys(sum.parents[0]).sort()).toEqual(['connected', 'latest', 'parentId', 'shared', 'starter', 'title']);
+  expect(Object.keys(sum.parents[0]).sort()).toEqual(['connected', 'connectedDate', 'latest', 'parentId', 'shared', 'starter', 'title']);
   expect(sum.parents[0]).toMatchObject({connected: true, shared: true});
   expect(sum.parents[0].parentId).toMatch(/^[0-9a-f-]{36}$/);
 });

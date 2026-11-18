@@ -4,6 +4,7 @@ import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {color, layout, space} from './tokens';
 import {ScreenTitleContext} from './screenTitle';
+import {useReportDock} from './toastPlacement';
 
 const FADE_H = 28; // §15: 본문이 넘치면 아래 28 높이 페이드로 "더 있음"
 const TITLE_FOCUS_MS = 300; // talkback-spec R2: 화면 진입 300ms 뒤 제목에 접근성 포커스
@@ -28,6 +29,9 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
   const topPad = Math.max(space.topSafeMin, insets.top + space.md);
+  // 토스트 자리(UX U2): 하단 고정 높이를 알린다(없으면 0)
+  const [dockH, setDockH] = useState(0);
+  useReportDock(bottom ? dockH : 0);
 
   // 본문이 넘치고 아직 끝까지 내리지 않았으면 아래 페이드(QA B4). 측정값은 ref, 화면은 boolean 이 바뀔 때만 다시 그린다
   const box = useRef({view: 0, content: 0, y: 0});
@@ -118,7 +122,10 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
         </View>
         {bottom ? (
           // 하단 고정 영역은 화면의 40% 이하. 글자를 키워 넘치면 영역 안에서 스크롤(본문을 덮지 않음).
-          <View testID="screen-dock" style={[styles.dock, {maxHeight: Math.floor(height * (dockMaxRatio ?? layout.dock.maxHeightRatio))}]}>
+          <View
+            testID="screen-dock"
+            onLayout={e => setDockH(Math.round(e.nativeEvent.layout.height))}
+            style={[styles.dock, {maxHeight: Math.floor(height * (dockMaxRatio ?? layout.dock.maxHeightRatio))}]}>
             <ScrollView
               bounces={false}
               keyboardShouldPersistTaps="handled"

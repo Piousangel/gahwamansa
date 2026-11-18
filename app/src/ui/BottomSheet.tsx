@@ -5,6 +5,7 @@ import {FONT_SCALE_MAX, color, font, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {useModalFocus} from './a11y';
+import {useToastModalGuard} from './toastPlacement';
 import {useFadeIn} from './useFadeIn';
 
 type SheetAction = {
@@ -43,6 +44,7 @@ type Props = {
 export function BottomSheet({visible, title, body, children, primary, secondary, onClose, closeLabel, returnFocusRef, error, testID}: Props) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
+  useToastModalGuard(visible); // 열려 있는 동안 토스트를 띄우지 않는다(UX U2)
   const insets = useSafeAreaInsets();
   const {opacity, start} = useFadeIn(visible);
 

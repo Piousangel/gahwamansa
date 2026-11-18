@@ -1,5 +1,5 @@
-import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useRef, useState} from 'react';
+import {Pressable, StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -12,7 +12,8 @@ import {color, radius} from '../../ui/tokens';
 import type {HistoryItem, ParentHistory} from '../types';
 import {formatAnswerDate} from './formatDate';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
-import {useAnswerHistory} from '../../shared/useChildData';
+import {useAnswerHistory, useApi} from '../../shared/useChildData';
+import {PaidSheet} from './PaidSheet';
 
 const c = copy.child;
 const p = c.past;
@@ -26,6 +27,9 @@ export function ChildReport() {
   const many = list.length > 1;
   const title = many ? p.title_many : withTitle(p.title, list[0]?.title ?? '부모님');
   const anyShared = list.length === 0 || list.some(x => x.shared);
+  const api = useApi();
+  const [paidOpen, setPaidOpen] = useState(false);
+  const topicRef = useRef<React.ComponentRef<typeof View>>(null);
 
   let body: React.ReactNode;
   if (error && !info) {
@@ -58,15 +62,22 @@ export function ChildReport() {
       <View testID="child-past" />
       {error && info ? <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20> : null}
       {body}
-      {/* TODO(C6): 곧 유료 시트(C6_paid_sheet)가 생기면 이 행을 눌러 연다. 지금은 표시만 */}
+      {/* AC-01: 이야기 주제 추천 행('곧 유료' 배지, AC-09)을 누르면 C6 곧 유료 시트 */}
       {info && anyShared && !error ? (
-        <View testID="child-past-topic" style={styles.topic} accessible accessibilityLabel={`${p.topic}, ${p.topic_badge}`}>
+        <Pressable
+          ref={topicRef}
+          testID="child-past-topic"
+          style={styles.topic}
+          accessibilityRole="button"
+          accessibilityLabel={`${p.topic}, ${p.topic_badge}`}
+          onPress={() => setPaidOpen(true)}>
           <Text20 weight="bold" style={styles.flex}>{p.topic}</Text20>
           <View style={styles.badge}>
             <Text20 weight="bold">{p.topic_badge}</Text20>
           </View>
-        </View>
+        </Pressable>
       ) : null}
+      <PaidSheet api={api} visible={paidOpen} onClose={() => setPaidOpen(false)} returnFocusRef={topicRef} />
     </Screen>
   );
 }

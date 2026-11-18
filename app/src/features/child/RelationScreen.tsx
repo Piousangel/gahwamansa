@@ -39,6 +39,11 @@ export function RelationScreen() {
       }
       const r = await api.setParentTitle(title);
       if (!r.ok) {
+        // 리뷰 D-L1: 0035부터 가족 기본 호칭도 다른 어르신과 겹치면 duplicate_title → 일반 오류가 아니라 호칭 중복 안내
+        if (r.reason === 'duplicate_title') {
+          setFailed(copy.relation.name_taken);
+          return;
+        }
         throw new Error('invalid_title');
       }
       // 살아 있는 가입 번호가 있으면 다시 쓴다(새로 받으면 이미 보낸 번호가 무효가 된다, 서버 0018). 호칭은 위에서 갱신됨

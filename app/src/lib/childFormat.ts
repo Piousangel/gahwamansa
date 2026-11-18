@@ -50,3 +50,9 @@ export function shareLink(base: string, code: string): string | null {
   }
   return `${base.replace(/\/+$/, '')}#${code}`;
 }
+
+// 'YYYY-MM-DD'(KST) -> 문구 틀의 {월}·{일}(앞 0 없음). 예: "{월}월 {일}일에 연결된 분이에요"
+export function monthDayText(template: string, ymd: string): string {
+  const [, m, d] = ymd.split('-').map(Number);
+  return template.split('{월}').join(String(m)).split('{일}').join(String(d));
+}

@@ -32,6 +32,8 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const {state, error, setError, check} = useChildWaitState(api);
   const [busy, setBusy] = useState(false);
   const [renewed, setRenewed] = useState(false); // 이 화면에서 지난 번호 대신 새 번호를 만들었다
+  // UX U12: 공유 창에서 돌아오면 '보냈어요 · 연결 기다리는 중', 주 버튼은 보조 '다시 보내기'로 낮춘다(새 번호를 또 만들지 않게)
+  const [sent, setSent] = useState(false);
   const {show} = useToast();
   const notify = useNotifyPermission();
   useBootLoading(!state && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
@@ -61,7 +63,13 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const send = () => {
     if (code) {
-      Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))}).catch(() => {});
+      Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))})
+        .then(r => {
+          if (r?.action !== Share.dismissedAction) {
+            setSent(true); // 공유 창에서 돌아왔다(Android 는 보냈는지 알 수 없어 돌아온 것을 기준으로)
+          }
+        })
+        .catch(() => {});
     }
   };
   const copyCode = () => {
@@ -93,7 +101,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const bottom = !state ? (
     <BigButton label={w.send} disabled onPress={() => {}} />
   ) : code ? (
-    <BigButton label={w.send} onPress={send} />
+    sent ? <BigButton variant="secondary" label={w.resend} onPress={send} /> : <BigButton label={w.send} onPress={send} />
   ) : (
     <BigButton label={expired ? w.new_code : w.make_code} loading={busy} onPress={makeCode} />
   );
@@ -107,6 +115,8 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           <View testID="wait-expired" style={styles.notice} accessibilityLiveRegion="polite">
             <Text20 size={24} weight="bold">{w.expired_title}</Text20>
             <Text20>{w.expired_body}</Text20>
+            {/* 11-9: 누르기 전에 앞 번호가 무효가 된다는 것을 알림 */}
+            <Text20 style={styles.sub}>{w.new_code_note}</Text20>
           </View>
         ) : (
           <>
@@ -132,6 +142,10 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
               <Text20>{w.until.split('{시각}').join(formatExpiry(code.expiresAt))}</Text20>
             </View>
             {renewed ? <Text20 weight="bold">{copy.code.old_invalid}</Text20> : null}
+            {/* UX U12(11-9): 공유 창에서 돌아오면 칩은 그대로, 안내 한 줄 + 주 버튼을 보조 '다시 보내기'로(보냈는지는 앱이 알 수 없어 단정하지 않음) */}
+            {sent ? (
+              <Text20 testID="wait-after-share" weight="bold" accessibilityLiveRegion="polite">{w.after_share}</Text20>
+            ) : null}
           </View>
         ) : null}
         {error ? (

@@ -18,6 +18,8 @@ export type ChildParent = {
   latest: LatestAnswer | null;
   // 고른 답에 맞춘 첫마디 한 문장(기능 회의 B3, 서버 0027 child_summary parents[].latest.starter). 없으면 null → 줄 숨김
   starter: string | null;
+  // 이 어르신이 가족에 연결된 날(KST). 서버 0041 child_summary parents[].connected_date(처음 연결된 날, 재연결해도 그대로) — 없으면 null(C4 이름 고르기 시트 날짜 줄 생략)
+  connectedDate?: string | null;
 };
 export type ChildSummary = {
   parentTitle: string; // 가족 기본 호칭(어르신이 아직 없을 때·한 명일 때 화면 제목)
@@ -120,7 +122,9 @@ export interface Api {
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
   // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
   fetchChildSummary(): Promise<ChildSummary>;
-  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title'}>; // 가족 기본 호칭(연결 전)
+  // 가족 기본 호칭(연결 전, 어르신이 아직 없어 set_parent_title_for 를 쓸 수 없을 때만). 0035부터 겹치면 duplicate_title.
+  // set_parent_title 은 폐기 예정 — 어르신이 있으면 setParentTitleFor 를 쓴다
+  setParentTitle(title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'duplicate_title'}>;
   // 어르신 한 분의 호칭: set_parent_title_for(p_parent, p_title)(0019)
   // duplicate_title(0028): 같은 가족 다른 어르신이 이미 그 호칭으로 보임
   setParentTitleFor(parentId: string, title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'invalid_target' | 'duplicate_title'}>;
@@ -130,6 +134,8 @@ export interface Api {
   sendCheer(parentId: string, key: CheerKey): Promise<SendCheerResult>;
   // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
   getLoginMethod(): Promise<LoginMethod | null>;
+  // 기기 기억값을 계정별로 나누는 가명값(auth user id 의 sha256 앞 16자, 리뷰 M4). 로그인 전이면 null
+  accountTag(): Promise<string | null>;
   // 로그아웃: 소셜 SDK 세션과 이 기기 세션을 지운다(서버 데이터는 그대로)
   signOut(): Promise<void>;
   withdrawConsent(): Promise<void>; // 어르신. 저장된 답이 지워진다

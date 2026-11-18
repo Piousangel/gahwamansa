@@ -15,6 +15,14 @@ const openWait = async (api: ReturnType<typeof createFakeApi>) => {
   await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'), {timeout: 8000});
 };
 jest.setTimeout(20000);
+// U10: 응원은 '취소' 가능 시간(토스트 표시 4초) 뒤에 보낸다. jest 의 RN 모의 PixelRatio 는 글자 배율 2를 돌려주므로 1로(그대로면 6초)
+beforeEach(() => {
+  jest.spyOn(require('react-native').PixelRatio, 'getFontScale').mockReturnValue(1);
+});
+const afterUndoWindow = () =>
+  act(async () => {
+    await new Promise<void>(r => setTimeout(() => r(), 4100));
+  });
 const openTab = async (name: string) => {
   await waitFor(() => screen.getByRole('tab', {name}));
   await act(async () => {
@@ -171,6 +179,7 @@ describe('C4 홈 · 응원', () => {
     }
     expect(within(sheet).queryByText(/건강|전화|듣고 싶어요|천천히/)).toBeNull();
     await press('늘 고마워요');
+    await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
     await waitFor(() => screen.getByText('엄마께 보냈어요'));
     expect(screen.queryByTestId('sheet')).toBeNull();
@@ -194,6 +203,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
     await press('늘 고마워요');
+    await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('오늘 보낼 수 있는 응원은 다 보냈어요. 내일 다시 보낼 수 있어요'));
     expect(screen.queryByText(/께 보냈어요/)).toBeNull();
   });
@@ -211,6 +221,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
     await press('늘 고마워요');
+    await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('엄마께 보냈어요. 나머지 분께는 잠시 뒤에 다시 보내 주세요'));
     await press('다시 하기');
     await waitFor(() => screen.getByText('엄마·아빠께 보냈어요'));
@@ -222,6 +233,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
     await press('늘 고마워요');
+    await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   });
 
