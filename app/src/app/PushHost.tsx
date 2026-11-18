@@ -7,7 +7,7 @@ import {navRef, useCurrentRouteName} from '../navigation/navRef';
 import {pushChannelSpecs} from '../push/channels';
 import {ensureChannels, readNotifyPermission} from '../push/notifyNative';
 import {isParentKind, parentStepAfterOpen} from '../push/openRoute';
-import {childPermissionGranted, registerToken, retryPending, shouldPromptParent} from '../push/pushClient';
+import {registerToken, retryPending, shouldPromptParent} from '../push/pushClient';
 import {configurePush} from '../push/runtime';
 import {pickTokenSource, type PushData, type PushTokenSource} from '../push/tokenSource';
 import {handleChildPushOpen} from '../features/home/pushOpen';
@@ -40,7 +40,9 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         return;
       }
       if (role === 'child') {
-        await childPermissionGranted(deps); // 이 계정에서 처음 확인한 허용이면 받기 동의도(한 번)
+        // 리드 결정 11-18(리뷰 L2): 자녀 받기 동의는 권한 허용만으로 기록하지 않는다 — C3 '알림 켜기'·C7 '가족 연결' 토글을 누를 때만.
+        // 여기서는 토큰만 등록(받기 꺼짐이면 서버가 보내지 않는다)
+        await registerToken(deps);
       } else {
         await retryPending(deps);
         await registerToken(deps);

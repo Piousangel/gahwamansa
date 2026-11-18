@@ -410,3 +410,8 @@
 - 자녀 `useNotifyPermission.notifyFlags.promptReady = true`. 12 이하 앱 단위 끔도 '꺼짐'으로 본다(네이티브 확인, 이전 ASSUMED 해소). 거절(다시 묻지 않음)·앱 끔이면 휴대폰 알림 설정(채널 화면 우선)으로.
 - `TextLink` 를 `ui/TextLink` 로 올림(N1 이 씀). `features/link/TextLink` 는 다시 내보내기만 — AU-10 에서 호출부 교체 후 삭제.
 - **Firebase 붙일 때 할 일(별도 항목)**: `@react-native-firebase/app`·`messaging` 정확 고정, flavor별 `google-services.json`(gitignore) + gradle 플러그인, 매니페스트 meta-data `com.google.firebase.messaging.default_notification_channel_id = daily`, `createFcmTokenSource`(getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage), 알림 거부 기기의 Firebase 설치 ID 생성 여부(QA-07), 실기기 수신 QA-07.
+
+### C7 '가족 연결' 알림 토글·자녀 명시 동의(AU-04 뒤, 리드 결정 11-18) · 11-19
+- features/child/FamilyPushRow: 켬 = set_push_enabled(true) + 토큰 등록, 끔 = set_push_enabled(false). 상태 = my_push_settings + 휴대폰 family 채널(channelEnabled). 권한 거절이면 켜는 길(시스템 창·설정), 채널만 꺼져 있으면 그 채널 설정 열기. 실패하면 되돌리고 토스트. 연결 전(enabled null)·상태 모름은 숨김.
+- 자녀 받기 동의는 누를 때만: C3 '알림 켜기'(시스템 창 허용 뒤) 또는 C7 토글. app/PushHost 의 자녀 시작 동기화는 토큰 등록만(권한 허용만으로 set_push_enabled(true) 하던 것 제거).
+- C7 앱 정보의 방침 링크 → AU-07 openInAppWeb 교체는 그 브랜치가 main 에 들어온 뒤(대기).

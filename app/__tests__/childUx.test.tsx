@@ -418,7 +418,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
   });
 
   async function openSettings() {
-    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await press('설정');
   }
@@ -428,18 +428,64 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     const openSettingsSpy = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
     await openSettings();
     await waitFor(() => screen.getByTestId('child-notify-row'));
-    expect(screen.getByRole('button', {name: '알림, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '가족 연결, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'})).toBeTruthy();
     fireEvent.press(screen.getByTestId('child-notify-row'));
     await waitFor(() => expect(openSettingsSpy).toHaveBeenCalled());
     expect(request).toHaveBeenCalled();
   });
 
-  test('켜짐: C7 알림 행은 무엇을 알려 주는지(누르는 행 아님)', async () => {
+  test('켜짐: C7 \'가족 연결\' 토글(스위치) — 끄면 set_push_enabled(false), 켜면 (true)', async () => {
     android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
+    const set = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
+    const row = screen.getByRole('switch', {name: '가족 연결'});
+    expect(row.props.accessibilityState.checked).toBe(true); // my_push_settings 기본 켬
+    fireEvent.press(row);
+    await waitFor(() => expect(set).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(false));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => expect(set).toHaveBeenLastCalledWith(true));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true));
+  });
+
+  test('C7 토글: 실패하면 되돌리고 알린다', async () => {
+    android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
+    jest.spyOn(api, 'setPushEnabled').mockResolvedValue({ok: false, reason: 'invalid'});
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => screen.getByTestId('toast'));
+    expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true);
+  });
+
+  test('C7: 휴대폰에서 \'family\' 채널을 끄면 꺼짐 표시 + 누르면 그 채널 설정', async () => {
+    android(34, true);
+    const native = require('../src/push/notifyNative');
+    jest.spyOn(native, 'channelEnabled').mockResolvedValue(false);
+    const openCh = jest.spyOn(native, 'openNotifySettings').mockResolvedValue(undefined);
     await openSettings();
-    await waitFor(() => screen.getByTestId('child-notify-row'));
-    expect(screen.getByLabelText('알림, 가족 휴대폰과 연결되면 알려 드려요')).toBeTruthy();
-    expect(screen.queryByRole('button', {name: /알림이 휴대폰 설정에서/})).toBeNull();
+    await waitFor(() => screen.getByRole('button', {name: '가족 연결, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'}));
+    fireEvent.press(screen.getByTestId('child-notify-row'));
+    expect(openCh).toHaveBeenCalledWith('family');
+  });
+
+  test('리드 결정: 권한이 이미 허용돼 있어도 앱을 여는 것만으로는 자녀 받기 동의(set_push_enabled)를 남기지 않는다', async () => {
+    android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', pushEnabled: false, childFamily: true});
+    const set = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 300));
+    });
+    expect(set).not.toHaveBeenCalled();
   });
 
   test('Android 12 이하는 런타임 권한이 없어 켜짐으로 본다, 상태를 모르면(iOS 등) 행을 숨긴다', async () => {
