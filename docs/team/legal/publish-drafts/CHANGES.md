@@ -113,3 +113,10 @@
 - 바뀐 점: 보관 기간을 **날짜**로(LCC §2-2), "다른 곳에 주지 않아요", "메일 주소 하나". 삭제 실행·기록은 internal-management-plan §7.
 - 운영자 약속(사용자 확인 필요): 종료일 + 30일 안 명단 삭제, 삭제한 날 대장 기록. 받은 Gmail은 문의 메일함 밖으로 옮기지 않음.
 - 9.2 초대 후 안내에 한 줄 추가 제안: "테스트가 끝나면 받은 메일 주소는 {삭제 기한 날짜}까지 지워요."
+
+## 4. iOS(빌드 2) 부록 결정 — iOS 감사 N4 (L6, 2026-11-19)
+| 변경 | 근거 |
+|---|---|
+| 방침 본문(`privacy.html`)은 바꾸지 않고 **별도 부록 초안** `privacy-ios-addendum.md`를 만듦: Apple 로그인 행, Apple 토큰 보관 행, APNs 위탁·국외 이전 행, iOS에서 틀려지는 문장(Play 설치 경로·안드로이드 버전·백업·알림 끄는 경로) 바꿀 문장 | 게시본에 "구현 예정"을 두지 않는 원칙(이 문서 머리), Apple 자리표시가 빌드 1 게시 조건(`{` 0건)을 막음. iOS 출시 PR에서 합치고 버전을 올림 |
+| 새 문서 `../app-privacy-label.md`: Play 대조표 행 번호 → App Store 분류·연결·추적·목적, iOS 행 i1~i3 | Apple App Privacy 안내(https://developer.apple.com/app-store/app-privacy-details/, 11-19 조회) |
+| `../official-consult-checklist.md` A-1~A-3, `../lawyer-packet.md` §3 iOS 항목, `../data-safety-form.md` §6 | 감사 N4 "변호사 묶음에 미리 넣기" |

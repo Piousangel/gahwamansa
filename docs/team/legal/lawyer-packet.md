@@ -51,6 +51,7 @@
 - 구독·무료 체험·다크패턴 고지, 청약철회, 선물 결제, 통신판매업 신고, 거래기록 보존 — [원#16~#20]
 - 토스 미니앱 `anonKey`·토스 로그인 정보 수령 — [원#14]
 - v2 가족사진 복원 기능 도입 시 AI 기본법·방침 재검토 — [원#11 후반]
+- **iOS(빌드 2) Apple 로그인·APNs** [추가 11-19, iOS 감사 N4]: ① APNs(Apple Inc. 미국)를 위탁·국외 이전으로 따로 적을지, Firebase의 재위탁으로 적을지 ② 삭제 때 철회용으로 보관하는 Apple refresh token의 저장 암호화 의무 ③ iCloud 백업에 들어가는 기기 안 정보의 고지 ④ Apple "이메일 가리기" 전달 주소를 이메일 주소 항목으로 적으면 충분한지. 문장 초안: `publish-drafts/privacy-ios-addendum.md`, 라벨: `app-privacy-label.md`, 공식 상담 A-1~A-3과 같은 질문
 
 ## 4. 함께 보낼 자료 (사용자가 첨부)
 1. `docs/team/legal/publish-drafts/privacy.html`·`terms.html`·`delete-account.html`(W1 게시본 초안, 사용자 값은 `{자리표시}`)
