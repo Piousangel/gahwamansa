@@ -429,7 +429,8 @@ android.applicationVariants.configureEach { variant ->
         // 요청한 작업 이름에 변형 이름이 있으면(예: assembleStagingDebug) 그 변형만 쓴다. 이름이 없으면(assembleDebug 등) 예전처럼
         def requested = gradle.startParameter.taskNames.join(" ").toLowerCase()
         def named = ["stagingdebug", "stagingrelease", "productiondebug", "productionrelease"].any { requested.contains(it) }
-        if (named && !requested.contains(variant.name.toLowerCase())) {
+        // 리뷰 M-R1: 디버그 변형만 건너뛴다 — release 번들은 언제나 자기 값을 쓴다(혼합 호출에서도 번들 직전 generate)
+        if (!isRelease && named && !requested.contains(variant.name.toLowerCase())) {
             return
         }
         writeEnvTs(e, vName, vCode, linkHost, isRelease)

@@ -61,6 +61,8 @@ adb wait-for-device
 export ANDROID_SERIAL="${ANDROID_SERIAL:-$(online | head -1)}"
 echo "e2e: 기기 $ANDROID_SERIAL"
 until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
+# logcat 버퍼를 넉넉히(기본 256K 면 긴 실행에서 앞쪽 ANR·크래시 기록이 밀려남, 재확인 L)
+adb logcat -G 16M >/dev/null 2>&1 || true
 
 # 3) 빌드·설치(stagingDebug = JS 는 Metro 에서 받음)
 if [ "${SKIP_INSTALL:-0}" != "1" ]; then
