@@ -271,3 +271,9 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 16 | Database > Extensions | **pg_cron ON** | 로컬 기본 | ☐ | 0023 파기 배치(db push 전에 켤 것) |
 
 - 다 끝나면 production에서 Advisors(Security) 실행 → 남는 경고가 1(익명 허용, 의도)·13(요금제상 불가 시)뿐인지 확인.
+
+## 10. 이메일 인증번호 재발송 동작 확인 (SV-13, 11-18)
+- 질문: 문구 `login.resent` "이전 번호는 쓸 수 없어요"가 실제 동작과 맞는가.
+- 재현(로컬 스택, GoTrue v2.198.0, config `otp_length 6`·`otp_expiry 600`·`max_frequency 1s`): 같은 메일로 `/auth/v1/otp` 두 번(2초 간격) → 서로 다른 6자리 2개 → **첫 번호 검증 = 403 `otp_expired`**, 두 번째 = 200(세션 발급).
+- 결론: **문구와 동작이 맞다**(재발송하면 이전 번호는 무효). 앱은 첫 번호 입력 시 오는 `otp_expired`를 "번호가 만료됐어요/새 번호로 써 주세요" 계열로 보여 주면 된다(만료와 같은 코드라 구분 불가).
+- 한계: staging·production(호스팅 GoTrue) 버전이 다르면 다를 수 있다 → 출시 전 staging에서 같은 순서로 1회 확인(테스트 메일). 재발송 간격(`max_frequency`)은 호스팅 대시보드 값(기본 60초일 수 있음, 미확인)을 따른다 — 앱의 "다시 보내기" 대기 시간과 맞출 것. 라이터 전달용.
