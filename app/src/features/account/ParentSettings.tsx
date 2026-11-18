@@ -1,6 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
-import {focusLater} from '../../ui/screenTitle';
 import {prefs} from '../../lib/prefs';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -16,6 +15,7 @@ import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {APP_VERSION} from '../../lib/appInfo';
 import {useAppVersionTaps} from '../../dev/devGate';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -30,23 +30,15 @@ export function ParentSettings() {
   const fromDeclined = route.params?.expand === 'resume' && !consented && linked;
   const [confirm, setConfirm] = useState<Confirm>(fromDeclined ? 'resume' : 'none');
   const resumeTitleRef = useRef<React.ComponentRef<typeof View>>(null);
-  useEffect(() => {
-    if (!fromDeclined) {
-      return undefined;
-    }
-    return focusLater(() => resumeTitleRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const [busy, setBusy] = useState(false);
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const versionTap = useAppVersionTaps();
 
   const run = async (action: () => Promise<void>, next: boolean, done: string | null) => {
-    if (busy) {
+    if (!beginBusy()) {
       return;
     }
-    setBusy(true);
     setError(null);
     try {
       await action();
@@ -56,13 +48,14 @@ export function ParentSettings() {
     } catch (e) {
       setError(errorMessage(e));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
 
   // 표준 화면 틀: 설정 내용은 본문(스크롤), "돌아가기"만 하단 고정.
   return (
     <Screen
+      initialFocusRef={fromDeclined ? resumeTitleRef : undefined} // '다시 정하기'로 왔으면 첫 포커스는 확인 제목(화면 제목 대신, 순서 보장)
       top={
         <>
           <BackBar />

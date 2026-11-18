@@ -246,6 +246,8 @@ describe('리뷰 낮음 반영', () => {
     expect(screen.queryByTestId('to-course-home')).toBeNull();
   });
   test("W0 ③: 거부 상태 P3 띠 '다시 정하기' → 설정이 '다시 보여 주기' 확인을 펼친 채, 제목에 포커스, 좋아요 한 번이면 끝", async () => {
+    // 첫 포커스는 Screen 이 화면 읽기가 켜져 있을 때만 옮긴다(AP-11: 시간 차 대신 Screen initialFocusRef 로 순서 보장)
+    (AccessibilityInfo.isScreenReaderEnabled as unknown as jest.Mock).mockImplementation(() => Promise.resolve(true));
     const api = createFakeApi({linked: true, consented: false});
     const give = jest.spyOn(api, 'giveConsent');
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');

@@ -8,11 +8,12 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
   const {api, sync, syncError, setConsented} = useSession();
   const [declined, setDeclined] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
 
   // 동의 화면은 코스 홈으로 바뀐다(replace): 뒤로가기로 동의 화면이 다시 나오지 않게(리뷰 ③)
@@ -32,10 +33,9 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   const shown = error ?? syncError; // 동의 저장 실패가 우선, 없으면 상태 확인 실패
   const accept = async () => {
-    if (busy) {
+    if (!beginBusy()) {
       return;
     }
-    setBusy(true);
     setError(null);
     try {
       await api.giveConsent(CONSENT_VERSION);
@@ -44,7 +44,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
     } catch (e) {
       setError(errorMessage(e));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
   // 거부: 서버 호출 없음. 코스는 볼 수 있고 답변은 저장하지 않는다. 나중에 코스 홈에서 동의할 수 있다.

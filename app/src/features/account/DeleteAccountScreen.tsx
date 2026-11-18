@@ -12,6 +12,8 @@ import type {DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
+import {useBusyLatch} from '../../ui/useBusyLatch';
+import {prefs} from '../../lib/prefs';
 
 type Props = {role: 'parent' | 'child'};
 
@@ -21,7 +23,7 @@ export function DeleteAccountScreen({role}: Props) {
   const {api, clear} = useSession();
   const [stage, setStage] = useState<1 | 2>(1);
   const [typed, setTyped] = useState('');
-  const [busy, setBusy] = useState(false);
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<Message | null>(null);
   const child = role === 'child';
   const dp = copy.delete.parent;
@@ -49,23 +51,23 @@ export function DeleteAccountScreen({role}: Props) {
   const strong = child && scope === 'family';
 
   const run = async () => {
-    if (busy) {
+    if (!beginBusy()) {
       return;
     }
-    setBusy(true);
     setFailed(null);
     try {
       const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
       const r = await api.deleteMyAccount();
       await clearAccountKeys(defaultStore(), tag); // 리뷰 M4 후속: 이 계정의 기기 기억값(N3 본 목록·C6 관심) 정리
       clear();
+      prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
       navigation.dispatch(
         CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}),
       );
     } catch (e) {
       setFailed(errorMessage(e));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
 

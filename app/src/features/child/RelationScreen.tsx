@@ -11,6 +11,7 @@ import {BigButton} from '../../ui/BigButton';
 import {SelectCard} from '../../ui/SelectCard';
 import {copy, offlineMessage} from '../../copy/copy';
 import {isOffline, isServerError, PARENT_TITLES} from '../types';
+import {useBusyLatch} from '../../ui/useBusyLatch';
 
 const t = copy.relation;
 
@@ -19,14 +20,13 @@ export function RelationScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ChildParams>>();
   const {api} = useSession();
   const [title, setTitle] = useState<string>('부모님');
-  const [busy, setBusy] = useState(false);
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<string | null>(null);
 
   const next = async () => {
-    if (busy) {
+    if (!beginBusy()) {
       return;
     }
-    setBusy(true);
     setFailed(null);
     try {
       try {
@@ -53,7 +53,7 @@ export function RelationScreen() {
     } catch (e) {
       setFailed(isOffline(e) ? offlineMessage.title : t.failed);
     } finally {
-      setBusy(false);
+      endBusy();
     }
   };
 

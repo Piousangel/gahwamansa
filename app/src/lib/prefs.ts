@@ -5,6 +5,7 @@ import {defaultStore, type KeyValueStore} from './kvStore';
 
 const SFX = 'pref_sfx_enabled';
 const SKIP_HINT = 'pref_p7_skip_hint_seen';
+const FIRST_GREETING = 'pref_p3_first_greeting_seen'; // 해님 첫 인사(연결 직후 앨범 첫 화면 1회, DECISIONS 11-17)
 const ZOOM_OPENED = 'pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라도 열었나(첫 안내 끝)
 const PHOTO_VISITS = 'pref_p4_visits'; // P4 방문 수(첫 안내는 세 번째 방문까지)
 const PHOTO_VISIT_DAY = 'pref_p4_visit_day'; // 마지막으로 센 날(KST YYYY-MM-DD). 같은 날 다시 들어오면 세지 않는다(리뷰 L3)
@@ -30,6 +31,16 @@ export function createPrefs(store: KeyValueStore) {
     setSfxEnabled: (v: boolean) => setBool(SFX, v),
     skipHintSeen: () => getBool(SKIP_HINT, false),
     markSkipHintSeen: () => setBool(SKIP_HINT, true),
+    firstGreetingSeen: () => getBool(FIRST_GREETING, false),
+    markFirstGreetingSeen: () => setBool(FIRST_GREETING, true),
+    /** 모두 지우기·처음 화면으로: 다음에 연결하는 계정이 다시 첫 인사를 받게 지운다(리뷰 L3) */
+    resetFirstGreeting: async () => {
+      try {
+        await store.removeItem(FIRST_GREETING);
+      } catch {
+        // 무시
+      }
+    },
     zoomOpened: () => getBool(ZOOM_OPENED, false),
     markZoomOpened: () => setBool(ZOOM_OPENED, true),
     photoVisits: async (): Promise<number> => {
