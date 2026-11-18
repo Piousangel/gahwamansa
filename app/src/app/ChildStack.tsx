@@ -19,6 +19,7 @@ import {useSession} from './session';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {copy} from '../copy/copy';
 import {WebScreen, type WebParams} from './WebScreen';
+import {OssScreen} from './OssScreen';
 
 const Tab = createBottomTabNavigator();
 export type ChildParams = {
@@ -33,6 +34,7 @@ export type ChildParams = {
   DeleteAccount: undefined;
   DeleteDone: undefined;
   Web: WebParams; // 앱 안 웹 화면(AU-07)
+  Oss: undefined; // 오픈소스 라이선스(AU-06)
 };
 const Stack = createNativeStackNavigator<ChildParams>();
 
@@ -73,6 +75,7 @@ export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyo
       <Stack.Screen name="DeleteAccount">{() => <DeleteAccountScreen role="child" />}</Stack.Screen>
       <Stack.Screen name="DeleteDone" component={DeleteDoneScreen} />
       <Stack.Screen name="Web" component={WebScreen} />
+      <Stack.Screen name="Oss" component={OssScreen} />
     </Stack.Navigator>
     </ToastProvider>
   );

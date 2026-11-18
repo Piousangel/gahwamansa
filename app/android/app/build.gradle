@@ -438,3 +438,71 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+/**
+ * 오픈소스 라이선스 목록(AU-06): Android 네이티브(Maven) 의존성 → src/oss/android.generated.json. JS 목록은 scripts/ossLicenses.js.
+ * - 근원: productionReleaseRuntimeClasspath 의 외부 모듈(프로젝트 모듈 = react-native-* 는 JS 목록에 있음) + 각 POM 의 <licenses>
+ *   (POM 에 없으면 부모 POM 을 3단계까지 따라간다). 새 의존성·플러그인 없음.
+ * - 다시 만들기: cd app && npm run oss:android
+ * - release 빌드는 두 목록이 최신인지 검사한다(verifyOssLicenses, 낡으면 실패 — 의존성 바꾼 뒤 npm run oss)
+ */
+def ossAndroidOut = file("../../src/oss/android.generated.json")
+def ossPomLicenses
+ossPomLicenses = { String group, String module, String version, int depth ->
+    def id = org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.newId(
+        org.gradle.api.internal.artifacts.DefaultModuleIdentifier.newId(group, module), version)
+    def res = project.dependencies.createArtifactResolutionQuery()
+        .forComponents([id])
+        .withArtifacts(org.gradle.maven.MavenModule, org.gradle.maven.MavenPomArtifact)
+        .execute()
+    for (c in res.resolvedComponents) {
+        for (a in c.getArtifacts(org.gradle.maven.MavenPomArtifact)) {
+            if (!(a instanceof org.gradle.api.artifacts.result.ResolvedArtifactResult)) continue
+            def pom = new groovy.xml.XmlSlurper(false, false).parse(a.file)
+            def lic = pom.licenses.license.collect { [name: it.name.text().trim(), url: it.url.text().trim()] }.findAll { it.name || it.url }
+            if (lic || depth >= 3 || !pom.parent.artifactId.text()) return lic
+            return ossPomLicenses(pom.parent.groupId.text().trim(), pom.parent.artifactId.text().trim(), pom.parent.version.text().trim(), depth + 1)
+        }
+    }
+    return []
+}
+def ossAndroidJson = {
+    def conf = configurations.getByName("productionReleaseRuntimeClasspath")
+    def ids = conf.incoming.resolutionResult.allComponents
+        .collect { it.id }
+        .findAll { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+        .collect { [group: it.group, module: it.module, version: it.version] }
+        .unique()
+        .sort { a, b -> "${a.group}:${a.module}".toString() <=> "${b.group}:${b.module}".toString() ?: a.version <=> b.version }
+    def rows = ids.collect { m ->
+        [name: "${m.group}:${m.module}".toString(), version: m.version, licenses: ossPomLicenses(m.group, m.module, m.version, 0)]
+    }
+    return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([packages: rows])) + "\n"
+}
+tasks.register("generateOssAndroid") {
+    group = "oss"
+    description = "Android 네이티브 의존성 라이선스 목록을 src/oss/android.generated.json 으로(AU-06)"
+    notCompatibleWithConfigurationCache("의존성 해석·POM 읽기")
+    doLast {
+        ossAndroidOut.setText(ossAndroidJson(), "UTF-8")
+        logger.lifecycle("오픈소스 라이선스 목록(Android) → ${ossAndroidOut}")
+    }
+}
+tasks.register("verifyOssLicenses") {
+    group = "oss"
+    description = "release 빌드 전: JS·Android 라이선스 목록이 최신인지(AU-06)"
+    notCompatibleWithConfigurationCache("의존성 해석·node 실행")
+    doLast {
+        if (!ossAndroidOut.exists() || ossAndroidOut.getText("UTF-8") != ossAndroidJson()) {
+            throw new GradleException("오픈소스 라이선스 목록(Android)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
+        }
+        def proc = ["node", file("../../scripts/ossLicenses.js").absolutePath, "--check"].execute(null, file("../.."))
+        proc.waitForProcessOutput(System.out, System.err)
+        if (proc.exitValue() != 0) throw new GradleException("오픈소스 라이선스 목록(JS)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
+    }
+}
+android.applicationVariants.configureEach { variant ->
+    if (!variant.buildType.debuggable) {
+        variant.preBuildProvider.configure { dependsOn("verifyOssLicenses") }
+    }
+}

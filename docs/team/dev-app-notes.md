@@ -411,3 +411,11 @@
 - 웹뷰 설정: `javaScriptEnabled=false`(정적 고지 페이지, site/*.html 스크립트 0), DOM 저장소·쿠키·캐시 끔(`incognito`), 파일 접근 3종 끔, `mixedContentMode=never`, 여러 창 끔, 위치 끔, `originWhitelist=https://*`, 주입 JS·onMessage 없음(브리지 없음). 탐색: 같은 호스트 https 만 안에서, 다른 https·mailto 는 사용자가 누른 것만 휴대폰 앱으로, intent·javascript·file·http 는 막음. 글자: `textZoom` = 휴대폰 글자 배율.
 - 열기: `shared/appLink.openInAppWeb(target, navigate)` — 값 없으면 `unavailable`, 그 주소에 HEAD 4초로 닿지 않으면 `offline`(화면을 열지 않음 → 호출부가 `app_info.link_offline`: 어르신 Banner·자녀 Toast), 닿으면 `navigate(target)`. 로드 실패는 화면 안 한 줄(같은 문구).
 - **연결은 AP-06(P13)·L3(C7) 몫**: 지금 C7 `ChildAppInfo` 는 방침을 외부 브라우저(`Linking.openURL`)로 연다 → `openInAppWeb('privacy', t => navigation.navigate('Web', {target: t}))` 로 바꿀 것.
+
+### AU-06 오픈소스 라이선스 목록·화면 · 2026-11-18
+- 목록 두 개(커밋되는 생성 파일): `src/oss/js.generated.json`(package-lock 출시 의존성 = dev·optional 제외 264개, 각 패키지 LICENSE·COPYING·NOTICE 전문, 같은 전문은 한 번만), `src/oss/android.generated.json`(Gradle `productionReleaseRuntimeClasspath` 의 Maven 모듈 149개 + POM `<licenses>` 이름·주소, 없으면 부모 POM 3단계까지). 프로젝트 모듈(react-native-*)은 JS 목록에 있다.
+  - 전문 파일이 없는 Meta 패키지(@react-native/*·metro·hermes·flow 등, MIT)는 react-native 의 LICENSE 로 채움. 남은 전문 없음 5개는 이름·라이선스만 표시.
+- 만들기: `cd app && npm run oss`(= `oss:js` node 스크립트 + `oss:android` Gradle `generateOssAndroid`). 의존성을 바꾸면 다시 만들어 커밋.
+- 최신성 검사: jest `ossLicenses.test`(JS 목록을 다시 만들어 커밋본과 비교 — npm 의존성을 바꾸고 안 만들면 실패) + **release 빌드 preBuild 가 `verifyOssLicenses`**(Android·JS 둘 다, 낡으면 빌드 실패). 디버그 빌드는 검사하지 않음.
+- 화면: 라우트 `Oss`(어르신·자녀 스택 한 줄씩) `app/OssScreen` — 이전 바·제목(app_info.oss)·안내 한 줄(app_info.oss_intro) + 행(이름 버전·라이선스), 누르면 그 자리에서 전문(없으면 라이선스 주소, 글자로만) 펼침. 목록 파일(약 280KB)은 화면을 열 때 처음 읽는다(`lib/ossLicenses.ossRows`). `appInfo.OSS_LICENSES_READY = true` — P13(AP-06)·C7(L3) 행에서 `navigate('Oss')`.
+- OFL 서체를 번들하면(DZ-08) 서체 3종을 JS 목록 밖에서 따로 넣어야 한다(npm 패키지가 아님) — 그때 `scripts/ossLicenses.js` 에 고정 항목 추가.

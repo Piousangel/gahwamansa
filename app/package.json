@@ -11,7 +11,10 @@
     "start": "react-native start",
     "test": "jest --testPathIgnorePatterns __integration__",
     "test:integration": "jest -c jest.integration.config.js --runInBand",
-    "check:dev-menu": "bash scripts/check-dev-menu-bundle.sh"
+    "check:dev-menu": "bash scripts/check-dev-menu-bundle.sh",
+    "oss": "npm run oss:js && npm run oss:android",
+    "oss:js": "node scripts/ossLicenses.js",
+    "oss:android": "cd android && ./gradlew -q :app:generateOssAndroid"
   },
   "dependencies": {
     "@mhpdev/react-native-speech": "1.4.4",

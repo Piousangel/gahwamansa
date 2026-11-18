@@ -66,5 +66,5 @@ const info = readAppInfo();
 export const APP_VERSION = info.version;
 export const PRIVACY_URL: string | null = info.privacyUrl;
 export const CONTACT_EMAIL: string | null = info.contactEmail;
-// TODO(AU-06 오픈소스 라이선스 화면): 목록 화면이 들어오면 true.
-export const OSS_LICENSES_READY = false;
+// AU-06: 오픈소스 라이선스 화면(라우트 'Oss')이 있다. P13·C7 행은 이 값이 true 면 보인다
+export const OSS_LICENSES_READY = true;
