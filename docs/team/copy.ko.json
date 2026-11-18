@@ -76,7 +76,7 @@
       "button": "다시 하기"
     },
     "push_denied": {
-      "title": "소식을 받지 않기로 했어요",
+      "title": "알림을 받지 않기로 했어요",
       "body": "괜찮아요. 앱을 열면 사진을 볼 수 있어요",
       "button": "알겠어요"
     },
@@ -268,6 +268,7 @@
     "app_info": "앱 정보",
     "ai_notice": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
     "family_row": "연결된 가족",
+    "version": "버전 {버전}",
     "sfx": "도장 소리",
     "sfx_sub": "도장을 찍을 때 짧은 소리",
     "group_family": "가족",
@@ -355,7 +356,8 @@
     "done_unlinked_sub": "번호를 받으면 그때부터 고른 답이 가족에게 보여요",
     "declined_banner": "고른 답은 저장되지 않아요",
     "declined_link": "다시 정하기",
-    "to_home": "오늘 코스로"
+    "to_home": "오늘 코스로",
+    "history_link": "지난 날 보기"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -563,5 +565,133 @@
     "chosen_a11y": "고른 답, {값}",
     "word": "오늘의 낱말이에요",
     "word_a11y": "오늘의 낱말, {낱말}"
+  },
+  "push": {
+    "_src": "copy-v3 11-11(WR-02), N1·N2·N3. 08~21시만, 혜택·유료·재방문 재촉 금지",
+    "channel": {
+      "daily": "오늘의 사진",
+      "daily_desc": "하루 한 번, 오늘 사진이 오면 알려 드려요",
+      "cheer": "응원",
+      "cheer_desc": "가족이 응원을 보내면 알려 드려요",
+      "family": "가족 연결",
+      "family_desc": "가족 휴대폰과 연결되거나 연결이 풀리면 알려 드려요"
+    },
+    "daily": {
+      "title": "오늘의 사진이 왔어요",
+      "body": "{설명}",
+      "body_fallback": "편할 때 열어 보세요"
+    },
+    "cheer": {
+      "title": "가족이 보낸 응원이 왔어요",
+      "body": "{응원}",
+      "body_many": "응원이 {n}개 왔어요"
+    },
+    "connected": {
+      "title": "{호칭} 폰과 연결됐어요",
+      "body": "고른 답을 보여 줄지는 {호칭}께서 정해요"
+    },
+    "reconnected": {
+      "title": "{호칭} 폰과 다시 연결됐어요",
+      "body": "새 폰으로 이어졌어요. 지난 답은 그대로 있어요"
+    },
+    "disconnected": {
+      "title": "{호칭} 폰의 연결이 풀렸어요",
+      "body": "새 번호를 만들어 보내 주세요"
+    },
+    "permission": {
+      "title": "오늘 사진이 오면 알려 드릴까요?",
+      "body": "하루 한 번만 알려 드려요. 소리는 휴대폰 설정을 따라요",
+      "optional": "안 받으셔도 앱은 그대로 써요",
+      "yes": "알려 주세요",
+      "no": "괜찮아요"
+    },
+    "system_off": {
+      "body": "알림이 휴대폰 설정에서 꺼져 있어요",
+      "open_parent": "휴대폰 설정 열기",
+      "open_child": "설정 열기"
+    },
+    "settings_row": "알림",
+    "settings_sub": "하루 한 번, 오늘 사진이 오면 알려 드려요"
+  },
+  "tts": {
+    "_src": "copy-v3 11-12(WR-03), PX_read_aloud. 자동으로 읽지 않음, 화면 읽기 켜짐이면 버튼 숨김",
+    "button": "읽어 주세요",
+    "stop": "멈추기",
+    "read": {
+      "photo": "{질문1} {질문2}",
+      "question": "{질문} {선택지1}, 아니면 {선택지2}.",
+      "word": "{낱말}. 한 글자씩, {글자들}.",
+      "cheer": "가족이 보낸 응원이에요. {응원}"
+    },
+    "no_korean": {
+      "title": "휴대폰에 한국어 읽기 기능이 없어요",
+      "body": "휴대폰 설정에서 한국어 음성을 받으면 쓸 수 있어요",
+      "button": "휴대폰 설정 열기"
+    },
+    "failed": "지금은 읽어 드릴 수 없어요. 잠시 뒤에 다시 눌러 주세요",
+    "muted": "휴대폰 소리가 꺼져 있어요. 소리 버튼을 올려 주세요"
+  },
+  "bgm": {
+    "_src": "copy-v3 10절·11-13(WR-04), PX_music",
+    "toggle_on": "음악 켜기",
+    "toggle_off": "음악 끄기",
+    "offer_title": "음악을 틀어 드릴까요?",
+    "offer_body": "오늘 코스 화면과 마친 화면에서만 조용히 나와요. 설정에서 언제든 끌 수 있어요",
+    "offer_source": "AI(Google Lyria)가 만든 연주곡이에요",
+    "offer_yes": "들어 볼게요",
+    "offer_no": "괜찮아요",
+    "preview_title": "이 음악 어떠세요?",
+    "preview_now": "지금 나오는 음악이에요",
+    "keep": "켜 둘게요",
+    "off": "끌게요",
+    "settings_row": "배경 음악",
+    "settings_sub": "오늘 코스 화면과 마친 화면에서만 나와요"
+  },
+  "app_info": {
+    "_src": "copy-v3 11-13(WR-04), 법률 in-app-notices §3 순서. 부모님(P13)·자녀(C7) 공용, ai_music 은 부모님만",
+    "title": "앱 정보",
+    "terms": "이용약관",
+    "privacy": "개인정보 처리방침",
+    "oss": "오픈소스 라이선스",
+    "ai_title": "AI가 만든 것",
+    "ai_photo": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
+    "ai_music": "배경 음악은 AI(Google Lyria)가 만든 연주곡이에요",
+    "not_medical": "병원 앱이 아니고, 안부나 안전을 확인하는 서비스가 아니에요",
+    "business_title": "사업자 정보",
+    "business": {
+      "name": "상호",
+      "ceo": "대표",
+      "reg_no": "사업자등록번호",
+      "address": "주소"
+    },
+    "contact": "문의하기",
+    "contact_sub": "메일로 보내요",
+    "version": "버전 {버전}",
+    "link_offline": "인터넷이 연결되면 볼 수 있어요"
+  },
+  "paid": {
+    "_src": "copy-v3 6절·11-13(WR-04), C6 축소형(고르기 없음, 관심 표시만)",
+    "title": "이야기 주제 추천은 곧 유료예요",
+    "body": "고른 답에 맞는 이야기 주제를 추천해요",
+    "price_label": "예정 가격",
+    "plan_month": "한 달 {가격}",
+    "plan_year": "일 년 {가격}",
+    "plan_gift": "선물 이용권 {가격}",
+    "plan_gift_sub": "형제나 친지가 대신 내 줘요",
+    "notice": "지금은 결제되지 않아요. 관심만 표시돼요",
+    "button": "관심 있어요",
+    "button_done": "관심 남김",
+    "toast": "관심을 남겼어요. 지금은 결제되지 않아요",
+    "close": "닫기"
+  },
+  "history": {
+    "_status": "copy-v3 11-3·11-7 #17c 확정. date_a11y·photo_a11y 는 읽기 라벨(라이터 확인 전)",
+    "title": "지난 날",
+    "sub": "최근 한 달 동안 본 사진이에요",
+    "empty": "사진을 보면 여기에 모여요",
+    "chosen": "고른 답",
+    "question": "{두 선택지} 고른 답",
+    "word": "낱말",
+    "day_a11y": "{날짜}, 자세히 보기"
   }
 }

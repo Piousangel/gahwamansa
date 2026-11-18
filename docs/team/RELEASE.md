@@ -33,6 +33,7 @@ JS 쪽 우선순위(뒤가 앞을 덮음): 기본값(로컬+fake) → `env.gener
 - 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
 - release 빌드는 번들 직전에 쓰고 **번들이 끝나면(실패해도) 지운다**. 그래서 `build-production.sh` 뒤에 `npm start` 만 해도 production 값이 남지 않고 기본값(로컬+fake)이 된다.
 - 지금 어느 값인지: `head -3 app/src/lib/env.generated.ts`(없으면 로컬+fake).
+- Metro 설정은 둘이다(개발자 메뉴 보안 재검토 R1). **개발 서버**(`npm start`·`npm run android`)는 `metro.config.js` 로, `config.local.ts` 와 개발자 메뉴를 그대로 둔다 — release 빌드 뒤 env.generated 가 지워져도 개발 흐름은 바뀌지 않는다. **출시 번들**은 Gradle 이 `react { bundleConfig }` 로 `metro.release.config.js` 를 쓴다: env.generated 의 `BUILD_TYPE=release` 가 없으면 번들을 멈추고, `config.local.ts` 를 빈 모듈로, production 이면 개발자 메뉴를 빈 대역으로 바꾼다. 번들 뒤 `verifyReleaseBundle` 이 산출물에서 테스트 계정·메뉴 표식을 찾으면 빌드를 실패시킨다. 손으로 확인: `npm run check:dev-menu`(임시 폴더 복사본에서, 작업 트리를 바꾸지 않음).
 
 ## 3. 로컬 개발
 

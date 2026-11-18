@@ -300,6 +300,28 @@
 - N3 시트 닫기 "닫기"(family.stop_sheet.close), N4 갈래 하나일 때 `hint_one`(라이터 확인 _status), N5 목록 간격 8·행 80·아이콘 원 48·그만두기 행 구분선+X 아이콘+화살표·갈래 테두리 2·화살표, 그만둘래요는 밑줄 보조 링크.
 - M4: radius.keypadKey 14·codeCell 12 를 tokens-v3.json(원본)·tokens.ts(사본)에 추가(designSystem 동기 테스트).
 
+### staging 전용 개발자 메뉴(보안 리뷰 대상) · 11-18
+- 진입: 설정의 버전 줄 7번 탭(어르신 P13 하단 "버전 1.0.0" 줄, 자녀 앱 정보의 버전 행). `src/dev/devGate.ts`(모든 빌드에 들어가는 작은 관문): production 은 항상 불가, staging 빌드 가능, local 은 `__DEV__` 일 때만. 허용 안 되면 버전 줄은 눌리지 않는다.
+- 번들 제외: `metroDevMenu.js` + `metro.config.js` resolveRequest — Gradle 이 번들 직전에 쓰는 `src/lib/env.generated.ts` 의 APP_ENV 가 production 이면 `src/dev/DevMenuHost.tsx` 를 `DevMenuHost.stub.tsx`(빈 대역)로 바꾼다. 구현만 import 하는 `sessionSlots`·`testFamily`·메뉴 문구도 함께 빠진다. 확인: `npm run check:dev-menu`(production·staging 번들을 만들어 표식 grep, production 에 없고 staging 에 있어야 통과).
+- 역할 전환: 역할별 세션(access·refresh 토큰)을 AsyncStorage `dev_menu_session_{parent|child}_v1` 에 보관하고 `setSession` 으로 바꾼 뒤 AppRoot 를 key 로 다시 마운트(스택 리셋). 지금 세션은 **서버 로그아웃 없이** 이 기기에서만 내린다(`auth._removeSession`, 비공개 API) — `signOut({scope:'local'})` 은 서버에서 그 세션 refresh 토큰을 무효로 해 보관 세션을 되살릴 수 없음을 통합 테스트로 확인했다. supabase-js 를 올릴 때 `__integration__/devMenu` 가 이름 변화를 잡는다.
+- 테스트 가족: 자녀(개발 빌드 `config.local.ts` 의 `devTestChild` 이메일·비밀번호, gitignore — 없으면 보관된 자녀 세션) → 가족·번호 → 자녀 세션 보관 → 어르신 익명 연결 → 어르신 세션 보관. 번호·토큰·비밀번호는 화면·로그·결과에 싣지 않는다. staging release 빌드에는 `config.local` 이 적용되지 않으므로 소셜 로그인 세션을 쓴다.
+- 오늘 코스 초기화·하루 넘기기: fake API(local 개발) 전용 훅 `__dev`(서버 영향 없음, fakeApi 와 함께 production 번들에도 있으나 무해). real 서버는 앱에서 기록·날짜를 바꿀 수 없어 메뉴에 그 사실만 표시. 도장: 이 기기 미연결 도장(localStamps) 지우기.
+- 표시: APP_ENV·API_MODE·서버 주소·버전(VERSION_NAME·CODE·GIT_SHA)·링크 도메인.
+- 아키텍처 예외: `src/dev` 는 개발 전용이라 supabase auth 를 realApi 밖에서 직접 쓴다(production 번들 제외로 한정).
+
+### 개발자 메뉴 보안 리뷰 반영(2026-11-18-dev-menu-security-review)
+- H1: release(staging·production) 번들·환경 불명이면 `config.local.ts` 를 `config.local.empty.ts` 로(metroDevMenu.js). 검사 표식에 devTestChild·테스트 도메인 이메일·config.local 문자열 값 추가(카나리아 계정으로 확인).
+- M1: 판정은 Gradle 이 쓰는 `env.generated.ts` 의 APP_ENV·BUILD_TYPE(새 필드)만, 환경 변수 덮어쓰기 폐지. 파일이 없거나 값을 모르면 메뉴·config.local 모두 제외(fail-closed) — Metro 개발 서버는 debug 빌드(preBuild 가 파일을 씀) 뒤에 쓴다. Gradle release 번들 작업 doLast `verifyReleaseBundle`: 실제 산출물 bundle 에서 표식을 찾으면 빌드 실패. production 은 API_MODE=real 강제.
+- M2: 보관 칸에 saved_at, 7일 지나면 버림. 로그아웃·계정 지우기·처음으로 때 `devGate.clearDevSessions`(메뉴 구현이 등록, production 대역은 무동작). 연결 전 익명 세션은 버리지 않고 비어 있는 어르신 칸에 보관. "보관 세션 모두 지우기" 버튼. 암호화 저장(EncryptedSharedPreferences)은 `androidx.security:security-crypto` 새 의존성이 필요해 보류 — 리드 결정 필요.
+- M3: "테스트 가족 정리" — 만든 기록(`dev_menu_test_family_v1`)이 있을 때만, 어르신(익명)→테스트 자녀 순서로 기존 `delete_my_account`. 소셜(실제) 자녀 계정은 지우지 않는다. 테스트 계정은 테스트 도메인 이메일만.
+- L1: production 버전 줄은 Pressable 이 아닌 글자/View. L3: ARCHITECTURE 금지 목록에 `src/dev` 예외 1줄. L4: production 차단(env mock)·4초 창·setSession 오류·already_has_profile·redeem_failed·정리 분기·로그아웃 정리 테스트, `_removeSession` 존재 단위 테스트.
+
+### 개발자 메뉴 재검토 반영(R1·R2·R3) · 11-18
+- R2: 테스트 가족 표시에 만들 때의 어르신·자녀 user id 와 "자녀가 테스트 도메인 이메일인지"를 기록하고 7일 만료. 정리는 칸에서 꺼낸 세션의 user id 가 기록과 같고(자녀는 이메일도 테스트 도메인) whoAmI 역할이 맞을 때만 계정 지우기. 다른 사람 세션이면 건드리지 않음. 정리 전 지금 세션을 보관했다가 지운 신원이 아니면 되돌림. `DevAuth.currentUser()`.
+- R1: 출시 판정을 Gradle 전용 `metro.release.config.js`(react { bundleConfig })로 분리. 개발 서버 `metro.config.js` 는 대역 없음(config.local·메뉴 유지). release 설정은 env.generated 가 없거나 BUILD_TYPE≠release 면 번들 실패. RELEASE.md 에 규칙 추가.
+- R3: `check:dev-menu` 는 앱 소스를 임시 폴더로 복사(node_modules 링크)해 release 설정으로 번들 — 작업 트리 파일을 바꾸지 않는다.
+- 낮음: 어르신 칸이 차 있으면 지금 익명 세션은 `dev_menu_session_anon_v1` 칸에 보관(덮지 않음).
+
 ### P1 번호 화면 공간 단계(UX U4 안심 줄 유지 뒤) · 2026-11-18
 - 단계: 0 그대로 → 1 제목 28→22 → 2 링크 두 개를 이전 바 줄로 → 3 키 64 + 본문 스크롤. 안심 줄 "이 앱은 돈이나 통장 번호를 묻지 않아요"는 어느 단계에서도 숨기지 않는다(예전 1단계 "안심 줄 숨김" 삭제).
 - 예산 모델(connectFit.test `keypadArea`): 위 max(inset,24)+64, 본문 4+제목(68/58)+16+안심 줄 46+8, 하단 6+링크 줄 64(2단계에서 0)+약관 34+max(28,16+inset). 키패드는 칸 68 + 칸 아래 한 줄 34 + 키 4줄(키 ≥ 64).
