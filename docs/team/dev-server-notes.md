@@ -277,3 +277,14 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 재현(로컬 스택, GoTrue v2.198.0, config `otp_length 6`·`otp_expiry 600`·`max_frequency 1s`): 같은 메일로 `/auth/v1/otp` 두 번(2초 간격) → 서로 다른 6자리 2개 → **첫 번호 검증 = 403 `otp_expired`**, 두 번째 = 200(세션 발급).
 - 결론: **문구와 동작이 맞다**(재발송하면 이전 번호는 무효). 앱은 첫 번호 입력 시 오는 `otp_expired`를 "번호가 만료됐어요/새 번호로 써 주세요" 계열로 보여 주면 된다(만료와 같은 코드라 구분 불가).
 - 한계: staging·production(호스팅 GoTrue) 버전이 다르면 다를 수 있다 → 출시 전 staging에서 같은 순서로 1회 확인(테스트 메일). 재발송 간격(`max_frequency`)은 호스팅 대시보드 값(기본 60초일 수 있음, 미확인)을 따른다 — 앱의 "다시 보내기" 대기 시간과 맞출 것. 라이터 전달용.
+
+## 11. 스토어 심사 접근 운영 절차 (SV-15)
+대상: Play 콘솔 "앱 액세스"에 적을 심사용 계정·번호. 서버 0025(재사용 번호, 기본 꺼짐·연결 상한 5) + `supabase/ops/create-review-access.mjs`. 실행은 운영자(서비스 키), 번호·계정 값은 저장소·채팅에 남기지 않는다.
+1. **준비(환경마다 1회)**: 대시보드 Authentication > Add user로 심사용 자녀 계정 2개(이메일+비밀번호, 비밀번호 10자 이상 — Auth 체크리스트 #14). 두 user id를 확인한다.
+2. **만들기**: `node supabase/ops/create-review-access.mjs create <자녀1 id> <자녀2 id>` → 대상 호스트·환경 확인 → 심사 가족 id와 6자리 재사용 번호 출력(이때는 **꺼진 상태**).
+   - 자녀 계정 하나로 앱에서 로그인해 호칭을 정해 둔다(심사자가 보는 화면이 자연스럽게).
+3. **콘솔 입력**: Play 콘솔 > 앱 액세스 안내문에 "자녀 계정(이메일·비밀번호)으로 로그인"과 "다른 폰(또는 앱 데이터 삭제 후)에서 '부모님 휴대폰이에요' → 번호 6자리 입력" 두 경로를 적는다. 번호 값은 콘솔에만.
+4. **심사 제출 직전**: `... enable <심사 가족 id>`(번호 켬). 상한 5대까지 연결된다.
+5. **심사 결과가 나오면**: `... cleanup <심사 가족 id>` — 심사 기기의 어르신 프로필·익명 계정 삭제 + 번호 끔. 자녀 계정·가족은 남는다(다음 심사 때 4부터 다시).
+6. 확인: `select is_review, (select count(*) from profiles p where p.family_id = f.id and role = 'parent') parents from families f where id = '<id>';`, 번호 상태 `select disabled_at, max_uses from invite_codes where family_id = '<id>' and reusable;`
+- 주의: 심사 가족은 일일·응원·연결 알림 대상이 아니고(0033·0038) 지표에서도 뺀다(§12). 번호가 새면 `disable` 후 새로 `create`(새 가족). 스크립트는 실행 전 `app/env/<환경>.env` ref와 호스트를 대조한다. 리허설: staging에서 1~5를 1회(리드·사용자). 로컬은 0025 pgTAP(review_access)으로 같은 흐름을 검증한다.
