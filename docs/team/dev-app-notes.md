@@ -334,3 +334,10 @@
 | 320×640 200% | — | — | — | 원래 스크롤(키 64, 잘림 없음) | 같음 |
 
 - **디자인 확인 항목**: 360×640 100%에서도 키패드 마지막 줄을 보려면 스크롤해야 한다(U4 문서 예상은 200%만 스크롤). 허용하지 않으면 안심 줄 작은 글자(1줄 고정) 단계를 2와 3 사이에 추가하는 안을 검토.
+
+### AU-03 공용 오디오 모듈(src/audio) · 2026-11-18 (리뷰 reviews/2026-11-18-audio-module-review.md 반영·재검토 통과)
+- 화면이 쓰는 것: `useReadAloud()`(allowed·speaking·speak·stop, 화면 읽기 값은 훅이 직접 읽음), `useBgm(자산, {enabled, screen})`(트랙 열기·멈춤·release 까지 훅이), 효과음은 `audio().sfx('stamp')` + 판단 `lib/audioPolicy sfxAllowed` 한 곳.
+- 멈춤: 앱이 뒤로 가면 `bindAppLifecycle` 이 읽기·음악 모두 정지, 화면을 떠나면(언마운트)·화면 읽기가 켜지면 `useReadAloud` 가 정지. 시스템 사유로 멈춘 음악은 돌아와도 자동 재생 안 함(껐다 켜면 재생).
+- **AP-03(읽어 주기) 연결 때 할 일 — 재검토 R1**: native-stack 은 다음 화면으로 갈 때(push) 이전 화면을 언마운트하지 않으므로, 언마운트 정지만으로는 P4→P5 처럼 다음 단계로 넘어갈 때 읽기가 이어진다. AP-03 은 화면 이탈(`useIsFocused` false 또는 `navigation.addListener('blur')`) 때 `stop()` 을 부를 것(테스트: 읽는 중 다음 단계로 이동 → stop 호출).
+- 자산: react-native-sound 0.13.0 은 문자열 파일 이름만 받는다 → require 번호는 `Image.resolveAssetSource().uri`(debug Metro http, release res/raw 이름). release 경로 실제 재생은 미확인(QA-04).
+- 속도 TTS Android 0.9 / iOS 0.45(같은 숫자의 뜻이 다름), 덕킹 10%(절대값 — BGM 기본 30%·페이드는 AP-04 에서 정함). 통화 수신 중 TTS·BGM 정지는 라이브러리 포커스 처리가 비어 있어 미보장(QA-04 5번).
