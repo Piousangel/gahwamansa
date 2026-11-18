@@ -2,7 +2,7 @@
 // 검수 전 사진은 공개 버킷에 올리지 않는다(게이트를 통과해야 업로드). 고칠 땐 이 스크립트로 새 날을 추가하고 옛 날은 admin_retire_content.
 // 입력: 묶음 JSON(배열) — [{day_index, photo:"day-15.jpg"(content/photos/ 아래), caption, keyword, recall_questions[], prompt, option_a, option_b, starter_a?, starter_b?}]
 //       검수표 content/review.md (형식은 content-gate.mjs 머리말)
-// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (키는 출력하지 않음)
+// 대상 주소·서버 키: supabase/ops/ops-auth.mjs(키 숨김 입력 또는 ops용 secret 키 환경변수, 출력하지 않음)
 // 사용: node scripts/photos/publish-content.mjs <묶음.json> --operator <처리자> [--reason "11월 3주차 추가"] [--check]
 //       --check: 게이트만 검사(업로드·게시 안 함). 실제 실행은 대상 호스트를 보여 주고 환경 이름을 다시 입력받아 app/env/<환경>.env의 ref와 대조(production은 호스트 재입력).
 //       검수표는 파일·sha256 칸으로 검수한 사진과 묶인다(content-gate.mjs 머리말).
@@ -12,6 +12,7 @@ import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {checkBatch, parseReview, PHOTO_NAME} from './content-gate.mjs';
 import {confirmTarget} from '../../supabase/ops/target-check.mjs';
+import {opsTarget} from '../../supabase/ops/ops-auth.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const argv = process.argv.slice(2);
@@ -28,13 +29,7 @@ if (!batchPath || (!checkOnly && !operator)) {
   process.exit(2);
 }
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
-  process.exit(3);
-}
-const auth = {Authorization: `Bearer ${key}`, apikey: key};
+const {url, headers: auth} = await opsTarget();
 
 const entries = JSON.parse(readFileSync(resolve(batchPath), 'utf8'));
 const review = parseReview(readFileSync(join(root, 'content/review.md'), 'utf8'));

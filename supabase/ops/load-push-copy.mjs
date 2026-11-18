@@ -1,12 +1,13 @@
 // 확정 푸시 문구를 서버 표(push_copy·cheer_texts, 0033·0038)에 넣는다. 원본은 docs/team/copy.ko.json 한 곳(push.*, cheers.*).
 // 문구가 서버에 들어가야 실제 발송이 된다(비어 있으면 함수가 보내지 않음). 법률 리뷰(WR-02, 혜택·유료·재방문 재촉 금지)를 마친 뒤에만 --approved로 실행한다.
-// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (키는 출력하지 않음)
+// 대상 주소·서버 키: ops-auth.mjs(키 숨김 입력 또는 ops용 secret 키 환경변수, 출력하지 않음)
 // 사용: node supabase/ops/load-push-copy.mjs --approved         (확인만: --dry-run)
 // 실행 시 대상 호스트를 보여 주고 환경 이름(local|staging|production)을 다시 입력해야 진행, production은 호스트를 한 번 더(리뷰 L2). 금지어가 있으면 멈춘다.
 import {readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {confirmTarget} from './target-check.mjs';
+import {opsTarget} from './ops-auth.mjs';
 import {execFileSync} from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -50,12 +51,7 @@ if (!args.has('--approved')) {
   process.exit(2);
 }
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  console.error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.');
-  process.exit(3);
-}
+const {url, headers: keyH} = await opsTarget();
 // 대상 확인(리뷰 L2·C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트를 대조한다. production은 호스트를 한 번 더.
 // 문구가 들어가는 순간 발송 조건이 충족되므로, 셸에 남은 다른 환경 키로 잘못 넣지 않게 한다.
 let commit = 'unknown';
@@ -67,7 +63,7 @@ const envName = await confirmTarget(root, url, `푸시 문구 적재, copy.ko.js
 async function upsert(table, body, onConflict) {
   const res = await fetch(`${url}/rest/v1/${table}?on_conflict=${onConflict}`, {
     method: 'POST',
-    headers: {Authorization: `Bearer ${key}`, apikey: key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal'},
+    headers: {...keyH, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal'},
     body: JSON.stringify(body.map((b) => ({...b, updated_at: new Date().toISOString()}))),
   });
   if (!res.ok) {
