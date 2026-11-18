@@ -15,16 +15,14 @@ async function toQuestion(opts: FakeOptions = {}) {
   await waitFor(() => screen.getByTestId('choice-group'));
 }
 
-test('제목·보조·질문 문장 순서와 크기', async () => {
+test('위계(감사 L3·디자인 판정 9절): 질문이 큰 제목 28 굵게, 지시문은 보조 20 inkSub', async () => {
   await toQuestion();
-  const title = screen.getByText('마음에 드는 쪽을 골라 주세요');
-  expect(StyleSheet.flatten(title.props.style).fontSize).toBe(32);
-  const hint = screen.getByText('정답은 없어요. 마음 가는 쪽을 눌러 주세요');
-  expect(StyleSheet.flatten(hint.props.style).fontSize).toBe(20);
-  expect(StyleSheet.flatten(hint.props.style).color).toBe(color.inkSub);
   const prompt = screen.getByText('더 좋아하는 계절은요?');
-  expect(StyleSheet.flatten(prompt.props.style).fontSize).toBe(22);
+  expect(StyleSheet.flatten(prompt.props.style).fontSize).toBe(28);
   expect(StyleSheet.flatten(prompt.props.style).fontWeight).toBe('bold');
+  const instruction = screen.getByText('마음에 드는 쪽을 골라 주세요');
+  expect(StyleSheet.flatten(instruction.props.style).fontSize).toBe(20);
+  expect(StyleSheet.flatten(instruction.props.style).color).toBe(color.inkSub);
 });
 
 test('질문 문장이 없는 날은 제목·보조만(제목이 두 번 나오지 않음)', async () => {
