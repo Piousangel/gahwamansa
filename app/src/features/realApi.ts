@@ -10,6 +10,8 @@ import {parsePeekResult} from '../api/contract/invite';
 import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled} from '../api/contract/push';
+import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
+import {parseDeleteScope} from '../api/contract/deleteScope';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -88,7 +90,9 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async deleteScopePreview() {
       const {data, error} = await sb.rpc('delete_scope_preview');
       if (error) fail('delete_scope_preview', error);
-      return {scope: data.scope};
+      const r = parseDeleteScope(data); // 0049: 가족 연결 전 계정은 'none'
+      if (!r) throw new ServerError('delete_scope_preview', 'contract_mismatch');
+      return r;
     },
     async deleteMyAccount() {
       const {data, error} = await sb.rpc('delete_my_account');
@@ -446,6 +450,20 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
       if (error) fail('my_push_settings', error);
       const r = parseMyPushSettings(data);
       if (!r) throw new ServerError('my_push_settings', 'contract_mismatch');
+      return r;
+    },
+    async recordTermsAgreement(termsVersion, privacyVersion) {
+      const {data, error} = await sb.rpc('record_terms_agreement', {p_terms_version: termsVersion, p_privacy_version: privacyVersion});
+      if (error) fail('record_terms_agreement', error);
+      const r = parseRecordTerms(data);
+      if (!r) throw new ServerError('record_terms_agreement', 'contract_mismatch');
+      return r;
+    },
+    async myTermsStatus() {
+      const {data, error} = await sb.rpc('my_terms_status');
+      if (error) fail('my_terms_status', error);
+      const r = parseMyTermsStatus(data);
+      if (!r) throw new ServerError('my_terms_status', 'contract_mismatch');
       return r;
     },
   };

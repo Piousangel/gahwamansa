@@ -2,6 +2,7 @@ import {useCallback, useEffect, useReducer, useRef} from 'react';
 import {isOffline} from '../types';
 import type {Api} from '../types';
 import type {EventName, EventProps} from '../../api/contract/events';
+import {PRIVACY_VERSION, TERMS_VERSION} from '../../api/contract/terms';
 import {AUTO_CHECK_MS, connectReducer, initialConnect, shouldAutoCheck} from './connectMachine';
 
 // 번호가 밖에서 들어온 경로(ease-and-joy A②). app_link = App Links(…/c#번호), referrer = 설치 직후 Install Referrer
@@ -12,6 +13,16 @@ export type Prefill = {code: string; source: 'app_link' | 'referrer'};
 // 계측은 기다리지 않고 실패도 무시한다(번호 값은 넣지 않는다)
 function track(api: Api, name: EventName, props?: EventProps) {
   api.logEvent(name, props).catch(() => {});
+}
+
+// 약관·방침 동의 기록(0046·0048, 법률 Q2): 어르신은 P1c 약관 줄 바로 위 [이 번호로 연결하기]를 누른 것이 동의다(연결 전 익명 기기여도 됨).
+// 기다리지 않는다(연결을 막지 않음). 같은 버전 쌍은 서버가 한 번만 남기므로 다시 불러도 된다 → 실패했으면 연결 성공 뒤 한 번 더.
+async function recordTerms(api: Api): Promise<boolean> {
+  try {
+    return (await api.recordTermsAgreement(TERMS_VERSION, PRIVACY_VERSION)).ok;
+  } catch {
+    return false;
+  }
 }
 
 // 밖에서 들어온 번호는 6자리 숫자만 받는다(리뷰 L1). 형식이 다르면 없는 것으로 본다
@@ -99,8 +110,12 @@ export function useConnectFlow(api: Api, rawPrefill?: Prefill) {
     }
     const mine = ++seq.current;
     dispatch({type: 'redeem'});
+    const terms = recordTerms(api);
     try {
       const result = await api.redeemInviteCode(state.code);
+      if (result.ok) {
+        terms.then(ok => (ok ? undefined : recordTerms(api))).catch(() => {});
+      }
       if (alive.current && mine === seq.current) {
         dispatch({type: 'redeemed', result});
         track(api, result.ok ? 'parent_code_redeemed' : 'parent_code_failed', result.ok ? undefined : {reason: result.reason});

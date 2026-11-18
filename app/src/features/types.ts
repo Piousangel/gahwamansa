@@ -3,6 +3,9 @@ import type {CheerKey, MarkCheersReadResult, MyCheers} from '../api/contract/che
 import type {ParentHistoryResult} from '../api/contract/history';
 import type {EventName, EventProps, LogEventResult} from '../api/contract/events';
 import type {MyPushSettings, RegisterPushTokenResult, SetPushEnabledResult} from '../api/contract/push';
+import type {MyTermsStatus, RecordTermsResult} from '../api/contract/terms';
+import type {DeleteScope} from '../api/contract/deleteScope';
+export type {DeleteScope};
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -52,7 +55,6 @@ export type ChildState =
       hadExpired: boolean; // 살아 있는 번호가 없고, 쓰지 않은 지난 번호가 있다(만료·무효화) → "새 번호 받기"
     };
 export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
-export type DeleteScope = 'parent' | 'child' | 'family';
 export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
 
@@ -152,4 +154,8 @@ export interface Api {
   // N1 '알려 주세요'·자녀 권한 허용 때만 true(서버가 받기 시각을 남김, 0037부터 처음 시각 유지). false 면 시각이 지워진다
   setPushEnabled(enabled: boolean): Promise<SetPushEnabledResult>;
   myPushSettings(): Promise<MyPushSettings>;
+  // 약관·방침 동의 기록(0046·0048, 계약 api/contract/terms.ts). 어르신은 연결 화면 약관 줄 동의 때(연결 전 익명 기기여도 됨)
+  recordTermsAgreement(termsVersion: string, privacyVersion: string): Promise<RecordTermsResult>;
+  // needs_reagree 만 쓴다(다시 동의 화면을 띄울지는 법률·리드 결정)
+  myTermsStatus(): Promise<MyTermsStatus>;
 }

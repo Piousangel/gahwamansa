@@ -36,7 +36,8 @@ export type FakeOptions = {
   completedSteps?: StepName[]; // 오늘 이미 끝낸 단계
   streak?: number;
   failRecord?: number; // recordSessionStep 이 처음 N번 실패
-  deleteScope?: 'parent' | 'child' | 'family'; // deleteMyAccount 결과(기본 parent)
+  deleteScope?: 'parent' | 'child' | 'family' | 'none'; // deleteMyAccount 결과(기본 parent). none = 가족 연결 전 계정(0049)
+  termsResult?: 'ok' | 'unknown_version' | 'offline'; // recordTermsAgreement 결과(기본 ok)
   failPreview?: boolean; // deleteScopePreview 실패
   failDelete?: number; // deleteMyAccount 가 처음 N번 실패
   parentTitle?: string; // 자녀 홈 호칭(기본 부모님)
@@ -105,6 +106,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   let failParentHistory = opts.failParentHistory ?? 0;
   // 기본 true(이미 받는 중) — N1 이 다른 화면 테스트를 가리지 않게. N1 을 보려면 pushEnabled:false
   let pushEnabled = opts.pushEnabled ?? true;
+  const agreedTerms = new Set<string>(); // 약관 동의 쌍(0046)
   let who = opts.who;
   let failHistory = opts.failHistory ?? 0;
   let failHistoryServer = opts.failHistoryServer ?? 0;
@@ -439,6 +441,22 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
     },
     async myPushSettings() {
       return {enabled: linked || childFamily ? pushEnabled : null};
+    },
+    // 약관 동의(0046·0048): 같은 쌍은 한 번만 기록
+    async recordTermsAgreement(terms, privacy) {
+      if (opts.termsResult === 'offline') {
+        throw new OfflineError('offline');
+      }
+      if (opts.termsResult === 'unknown_version') {
+        return {ok: false, reason: 'unknown_version'};
+      }
+      const key = `${terms}|${privacy}`;
+      const recorded = !agreedTerms.has(key);
+      agreedTerms.add(key);
+      return {ok: true, recorded};
+    },
+    async myTermsStatus() {
+      return {needsReagree: agreedTerms.size === 0};
     },
   };
 }
