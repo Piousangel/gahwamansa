@@ -1,7 +1,7 @@
-// push-daily 단위 테스트. 실행: node --test supabase/functions/push-daily/lib.test.mts (Node 23.6+ 타입 제거 실행)
+// push-daily 단위 테스트. 실행: node --test supabase/functions/_shared/push.test.mts (Node 23.6+ 타입 제거 실행)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMessage, classifyFcmError, getAccessToken, runDaily, safeEqual, sendAll, ANDROID_CHANNEL_ID, type Target } from './lib.mts';
+import { buildMessage, classifyFcmError, getAccessToken, runDaily, runEvents, safeEqual, sendAll, ANDROID_CHANNEL_ID, type Target } from './push.mts';
 
 const copy = { title: '가화만사성', body: '오늘의 사진이 왔어요' };
 const t1: Target = { profile_id: 'p1', token: 'tok1', platform: 'android' };
@@ -176,4 +176,56 @@ test('runDaily: 인증 토큰 실패면 선점분을 failed로 기록하고 conf
   const rec = f.calls.find((c) => c.name === 'push_record')!;
   assert.equal(rec.args.p_note, 'oauth_failed');
   assert.deepEqual((rec.args.p_results as { status: string }[]).map((x) => x.status), ['failed']);
+});
+
+test('buildMessage(0038): 서버가 채운 대상별 문구·채널·종류를 쓴다', () => {
+  const m = buildMessage({ profile_id: 'c1', token: 'tk', platform: 'android', kind: 'parent_connected', channel: 'family', title: '엄마 폰과 연결됐어요', body: '고른 답을 보여 줄지는 엄마께서 정해요' }, null);
+  assert.deepEqual(m.message.notification, { title: '엄마 폰과 연결됐어요', body: '고른 답을 보여 줄지는 엄마께서 정해요' });
+  assert.equal(m.message.android.notification.channel_id, 'family');
+  assert.deepEqual(m.message.data, { kind: 'parent_connected' });
+  const noBody = buildMessage({ profile_id: 'p', token: 'tk', platform: 'android', kind: 'cheer_arrived', channel: 'cheer', title: '응원', body: null }, null);
+  assert.deepEqual(noBody.message.notification, { title: '응원' }, '본문이 없으면 제목만');
+});
+
+test('runEvents: dry-run이면 선점(처리 표시)하지 않고 dry_run 실행만 남긴다(0041 cron 1시간 쉼)', async () => {
+  const f = fakeRpc({ window_open: true, targets: [] });
+  assert.deepEqual(await runEvents({ rpc: f.rpc, serviceAccount: null, fetchFn: noFetch }), { status: 'dry_run' });
+  assert.deepEqual(f.calls.map((c) => c.name), ['push_record']);
+  assert.equal(f.calls[0].args.p_note, 'dry_run');
+  assert.deepEqual(f.calls[0].args.p_results, []);
+});
+
+test('runEvents(L5): 인증 토큰 실패면 종류별로 failed + oauth_failed 메모', async () => {
+  const { sa } = await makeServiceAccount();
+  const targets: Target[] = [
+    { profile_id: 'a1', token: 'ta', platform: 'android', kind: 'cheer_arrived', channel: 'cheer', title: 't', body: 'b' },
+    { profile_id: 'c1', token: 'tc', platform: 'android', kind: 'parent_connected', channel: 'family', title: 't', body: 'b' },
+  ];
+  const f = fakeRpc({ window_open: true, targets });
+  const rpc = (name: string, args: Record<string, unknown>) => f.rpc(name === 'push_events_claim' ? 'push_daily_claim' : name, args);
+  const fetchFn = (async () => new Response('{}', { status: 400 })) as unknown as typeof fetch;
+  const r = await runEvents({ rpc, serviceAccount: sa, fetchFn });
+  assert.equal(r.status, 'config_error');
+  const recs = f.calls.filter((c) => c.name === 'push_record');
+  assert.deepEqual(recs.map((c) => [c.args.p_kind, c.args.p_note]), [['cheer_arrived', 'oauth_failed'], ['parent_connected', 'oauth_failed']]);
+  assert.ok(recs.every((c) => (c.args.p_results as { status: string }[]).every((x) => x.status === 'failed')));
+});
+
+test('runEvents: 종류별로 결과를 기록한다', async () => {
+  const { sa } = await makeServiceAccount();
+  const targets: Target[] = [
+    { profile_id: 'a1', token: 'ta', platform: 'android', kind: 'cheer_arrived', channel: 'cheer', title: 't', body: 'b' },
+    { profile_id: 'c1', token: 'tc', platform: 'android', kind: 'parent_connected', channel: 'family', title: 't', body: 'b' },
+  ];
+  const f = fakeRpc({ window_open: true, targets });
+  (f as unknown as { rpc: unknown }).rpc = f.rpc;
+  const calls: string[] = [];
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    calls.push(name + (args.p_kind ? ':' + args.p_kind : ''));
+    return f.rpc(name === 'push_events_claim' ? 'push_daily_claim' : name, args);
+  };
+  const fetchFn = (async (url: string) => url.includes('oauth2') ? new Response(JSON.stringify({ access_token: 'at' })) : new Response('{}')) as unknown as typeof fetch;
+  const r = await runEvents({ rpc, serviceAccount: sa, fetchFn });
+  assert.equal(r.status, 'done');
+  assert.deepEqual(calls, ['push_events_claim', 'push_record:cheer_arrived', 'push_record:parent_connected']);
 });

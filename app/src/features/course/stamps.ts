@@ -13,6 +13,11 @@ export function historyDateLabel(ymd: string): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAYS[d.getUTCDay()]}`;
 }
 
+// 오늘 KST 날짜 'YYYY-MM-DD'
+export function kstYmd(now: Date = new Date()): string {
+  return kst(now).toISOString().slice(0, 10);
+}
+
 // 월=0 … 일=6
 export function kstWeekdayIndex(now: Date = new Date()): number {
   return (kst(now).getUTCDay() + 6) % 7;

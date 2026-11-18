@@ -7,7 +7,7 @@ import {
   isQuietEventFailure,
   parseLogEventResult,
 } from '../src/api/contract/events';
-import {ANDROID_PUSH_CHANNEL_ID} from '../src/api/contract/push';
+import {ANDROID_PUSH_CHANNEL_ID, ANDROID_PUSH_CHANNELS, PUSH_KINDS, pushChannelFor} from '../src/api/contract/push';
 
 // 서버 화이트리스트와 계약 상수 비교(ARCHITECTURE 4절 "서버 check/화이트리스트와 contracts 상수가 같은 값").
 // 근원 = supabase/migrations 에서 log_event·event_prop_ok 를 마지막으로 정의한 파일(번호 순). 서버가 바뀌면 이 테스트가 앱 계약을 맞추라고 알린다.
@@ -92,12 +92,30 @@ describe('서버 event_prop_ok = 속성 계약', () => {
   });
 });
 
-test('Android 알림 채널 id 는 서버 push-daily 와 같다(0033)', () => {
-  const lib = path.join(ROOT, 'supabase/functions/push-daily/lib.mts');
-  expect(fs.existsSync(lib)).toBe(true);
-  const m = /ANDROID_CHANNEL_ID\s*=\s*'([^']+)'/.exec(fs.readFileSync(lib, 'utf8'));
-  expect(m?.[1]).toBe(ANDROID_PUSH_CHANNEL_ID);
-  expect(ANDROID_PUSH_CHANNEL_ID).toBe('daily');
+describe('Android 알림 채널 = 서버(0038 push_channel · _shared/push.mts)', () => {
+  test('종류 → 채널 대응이 서버 push_channel 과 같다', () => {
+    const {file, body} = lastDefinition('push_channel');
+    const m = /case\s+p_kind([\s\S]*?)\bend\b/i.exec(body);
+    if (!m) {
+      throw new Error(`${file} 의 push_channel 에서 case p_kind ... end 를 찾지 못했어요.`);
+    }
+    const whens = [...m[1].matchAll(/when\s+'([a-z_]+)'\s+then\s+'([a-z_]+)'/gi)].map(x => [x[1], x[2]] as const);
+    const other = /else\s+'([a-z_]+)'/i.exec(m[1])?.[1];
+    const server = (k: string) => whens.find(([w]) => w === k)?.[1] ?? other;
+    for (const k of PUSH_KINDS) {
+      expect([k, pushChannelFor(k)]).toEqual([k, server(k)]);
+    }
+    const serverChannels = new Set([...whens.map(([, c]) => c), ...(other ? [other] : [])]);
+    expect(sorted([...serverChannels])).toEqual(sorted(ANDROID_PUSH_CHANNELS));
+  });
+  test('채널이 없을 때의 기본 id 가 Edge Function 과 같다', () => {
+    const lib = path.join(ROOT, 'supabase/functions/_shared/push.mts');
+    if (!fs.existsSync(lib)) {
+      throw new Error('supabase/functions/_shared/push.mts 가 없어요(서버가 옮겼으면 이 경로를 고쳐 주세요).');
+    }
+    const m = /ANDROID_CHANNEL_ID\s*=\s*'([^']+)'/.exec(fs.readFileSync(lib, 'utf8'));
+    expect(m?.[1]).toBe(ANDROID_PUSH_CHANNEL_ID);
+  });
 });
 
 test('log_event 응답 검증과 조용한 실패 구분', () => {

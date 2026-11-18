@@ -670,5 +670,12 @@
     "question": "{두 선택지} 고른 답",
     "word": "낱말",
     "day_a11y": "{날짜}, 자세히 보기"
+  },
+  "photo": {
+    "_status": "zoom_close·zoom_hint·zoom_a11y 는 copy 11절 확정. zoom_open_a11y 끝 \"두 번 눌러 크게 보기\"는 디자인 DZ-06(라이터 확인 전)",
+    "zoom_close": "닫기",
+    "zoom_hint": "사진을 누르면 크게 보여요",
+    "zoom_a11y": "사진 크게 보기, {caption}, AI가 만든 그림",
+    "zoom_open_a11y": "오늘 사진, {caption}, AI가 만든 그림, 두 번 눌러 크게 보기"
   }
 }
