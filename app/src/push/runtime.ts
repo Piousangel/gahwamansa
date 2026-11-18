@@ -3,7 +3,7 @@
 import {defaultStore} from '../lib/kvStore';
 import type {Api} from '../features/types';
 import {childOptIn, logPermissionResult, readReceive, setReceive, type PushDeps, type ReceiveResult} from './pushClient';
-import {readNotifyPermission, type NotifyPermission} from './notifyNative';
+import {readNotifyPermission, requestNotifyPermission, type NotifyPermission} from './notifyNative';
 import {nullTokenSource, type PushTokenSource} from './tokenSource';
 
 let deps: PushDeps | null = null;
@@ -41,4 +41,27 @@ export function pushReceive(): Promise<boolean | null | 'offline'> {
 /** 앱 안 알림 끄기·켜기(P13 어르신·C7 자녀 토글). 실패는 값으로(offline·no_profile) */
 export function setPushReceive(enabled: boolean): Promise<ReceiveResult> {
   return deps ? setReceive(deps, enabled, readNotifyPermission) : Promise.resolve({ok: false, reason: 'offline'});
+}
+
+/**
+ * P13 어르신 '알림' 켜기(l2-appinfo 리뷰 M1): N1 '알려 주세요'와 같은 순서 — set_push_enabled(true) → 권한 창(13+ 묻기 전·한 번 거절이면 뜬다)
+ * → 허용이면 토큰 등록. N1 '괜찮아요'로 묻지 않은 기기도 앱 안에서 켤 수 있다. 결과 권한을 함께 돌려준다(blocked 면 호출부가 휴대폰 설정을 연다).
+ * request 는 주입(테스트).
+ */
+export async function parentEnableFromSettings(
+  request: () => Promise<NotifyPermission> = requestNotifyPermission,
+): Promise<{result: ReceiveResult; permission: NotifyPermission | null}> {
+  const d = deps;
+  if (!d) {
+    return {result: {ok: false, reason: 'offline'}, permission: null};
+  }
+  let permission: NotifyPermission | null = null;
+  const result = await setReceive(d, true, async () => {
+    permission = await request();
+    return permission;
+  });
+  if (permission) {
+    logPermissionResult(d.api, permission);
+  }
+  return {result, permission};
 }

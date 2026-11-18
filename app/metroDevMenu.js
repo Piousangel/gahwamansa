@@ -5,6 +5,8 @@
 //   - 개발자 메뉴 구현(src/dev/DevMenuHost.tsx): APP_ENV 가 staging·local 일 때만. 그 밖은 DevMenuHost.stub.tsx
 //     (구현이 import 하는 sessionSlots·testFamily 도 따라서 빠진다)
 //   - config.local.ts(로컬 서버 값·테스트 계정, gitignore): debug 빌드에만. release·불명은 config.local.empty.ts
+//   - 공개 전 배경 음악(src/lib/bgmAsset.ts 에 RELEASED = false): staging·local 이 아니면 bgmAsset.stub.ts(음원 require 없음 →
+//     사람이 귀로 확인하기 전 파일이 production APK 에 들어가지 않음, l2-appinfo 리뷰 L7). RELEASED 를 true 로 바꾸면 대역이 저절로 풀린다
 // 확인: npm run check:dev-menu(직접 번들), Gradle release 번들 뒤 산출물 검사(build.gradle verifyReleaseBundle)
 const fs = require('fs');
 const path = require('path');
@@ -26,7 +28,7 @@ function bundleAppEnv(appDir, readFile = f => fs.readFileSync(f, 'utf8')) {
   return {appEnv: pick('APP_ENV', ENVS), buildType: pick('BUILD_TYPE', BUILD_TYPES)};
 }
 
-function devMenuRedirect(filePath, bundle, appDir) {
+function devMenuRedirect(filePath, bundle, appDir, readFile = f => fs.readFileSync(f, 'utf8')) {
   const p = path.resolve(filePath);
   if (p === path.join(appDir, 'src/dev/DevMenuHost.tsx') && !['staging', 'local'].includes(bundle.appEnv)) {
     return path.join(appDir, 'src/dev/DevMenuHost.stub.tsx');
@@ -34,7 +36,19 @@ function devMenuRedirect(filePath, bundle, appDir) {
   if (p === path.join(appDir, 'src/lib/config.local.ts') && bundle.buildType !== 'debug') {
     return path.join(appDir, 'src/lib/config.local.empty.ts');
   }
+  if (p === path.join(appDir, 'src/lib/bgmAsset.ts') && !['staging', 'local'].includes(bundle.appEnv) && bgmUnreleased(p, readFile)) {
+    return path.join(appDir, 'src/lib/bgmAsset.stub.ts');
+  }
   return null;
+}
+
+// RELEASED = false 이면(또는 읽지 못하면 — 모르면 빼는 쪽) 아직 공개 전
+function bgmUnreleased(file, readFile) {
+  try {
+    return !/const RELEASED = true\b/.test(readFile(file));
+  } catch {
+    return true;
+  }
 }
 
 // release 설정 전용: 파일이 없거나 release 값이 아니면 멈춘다(모르면 진행하지 않음)

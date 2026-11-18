@@ -84,6 +84,23 @@ describe('번들 제외(Metro)', () => {
     expect(devMenuRedirect(impl, B('staging', 'debug'), appDir)).toBeNull();
     expect(devMenuRedirect(path.join(appDir, 'src/app/AppRoot.tsx'), B('production', 'release'), appDir)).toBeNull();
   });
+  test('l2-appinfo 리뷰 L7: 공개 전 배경 음악(RELEASED=false)은 production·불명 번들에서 음원 없는 대역으로, 공개 뒤(true)나 staging 은 그대로', () => {
+    const bgm = path.join(appDir, 'src/lib/bgmAsset.ts');
+    const bgmStub = path.join(appDir, 'src/lib/bgmAsset.stub.ts');
+    const off = () => 'const RELEASED = false;';
+    const on = () => 'const RELEASED = true; // 확인됨';
+    expect(devMenuRedirect(bgm, B('production', 'release'), appDir, off)).toBe(bgmStub);
+    expect(devMenuRedirect(bgm, B('unknown', 'unknown'), appDir, off)).toBe(bgmStub);
+    expect(devMenuRedirect(bgm, B('production', 'release'), appDir, on)).toBeNull();
+    expect(devMenuRedirect(bgm, B('staging', 'release'), appDir, off)).toBeNull(); // 개발자 메뉴 미리 듣기용
+    expect(devMenuRedirect(bgm, B('production', 'release'), appDir)).toBe(bgmStub); // 실제 파일은 지금 공개 전
+    // 대역은 같은 API 를 내보낸다(require 없음)
+    const stubSrc: string = require('fs').readFileSync(bgmStub, 'utf8');
+    expect(stubSrc).not.toMatch(/require\(/);
+    for (const name of ['bgmAsset', 'setBgmPreview', 'bgmPreview', 'setBgmAssetForTest']) {
+      expect(stubSrc).toMatch(new RegExp(`export function ${name}\\b`));
+    }
+  });
   test('H1: config.local(개발용 값·테스트 계정)은 release 번들·환경 불명이면 빈 모듈로', () => {
     expect(devMenuRedirect(local, B('staging', 'release'), appDir)).toBe(empty);
     expect(devMenuRedirect(local, B('production', 'release'), appDir)).toBe(empty);

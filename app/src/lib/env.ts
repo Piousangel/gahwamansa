@@ -23,8 +23,8 @@ export type AppEnv = {
   GIT_SHA: string;
 } & AppInfoEnv;
 
-// 앱 정보 값(AU-07, 공개 값, app/env/<flavor>.env). 없으면 '' → 그 행을 화면에서 숨긴다(자리표시 금지).
-// 빠진 값은 빌드 경고, production release 는 빌드 실패(G-INT 관문 "값이 없어 숨겨진 앱 정보 행 0").
+// 앱 정보 값(AU-07, 공개 값, app/env/<flavor>.env). 없으면 '' → 행은 숨기지 않고 값 없는 행으로 둔다(개발·staging 빨간 '[설정 필요]', 디자인 판정 M8).
+// 빠진 값은 빌드 경고, production release 는 빌드 실패(G-INT 관문 "값이 빈 앱 정보 행 0").
 export type AppInfoEnv = {
   TERMS_URL: string; // 이용약관(https)
   PRIVACY_URL: string; // 개인정보 처리방침(https)

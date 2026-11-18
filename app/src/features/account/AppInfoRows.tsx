@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Linking, StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import {readAppInfo} from '../../lib/appInfo';
 import {getAppEnv} from '../../lib/env';
 import {bgmAsset} from '../../lib/bgmAsset';
 import {copy} from '../../copy/copy';
+import {announce} from '../../ui/a11y';
 
 const ai = copy.app_info;
 // 값이 비었을 때 개발·staging 에서만 보이는 표시(사용자 문구 아님 — production 은 빌드가 막는다, 디자인 판정 M8)
@@ -29,26 +30,34 @@ export function AppInfoRows() {
   const [offline, setOffline] = useState(false);
   const [bizOpen, setBizOpen] = useState(false);
   const web = useInAppWeb(target => navigation.navigate('Web', {target}));
+  // 오프라인 한 줄은 화면에 다시 들어오면 지운다(리뷰 L4: 연결이 돌아와도 남지 않게. 다음에 누르면 다시 확인한다)
+  useEffect(() => navigation.addListener('focus', () => setOffline(false)), [navigation]);
   const open = async (target: 'terms' | 'privacy') => {
     setOffline(false);
+    announce(copy.app.loading); // 확인(최대 4초) 동안 화면 읽기에도 진행을 알린다(리뷰 L3)
     const r = await web.open(target);
     if (r === 'offline') {
       setOffline(true);
     }
+    // 'busy'(이미 확인 중)·'unavailable'(허용 주소 아님 — 값이 있을 때만 누를 수 있어 정상 흐름에는 없음)은 그대로 둔다
   };
-  const missing = dev ? NEEDS_SETUP : undefined;
+  const badge = dev ? NEEDS_SETUP : undefined; // 빨간 표시(SettingsRow badge, 리뷰 L1)
   return (
     <>
       <SettingsRow
         testID="settings-row-terms"
         title={ai.terms}
-        sub={info.termsUrl ? (web.busy === 'terms' ? copy.app.loading : undefined) : missing}
+        sub={info.termsUrl && web.busy === 'terms' ? copy.app.loading : undefined}
+        badge={info.termsUrl ? undefined : badge}
+        accessibilityState={{busy: web.busy === 'terms'}}
         onPress={info.termsUrl ? () => open('terms') : undefined}
       />
       <SettingsRow
         testID="settings-row-privacy"
         title={ai.privacy}
-        sub={info.privacyUrl ? (web.busy === 'privacy' ? copy.app.loading : undefined) : missing}
+        sub={info.privacyUrl && web.busy === 'privacy' ? copy.app.loading : undefined}
+        badge={info.privacyUrl ? undefined : badge}
+        accessibilityState={{busy: web.busy === 'privacy'}}
         onPress={info.privacyUrl ? () => open('privacy') : undefined}
       />
       {offline ? <Banner testID="app-info-offline" kind="offline" text={ai.link_offline} /> : null}
@@ -66,6 +75,7 @@ export function AppInfoRows() {
           <SettingsRow
             testID="settings-row-business"
             title={ai.business_title}
+            accessibilityState={{expanded: bizOpen}}
             onPress={() => setBizOpen(o => !o)}
             noChevron
           />
@@ -79,7 +89,7 @@ export function AppInfoRows() {
           ) : null}
         </>
       ) : (
-        <SettingsRow testID="settings-row-business" title={ai.business_title} sub={missing} />
+        <SettingsRow testID="settings-row-business" title={ai.business_title} badge={badge} />
       )}
       <ContactRow mail={info.contactEmail} dev={dev} />
     </>
@@ -95,7 +105,8 @@ function ContactRow({mail, dev}: {mail: string | null; dev: boolean}) {
       <SettingsRow
         testID="settings-row-contact"
         title={ai.contact}
-        sub={`${dev ? `${NEEDS_SETUP} ` : ''}${ai.contact_pending}\n${ai.contact_request_hint}`}
+        badge={dev ? NEEDS_SETUP : undefined}
+        sub={`${ai.contact_pending}\n${ai.contact_request_hint}`}
       />
     );
   }
