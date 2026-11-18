@@ -65,3 +65,23 @@ export async function parentEnableFromSettings(
   }
   return {result, permission};
 }
+
+/**
+ * P13 '켜 둔 상태 + 권한 denied' 줄의 [알려 주세요](l2-appinfo 재확인 N2): 권한 창 → 결과 기록(push_permission_result, 값 없음)
+ * → 허용이면 받기 상태 확인·토큰 등록(set_push_enabled(true) — 0037 처음 시각 유지). 결과를 돌려준다(실패면 호출부가 한 줄).
+ */
+export async function parentAskPermissionAgain(
+  request: () => Promise<NotifyPermission> = requestNotifyPermission,
+): Promise<{permission: NotifyPermission; result: ReceiveResult | null}> {
+  const permission = await request();
+  const d = deps;
+  if (!d) {
+    return {permission, result: null};
+  }
+  logPermissionResult(d.api, permission);
+  if (permission !== 'granted') {
+    return {permission, result: null};
+  }
+  const result = await setReceive(d, true, async () => permission);
+  return {permission, result};
+}
