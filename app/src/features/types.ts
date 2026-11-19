@@ -133,6 +133,8 @@ export interface Api {
   setParentTitleFor(parentId: string, title: string): Promise<{ok: true} | {ok: false; reason: 'invalid_title' | 'invalid_target' | 'duplicate_title'}>;
   // C5 지난 답: child_answer_history()(0021)
   fetchAnswerHistory(): Promise<ParentHistory[]>;
+  // 어르신 P13 '가족에게 이렇게 보여요'(0050 parent_preview_child_view): 자녀 C4·C5 와 같은 모양, 본인 항목 1개(어르신만)
+  parentPreviewChildView(): Promise<{summary: ChildSummary; history: ParentHistory[]}>;
   // 응원 보내기: send_cheer(p_parent, p_key)(0020). 어르신 한 분에게
   sendCheer(parentId: string, key: CheerKey): Promise<SendCheerResult>;
   // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
