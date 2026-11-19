@@ -468,3 +468,6 @@
 - 자녀 '첫 답' 알림: 연결 뒤 첫 답 때 1회만, 답 내용·시각 없이(U11 예외로 개정, 사용자)
 - U13 개정: P4·P5 하단 '오늘 코스로' 삭제, BackLink 하나로 통일(BackLink v4 적용 뒤, 사용자)
 - 70대 관찰 테스트(첫 설치→첫 도장 혼자): 빌드 1 최우선 관문, 사용자가 섭외(부모님 등). 팀이 절차·체크리스트·기록 양식 준비
+
+## 2026-11-19 staging 반영 0051 + 개발 스위치 켬 (사용자 승인 "올리고 스위치 켜")
+- db push 0051(server_flags·dev_reset_today), staging server_flags.dev_reset_enabled=true(QA용, 테스트 가족에만 동작). production은 행 없음=꺼짐, 출시 점검(remote-checks)에서 꺼짐 확인 필수
