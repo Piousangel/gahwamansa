@@ -335,6 +335,18 @@
       "done_last": "계정과 {호칭}의 기록이 모두 지워졌어요",
       "thanks": "함께해 주셔서 고마워요",
       "back": "처음으로"
+    },
+    "signed_out": {
+      "_src": "PR #146 리뷰 H1(리드 결정 ②, 11-20): delete_my_account 가 no_profile(로그인 정보 없음, 0049)이면 지우지 못한 것 — '지웠어요'로 보이면 안 됨. 라이터 11-20 확정: 자녀용(소셜·이메일로 다시 로그인하면 같은 계정)",
+      "title": "로그인이 풀려 지워지지 않았어요",
+      "body": "다시 로그인한 뒤 해 주세요",
+      "button": "다시 로그인하기"
+    },
+    "signed_out_parent": {
+      "_src": "라이터 11-20 확정: 어르신용. 어르신은 익명 계정이라 번호를 다시 쓰면 새 계정이 생기고 옛 계정은 앱에서 지울 수 없다 → 운영자 삭제(admin_delete_account)로 안내. 익명 기기는 본인 확인 수단이 없어 연결된 자녀 계정으로 가족을 찾고 요청자가 그 가족인지 확인한 뒤 지운다(dev-server-notes §4·§19 ③, #153 리뷰 M1) — '가족 확인 뒤'로 조건을 밝히고, 둘째 문장은 '자녀가 자기 계정을 지우면 된다'가 아니라 '가족이 대신 문의'라는 뜻. '로그인'은 어르신 화면 낱말이 아니라 쓰지 않는다(writer 1-2). button 은 app_info.contact 와 같은 이름(누르면 문의 메일, 제목 app_info.contact_request_subject, 주소는 앱 정보 상수 CONTACT_EMAIL — 비어 있으면 app_info.contact_pending)",
+      "title": "이 휴대폰에서는 지울 수 없어요",
+      "body": "문의하기로 알려 주시면 가족 확인 뒤 지워 드려요. 가족이 대신 문의해도 돼요",
+      "button": "문의하기"
     }
   },
   "course": {
@@ -552,7 +564,7 @@
       "CourseHome": "오늘 코스로",
       "PhotoStep": "사진 보기로",
       "QuestionStep": "둘 중 고르기로",
-      "KeyboardStep": "글씨 쓰기로",
+      "KeyboardStep": "낱말 쓰기로",
       "CourseDone": "오늘 도장으로",
       "History": "지난 날로",
       "HistoryDay": "그날 기록으로",

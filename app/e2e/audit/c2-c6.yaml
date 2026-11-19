@@ -1,0 +1,47 @@
+# C2 재연결 번호·C6 곧 유료 시트 회귀 캡처(ui/ds). 설정 '새 폰 연결 번호' → C2, 지난 날 탭 '이야기 주제 추천' → C6 시트.
+# 전제: fake API 시작 상태를 개발 중에만 잠깐
+#   {who: 'child', childFamily: true, childLinked: true, consented: true, parentTitle: '엄마', history: [{answeredDate: '2020-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}]}
+#   로 바꿔 실행(커밋하지 않음 — c5-past.yaml 머리 주석). clearState 를 쓰지 않는다(c3-fit.yaml 머리 주석).
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c2-c6.yaml
+appId: com.bumojasik.app.staging
+name: C2 C6 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '설정'
+    timeout: 20000
+- tapOn: '설정'
+- scrollUntilVisible:
+    element: '새 폰 연결 번호.*'
+    direction: DOWN
+    speed: 30
+    centerElement: true
+- tapOn: '새 폰 연결 번호.*'
+- extendedWaitUntil:
+    visible: '번호가 만들어졌어요'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c2-first
+- back
+- back
+- extendedWaitUntil:
+    visible: '지난 날'
+    timeout: 10000
+- tapOn: '지난 날'
+- scrollUntilVisible:
+    element: '이야기 주제 추천.*'
+    direction: DOWN
+- tapOn: '이야기 주제 추천.*'
+- extendedWaitUntil:
+    visible: '관심 있어요'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c6-sheet

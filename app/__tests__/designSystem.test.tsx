@@ -3,7 +3,7 @@ import React from 'react';
 import {Dimensions, KeyboardAvoidingView, Platform, StyleSheet, Text} from 'react-native';
 import {render, screen} from '@testing-library/react-native';
 import v3 from '../../design-system/tokens-v3.json';
-import {color, fontSize, labelLineHeight, layout, lineHeight, lineHeightFor, radius, size, space, touch, typeScale, FONT_SCALE_MAX, FONT_SCALE_MAX_BODY, MIN_BODY_FONT, MIN_TOUCH} from '../src/ui/tokens';
+import {color, fontSize, labelLineHeight, layout, lineHeight, lineHeightFor, radius, size, space, tokensV4, touch, typeScale, FONT_SCALE_MAX, FONT_SCALE_MAX_BODY, MIN_BODY_FONT, MIN_TOUCH} from '../src/ui/tokens';
 import {keepAll, keepAllChildren, WORD_JOINER} from '../src/ui/koreanText';
 import {BigButton} from '../src/ui/BigButton';
 import {SelectCard} from '../src/ui/SelectCard';
@@ -17,9 +17,19 @@ const flat = (s: unknown) => StyleSheet.flatten(s as never) ?? {};
 
 describe('tokens = tokens-v3.json', () => {
   test('색은 v3 역할 값과 같다', () => {
+    // inkSub 만 v4 값(#85592F 5.47 → #544B43 7.70, 접근성 패널 r1 어르신 7:1). 나머지 v3 값은 v4 와 같다
+    const V4_VALUE: Record<string, string> = {inkSub: tokensV4.color.inkSub};
     for (const [name, def] of Object.entries(v3.color)) {
-      expect([name, (color as Record<string, string>)[name]]).toEqual([name, def.value]);
+      expect([name, (color as Record<string, string>)[name]]).toEqual([name, V4_VALUE[name] ?? def.value]);
     }
+  });
+  test('v3 색은 tokensV4 에서 파생된다(원본 하나): 같은 이름은 같은 값, ink 는 v3ColorAlias(action)', () => {
+    const c4 = tokensV4.color as Record<string, string>;
+    for (const name of Object.keys(v3.color)) {
+      const v4Name = name === 'ink' ? tokensV4.v3ColorAlias.ink : name;
+      expect([name, (color as Record<string, string>)[name]]).toEqual([name, c4[v4Name]]);
+    }
+    expect(color.inkBody).toBe(tokensV4.color.inkBody);
   });
   test('옛 이름은 v3 역할의 별칭으로 남는다(호출부 호환)', () => {
     expect(color.actionDark).toBe(color.actionPressed);

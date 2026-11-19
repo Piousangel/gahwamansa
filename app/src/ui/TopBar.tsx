@@ -26,7 +26,7 @@ export function TopBar({title, settingsLabel, onSettings}: Props) {
           hitSlop={8}
           style={({pressed}) => [styles.settings, pressed ? styles.pressed : null]}>
           <Icon name="icon-settings" size={28} color={color.ink} />
-          <Text20 weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX}>{settingsLabel}</Text20>
+          <Text20 weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.action}>{settingsLabel}</Text20>
         </Pressable>
       ) : null}
     </View>
@@ -38,4 +38,6 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   settings: {flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: size.touchMin, paddingLeft: 8},
   pressed: {opacity: 0.6},
+  // 누르는 글자는 갈색(아이콘과 같은 색) — Text20 기본 inkBody 를 따라가지 않게(#140 리뷰 M1)
+  action: {color: color.ink},
 });

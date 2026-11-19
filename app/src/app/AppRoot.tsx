@@ -22,6 +22,11 @@ import {startInviteSources, subscribeInvite, type InviteBanner} from '../lib/lin
 import {emitRouteChange, navRef} from '../navigation/navRef';
 import {PushHost} from './PushHost';
 import {trackOnce} from '../features/track';
+import {configureCoverQueue} from '../ui/ds/coverQueue';
+import {prefs} from '../lib/prefs';
+
+// 덮개 하루 하나(A8): 마지막으로 보인 날을 이 기기에 남긴다(ui 는 저장소를 모르므로 조립 계층에서 붙인다)
+configureCoverQueue({load: () => prefs().coverDay(), save: day => prefs().setCoverDay(day)});
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
