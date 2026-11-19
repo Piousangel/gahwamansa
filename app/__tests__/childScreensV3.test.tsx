@@ -572,6 +572,36 @@ describe('C7 설정 v2', () => {
     expect(mt('code-show-line-1')).toBeUndefined();
   });
 
+  test('#152 리뷰 L: C2 — 번호 카드가 첫 화면 끝에 걸쳐도 카드는 밀지 않는다(from 1)', async () => {
+    await openSettings();
+    await press('새 폰 연결 번호, 엄마 폰을 바꿨을 때 써요');
+    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 304); // 접힘 = 280
+      lay('code-show-block', 200, 300); // 묶음이 200 에서 시작(제목이 큰 글자로 길 때)
+      lay('code-show-card', 0, 120); // 200~320 → 280 에 걸림
+      lay('code-show-line-1', 0, 104);
+      lay('code-show-line-2', 0, 52);
+    });
+    expect(mt('code-show-card')).toBeUndefined();
+    expect(mt('code-show-line-1')).toBeUndefined();
+    expect(mt('code-show-line-2')).toBeUndefined();
+  });
+
+  test('#152 리뷰 L(W-09): C2 보조 버튼은 돌아갈 화면 이름(설정에서 왔으면 \'설정으로\')', async () => {
+    await openSettings();
+    await press('새 폰 연결 번호, 엄마 폰을 바꿨을 때 써요');
+    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+    expect(screen.queryByText('연결 기다리기')).toBeNull();
+    const back = screen.getAllByRole('button', {name: '설정으로'});
+    expect(back.length).toBeGreaterThanOrEqual(1);
+    fireEvent.press(back[back.length - 1]); // Dock 보조(위 뒤로 바와 같은 곳)
+    await waitFor(() => screen.getByText('설정'));
+  });
+
   test('새 폰 연결 번호 → 그 어르신 재연결 번호 화면', async () => {
     const api = await openSettings();
     const issue = jest.spyOn(api, 'issueInviteCode');
