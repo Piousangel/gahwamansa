@@ -19,6 +19,18 @@ if (googleServicesFlavors) {
     }
     logger.lifecycle("Firebase: google-services.json 있는 flavor = ${googleServicesFlavors.join(', ')}")
 }
+// 출시 게이트(US-10 뒤): production release 는 Firebase 설정 없이 만들지 않는다(알림이 조용히 안 오는 출시 방지)
+android.applicationVariants.configureEach { variant ->
+    if (variant.flavorName == "production" && !variant.buildType.debuggable) {
+        variant.preBuildProvider.configure {
+            doFirst {
+                if (!file("src/production/google-services.json").exists()) {
+                    throw new GradleException("app/android/app/src/production/google-services.json 이 없어요. production release 는 Firebase 설정이 있어야 해요(US-10, 저장소 밖에서 받아 복사 — 커밋 금지).")
+                }
+            }
+        }
+    }
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.

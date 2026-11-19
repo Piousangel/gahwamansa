@@ -1,4 +1,5 @@
 import React from 'react';
+import {Platform} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ChildHome} from '../features/home/ChildHome';
@@ -16,6 +17,7 @@ import {ChildTabBar} from './ChildChrome';
 import {ToastProvider} from '../ui/Toast';
 import {NewConnectionBanner} from '../features/home/NewConnectionBanner';
 import {useSession} from './session';
+import {stackScreenOptions} from '../navigation/stackOptions';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {copy} from '../copy/copy';
 import {WebScreen, type WebParams} from './WebScreen';
@@ -63,7 +65,7 @@ export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyo
   return (
     // 자녀 화면 공용 토스트(U0). 시트·대화상자 위 오류는 토스트가 아니라 모달 안 오류 줄(리뷰 M2)
     <ToastProvider>
-    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{headerShown: false}}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={stackScreenOptions(Platform.OS)}>
       <Stack.Screen name="Gate" component={ChildGate} />
       <Stack.Screen name="Login" component={ChildLogin} />
       <Stack.Screen name="Relation" component={RelationScreen} />

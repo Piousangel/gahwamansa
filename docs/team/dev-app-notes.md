@@ -462,3 +462,10 @@
 - `res/xml/data_extraction_rules.xml`(Android 12+: cloud-backup·device-transfer 모두 모든 도메인 제외) + `res/xml/backup_rules.xml`(11 이하 자동 백업 제외), 매니페스트 `android:dataExtractionRules`·`android:fullBackupContent` 연결(`allowBackup="false"` 유지). 일부 제조사 D2D 가 allowBackup=false 를 무시하는 경우 대비.
 - 확인: stagingRelease 병합 매니페스트 `usesCleartextTraffic="false"`·`allowBackup="false"`·두 규칙 연결, 권한 INTERNET·POST_NOTIFICATIONS·DYNAMIC_RECEIVER_NOT_EXPORTED·INSTALL_REFERRER 뿐. 관문 행 release-gates G-25(백업)·G-26(평문 통신).
 - `react-native-url-polyfill` 을 `^4.0.0` → `4.0.0` 정확 고정(웹뷰 재확인 낮음, lock 은 이미 4.0.0).
+### Firebase 설치(US-10 완료 뒤) · 2026-11-19 (xhigh 리뷰 대상)
+- 프로젝트 `gahwa-mansaseong` 하나에 staging·production 앱 2개(DECISIONS 11-19). `google-services.json` 은 `app/android/app/src/{staging,production}/`(gitignore·600, 저장소 밖에서 복사, 커밋 금지).
+- `@react-native-firebase/app`·`messaging` **27.1.0** 정확 고정. 함께 들어온 npm 의존성: 웹 `firebase` 13.1.0 묶음(@firebase/*, grpc·protobuf 등 — RNFB 의 웹·기타 플랫폼용). Android 번들에 들어가는지는 아래 '번들 확인'.
+- 병합 매니페스트(stagingDebug): 새 권한 `WAKE_LOCK`·`ACCESS_NETWORK_STATE`·`com.google.android.c2dm.permission.RECEIVE`. **AD_ID 없음**, 위치 없음. 수신기 `ReactNativeFirebaseMessagingReceiver`·`FirebaseInstanceIdReceiver` 는 exported=true 이지만 `c2dm.permission.SEND`(GMS 만 가짐)로 보호. 서비스는 모두 exported=false. meta: 자동 초기화 false·설치 ID 메시징 false·알림 위임 false·기본 채널 `daily`. datatransport(Firelog) 구성 요소가 함께 들어온다 — 전달 지표 내보내기는 꺼 둠(firebase.json), 데이터 보안 양식(LG-05)에 "Firebase 진단(datatransport)" 확인 필요.
+- production release 게이트: `src/production/google-services.json` 이 없으면 빌드 실패.
+- `FCM_WIRED` 는 **false 유지**(리드 지시): P13 어르신 토글은 main 에 있으나 C7 자녀 '가족 연결' 토글이 아직 없음(DECISIONS 11-18: 둘 다 필요).
+- 토큰 시험(2026-11-19, emulator-5554 Google APIs 이미지, staging 디버그 + 임시 real 모드·임시 시험 코드 — 커밋 안 함): `createFcmTokenSource().getToken()` → **발급됨**(길이만 기록, 값은 로그·출력 안 함). POST_NOTIFICATIONS 허용 상태. 실제 수신(QA-07)은 FCM_WIRED 를 켠 뒤.

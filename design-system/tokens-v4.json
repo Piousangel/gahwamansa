@@ -722,6 +722,14 @@
       "top": 12,
       "bottom": "max(28, insets.bottom)",
       "x": 24
+    },
+    "socialGroup": {
+      "slot": "주 슬롯 안의 SocialGroup",
+      "maxItems": 3,
+      "order": "kakao → google → apple(iOS만)",
+      "equalSize": "같은 높이·같은 폭·같은 반경(grid 같은 행)",
+      "note": "브랜드 가이드 값. 글자 child button 18, 확대 1.5, 줄바꿈 허용, 글자 굵기 500(브랜드 예외)",
+      "heightLimit": "Dock ≤ 40%. 넘치면 보조 링크 → 본문 끝"
     }
   },
   "backLink": {
@@ -849,6 +857,16 @@
         "child",
         "bodyLg",
         "body"
+      ],
+      [
+        "child",
+        "link",
+        "sub"
+      ],
+      [
+        "elder",
+        "link",
+        "sub"
       ]
     ],
     "generated": "tokens-v4.json과 생성물 일치",

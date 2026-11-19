@@ -110,6 +110,8 @@ export function ParentSettings() {
             </View>
           ) : null}
           {/* P16 연결된 가족(copy 11-3 settings.family_row): 누구와 연결됐는지 확인·그만두기 */}
+          {/* AP-06 시안 P13_more: '답 보여 주기' 바로 아래 '가족에게 이렇게 보여요' › (펼친 확인·오류 줄이 있으면 그 아래) */}
+          <SettingsRow testID="settings-row-preview" title={copy.settings.preview.title} onPress={() => navigation.navigate('FamilyPreview')} />
           <SettingsRow testID="settings-row-family" title={t.family_row} onPress={() => navigation.navigate('Family')} />
         </>
       ) : (
@@ -282,3 +284,4 @@ const styles = StyleSheet.create({
   errorTitle: {color: color.dangerInk},
   sub: {color: color.inkSub},
 });
+

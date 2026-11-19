@@ -52,6 +52,7 @@ test('P6 글자 입력마다: 다시 그리기 1번, 서버·TTS·소리·앱 �
     });
   }
   const called = watched.filter(([, m]) => m.mock.calls.length > 0).map(([k, m]) => `${k}×${m.mock.calls.length}`);
+  expect(watched.length).toBeGreaterThan(apiSpies.length + 5); // 감시 대상이 비면(대역이 바뀌어 .mock 이 없어지는 등) 가드가 조용히 빈다(PR #3 리뷰 L3)
   expect(called).toEqual([]);
-  expect(commits).toBe(N);
+  expect(commits).toBeLessThanOrEqual(N); // 글자당 두 번 이상이면 회귀. 입력과 무관한 묶어 그리기 변화에는 흔들리지 않게(PR #3 리뷰 L2)
 });

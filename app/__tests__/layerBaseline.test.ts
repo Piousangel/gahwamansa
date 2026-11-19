@@ -9,7 +9,7 @@ type LintResult = {messages: LintMessage[]};
 const {ESLint}: {ESLint: new (o: {cwd: string}) => {lintFiles(p: string[]): Promise<LintResult[]>}} = require('eslint');
 const path: {join(...p: string[]): string} = require('path');
 
-const BASELINE = {app: 59, crossFeature: 7, uiDeps: 1};
+const BASELINE = {app: 61, crossFeature: 7, uiDeps: 1}; // app 59→61: features/account/FamilyPreview 의 session·BackBar(PR #11 리뷰 L1 권고, AU-10 에서 ui/shared 로 옮길 대상)
 
 jest.setTimeout(120000);
 
