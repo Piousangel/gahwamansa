@@ -783,6 +783,8 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     dims(1);
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
+    expect(StyleSheet.flatten(screen.getByTestId('title-group').props.style).flexDirection).not.toBe('row'); // #115 L1: 재기 전에는 1열
+    fireEvent(screen.getByTestId('title-group'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     const group = screen.getByTestId('title-group');
     expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row'); // 2열(행 우선 — 읽는 순서 = 시선 흐름)
     const radios = within(group).getAllByRole('radio');
@@ -861,6 +863,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));
     await press('이름 고르기');
+    fireEvent(screen.getByTestId('title-dup-options'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     const grid = screen.getByTestId('title-dup-options');
     expect(StyleSheet.flatten(grid.props.style).flexDirection).toBe('row');
     expect(within(grid).getByLabelText('엄마, 이미 쓰는 이름, 사용할 수 없음').props.accessibilityState.disabled).toBe(true);
