@@ -199,7 +199,13 @@ type UnregisterPushToken = { ok: true; removed: number };
   - 확정 문구(라이터, 11-19): 제목 `{호칭}께서 첫 답을 고르셨어요`, 본문 `앨범에서 보고 이야기해 볼까요?`(금지어·길이 통과, pgTAP).
   - 문구: 라이터가 `docs/team/copy.ko.json`에 `push.first_answer.title`·`body`를 넣으면 `load-push-copy.mjs`가 적재(없으면 "라이터 문구 대기"로 건너뜀 → 서버는 그 종류를 보내지 않음). 자리값은 `{호칭}`만 허용(스크립트가 다른 자리값을 거부) — **답 내용·고른 답·시각은 넣지 않는다**. 금지어 검사는 push_copy 제약 그대로.
   - 큐: `save_answer`가 새 답(같은 날 같은 질문 고치기는 아님)을 넣을 때, 아직 기록이 없는 자녀가 있고 같은 종류 미처리 큐가 없으면 `notification_queue`에 한 줄(payload `{parent_id}`만). 심사 가족 제외.
-  - 선점(push-events, KST 08~20시): 어르신이 **지금도 동의 중**일 때만. 기록 없는 자녀마다 `first_answer_notices`(자녀 PK = 평생 1회)에 `sent`(받을 수 있음: 알림 켬·받기 동의 시각·토큰·심사 아님) 또는 `skipped`(알림 끔·받기 동의 없음 — 그 첫 답은 지나가고 나중에 켜도 다시 안 보냄). 철회면 아무에게도 안 보내고 기록도 안 남김(다시 동의하고 새로 답하면 그때가 첫 답). 나중에 연결된 형제 자녀는 연결 뒤 다음 새 답 때 1회.
+  - 선점(push-events, KST 08~20시): 어르신이 **지금도 동의 중**일 때만. 기록 없는 자녀마다 `first_answer_notices`(자녀 PK = 평생 1회)에 한 줄:
+    - `claimed` → 대상(받을 수 있음: 알림 켬·받기 동의 시각·심사 아님 + 토큰 있음). Edge가 `push_record`로 결과를 남기면 `sent`(토큰 하나라도 성공) 또는 `failed`로 확정. 재시도 없음.
+    - `no_token`(받을 수 있지만 토큰 없음), `skipped`/`not_reachable`(알림 끔·받기 동의 없음) — 그 첫 답은 지나가고 나중에 켜도 다시 안 보냄.
+    - 실제 도달 확인: `select status, reason, count(*) from first_answer_notices group by 1, 2;`(`claimed`가 오래 남아 있으면 Edge 결과 기록이 안 된 것).
+  - **백필(0052 반영 시 1회)**: 반영 전에 이미 답이 있던 가족의 자녀(자녀 프로필이 생긴 뒤 그 가족 어르신 답이 있음)는 `skipped`/`backfill` — 몇 주째 답해 온 가족에 "첫 답" 알림이 가지 않는다(리뷰 PR #48 M1). down 뒤 다시 올리면 백필이 다시 도니 기록을 내보내 두고 복원한다(down 머리말).
+  - 서버 제약 `push_copy_first_answer_vars`: 첫 답 문구는 `{호칭}` 외 자리값 금지, body_fallback·body_many 없음.
+  - 라이터 확인 권장(리뷰): 나중에 연결된 형제 자녀도 "첫 답" 문구를 받는데 어르신에게는 첫 답이 아니다 — 문구를 그대로 둘지 라이터 판단. 철회면 아무에게도 안 보내고 기록도 안 남김(다시 동의하고 새로 답하면 그때가 첫 답). 나중에 연결된 형제 자녀는 연결 뒤 다음 새 답 때 1회.
   - `first_answer_notices`는 앱·anon·서비스 역할 접근 불가, 자녀 프로필 삭제 시 함께 삭제. 확인: `select status, count(*) from first_answer_notices group by 1;`, `select * from push_runs where kind = 'parent_first_answer' order by id desc limit 5;`
 - **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
   ```sql

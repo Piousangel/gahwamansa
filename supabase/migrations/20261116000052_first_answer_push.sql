@@ -5,7 +5,11 @@
 --   같은 종류의 미처리 큐가 없으면 notification_queue에 'parent_first_answer' 한 줄(payload {parent_id}만). 심사 가족은 넣지 않는다.
 --   push_events_claim(창 08~20시 KST)이 큐를 소비하며, 어르신이 지금도 동의 중일 때만(철회면 아무에게도 안 보내고 기록도 안 남김),
 --   아직 기록 없는 자녀마다 first_answer_notices에 한 줄(자녀 PK = 평생 1회, 동시 실행은 on conflict로 한 번만):
---     받을 수 있으면(push_reachable: 알림 켬·받기 동의 시각·토큰 연결·심사 아님) 'sent' → 대상, 아니면 'skipped'(그 첫 답은 지나감 — 나중에 켜도 다시 안 보냄).
+--     받을 수 있고(push_reachable: 알림 켬·받기 동의 시각·심사 아님) 토큰이 있으면 'claimed' → 대상, Edge 결과 기록(push_record) 때 'sent'·'failed'로 확정.
+--     알림 끔·받기 동의 없음이면 'skipped'(reason not_reachable), 토큰이 없으면 'no_token' — 어느 쪽이든 그 첫 답은 지나감(재시도 없음, 평생 1회).
+-- 백필(리뷰 PR #48 M1): 0052 반영 전에 이미 답이 있던 가족의 자녀(자녀 프로필이 생긴 뒤 그 가족 어르신 답이 있음)는 'skipped'(reason backfill)로 미리 넣는다
+--   → 몇 주째 답해 온 가족에 "첫 답" 알림이 가지 않는다. 함수 first_answer_backfill()로 두고(테스트 재현용) 마이그레이션에서 한 번 부른다.
+-- 서버도 첫 답 문구의 자리값을 {호칭}으로 제한한다(push_copy 제약, 리뷰 L2).
 --   형제 자녀가 나중에 연결되면 그 자녀는 기록이 없으므로, 연결 뒤 어르신의 다음 새 답이 그 자녀의 '첫 답' 알림이 된다.
 -- 표 first_answer_notices: 앱·anon·서비스 역할 접근 불가(definer 함수만). 자녀 프로필이 지워지면 함께 지워진다.
 
@@ -21,11 +25,37 @@ alter table public.push_claims drop constraint push_claims_kind_check,
 create table public.first_answer_notices (
   child_id uuid primary key references public.profiles(id) on delete cascade,
   family_id uuid not null references public.families(id) on delete cascade,
-  status text not null check (status in ('sent', 'skipped')),
-  created_at timestamptz not null default now()
+  status text not null check (status in ('claimed', 'sent', 'failed', 'no_token', 'skipped')),
+  reason text check (reason in ('backfill', 'not_reachable')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 alter table public.first_answer_notices enable row level security; -- 정책 없음 = 클라이언트 전면 거부
 revoke all on public.first_answer_notices from public, anon, authenticated, service_role;
+
+-- 첫 답 문구 자리값은 {호칭}만(답 내용·시각 금지, 리뷰 L2)
+alter table public.push_copy add constraint push_copy_first_answer_vars check (
+  kind <> 'parent_first_answer'
+  or (title !~ '\{(?!호칭\})' and body !~ '\{(?!호칭\})' and body_fallback is null and body_many is null));
+
+-- 백필: 이미 답이 있던 가족의 자녀는 '첫 답'이 지나간 것으로 기록. 돌려주는 값 = 넣은 행 수
+create function public.first_answer_backfill() returns int
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  n int;
+begin
+  insert into public.first_answer_notices (child_id, family_id, status, reason)
+  select c.id, c.family_id, 'skipped', 'backfill'
+    from public.profiles c
+   where c.role = 'child'
+     and exists (select 1 from public.answers a where a.family_id = c.family_id and a.answered_at >= c.created_at)
+  on conflict (child_id) do nothing;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke execute on function public.first_answer_backfill() from public, anon, authenticated, service_role;
+select public.first_answer_backfill();
 
 -- save_answer(0014) + 첫 답 큐
 create or replace function public.save_answer(p_question uuid, p_choice text) returns void
@@ -87,6 +117,16 @@ begin
     delete from public.device_tokens dt
      using jsonb_array_elements(v_res) r
      where r ->> 'status' = 'invalid_token' and dt.token = r ->> 'token';
+  end if;
+
+  -- 첫 답(0052): 선점(claimed)한 자녀를 실제 결과로 확정 — 토큰 하나라도 sent면 sent, 아니면 failed(재시도 없음)
+  if p_kind = 'parent_first_answer' then
+    update public.first_answer_notices n
+       set status = case when exists (select 1 from jsonb_array_elements(v_res) r
+                                       where (r ->> 'profile_id')::uuid = n.child_id and r ->> 'status' = 'sent') then 'sent' else 'failed' end,
+           updated_at = p_now
+     where n.status = 'claimed'
+       and n.child_id in (select (r ->> 'profile_id')::uuid from jsonb_array_elements(v_res) r);
   end if;
 
   update public.push_claims c
@@ -183,7 +223,8 @@ begin
       returning family_id, (payload ->> 'parent_id')::uuid as parent_id),
     cand as (
       select distinct on (c.id) c.id as child_id, c.user_id, d.family_id,
-             coalesce(par.parent_title, f.parent_title) as title, public.push_reachable(c.id) as reach
+             coalesce(par.parent_title, f.parent_title) as title, public.push_reachable(c.id) as reach,
+             exists (select 1 from public.device_tokens t where t.user_id = c.user_id) as has_token
         from done d
         join public.families f on f.id = d.family_id and not f.is_review
         join public.profiles par on par.id = d.parent_id and par.family_id = d.family_id and par.role = 'parent'
@@ -192,8 +233,11 @@ begin
        where not exists (select 1 from public.first_answer_notices n where n.child_id = c.id)
        order by c.id, d.parent_id),
     ins as (
-      insert into public.first_answer_notices (child_id, family_id, status)
-      select child_id, family_id, case when reach then 'sent' else 'skipped' end from cand
+      insert into public.first_answer_notices (child_id, family_id, status, reason)
+      select child_id, family_id,
+             case when not reach then 'skipped' when not has_token then 'no_token' else 'claimed' end,
+             case when not reach then 'not_reachable' end
+        from cand
       on conflict (child_id) do nothing
       returning child_id, status)
     select coalesce(jsonb_agg(jsonb_build_object(
@@ -206,7 +250,7 @@ begin
       from ins
       join cand on cand.child_id = ins.child_id
       join public.device_tokens dt on dt.user_id = cand.user_id
-     where ins.status = 'sent';
+     where ins.status = 'claimed';
     v_targets := v_targets || v_part;
   end if;
 
