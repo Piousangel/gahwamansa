@@ -131,7 +131,8 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
         clearDevSessions(); // 개발자 메뉴가 보관한 역할별 세션도(staging·개발 빌드만, production 은 아무것도 안 함)
       },
       resetRole: () => {
-        localStamps().clear(); // 처음 화면으로: 이 기기의 미연결 도장도 비운다
+        // 처음 화면으로는 데이터를 지우지 않는다(PR #133 리뷰 M1: 뒤로가기로 닿는 길이라 기기 도장이 사라지면 안 된다).
+        // 기기 도장을 지우는 것은 '모두 지우기'(clear)뿐
         clearDevSessions(); // 로그아웃·처음으로: 개발자 메뉴 보관 세션도 지운다
         setContent(undefined);
         setStart('Connect');

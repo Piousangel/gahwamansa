@@ -53,14 +53,15 @@ test('음원(CT-04) 전에는 P3 음악 버튼·P7 권유·P13 행이 모두 없
   expect(screen.queryByTestId('bgm-row')).toBeNull();
 });
 
-test('음원이 있으면 P3 "음악 켜기" → 누르면 켜지고 "음악 끄기"(기본 꺼짐, 기기에 저장)', async () => {
+test('P3 v4(시안 ds4b): 음악은 소리가 날 때만 "음악 끄기"(켜기는 설정), 누르면 꺼지고 줄이 사라진다(기기에 저장)', async () => {
   setBgmAssetForTest('bgm_test');
+  await prefs.setBgmEnabled(true);
   await home();
-  await press('음악 켜기');
   await waitFor(() => screen.getByRole('button', {name: '음악 끄기'}));
-  expect(await prefs.bgmEnabled()).toBe(true);
+  expect(screen.queryByRole('button', {name: '음악 켜기'})).toBeNull();
   await press('음악 끄기');
-  await waitFor(() => screen.getByRole('button', {name: '음악 켜기'}));
+  await waitFor(() => expect(screen.queryByRole('button', {name: '음악 끄기'})).toBeNull());
+  expect(screen.queryByRole('button', {name: '음악 켜기'})).toBeNull();
   expect(await prefs.bgmEnabled()).toBe(false);
 });
 

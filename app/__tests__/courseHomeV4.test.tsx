@@ -7,7 +7,7 @@ import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
 import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
-import {press, toHomeConsented, confirmDeleteAll} from '../testUtils/flow';
+import {press, toHomeConsented, confirmDeleteAll, pressCourseNext} from '../testUtils/flow';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
 
 // P3 코스 홈 v4(동결 시안 P3_course_home_v4): 리듬 규칙(D)·완료 상태 다시 보기(B)·제목 없음·미연결 띠.
@@ -114,13 +114,15 @@ function spyAll(api: Fake) {
 const counts = (spies: {mock: {calls: unknown[]}}[]) => spies.map(s => s.mock.calls.length);
 
 describe('코스 홈 v4', () => {
-  test('"오늘의 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 본문(스크롤) 안, 단계 행 사이 8', async () => {
+  test('"오늘의 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 위 영역(시안 ds4b — 200%에서도 첫 화면에 남는다), 단계 행 사이 12', async () => {
     await home({});
     expect(screen.queryByText('오늘의 코스')).toBeNull();
     expect(screen.getByTestId('date-line').props.accessibilityRole).toBe('header');
-    expect(within(screen.getByTestId('screen-body')).getByTestId('date-line')).toBeTruthy(); // 리뷰 H3
-    expect(StyleSheet.flatten(screen.getByTestId('course-steps').props.style).gap).toBe(8);
-    expect(screen.getByText('세 가지를 차례로 해요')).toBeTruthy(); // 0/3 인사 한 줄
+    expect(within(screen.getByTestId('ds-screen-top')).getByTestId('date-line')).toBeTruthy(); // 네이버 패널 r1/4: 돌아와도 날짜·설정이 위로 밀려 사라지지 않게
+    expect(within(screen.getByTestId('ds-screen-top')).getByRole('button', {name: '설정'})).toBeTruthy();
+    // 본문 간격 12(FoldStack 이 요소 사이 marginTop 으로 준다)
+    const kids = (screen.getByTestId('course-steps').children as unknown as {props: {style: unknown}}[]).map(k => StyleSheet.flatten(k.props.style as never)?.marginTop);
+    expect(kids.slice(1).every(m => m === 12)).toBe(true);
   });
 
   test('3/3 완료: 세 행 모두 › 와 하단 "오늘 코스 다시 보기"', async () => {
@@ -194,10 +196,15 @@ describe('코스 홈 v4', () => {
     await waitFor(() => screen.getByTestId('date-line'));
   });
 
-  test('완료 전에는 행을 누를 수 없고 다시 보기 버튼도 없다', async () => {
+  test('리드 결정(시안 1:1): 완료 전에도 했어요 행은 눌러 다시 보기(읽기 이름 = 보이는 글, 다시 보기는 힌트), 다음 행은 누르지 않는다', async () => {
     await home({completedSteps: ['photo']});
-    expect(screen.queryByRole('button', {name: '사진 보기, 했어요'})).toBeNull();
+    const row = screen.getByRole('button', {name: '사진 보기, 했어요'});
+    expect(row.props.accessibilityHint).toBe('다시 보기');
+    expect(screen.getByRole('button', {name: '둘 중 고르기, 지금 할 차례'})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /자판으로 쓰기/})).toBeNull();
     expect(screen.queryByRole('button', {name: '오늘 코스 다시 보기'})).toBeNull();
+    await act(async () => fireEvent.press(row));
+    await waitFor(() => screen.getByRole('button', {name: '돌아가기'})); // 보기 전용 P4
   });
 
   test('동의 거부: 날짜 아래 한 줄 띠 "고른 답은 저장되지 않아요" + "다시 정하기"(설정으로)', async () => {
@@ -223,20 +230,14 @@ describe('미연결', () => {
     await preview();
     const strip = screen.getByTestId('course-strip');
     expect(strip.props.accessibilityRole).toBe('button');
-    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 그때부터 답이 저장돼요');
-    const st = StyleSheet.flatten(strip.props.style);
-    expect(st.borderWidth).toBe(3);
-    expect(st.flexWrap).toBe('wrap');
-    expect(st.alignItems).toBe('baseline'); // 글 첫 줄과 '번호 쓰기' 바닥선(리뷰 R5)
+    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 그때부터 답이 저장돼요, 번호 쓰기'); // R-14: 보이는 글 그대로
+    const st = StyleSheet.flatten(typeof strip.props.style === 'function' ? strip.props.style({pressed: false}) : strip.props.style);
+    expect(st.borderWidth).toBe(1.5);
     expect(st.minHeight).toBeGreaterThanOrEqual(64);
     expect(within(strip).getByText('번호 쓰기', {includeHiddenElements: true})).toBeTruthy();
     expect(within(strip).getByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeTruthy();
     // 순서: 날짜 줄 다음(R1)
-    const ids = screen
-      .getByTestId('screen-body')
-      .findAll(n => n.props?.testID === 'date-line' || n.props?.testID === 'course-strip')
-      .map(n => n.props.testID);
-    expect(ids.indexOf('date-line')).toBeLessThan(ids.indexOf('course-strip'));
+    expect(within(screen.getByTestId('screen-body')).getByTestId('course-strip')).toBeTruthy(); // 본문 맨 위(날짜 줄은 위 영역)
     fireEvent.press(strip);
     await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   });
@@ -245,13 +246,13 @@ describe('미연결', () => {
     const api = createFakeApi();
     const week = jest.spyOn(api, 'getWeekStamps');
     await preview(api);
-    await waitFor(() => screen.getByText('이번 주 도장'));
+    await waitFor(() => screen.getByTestId('course-week'));
     expect(week).not.toHaveBeenCalled();
   });
   test('미연결 3/3: 오늘 도장이 기기에 찍히고, P7·P3 문구는 11-7 #19·#18', async () => {
     await preview();
     for (const step of ['다 봤어요', '정했어요']) {
-      await press(/사진 보기|둘 중 고르기/);
+      await pressCourseNext();
       if (step === '정했어요') {
         await waitFor(() => screen.getByText('봄'));
         fireEvent.press(screen.getByText('봄'));
@@ -260,7 +261,7 @@ describe('미연결', () => {
       await press(step);
       await waitFor(() => screen.getByTestId('date-line'));
     }
-    await press('자판으로 쓰기');
+    await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
     await press('오늘은 넘어갈게요');
     await waitFor(() => screen.getByText(/도장을 찍었어요\.\s*번호를 받으면 그때부터 고른 답이 가족에게 보여요/)); // P7

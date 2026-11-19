@@ -9,7 +9,7 @@ import {Screen} from '../src/ui/Screen';
 import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
-import {press, pressBackLink} from '../testUtils/flow';
+import {press, pressBackLink, pressCourseNext} from '../testUtils/flow';
 import {P4_LAYOUT} from '../src/features/course/PhotoStep';
 
 afterEach(() => {
@@ -84,7 +84,7 @@ test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
-  await press('사진 보기');
+  await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
   const {fontScale} = require('react-native').Dimensions.get('window');
   expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? P4_LAYOUT.photo.large : P4_LAYOUT.photo.withCaption); // fake 콘텐츠는 설명 있음
@@ -92,7 +92,7 @@ test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
   await previewHome();
-  await press('사진 보기');
+  await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
   const {fontScale} = require('react-native').Dimensions.get('window');
   expect(screen.getByText(fontScale >= 1.5 ? '1 / 3' : '사진 보기 · 1 / 3')).toBeTruthy(); // v4 단계 제목 한 줄(큰 글자는 '1 / 3'만, #95)
@@ -108,8 +108,7 @@ test('P3: 하단 큰 버튼은 지금 단계 이름(0/3 사진 보기 → 1/3 �
   expect(screen.queryByRole('button', {name: '이어서 하기'})).toBeNull();
   screen.unmount();
   render(<AppRoot api={createFakeApi({linked: true, consented: true, completedSteps: ['photo']})} role="parent" restore />);
-  await waitFor(() => screen.getByText('둘 남았어요'));
-  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '둘 중 고르기'})).toBeTruthy();
+  await waitFor(() => within(screen.getByTestId('screen-dock')).getByRole('button', {name: '둘 중 고르기'}));
 });
 
 test('P1 v4: 하단은 번호가 없어요·코스 보기 → 약관 한 줄("다음" 없음, 자동 확인)', async () => {
@@ -131,10 +130,10 @@ test('a11y R9: 선택 카드는 라디오(checked), 묶음은 radiogroup', async
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
-  await press('사진 보기');
+  await pressCourseNext();
   await press('다 봤어요');
   await waitFor(() => screen.getByTestId('date-line'));
-  await press('둘 중 고르기');
+  await pressCourseNext();
   await waitFor(() => screen.getByTestId('choice-group'));
   expect(screen.getByTestId('choice-group').props.accessibilityRole).toBe('radiogroup');
   expect(within(screen.getByTestId('choice-group')).getAllByRole('radio').length).toBe(2);

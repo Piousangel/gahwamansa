@@ -35,12 +35,12 @@ async function home(opts: FakeOptions = {}) {
 test('M1(411×914 100%): 이번 주 도장이 0이면 도장 줄을 숨긴다(첫 진입 해님 인사와 겹침 해소)', async () => {
   await home({weekDone: []});
   await waitFor(() => screen.getByTestId('course-steps'));
-  expect(screen.queryByTestId('stamp-day-0')).toBeNull();
+  expect(screen.queryByTestId('course-week')).toBeNull();
 });
 
 test('M1: 찍은 날이 있으면 도장 줄은 그대로', async () => {
   await home({weekDone: [0, 1]});
-  await waitFor(() => screen.getByTestId('stamp-day-0'));
+  await waitFor(() => screen.getByTestId('course-week'));
 });
 
 test('L1: 3/3 인사는 마침표 뒤 줄바꿈', async () => {
