@@ -171,6 +171,7 @@ export function DevMenuHost({api, children}: Props) {
   const [who, setWho] = useState<'parent' | 'child' | 'none' | null>(null);
   useEffect(() => {
     if (!visible || fake) {
+      setWho(null); // PR #85 리뷰 L1: 닫을 때 비워, 역할을 바꾼 뒤 다시 열면 이전 역할 안내가 잠깐 보이지 않게
       return;
     }
     let alive = true;

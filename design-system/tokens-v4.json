@@ -140,6 +140,15 @@
       "role": "인주(P7 도장 '쾅' 번짐 원, 브랜드 인장 두께). 장식 전용, 정보 전달 안 함, 투명도 0.35 이하로만 글자 금지(도장·면만, 4.21)",
       "note": "2026-11-18 디자인 리드 결정: 새 이름(stampInk)을 만들지 않고 브랜드 README의 brandSealDeep를 토큰으로 올림. blush(해님 볼)로 대체 금지"
     },
+    "brandSeal": {
+      "value": "#EE6A44",
+      "role": "인장 면(P7 큰 도장 '家'). 장식 전용, 글자 바탕 금지",
+      "note": "2026-11-19 P7 구현(시안 P7_album_ds4). 브랜드 README 제안 토큰 brandSeal 값을 그대로 올림(시안 #EE6640 ≈ 같은 색, 브랜드 원본 우선)"
+    },
+    "brandSealGlyph": {
+      "value": "#FFFAF3",
+      "role": "인장 위 '家' 획(장식). 브랜드 README 제안 토큰"
+    },
     "inkBody": {
       "value": "#2E2924",
       "role": "본문(읽는 글 전부) 차콜"

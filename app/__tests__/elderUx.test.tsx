@@ -124,8 +124,6 @@ describe('P7 후속', () => {
     await finish();
     const ink = screen.getByTestId('p7-ink', {includeHiddenElements: true});
     expect(StyleSheet.flatten(ink.props.style).backgroundColor).toBe(color.brandSealDeep);
-    fireEvent.press(screen.getByTestId('p7-stage'));
-    await waitFor(() => expect(screen.queryByTestId('p7-stamp-big', {includeHiddenElements: true})).toBeNull());
     expect(screen.queryByTestId('p7-sun', {includeHiddenElements: true})).toBeNull();
   });
   test('이번 주 도장 응답이 오지 않아도 제목·문구가 투명으로 남지 않는다(1.5초 뒤 진행)', async () => {
@@ -137,12 +135,10 @@ describe('P7 후속', () => {
     await press('오늘은 넘어갈게요');
     await waitFor(() => screen.getByTestId('p7-stage'));
     await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1)); // 연출이 시작됐다
-    fireEvent.press(screen.getByTestId('p7-stage'));
     await waitFor(() => expect(StyleSheet.flatten(screen.getByTestId('p7-text').props.style).opacity).toBe(1));
   });
   test('U5: 완료 문구 둘째 줄은 "내일 새 사진이 와요"(연결), 미연결은 11-7 #19 그대로', async () => {
     await finish();
-    fireEvent.press(screen.getByTestId('p7-stage'));
     await waitFor(() => screen.getByText(/(도장을 찍었어요|오늘 첫 도장을 찍었어요)\.?\s*내일 새 사진이 와요/));
     expect(screen.queryByText(/내일 또 만나요/)).toBeNull();
   });
