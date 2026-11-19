@@ -10,7 +10,7 @@
 | `app/src/api/contract/` → 나중에 `packages/contracts` | RPC별 인자·반환 타입 + 런타임 검증, 오류 이유 목록 | 플랫폼 무관 TS만(React·RN·DOM 금지) |
 | `app/` | RN 앱(Android·iOS 한 코드) | |
 | `toss/`, `admin/`(예정) | 토스 미니앱, 백오피스 | contracts·copy·tokens만 가져다 쓴다 |
-| `design-system/` | 토큰 원본(`tokens-v3.json`)·에셋·명세 | 앱 `ui/tokens.ts`는 사본(테스트로 동기 검증) |
+| `design-system/` | 토큰 원본(`tokens-v4.json`, v3는 한 릴리스 병행)·에셋·명세 | 앱 `ui/tokensV4.ts`는 생성물(`node scripts/gen-tokens-v4.js`, `tokensV4.test.ts`가 동기 검증). `ui/tokens.ts`는 v3 사본·별칭 |
 | `docs/team/copy.ko.json` | 문구 원본 | 앱 사본은 스크립트로만 덮어쓴다 |
 - `packages/` + npm workspaces 전환은 **두 번째 클라이언트가 실제로 서버를 부를 때**(토스 연동 착수 또는 백오피스 착수) 한다. 그 전엔 `app/src/api/contract/`에 같은 규칙으로 둔다(옮기기만 하면 되게).
 
