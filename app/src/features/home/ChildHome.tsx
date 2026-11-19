@@ -196,7 +196,8 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
       <Text role="sub" tone="muted">
         {head}
       </Text>
-      <Text role="answer">{p.latest.choiceLabel}</Text>
+      {/* R-21: answer 는 화면에 1개 — 어르신 한 분일 때만. 여러 분(withHeader)이면 행마다 answerRow(#125 리뷰 M1) */}
+      <Text role={withHeader ? 'answerRow' : 'answer'}>{p.latest.choiceLabel}</Text>
       <Text role="body">{formatAnswerDate(p.latest.answeredDate)}</Text>
       <View style={styles.stitch} />
       {p.starter ? (

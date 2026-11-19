@@ -170,3 +170,23 @@ test('fake: 호칭은 닫힌 목록만, 철회하면 저장된 답이 사라진�
   expect(s.shared).toBe(false);
   expect(s.latest).toBeNull();
 });
+
+test('#125 리뷰 M1(R-21 answer 는 화면에 1개): 어르신 여러 분이면 카드마다 answerRow(26/36), 한 분이면 answer(40)', async () => {
+  const day = '2020-11-16';
+  const api = createFakeApi({
+    who: 'child',
+    childFamily: true,
+    childLinked: true,
+    consented: true,
+    parents: [
+      {title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '가을', answeredDate: day}},
+      {title: '아빠', latest: {prompt: '산과 바다', choiceLabel: '바다', answeredDate: day}},
+    ],
+  });
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByText('가을'));
+  for (const w of ['가을', '바다']) {
+    expect(StyleSheet.flatten(screen.getByText(w).props.style)).toMatchObject({fontSize: 26, lineHeight: 36, fontWeight: '400'});
+    expect(screen.getByText(w).props.maxFontSizeMultiplier).toBe(1.5);
+  }
+});
