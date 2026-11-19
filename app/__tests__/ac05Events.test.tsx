@@ -232,6 +232,7 @@ describe('자녀 퍼널', () => {
   });
 
   test('응원을 받은 분이 있으면 cheer_sent{message_key} 한 번(받는 분 정보 없음)', async () => {
+    jest.useFakeTimers(); // 취소 가능 4초를 실제로 기다리지 않는다(부하 정리 2차)
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
@@ -239,7 +240,7 @@ describe('자녀 퍼널', () => {
     await press('응원 보내기');
     await press('늘 고마워요');
     await act(async () => {
-      await new Promise<void>(r => setTimeout(() => r(), 4300)); // 취소 가능 시간이 지나야 보낸다
+      jest.advanceTimersByTime(4300); // 취소 가능 시간이 지나야 보낸다
     });
     await waitFor(() => expect(callsOf(log, 'cheer_sent')).toEqual([{message_key: 'thanks_always'}]));
   });
@@ -250,7 +251,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'), {timeout: 8000});
+    await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'));
     await press('번호 보내기');
     await press('복사하기');
     expect(callsOf(log, 'invite_share_tapped')).toEqual([{channel: 'share_sheet'}, {channel: 'copy'}]);
@@ -261,7 +262,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({who: 'child'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}));
     await press('번호 만들기');
     await waitFor(() => expect(callsOf(log, 'invite_code_issued')).toEqual([{purpose: 'parent_code'}]));
   });

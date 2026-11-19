@@ -12,7 +12,7 @@ const waitApi = (o: Parameters<typeof createFakeApi>[0] = {}) => createFakeApi({
 const openWait = async (api: ReturnType<typeof createFakeApi>) => {
   render(<AppRoot api={api} restore />);
   // 파일 첫 렌더는 모듈 첫 로드(사진·SVG)로 느릴 수 있다
-  await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'), {timeout: 8000});
+  await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'));
 };
 jest.setTimeout(20000);
 // U10: 응원은 '취소' 가능 시간(토스트 표시 4초) 뒤에 보낸다. jest 의 RN 모의 PixelRatio 는 글자 배율 2를 돌려주므로 1로(그대로면 6초)
@@ -140,7 +140,7 @@ describe('C3 연결 대기', () => {
       return snapshot;
     });
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByRole('button', {name: '새 번호 만들기'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '새 번호 만들기'}));
     hold = true;
     await act(async () => {
       handlers.forEach(h => h('active')); // 포그라운드 복귀 확인이 떠난다(만료 상태로)
