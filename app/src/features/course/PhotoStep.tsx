@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Image, Pressable, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -9,7 +9,8 @@ import {useBackAction} from '../../app/BackBar';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
-import {StepErrorBanner, stepErrorDock} from './StepError';
+import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
+import {stepA11y} from './StepHeader';
 import {useFinishStep, useStepStarted} from './useFinishStep';
 import {PhotoZoom} from './PhotoZoom';
 import {ReadAloudNotice, ttsText, useReadAloudAction} from './ReadAloud';
@@ -22,14 +23,15 @@ import {focusLater} from '../../ui/screenTitle';
 export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
   const review = !!route.params?.review;
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
-  const toCourseHome = () => navigation.popTo('CourseHome');
+  const toCourseHome = useCallback(() => navigation.popTo('CourseHome'), [navigation]);
   useBackAction(toCourseHome);
   const {finish, error, busy} = useFinishStep();
+  const errorTop = useErrorTop(error);
   useStepStarted('photo', review); // AC-05
   const [imageFailed, setImageFailed] = useState(false);
   const [loaded, setLoaded] = useState(false); // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음)
   const [zoom, setZoom] = useState(false);
-  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글 왼쪽 하늘색 막대
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
   const {api, content} = useSession();
@@ -47,9 +49,9 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       alive = false;
     };
   }, [review]);
-  // 사진 높이는 화면 높이의 28% 이하(QA B4: 작은 화면에서 회상 질문이 더 보이게). 틀 폭 = 사진 높이 x 272/236 + 안쪽 14x2
+  // 사진 높이는 화면 높이의 28% 이하(QA B4: 작은 화면에서 회상 질문이 더 보이게). 카드 폭 = 사진 폭 = 사진 높이 x 272/236(v4 카드는 안쪽 여백 없음)
   const {height: winH} = useWindowDimensions();
-  const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236) + 28);
+  const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236));
   const photo = content?.photo;
   const read = useReadAloudAction(photo ? ttsText.photo(photo.recall_questions) : '', setReading);
   if (!photo) {
@@ -77,19 +79,19 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const readable = read.allowed && photo.recall_questions.length > 0;
   // 시안 P4(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제), 단계 제목 한 줄, 사진 카드(안에 AI 고지), 천천히 보세요, 회상 질문.
   // Dock = 주 '다 봤어요' + 보조 '읽어 주세요'(AP-03, 화면 읽기 켜짐이면 없음). 보기 전용은 주 '돌아가기'만
+  const readSlot: DockProps['secondary'] = readable ? {label: read.label, loading: read.busy, onPress: read.onPress, testID: 'read-aloud'} : undefined;
   const dock: DockProps = review
-    ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}
+    ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}, secondary: readSlot}
     : error
-      ? stepErrorDock(error, go)
-      : {
-          primary: {label: copy.course.next.photo, loading: busy, onPress: go},
-          secondary: readable ? {label: read.label, loading: read.busy, onPress: read.onPress, testID: 'read-aloud'} : undefined,
-        };
+      ? stepErrorDock(error, go, readSlot)
+      : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}, secondary: readSlot};
   return (
     <DsScreen
       variant="step"
       back={{label: copy.course.to_home, onPress: toCourseHome}}
       header={<StepHeader name={copy.course.step.photo} n={1} review={review} />}
+      stepInfo={stepA11y(copy.course.step.photo, 1, review)}
+      scrollRef={errorTop}
       dock={dock}>
       {!review && error ? <StepErrorBanner error={error} /> : null}
       {/* B1: 사진 카드 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
@@ -130,7 +132,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
       <Text role="body">{appCopy.photo_look}</Text>
       {photo.recall_questions.length > 0 ? (
-        <View testID="recall-questions" style={reading ? styles.reading : null}>
+        <View testID="recall-questions" style={[styles.readBar, reading ? styles.reading : null]}>
           {photo.recall_questions.map(q => (
             <Text key={q} role="bodyLg">{q}</Text>
           ))}
@@ -144,7 +146,9 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
 // 사진 카드(시안 P4 ds4b): 흰 면 + line 테두리 1.5 + 반경 22, 사진 위·AI 고지 아래(안쪽 8/14). 사진 비율 272:236 유지
 const styles = StyleSheet.create({
   // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대(글자 스타일을 바꾸지 않고 표시)
-  reading: {borderLeftWidth: 4, borderLeftColor: ds.color.info, paddingLeft: 10},
+  // 읽어 주는 중 표시: 왼쪽 막대. 자리는 늘 두고 색만 바꿔 글 폭·줄바꿈이 움직이지 않게(리뷰)
+  readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
+  reading: {borderLeftColor: ds.color.info},
   card: {alignSelf: 'center', width: '100%', backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, overflow: 'hidden'},
   photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: ds.color.paperSoft},
   cardLabel: {paddingVertical: 8, paddingHorizontal: 14, gap: 2},

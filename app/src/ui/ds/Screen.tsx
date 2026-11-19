@@ -72,9 +72,10 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, scrol
   const visible = Math.max(0, height - kb);
   const cap = dockCap(visible, ratio);
 
-  // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1)
+  // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1).
+  // 보조에 testID 가 있으면 문구가 바뀌어도 같은 슬롯으로 본다(P4 '읽어 주세요'↔'멈추기': 누를 때마다 Dock·본문을 오가지 않게)
   const dockKey = dock
-    ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}`, dock.secondary?.label ?? '', dock.note?.text ?? ''].join('/')
+    ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}`, dock.secondary?.testID ?? dock.secondary?.label ?? '', dock.note?.text ?? ''].join('/')
     : '';
   useEffect(() => setSpill(0), [width, height, fontScale, kb, dockKey]);
 

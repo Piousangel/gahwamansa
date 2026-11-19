@@ -303,7 +303,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
   }
   afterEach(() => jest.restoreAllMocks());
 
-  test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(화면에 행동 하나)', async () => {
+  test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(P4 는 v4 시안대로 보조 읽어 주세요가 함께)', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'A'});
     for (const [row, label] of [
       ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
@@ -312,7 +312,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
-      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button');
+      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /돌아가기/});
       expect(StyleSheet.flatten(dockButton.props.style).minHeight).toBe(72); // 주 버튼 높이
       fireEvent.press(dockButton);
       await waitFor(() => screen.getByTestId('date-line'));

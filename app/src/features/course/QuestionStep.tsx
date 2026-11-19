@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
@@ -10,7 +10,8 @@ import {Choice, DsScreen, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {appCopy, copy} from '../../copy/copy';
-import {StepErrorBanner, stepErrorDock} from './StepError';
+import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
+import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
 
@@ -18,13 +19,14 @@ import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
 export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
   const review = !!route.params?.review;
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
-  const toCourseHome = () => navigation.popTo('CourseHome');
+  const toCourseHome = useCallback(() => navigation.popTo('CourseHome'), [navigation]);
   useBackAction(toCourseHome);
   const {api, consented, content, applyAnswer} = useSession();
   const {finish, error, setError} = useFinishStep();
+  const errorTop = useErrorTop(error);
   useStepStarted('question', review); // AC-05
   const [saving, setSaving] = useState(false);
-  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글 왼쪽 하늘색 막대
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
   const q = content?.question;
   if (!q) {
@@ -84,13 +86,15 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
       variant="step"
       back={back}
       header={header}
+      stepInfo={stepA11y(copy.course.step.question, 2)}
+      scrollRef={errorTop}
       dock={
         error
           ? stepErrorDock(error, confirm)
           : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
       }>
       {error ? <StepErrorBanner error={error} /> : null}
-      <View testID="p5-title-group" style={[styles.titleGroup, reading ? styles.reading : null]}>
+      <View testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
         <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
         <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
       </View>
@@ -133,9 +137,11 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
 
 const styles = StyleSheet.create({
   // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대
-  reading: {borderLeftWidth: 4, borderLeftColor: ds.color.info, paddingLeft: 10},
+  // 읽어 주는 중 표시: 왼쪽 막대. 자리는 늘 두고 색만 바꿔 글 폭·줄바꿈이 움직이지 않게(리뷰)
+  readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
+  reading: {borderLeftColor: ds.color.info},
   card: {minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: ds.radius.select, borderWidth: 1.5, borderColor: ds.color.line, backgroundColor: ds.color.card, paddingVertical: 14, paddingHorizontal: 20},
-  chosen: {borderWidth: 5, borderColor: ds.color.action, backgroundColor: ds.color.actionSoft, paddingHorizontal: 16.5},
+  chosen: {borderWidth: 5, borderColor: ds.color.action, backgroundColor: ds.color.actionSoft, paddingHorizontal: 16.5, paddingVertical: 10.5},
   grow: {flex: 1},
   tag: {flexDirection: 'row', alignItems: 'center', gap: 8},
   titleGroup: {gap: 20},

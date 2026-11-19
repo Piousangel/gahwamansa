@@ -57,7 +57,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
               selected ? (answer ? styles.answerSelected : styles.selected) : null,
             ]}>
             {item.icon ? <Icon name={item.icon} size={a === 'elder' ? 32 : 28} color={c.action} /> : null}
-            <View style={styles.body}>
+            <View style={answer ? styles.answerBody : styles.body}>
               <Text role={answer ? 'title' : 'bodyLg'}>{item.label}</Text>
               {item.hint ? (
                 // 옅은 면(actionSoft) 위에는 보조색을 쓰지 않는다(허용 목록) → 고른 상태는 본문색
@@ -90,7 +90,9 @@ const styles = StyleSheet.create({
   pressed: {backgroundColor: c.paperSoft},
   selected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 4},
   body: {flex: 1, gap: 2},
-  answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14},
-  answerSelected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 5, paddingHorizontal: 16.5},
+  answerBody: {flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 2},
+  // 테두리가 1.5 → 5 로 굵어져도 내용 자리가 움직이지 않게 안쪽 여백을 그만큼 줄인다(가로·세로). 좁으면 '✓ 골랐어요'가 다음 줄로
+  answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14, flexWrap: 'wrap'},
+  answerSelected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 5, paddingHorizontal: 16.5, paddingVertical: 10.5},
   selectedTag: {flexDirection: 'row', alignItems: 'center', gap: 8},
 });
