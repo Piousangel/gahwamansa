@@ -1,14 +1,13 @@
 import React from 'react';
 import {Share, StyleSheet, View} from 'react-native';
-import {Text20} from '../../ui/Text20';
-import {Screen} from '../../ui/Screen';
-import {BigButton} from '../../ui/BigButton';
+import {Card, DsScreen, Heading, Text} from '../../ui/ds';
 import {copy} from '../../copy/copy';
 import {formatCode} from '../../ui/codeInputLogic';
-import {color, radius} from '../../ui/tokens';
 
 // 번호 보여 주기(역할에 묶이지 않음): 큰 숫자 3자리씩 + 보내기(시스템 공유: 카톡·문자 등).
 // 빌드 2 "부모님 먼저" 흐름에서도 문구만 바꿔 재사용한다.
+// v4(지금 쓰는 곳은 C2 재연결 번호뿐, V4-INDEX '시안 없음, 토큰 효과만'): 부품만 ui/ds — 제목 Heading, 번호는 C3 번호 카드와 같은 모양(Card outlined + display),
+// Dock 주 = 보내기, 보조 = 돌아가기. audience 는 호출 스택(자녀 스택 루트)에서 받는다.
 type Props = {
   code: string;
   title: string;
@@ -27,28 +26,31 @@ export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLa
     onShare?.();
     Share.share({message: shareMessage.split('{번호}').join(shown)}).catch(() => {});
   };
-  // 보내기·다음 버튼은 하단 고정 영역(내비게이션 바 위)
+  const a11y = copy.code.show_a11y.split('{앞}').join(code.slice(0, 3).split('').join(' ')).split('{뒤}').join(code.slice(3).split('').join(' '));
   return (
-    <Screen
-      top={top}
-      bottom={
+    <DsScreen
+      variant="form"
+      header={
         <>
-          <BigButton label={sendLabel} onPress={send} />
-          <BigButton variant="secondary" label={primaryLabel} onPress={onPrimary} />
+          {top}
+          <Heading level={1}>{title}</Heading>
         </>
-      }>
-      <Text20 size={28} weight="bold">{title}</Text20>
-      <View style={styles.box} accessible accessibilityLabel={copy.code.show_a11y.split('{앞}').join(code.slice(0, 3).split('').join(' ')).split('{뒤}').join(code.slice(3).split('').join(' '))}>
-        <Text20 size={44} weight="bold" style={styles.code}>{shown}</Text20>
-      </View>
+      }
+      dock={{primary: {label: sendLabel, onPress: send}, secondary: {label: primaryLabel, onPress: onPrimary}}}>
+      <Card tone="outlined" testID="code-show">
+        <View accessible accessibilityLabel={a11y} style={styles.center}>
+          <Text role="display">{shown}</Text>
+        </View>
+      </Card>
       {lines.map(l => (
-        <Text20 key={l}>{l}</Text20>
+        <Text key={l} role="bodyLg">
+          {l}
+        </Text>
       ))}
-    </Screen>
+    </DsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  box: {borderWidth: 3, borderColor: color.line, borderRadius: radius.card, backgroundColor: color.card, padding: 16, marginVertical: 12, alignItems: 'center'},
-  code: {letterSpacing: 4},
+  center: {alignItems: 'center', alignSelf: 'stretch'},
 });
