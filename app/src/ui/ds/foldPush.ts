@@ -10,8 +10,10 @@
  *   ② 묶음 첫 요소는 allowFirst 일 때만 민다(첫 요소 앞 여백 = 묶음 전체를 미는 것. 하위 줄 묶음·단계 묶음은 켠다).
  *   ③ from 보다 앞 번호는 밀지 않는다(첫 화면에 남기는 것이 시안인 요소, 예: C4 안내 한 줄).
  *   ④ glue 번호(묶음 제목 등)는 다음 요소와 붙여 민다 — 다음 요소가 걸리면 제목째(첫 화면 끝에 제목만 남지 않게, PR #83 재확인 L9).
+ *   ⑤ pushTo(기본 viewport): 민 요소의 위 끝이 갈 곳. 내용 위에 겹쳐 그리는 흐림이 있는 옛 Screen(C4 홈)은 판정 = 창 − 흐림, pushTo = 창 끝.
+ *      흐림 구간(viewport ~ pushTo) 안에서 시작해 viewport 아래로 걸치는 요소도 민다(PR #87 L4·재확인 L6).
  */
-export type FoldPushOptions = {allowFirst?: boolean; from?: number; glue?: readonly number[]};
+export type FoldPushOptions = {allowFirst?: boolean; from?: number; glue?: readonly number[]; pushTo?: number};
 export type FoldPush = {index: number; space: number};
 
 export function foldPush(
@@ -21,10 +23,11 @@ export function foldPush(
   gap: number,
   opts: boolean | FoldPushOptions = {},
 ): FoldPush | null {
-  const {allowFirst = false, from = 0, glue = []} = typeof opts === 'boolean' ? {allowFirst: opts} : opts;
+  const {allowFirst = false, from = 0, glue = [], pushTo = viewport} = typeof opts === 'boolean' ? {allowFirst: opts} : opts;
   if (viewport <= 0 || heights.some(h => h === undefined)) {
     return null;
   }
+  const to = Math.max(viewport, pushTo);
   const tops: number[] = [];
   let y = top;
   for (let i = 0; i < heights.length; i++) {
@@ -34,7 +37,10 @@ export function foldPush(
     }
     tops.push(y);
     const bottom = y + h;
-    if (y < viewport && bottom > viewport + 0.5) {
+    if (y >= to) {
+      return null; // 이미 접힘 밖
+    }
+    if (bottom > viewport + 0.5) {
       if (i < from || h >= viewport) {
         return null;
       }
@@ -43,7 +49,7 @@ export function foldPush(
       if (target === 0 && !allowFirst) {
         return null;
       }
-      return {index: target, space: Math.ceil(viewport - tops[target]) + 1};
+      return {index: target, space: Math.ceil(to - tops[target]) + 1};
     }
     y = bottom;
   }

@@ -148,7 +148,7 @@ test('자녀 홈 조회 실패는 오류 상태이고 다시 불러올 수 있�
   render(<AppRoot api={createFakeApi({failChildHome: 1, consented: true, latest: null})} role="child" />);
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
-  await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
+  await waitFor(() => screen.getByTestId('child-home-empty')); // C4 첫날 빈 상태 안 B
 });
 
 test('realApi: getSession 오류면 새 익명 로그인을 만들지 않는다', async () => {

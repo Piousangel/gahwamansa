@@ -1,20 +1,21 @@
-import React, {useEffect, useState} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {TopBar} from '../../ui/TopBar';
-import {Screen} from '../../ui/Screen';
+import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {BottomSheet} from '../../ui/BottomSheet';
+import {AudienceProvider, Choice, Sheet} from '../../ui/ds';
+import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
 import {useSendCheer} from './useSendCheer';
 import {findTitleDup} from './titleDup';
 import {TitleDupNotice} from './TitleDupNotice';
 import {appCopy, copy, withTitle} from '../../copy/copy';
-import {color, radius, size} from '../../ui/tokens';
+import {color, radius} from '../../ui/tokens';
 import {CHILD_CHEER_KEYS, ChildParent, ChildSummary} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
 import {useBootLoading} from '../../app/splash';
@@ -23,6 +24,10 @@ import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
+import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
+
+/** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
+const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
 
 const c = copy.child;
 const h = c.home;
@@ -41,6 +46,7 @@ export function ChildHome() {
   const {api} = useSession();
   const {info, error, loading, load} = useChildSummary();
   const [sheet, setSheet] = useState(false);
+  const cheerButton = useRef<React.ComponentRef<typeof import('react-native').Pressable>>(null); // 시트가 닫히면 화면 읽기 포커스를 이 버튼으로(PR #93 M1)
   const [making, setMaking] = useState(false);
   const {show} = useToast();
   const {send, sending} = useSendCheer(api, load);
@@ -50,6 +56,10 @@ export function ChildHome() {
   const many = list.length > 1;
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
   const dup = findTitleDup(list);
+  // C4 첫날 빈 상태 안 B(#59): 연결된 분이 모두 보여 주기로 했고 아직 고른 답이 없을 때(첫날). 나누지 않음·연결 끊김은 기존 카드
+  //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
+  const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
+  const emptyFold = useEmptyFold();
 
   // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
   const firstSeen = list.find(p => p.shared && p.latest);
@@ -96,12 +106,13 @@ export function ChildHome() {
     !info ? (
       <BigButton label={c.cheer.button} disabled disabledReason={h.loading_reason} onPress={() => {}} />
     ) : reachable.length ? (
-      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} />
+      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} buttonRef={cheerButton} />
     ) : undefined;
 
   return (
     <View style={styles.flex}>
-      <Screen top={top} bottom={bottom}>
+      {/* 리뷰 L4: 옛 Screen 의 아래 흐림(SCREEN_FADE_H, 겹쳐 그림)에 걸치면 민다(기준 = 흐림 위), 민 요소는 흐림 밑(창 끝)으로 — 흐림 속에 위 테두리가 비치지 않게 */}
+      <Screen top={top} bottom={bottom} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
         {error ? <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20> : null}
         {!info ? (
           <Text20>{appCopy.loading}</Text20>
@@ -118,27 +129,28 @@ export function ChildHome() {
               ))}
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
             {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
-            {list.map(p => (
-              <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />
-            ))}
+            {firstDay ? (
+              <ChildHomeEmpty fold={emptyFold} />
+            ) : (
+              list.map(p => <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />)
+            )}
           </>
         )}
       </Screen>
-      <BottomSheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} body={c.cheer.hint} testID="sheet">
-        {CHILD_CHEER_KEYS.map(k => (
-          <Pressable
-            key={k}
-            accessibilityRole="button"
-            accessibilityLabel={copy.cheers[k]}
-            onPress={() => {
+      {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
+      <AudienceProvider value="child">
+        <Sheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
+          <Choice
+            mode="action"
+            testID="cheer"
+            items={CHILD_CHEER_KEYS.map(k => ({key: k, label: copy.cheers[k], icon: CHEER_ICON[k]}))}
+            onSelect={k => {
               setSheet(false);
-              send(k, reachable);
+              send(k as (typeof CHILD_CHEER_KEYS)[number], reachable);
             }}
-            style={({pressed}) => [styles.option, pressed ? styles.optionPressed : null]}>
-            <Text20 size={22}>{copy.cheers[k]}</Text20>
-          </Pressable>
-        ))}
-      </BottomSheet>
+          />
+        </Sheet>
+      </AudienceProvider>
     </View>
   );
 }
@@ -192,9 +204,4 @@ const styles = StyleSheet.create({
   choice: {color: color.inkTitle},
   starter: {gap: 4},
   sub: {color: color.inkSub},
-  option: {
-    minHeight: size.touchMin, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: color.card, borderRadius: radius.select, borderWidth: 3, borderColor: color.lineSoft,
-  },
-  optionPressed: {backgroundColor: color.actionSoft, borderColor: color.action},
 });

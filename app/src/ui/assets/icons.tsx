@@ -40,6 +40,30 @@ const XML = {
   'icon-speaker': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5h3l4-3.5v12l-4-3.5H6z"/><path d="M16.18 8.82A4.5 4.5 0 0 1 16.18 15.18"/></svg>`,
   // 첫 화면 띠 '가족이 보낸 번호가 있어요'(시안 FS_link)
   'icon-mail': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>`,
+  // 응원 시트 사물 아이콘(디자인 #92, 분류 b 아이콘+글자)
+  'icon-sun': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="해">
+  <title>해</title>
+  <circle cx="12" cy="12" r="4"/>
+  <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4"/>
+</svg>`,
+  'icon-teacup': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="찻잔">
+  <title>찻잔</title>
+  <path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/>
+  <path d="M16 10h2a2 2 0 0 1 0 4h-2"/>
+  <path d="M8 3c0 1.2 1.2 1.2 1.2 2.6M12 3c0 1.2 1.2 1.2 1.2 2.6"/>
+</svg>`,
+  'icon-sprout': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="새싹">
+  <title>새싹</title>
+  <path d="M12 20v-8"/>
+  <path d="M12 12c-4 0-6-3-6-6 4 0 6 2 6 6z"/>
+  <path d="M12 14c4 0 6-3 6-6-4 0-6 2-6 6z"/>
+</svg>`,
+  'icon-note': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="쪽지">
+  <title>쪽지</title>
+  <path d="M6 4h9l3 3v13H6z"/>
+  <path d="M15 4v3h3"/>
+  <path d="M9 12h6M9 16h6"/>
+</svg>`,
 } as const;
 export type IconName = keyof typeof XML;
 

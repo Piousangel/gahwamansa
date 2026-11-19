@@ -53,6 +53,14 @@ describe('경계 동작(리뷰 L1에서 고정)', () => {
     // 제목이 from 앞이면 걸친 요소만
     expect(foldPush(120, 0, [30, 100, 100], 10, {allowFirst: true, from: 1, glue: [0]})).toEqual({index: 1, space: 81});
   });
+  test('pushTo: 판정은 viewport(창 − 흐림), 민 요소는 pushTo(창 끝)로. 흐림 구간 안에서 시작하는 요소도 민다(C4 #87 L4·L6)', () => {
+    // 판정 300, 창 끝 328: 둘째(150~270)는 들어가고 셋째(280~400)가 걸침 → 328-280+1
+    expect(foldPush(300, 0, [140, 120, 120], 10, {allowFirst: true, pushTo: 328})).toEqual({index: 2, space: 49});
+    // 셋째가 흐림 구간(300~328) 안 310 에서 시작 → 그래도 민다(328-310+1)
+    expect(foldPush(300, 0, [150, 140, 120], 10, {allowFirst: true, pushTo: 328})).toEqual({index: 2, space: 19});
+    // 창 끝(328) 아래에서 시작하면 이미 밖
+    expect(foldPush(300, 0, [150, 140], 180, {allowFirst: true, pushTo: 328})).toBeNull(); // 둘째 330 에서 시작
+  });
 });
 
 test('keyOf: Children.toArray 의 key(.$read, 배열 안 .2:$q0)에서 화면이 준 key 를 되찾는다(PR #91 리뷰)', () => {
