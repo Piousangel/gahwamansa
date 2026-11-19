@@ -31,7 +31,7 @@ test('자녀 화면 문구에 "어르신"이 없다', () => {
 
 test('확정 키: 탭 이름, 지우기 확인 단어, AI 표기, 서비스 이름', () => {
   expect(copy.child.tab_album).toBe('앨범');
-  expect(copy.child.tab_past).toBe('지난 답');
+  expect(copy.child.tab_past).toBe('지난 날');
   expect(copy.delete.child.type_word).toBe('지우기');
   expect(copy.delete.child.type_hint).toContain('지우기');
   expect(copy.app.ai_photo_label).toBe('AI가 만든 그림');

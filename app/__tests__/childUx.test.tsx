@@ -360,9 +360,9 @@ describe('AC-01 C6 곧 유료 시트', () => {
   const items = [{answeredDate: '2020-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}];
   async function openPaid(api: ReturnType<typeof createFakeApi>) {
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
     await waitFor(() => screen.getByTestId('child-past-topic'));
     await press('이야기 주제 추천, 곧 유료');

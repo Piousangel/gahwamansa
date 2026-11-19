@@ -45,12 +45,12 @@ describe('StepRow 리듬', () => {
       <>
         <StepRow title="사진 보기" status="done" statusLabel="했어요" />
         <StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />
-        <StepRow title="자판으로 쓰기" status="wait" statusLabel="다음 차례" />
+        <StepRow title="낱말 쓰기" status="wait" statusLabel="다음 차례" />
       </>,
     );
     const done = rowStyle('사진 보기, 했어요');
     const now = rowStyle('둘 중 고르기, 지금 할 차례');
-    const wait = rowStyle('자판으로 쓰기, 다음 차례');
+    const wait = rowStyle('낱말 쓰기, 다음 차례');
     expect((done.borderWidth ?? 0) + done.paddingHorizontal).toBe(20);
     expect(now.borderWidth + now.paddingHorizontal).toBe(20);
     expect(wait.borderWidth + wait.paddingHorizontal).toBe(20);
@@ -114,9 +114,9 @@ function spyAll(api: Fake) {
 const counts = (spies: {mock: {calls: unknown[]}}[]) => spies.map(s => s.mock.calls.length);
 
 describe('코스 홈 v4', () => {
-  test('"오늘의 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 본문(스크롤) 안, 단계 행 사이 8', async () => {
+  test('"오늘 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 본문(스크롤) 안, 단계 행 사이 8', async () => {
     await home({});
-    expect(screen.queryByText('오늘의 코스')).toBeNull();
+    expect(screen.queryByText('오늘 코스')).toBeNull();
     expect(screen.getByTestId('date-line').props.accessibilityRole).toBe('header');
     expect(within(screen.getByTestId('screen-body')).getByTestId('date-line')).toBeTruthy(); // 리뷰 H3
     expect(StyleSheet.flatten(screen.getByTestId('course-steps').props.style).gap).toBe(8);
@@ -126,7 +126,7 @@ describe('코스 홈 v4', () => {
   test('3/3 완료: 세 행 모두 › 와 하단 "오늘 코스 다시 보기"', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul']});
     expect(screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')).toBeTruthy();
-    for (const n of ['사진 보기', '둘 중 고르기', '자판으로 쓰기']) {
+    for (const n of ['사진 보기', '둘 중 고르기', '낱말 쓰기']) {
       expect(screen.getByRole('button', {name: `${n}, 했어요`})).toBeTruthy();
     }
     expect(screen.getByRole('button', {name: '오늘 코스 다시 보기'})).toBeTruthy();
@@ -173,8 +173,8 @@ describe('코스 홈 v4', () => {
     const api = await home({completedSteps: ['photo', 'question', 'hangul']});
     const spies = spyAll(api);
     const before = counts(spies);
-    await press('자판으로 쓰기, 했어요');
-    await waitFor(() => screen.getByLabelText('자판으로 쓰기, 다시 보는 중'));
+    await press('낱말 쓰기, 했어요');
+    await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     expect(screen.getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy(); // 보이는 글, 읽기는 아래 한 덩어리
     expect(screen.getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
     expect(screen.queryByLabelText('낱말 쓰는 칸')).toBeNull();
@@ -260,7 +260,7 @@ describe('미연결', () => {
       await press(step);
       await waitFor(() => screen.getByTestId('date-line'));
     }
-    await press('자판으로 쓰기');
+    await press('낱말 쓰기');
     await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
     await press('오늘은 넘어갈게요');
     await waitFor(() => screen.getByText(/도장을 찍었어요\.\s*번호를 받으면 그때부터 고른 답이 가족에게 보여요/)); // P7
@@ -308,7 +308,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     for (const [row, label] of [
       ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
       ['둘 중 고르기, 했어요', '둘 중 고르기, 다시 보는 중'],
-      ['자판으로 쓰기, 했어요', '자판으로 쓰기, 다시 보는 중'],
+      ['낱말 쓰기, 했어요', '낱말 쓰기, 다시 보는 중'],
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
@@ -330,8 +330,8 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
 
   test('N2: P6 보기 전용 — 그림·캡션·제목·칸이 한 흰 카드 안, 칸 사이 10, 좁으면 줄어드는 칸', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], realImage: true});
-    await press('자판으로 쓰기, 했어요');
-    await waitFor(() => screen.getByLabelText('자판으로 쓰기, 다시 보는 중'));
+    await press('낱말 쓰기, 했어요');
+    await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     const card = screen.getByTestId('kb-review-card');
     expect(within(card).getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy();
     expect(within(card).getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
