@@ -147,7 +147,8 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             contentContainerStyle={[styles.bodyPad, dense ? styles.dense : null, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}
           </ScrollView>
-          {more && !fill ? (
+          {/* 재확인 5 L22: fill 이어도 안전망(fillScrollable)으로 넘치면 '더 있음' 흐림을 보인다 */}
+          {more && (!fill || fillScrollable) ? (
             <View testID="screen-more" pointerEvents="none" style={styles.more} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Svg width="100%" height={FADE_H}>
                 <Defs>
