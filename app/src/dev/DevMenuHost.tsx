@@ -12,7 +12,7 @@ import {color, radius} from '../ui/tokens';
 import {DevMenuContext, isDevMenuAllowed, registerDevSessionCleaner} from './devGate';
 import {ALL_DEV_KEYS, createSessionSlots, type DevRole} from './sessionSlots';
 import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily';
-import {DEV_RESET_REASON_TEXT, devResetToday} from './devResetToday';
+import {DEV_RESET_REASON_TEXT, devResetTodayChecked} from './devResetToday';
 import type {FakeDevHooks} from '../features/fakeApi';
 import {bgmPreview, setBgmPreview} from '../lib/bgmAsset';
 
@@ -32,6 +32,8 @@ const T = {
   nextDay: '하루 넘기기',
   serverReset: '오늘 코스 다시 하기(테스트 가족만)',
   serverResetHint: '어르신 본인의 오늘 기록만 지워요. 날짜 넘기기는 앱에서 못 해요(로컬 DB면 SQL, supabase/README)',
+  serverResetKept: '첫 완료 화면처럼 이 기기에 한 번만 남는 기록(음악 권유 등)은 되돌리지 않아요',
+  serverResetChild: '자녀 역할에서는 쓸 수 없어요. 어르신으로 전환해 주세요',
   stamps: '이 기기 도장(미연결) 지우기',
   bgmOn: '배경 음악 미리 듣기 켜기(이 실행 동안)',
   bgmOff: '배경 음악 미리 듣기 끄기',
@@ -139,7 +141,12 @@ export function DevMenuHost({api, children}: Props) {
   const resetServerToday = () =>
     run(async () => {
       const {getSupabase} = require('../lib/supabase');
-      const r = await devResetToday(name => getSupabase().rpc(name));
+      const sb = getSupabase();
+      const r = await devResetTodayChecked({
+        rpc: name => sb.rpc(name),
+        hasSession: async () => !!(await sb.auth.getSession()).data.session,
+        whoAmI: () => api.whoAmI(),
+      });
       if (!r.ok) {
         setMsg(DEV_RESET_REASON_TEXT[r.reason]);
         return;
@@ -160,6 +167,21 @@ export function DevMenuHost({api, children}: Props) {
   }, [allowed, fake]);
 
   const ctx = useMemo(() => ({open: () => (allowed ? setVisible(true) : undefined)}), [allowed]);
+  // PR #70 리뷰 L3: 자녀 역할이면 '오늘 코스 다시 하기'를 비활성으로(메뉴를 열 때 역할 확인, 실제 서버만)
+  const [who, setWho] = useState<'parent' | 'child' | 'none' | null>(null);
+  useEffect(() => {
+    if (!visible || fake) {
+      return;
+    }
+    let alive = true;
+    api
+      .whoAmI()
+      .then(w => alive && setWho(w))
+      .catch(() => alive && setWho(null));
+    return () => {
+      alive = false;
+    };
+  }, [visible, fake, api]);
 
   return (
     <DevMenuContext.Provider value={ctx}>
@@ -215,7 +237,9 @@ export function DevMenuHost({api, children}: Props) {
                 ) : (
                   <>
                     <Text20>{T.serverResetHint}</Text20>
-                    <BigButton variant="secondary" label={T.serverReset} disabled={busy} onPress={resetServerToday} />
+                    <Text20>{T.serverResetKept}</Text20>
+                    {who === 'child' ? <Text20 testID="dev-reset-child">{T.serverResetChild}</Text20> : null}
+                    <BigButton variant="secondary" label={T.serverReset} disabled={busy || who === 'child'} onPress={resetServerToday} />
                   </>
                 )}
                 <BigButton variant="secondary" label={T.stamps} onPress={() => run(async () => {
