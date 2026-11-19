@@ -24,6 +24,8 @@ type Props = {
   fill?: boolean;
   /** 공간이 모자란 화면의 마지막 단계(감사 H3 4단계): 본문 묶음 간격 16 → 12 */
   dense?: boolean;
+  /** fill 화면이어도 내용이 창보다 크면 스크롤(P1 안전망, 리드 결정 11-19). 맞으면 스크롤이 생기지 않는다 */
+  fillScrollable?: boolean;
   /** 첫 포커스를 제목 대신 이 요소로(예: '다시 정하기'로 연 설정의 확인 제목). 시간 차 없이 한 번만 옮겨 순서가 뒤집히지 않는다(AP-11) */
   initialFocusRef?: React.RefObject<unknown>;
   /** 본문 스크롤 연결점(감사 M3): 펼친 확인 패널처럼 새로 나타난 영역을 보이게 한다. top·bottom 은 본문 안 y */
@@ -39,7 +41,7 @@ export type ScreenScroll = {
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, initialFocusRef, scrollRef, onViewport}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -133,7 +135,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             ref={bodyScroll}
             testID="screen-body"
             style={styles.body}
-            scrollEnabled={fill ? false : scrollEnabled}
+            scrollEnabled={fill ? !!fillScrollable : scrollEnabled}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={64}
             onScroll={onScroll}

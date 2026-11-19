@@ -840,11 +840,14 @@ describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
     expect(await recordChildTerms(api, store)).toBe(false);
     expect(await store.getItem('terms_pending_v1:acc-t')).toBe('1');
     rec.mockClear();
+    rec.mockRejectedValueOnce(new Error('offline')); // 다시 보내기도 실패하면 표시를 남긴다(재확인 4 M8)
     await retryChildTerms(api, store);
-    expect(rec).toHaveBeenCalledTimes(1);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBe('1');
+    await retryChildTerms(api, store); // 다음 시작: 성공 → 지움
+    expect(rec).toHaveBeenCalledTimes(2);
     expect(await store.getItem('terms_pending_v1:acc-t')).toBeNull();
     await retryChildTerms(api, store); // 남은 것이 없으면 부르지 않는다
-    expect(rec).toHaveBeenCalledTimes(1);
+    expect(rec).toHaveBeenCalledTimes(2);
   });
 
   test('C0 소셜 로그인에 성공하면 기록한다(약관 줄을 본 그 로그인)', async () => {

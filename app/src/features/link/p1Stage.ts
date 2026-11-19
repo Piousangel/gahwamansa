@@ -16,14 +16,14 @@ export type StageInput = {
 };
 export type Stage = {level: 0 | 1 | 2 | 3 | 4; keyH: number};
 
-// ui 수치(바뀌면 여기도): 위 TopSafe 52·상단 12(Screen topPad), 이전 바 64(touchMin), 본문 위 4·좌우 24·아래 24·간격 16,
+// ui 수치(바뀌면 여기도): 위 TopSafe 52·상단 12(Screen topPad), 이전 바 64(touchMin), 본문 위 4·좌우 24·아래 8(fill)·간격 16,
 // 하단 고정 위 6·아래 max(28, 16+inset), 링크 줄 64(TextLink touch), 링크 사이 24, 흐림 28
 const TOP_SAFE_MIN = 52;
 const TOP_GAP = 12;
 const BACK_BAR = 64;
 const BODY_TOP = 4;
 const BODY_X = 24;
-const BODY_BOTTOM = 24;
+const BODY_BOTTOM = 8; // 0·1단계는 Screen fill(아래 여백 8)
 const GAP = 16;
 const DOCK_TOP = 6;
 const LINK_ROW = 64;

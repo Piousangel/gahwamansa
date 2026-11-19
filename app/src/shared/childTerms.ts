@@ -29,7 +29,7 @@ export async function recordChildTerms(api: Api, store: KeyValueStore = defaultS
   return ok;
 }
 
-/** 앱 시작(자녀로 판정된 뒤): 남은 것이 있으면 한 번만 다시 보낸다. 또 실패하면 표시를 지운다(재시도는 한 번, 다음 로그인 때 다시 기록) */
+/** 앱 시작(자녀로 판정된 뒤): 남은 것이 있으면 다시 보낸다(시작마다 한 번). 성공했을 때만 표시를 지운다(재확인 4 M8: 두 번 실패해도 다음 시작 때 또) */
 export async function retryChildTerms(api: Api, store: KeyValueStore = defaultStore()): Promise<void> {
   const tag = await api.accountTag().catch(() => null);
   if (!tag) {
@@ -39,6 +39,7 @@ export async function retryChildTerms(api: Api, store: KeyValueStore = defaultSt
   if ((await store.getItem(key).catch(() => null)) !== '1') {
     return;
   }
-  await store.removeItem(key).catch(() => {});
-  await send(api);
+  if (await send(api)) {
+    await store.removeItem(key).catch(() => {});
+  }
 }

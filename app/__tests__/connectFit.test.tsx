@@ -5,7 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {copy} from '../src/copy/copy';
 import {pickStage} from '../src/features/link/p1Stage';
 import {createFakeApi} from '../src/features/fakeApi';
-import {BELOW_LINE_H, KEYPAD_FIXED, keypadKeyHeight} from '../src/features/link/keypadFit';
+import {keypadKeyHeight} from '../src/features/link/keypadFit';
 import {press} from '../testUtils/flow';
 
 const RN = require('react-native');
@@ -28,31 +28,21 @@ async function openConnect() {
   await press(/부모님 휴대폰이에요/);
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 }
-// 레이아웃 모의: 본문 창 높이(Screen 스크롤 창 onLayout)·키패드 영역(위치 y·높이)
+// 레이아웃 모의: 본문 창 높이(Screen 스크롤 창 onLayout)
 const viewport = async (h: number) =>
   act(async () => {
     fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
-  });
-const area = async (y: number, h: number) =>
-  act(async () => {
-    fireEvent(screen.getByTestId('keypad-area', {includeHiddenElements: true}), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
   });
 const keyH = (label = '숫자 0') => {
   const st = screen.getByLabelText(label).props.style;
   return StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight as number;
 };
-// 키패드 묶음 높이(칸 68 + 12 + 칸 아래 줄 + 키 4줄)
-const keypadH = (k: number) => KEYPAD_FIXED + BELOW_LINE_H + 4 * k;
 const inDock = (id: string) => {
   const dock = screen.queryByTestId('screen-dock');
   return !!dock && within(dock).queryByTestId(id) !== null;
 };
 
-const pad = async (h: number) =>
-  act(async () => {
-    fireEvent(screen.getByTestId('keypad-pinned'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
-  });
-const firstHeight = () => StyleSheet.flatten(screen.getByTestId('connect-first').props.style).height as number | undefined;
+const firstHeight = () => StyleSheet.flatten(screen.getByTestId('connect-first').props.style).minHeight as number | undefined;
 const titleSize = () => StyleSheet.flatten(screen.getByRole('header').props.style).fontSize;
 // 2단계(하단 고정 = 위 6 + 링크 줄 64 + 아래 max(28, 16+inset))를 뺀 창. 360×640 제스처 내비: 위 116(TopSafe 52 + 이전 바 64)
 const FADE = 28;
@@ -82,7 +72,7 @@ describe('P1 화면 = pickStage 결과(이벤트를 기다리지 않음)', () =>
       await openConnect();
       const st = stageOf(w, h, f);
       expect(titleSize()).toBe(st.level >= 1 ? 22 : 28);
-      expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(st.level >= 2);
+      expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 안전망: 늘 스크롤 가능
       expect(inDock('legal-line')).toBe(st.level < 2);
       expect(inDock('connect-links')).toBe(st.level < 3);
       expect(keyH()).toBe(st.keyH);
@@ -104,34 +94,62 @@ describe('P1 화면 = pickStage 결과(이벤트를 기다리지 않음)', () =>
   });
 });
 
-describe('사후 검증(넘치면 한 단계, 최대 1회)', () => {
-  test('같은 키 높이로 그린 키패드가 영역보다 크면 한 단계만 올리고, 또 넘쳐도 더 올리지 않는다', async () => {
+// 사후 검증(재확인 4 H5): 묶음이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
+const block = async (h: number) =>
+  act(async () => {
+    fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+  });
+const FILL_BOTTOM = 8;
+
+describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
+  test('넘침이 작으면 같은 단계에서 키를 줄인다(재현 F: 어림 68 → 실제 영역은 64 만 들어감)', async () => {
     dims(411, 914);
     await openConnect();
     const st = stageOf(411, 914, 1);
     expect(st.level).toBe(0);
-    // 키 높이는 첫 렌더부터 판정값이라 '기본 배치로 잰 높이'(옛 H2)는 생기지 않는다
-    await pad(keypadH(st.keyH));
-    await area(140, keypadH(st.keyH));
-    expect(titleSize()).toBe(28);
-    await pad(keypadH(st.keyH) + 30); // '모두 / 지움' 두 줄로 넘침
-    expect(titleSize()).toBe(22); // 1단계
-    await area(130, keypadH(keyH()));
-    await pad(keypadH(keyH()) + 30); // 또 넘쳐도
-    expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(false); // 2단계로 가지 않는다(최대 1회)
+    await viewport(700);
+    const expected = 700 - 4 - FILL_BOTTOM;
+    await block(expected + 10); // 10 넘침 → 키 4줄에서 3 씩 덜면 들어감
+    expect(titleSize()).toBe(28); // 0단계 유지
+    expect(keyH()).toBe(Math.floor(st.keyH - 10 / 4));
   });
 
-  test('글자 크기가 바뀌면 판정을 처음부터(올린 단계도 무효)', async () => {
+  test('64 로도 안 되면 한 단계, 올린 뒤에도 넘치면 곧바로 4단계(잘림 없이 보통 배치 + 스크롤), 더는 없다', async () => {
+    dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await block(700 - 4 - FILL_BOTTOM + 60); // 많이 넘침
+    expect(titleSize()).toBe(22); // 1단계
+    await block(700 - 4 - FILL_BOTTOM + 40); // 1단계 키로 그린 묶음도 넘침
+    expect(firstHeight()).toBeUndefined(); // 4단계: 묶음 고정 없음
+    expect(keyH()).toBe(64);
+    await block(900);
+    expect(keyH()).toBe(64); // 4단계에서 멈춤
+  });
+
+  test('다른 단계·다른 키 높이로 잰 묶음은 쓰지 않는다(옛 값으로 판정하지 않음)', async () => {
+    dims(411, 914);
+    await openConnect();
+    await block(2000); // 창을 모를 때
+    expect(titleSize()).toBe(28);
+  });
+
+  test('안전망: 단계와 상관없이 본문은 늘 스크롤할 수 있다(맞으면 스크롤이 생기지 않음)', async () => {
+    for (const [w, h] of [[411, 914], [320, 640]] as const) {
+      dims(w, h);
+      await openConnect();
+      expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true);
+      screen.unmount();
+      jest.restoreAllMocks();
+    }
+  });
+
+  test('글자 크기가 바뀌면 판정을 처음부터(사후 조정도 무효)', async () => {
     const spy = dims(411, 914);
     await openConnect();
-    await area(140, 300);
-    await pad(500);
+    await viewport(700);
+    await block(700 - 4 - FILL_BOTTOM + 60);
     expect(titleSize()).toBe(22);
-    spy.mockReturnValue({width: 411, height: 914, scale: 2, fontScale: 1});
-    await act(async () => {
-      fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 600}}});
-    });
-    expect(titleSize()).toBe(22); // 같은 입력이면 그대로
     spy.mockReturnValue({width: 411, height: 900, scale: 2, fontScale: 1});
     await act(async () => {
       fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 590}}});

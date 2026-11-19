@@ -14,6 +14,7 @@ import {SocialButton} from './SocialButton';
 import {TextLink} from '../link/TextLink';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {LegalText} from '../../ui/LegalText';
+import {Banner} from '../../ui/Banner';
 import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {recordChildTerms} from '../../shared/childTerms';
 
@@ -26,7 +27,7 @@ const CODE_VALID_MS = 10 * 60 * 1000; // 메일 템플릿 기준 유효 10분
 // 주 버튼은 하단 고정 영역(내비게이션 바 위), 보조는 그 안. 이전: 이메일 단계는 역할 선택, 번호 단계는 이메일 단계.
 export function ChildLogin() {
   const navigation = useNavigation();
-  const openLegal = useLegalOpen(); // 약관 줄 링크는 앱 안 웹 화면(재확인 3 M5)
+  const legal = useLegalOpen(); // 약관 줄 링크는 앱 안 웹 화면(재확인 3 M5), 안 닿으면 Banner(재확인 4 M7)
   const {api, resetRole} = useSession();
   const large = useWindowDimensions().fontScale >= 1.5; // 150% 이상이면 약관·연령 줄을 본문 끝으로(하단 고정을 지킨다)
   const [email, setEmail] = useState('');
@@ -149,7 +150,8 @@ export function ChildLogin() {
   // 약관 줄 + 연령 줄(디자인 판정 ②: 연령은 안내라 inkSub). 선택·이메일 두 화면에 같게
   const legalLines = (
     <View>
-      <LegalText testID="legal-child" style={styles.legal} text={copy.legal.agree_child} links={legalLinks()} onOpen={openLegal} />
+      <LegalText testID="legal-child" style={styles.legal} text={copy.legal.agree_child} links={legalLinks()} onOpen={legal.open} />
+      {legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
       <Text20 testID="age-notice" style={[styles.legal, styles.age]}>{copy.legal.age_notice}</Text20>
     </View>
   );
