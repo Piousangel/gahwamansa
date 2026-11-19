@@ -40,6 +40,27 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
+    name: 'P9·C8 계정 지우기(안 지울래요 + 위험 외곽선, 어르신)',
+    screen: 'DeleteAccountScreen',
+    variant: 'form',
+    audience: 'elder',
+    dock: {primary: {label: copy.delete.parent.cancel, onPress: noop}, secondary: {kind: 'danger', label: copy.delete.parent.yes, onPress: noop}},
+  },
+  {
+    name: 'C8 계정 지우기(자녀)',
+    screen: 'DeleteAccountScreen',
+    variant: 'form',
+    audience: 'child',
+    dock: {primary: {label: copy.delete.child.cancel, onPress: noop}, secondary: {kind: 'danger', label: copy.delete.child.danger, onPress: noop}},
+  },
+  {
+    name: '계정 지운 뒤(처음으로)',
+    screen: 'DeleteDoneScreen',
+    variant: 'form',
+    audience: 'elder',
+    dock: {primary: {label: copy.delete.parent.back, onPress: noop}},
+  },
+  {
     name: 'C1 호칭 고르기(번호 만들기 하나)',
     screen: 'RelationScreen',
     variant: 'form',

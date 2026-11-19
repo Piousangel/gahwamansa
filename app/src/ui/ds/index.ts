@@ -2,7 +2,7 @@
 // 화면 적용은 시안 v4 뒤 각 레인 몫. 새 화면 코드는 여기서만 가져온다: import {Text, Button, DsScreen} from '../../ui/ds'.
 export {AudienceProvider, useAudience, type LayoutOnlyStyle} from './audience';
 export {Text, Heading, type TextProps} from './Text';
-export {Button, type ButtonProps, type ButtonKind} from './Button';
+export {Button, type ButtonProps, type ButtonKind, type ButtonHandle} from './Button';
 export {SocialButton, type SocialButtonProps, type SocialProvider} from './SocialButton';
 export {BackLink, type BackLinkProps} from './BackLink';
 export {Dock, DockSpill, type DockProps, type DockAction, type DockPrimary, type DockSecondary, type DockNote, type SocialGroup} from './Dock';

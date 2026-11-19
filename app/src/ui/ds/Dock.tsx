@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, View, type LayoutChangeEvent} from 'react-native';
-import {Button} from './Button';
+import {Button, type ButtonHandle} from './Button';
 import {SocialButton, type SocialButtonProps} from './SocialButton';
 import {Text} from './Text';
 import {ds} from './roles';
@@ -19,6 +19,8 @@ export type DockAction = {
   icon?: IconName;
   accessibilityHint?: string;
   testID?: string;
+  /** 이 버튼에 포커스를 돌려줄 때(확인 상자 returnFocusRef 등) */
+  buttonRef?: React.Ref<ButtonHandle>;
   social?: never;
 };
 
@@ -31,7 +33,8 @@ export type SocialGroup = {social: readonly [Social<'kakao'>] | readonly [Social
 export const SOCIAL_GROUP_MAX = ds.dock.socialGroupMax;
 
 export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger'}) | SocialGroup;
-export type DockSecondary = DockAction & {kind?: 'secondary' | 'text'};
+/** 보조: 기본 외곽선·글자 버튼, 또는 위험 외곽선(계정 지우기처럼 안전한 쪽이 주 버튼일 때) */
+export type DockSecondary = DockAction & {kind?: 'secondary' | 'text' | 'danger'};
 /** 한 줄 안내(글) 또는 글자 링크 하나 */
 export type DockNote = {text: string; onPress?: never} | {text: string; onPress: () => void};
 

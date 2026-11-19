@@ -1,0 +1,41 @@
+# P9 계정 지우기(어르신) 회귀 캡처(ui/ds). 설정 → 모두 지우기 → P9 → 2단계 확인 상자(지우지 않고 '안 지울래요'로 닫음).
+# 전제: fake API 시작 상태를 개발 중에만 잠깐 {linked: true, consented: true} 로 바꿔 실행(커밋하지 않음 — c5-past.yaml 머리 주석).
+# 주의: clearState 를 쓰지 않는다(c3-fit.yaml 머리 주석). 끝까지 지우는 흐름은 flows/f9-parent-delete.yaml.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/p9-delete.yaml
+appId: com.bumojasik.app.staging
+name: P9 지우기 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '설정'
+    timeout: 60000
+- tapOn: '설정'
+- scrollUntilVisible:
+    element:
+      id: 'settings-row-delete'
+    direction: DOWN
+- tapOn:
+    id: 'settings-row-delete'
+- extendedWaitUntil:
+    visible: '모두 지울까요\?'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: p9-first
+- tapOn:
+    text: '모두 지우기'
+    index: 0
+- extendedWaitUntil:
+    visible: '정말 모두 지울까요\?'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: p9-confirm2
+- tapOn:
+    text: '안 지울래요'
+    index: 1
+- extendedWaitUntil:
+    notVisible: '정말 모두 지울까요\?'
+    timeout: 10000

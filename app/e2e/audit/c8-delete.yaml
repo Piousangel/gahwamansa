@@ -1,0 +1,32 @@
+# C8 계정 지우기(자녀) 회귀 캡처(ui/ds). 설정 → 내 계정 지우기 → 마지막 자녀 경고 → 계정 지우기(2단계 '지우기' 입력 칸)까지, 지우지 않음.
+# 전제: fake API 시작 상태를 개발 중에만 잠깐 {who: 'child', childFamily: true, childLinked: true, consented: true, parentTitle: '엄마'} 로 바꿔 실행(커밋하지 않음).
+# 주의: clearState 를 쓰지 않는다(c3-fit.yaml 머리 주석).
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c8-delete.yaml
+appId: com.bumojasik.app.staging
+name: C8 지우기 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '설정'
+    timeout: 20000
+- tapOn: '설정'
+- scrollUntilVisible:
+    element: '내 계정 지우기'
+    direction: DOWN
+- tapOn: '내 계정 지우기'
+- extendedWaitUntil:
+    visible: '되돌릴 수 없어요'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c8d-first
+- tapOn: '계정 지우기'
+- waitForAnimationToEnd
+- takeScreenshot: c8d-type
