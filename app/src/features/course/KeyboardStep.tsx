@@ -1,9 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Image, Keyboard, Pressable, StyleSheet, TextInput, useWindowDimensions, View} from 'react-native';
+import {Image, Keyboard, Pressable, StyleSheet, Text as RNText, TextInput, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Screen} from '../../ui/Screen';
-import {BackBar} from '../../app/BackBar';
+import {BackBar, useBackAction} from '../../app/BackBar';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, FONT_SCALE_MAX, radius, shadow} from '../../ui/tokens';
@@ -13,11 +13,13 @@ import {focusLater} from '../../ui/screenTitle';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
-import {StepError} from './StepError';
+import {StepErrorBanner, stepErrorDock} from './StepError';
+import {Button, DsScreen, Heading, Text, type DockProps} from '../../ui/ds';
+import {ds, roleText} from '../../ui/ds/roles';
 import {useFinishStep, useStepStarted, type HangulResult} from './useFinishStep';
-import {StepHeader} from './StepHeader';
+import {StepHeader, stepA11y} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
-import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
+import {confirmedCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
 import type {StepName} from '../types';
 
 const k = copy.keyboard;
@@ -39,6 +41,8 @@ type Phase = 'writing' | 'sheet' | 'matched';
 export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
   const review = !!route.params?.review;
   const toCourseHome = () => navigation.popTo('CourseHome');
+  // 하드웨어 뒤로 = BackLink 와 같은 동작(기록 없이 코스 홈). 보기 전용은 BackBar 가 맡는다
+  useBackAction(review ? undefined : toCourseHome);
   const {finish, error, busy} = useFinishStep();
   useStepStarted('hangul', review); // AC-05
   const lastResult = useRef<HangulResult>('finished'); // 저장 실패 뒤 '다시 하기'도 같은 결과(finished/skipped)로
@@ -120,17 +124,16 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       </Screen>
     );
   }
-  const filled = phase === 'matched' ? cells.length : filledCount(text, word);
   const hasText = normalizeWord(text).length > 0;
   const skipStrong = reader || attempts >= 2 || lateSkip;
   const open = kbOpen && phase === 'writing';
-  // PR #14 리뷰 M2(v4 2-5 '위 영역 접기' 방향): 자판이 열려 있으면 글자 배율과 상관없이 단계 제목을 숨기고 위 영역은 뒤로 한 줄만.
-  // 단계 정보는 입력 칸 읽기 라벨·뒤로 라벨로 충분(닫으면 다시 보인다)
-  const hideTitle = open;
+  const large = fontScale >= 1.5;
+  // 로마자 감지(시안 ds4b): 영어로 써지고 있으면 카드 아래 한 줄 안내
+  const roman = phase === 'writing' && /[A-Za-z]/.test(text);
   const showPhoto = !open && !photo.image_url.startsWith('pending://') && !imageFailed;
 
   const matched = () => {
-    Keyboard.dismiss(); // 칭찬이 자판에 가려지지 않게 먼저 내린다
+    Keyboard.dismiss(); // 알림이 자판에 가려지지 않게 먼저 내린다
     setKbOpen(false);
     setPhase('matched');
     announce(k.matched); // R11: 1회
@@ -170,67 +173,75 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       }
     }
   };
+  const skip = () => complete('skipped');
 
-  const dock = error ? (
-    <StepError error={error} onRetry={() => complete(lastResult.current)} />
-  ) : phase === 'matched' ? (
-    <BigButton buttonRef={finishRef} label={k.finish} disabled={!canFinish} loading={busy} onPress={() => complete('finished')} />
+  // 시안 P6_P7_N1_P2_ds4b:
+  // - 닫힘: 사진 띠(+AI 고지) → '보이는 낱말을 아래 칸에 써요' → '한 글자라도 쓰면 눌려요' → 낱말 카드(따라 쓸 낱말 + 입력 칸). Dock = 다 썼어요 + 오늘은 넘어갈게요.
+  // - 자판 열림: 위 영역은 BackLink 한 줄(100%는 그 줄 오른쪽 '넘어갈게요'), 본문은 낱말 카드(따라 쓸 낱말 한 줄 + 입력 칸)가 맨 위 —
+  //   어떤 배율에서도 본보기 낱말이 입력 칸 바로 위에 보인다(r1/7 H). 200%는 '오늘은 넘어갈게요'를 카드 아래 본문으로(스크롤로 닿음).
+  // - 일치: ✓ + '낱말을 다 쓰셨어요' + 쓰신 낱말 카드. Dock '마칠게요'는 보통 모양, 1.5초 동안 누름을 무시(표시 없음).
+  const skipNode = skipStrong ? (
+    <View testID="kb-skip-strong">
+      <Button kind="secondary" label={k.skip} disabled={busy} onPress={skip} />
+    </View>
   ) : (
-    <>
-      <BigButton
-        buttonRef={doneRef}
-        label={copy.course.next.hangul}
-        disabled={!hasText}
-        disabledReason={open ? undefined : k.need_one}
-        loading={busy}
-        onPress={pressDone}
-      />
-      {open ? null : skipStrong ? (
-        <View testID="kb-skip-strong">
-          <BigButton variant="secondary" label={k.skip} disabled={busy} onPress={() => complete('skipped')} />
-        </View>
-      ) : (
-        <SkipLink label={k.skip} disabled={busy} onPress={() => complete('skipped')} />
-      )}
-      {/* 감사 L4·디자인 판정: P6 은 '오늘 코스로'(U13)를 숨긴다 — '오늘은 넘어갈게요'와 뜻이 겹쳐 오터치 */}
-    </>
+    <Button kind="text" size="inline" label={k.skip} disabled={busy} onPress={skip} testID="kb-skip" />
   );
+  const dock: DockProps = error
+    ? stepErrorDock(error, () => complete(lastResult.current))
+    : phase === 'matched'
+      ? {primary: {label: k.finish, buttonRef: finishRef, loading: busy, testID: 'kb-finish', onPress: () => canFinish && complete('finished')}}
+      : {
+          primary: {label: copy.course.next.hangul, buttonRef: doneRef, disabled: !hasText, disabledReason: open ? undefined : k.need_one, loading: busy, onPress: pressDone},
+          // 닫힘: 넘어가기는 Dock(넘치면 본문 끝으로, R-12). 자판 열림은 위 줄(100%) 또는 본문(200%)
+          secondary: open ? undefined : skipStrong ? {kind: 'secondary', label: k.skip, disabled: busy, testID: 'kb-skip-strong', onPress: skip} : {kind: 'text', label: k.skip, disabled: busy, onPress: skip},
+        };
+  const asideSkip = open && !large ? <Button kind="text" size="inline" label={k.skip_short} accessibilityHint={k.skip} disabled={busy} onPress={skip} testID="kb-skip-top" /> : undefined;
 
   return (
-    <Screen
-      top={
-        <>
-          <BackBar course onBack={toCourseHome} />
-          {/* 제목 포커스(R2)는 StepHeader 가 Screen 에 등록한다. 150% 이상 + 자판 열림이면 숨김(리드 결정) */}
-          {hideTitle ? null : <StepHeader name={copy.course.step.hangul} n={3} />}
-        </>
-      }
-      bottom={dock}>
-      {open || phase === 'matched' ? null : <Text20 size={22} weight="bold" style={styles.title}>{k.guide}</Text20>}
-      {/* S25 실기기(11-19): 자판이 열리면 본문이 낮아져 카드가 제목 밑으로 밀려 잘렸다 → 열림 동안은 카드를 납작하게(사진 없음·칸 44·읽어 주기 숨김) */}
-      <View testID="kb-card" style={[styles.card, open ? styles.cardOpen : null]}>
-        {showPhoto ? (
-          // 명세 P6 4번: 카드(사진+칸)는 한 덩어리로 읽는다 → 사진은 읽기에서 빼고 칸 묶음 라벨이 대표
-          <View style={styles.figure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <View style={styles.thumb}>
-              <Image source={{uri: photo.image_url}} style={styles.thumbImg} onError={() => setImageFailed(true)} />
-            </View>
-            <Text20 style={styles.figcaption}>{appCopy.ai_photo_label}</Text20>
+    <DsScreen
+      variant="step"
+      back={{label: copy.course.to_home, onPress: toCourseHome}}
+      backAside={asideSkip}
+      header={<StepHeader name={copy.course.step.hangul} n={3} />}
+      stepInfo={stepA11y(copy.course.step.hangul, 3)}
+      dock={dock}>
+      {!error ? null : <StepErrorBanner error={error} />}
+      {phase === 'matched' ? (
+        // 알림은 announceForAccessibility 1회만(R11). liveRegion 을 같이 두면 두 번 읽힌다
+        <View style={styles.matchedGroup}>
+          <View style={styles.matchedHead}>
+            <Icon name="icon-check" size={MATCH_ICON} color={ds.color.doneInk} />
+            <Heading level={1}>{k.matched}</Heading>
           </View>
-        ) : null}
-        <WordCells cells={cells} filled={filled} big={!open} />
-        {/* AP-03 읽어 주기: 낱말 칸 바로 아래. 낱말과 한 글자씩(화면 읽기 켜짐이면 숨김 R16) */}
-        {phase === 'matched' || open ? null : <ReadAloud text={ttsText.word(word, cells)} />}
-      </View>
+          <View testID="kb-written" style={styles.writtenCard} accessible accessibilityLabel={`${k.your_word}, ${word}`}>
+            <Text role="sub">{k.your_word}</Text>
+            <Text role="title">{word}</Text>
+          </View>
+        </View>
+      ) : open ? null : (
+        <>
+          {showPhoto ? (
+            <View testID="kb-photo" style={styles.photoCard} accessibilityElementsHidden={false}>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Image source={{uri: photo.image_url}} style={styles.photoStrip} resizeMode="cover" onError={() => setImageFailed(true)} />
+              </View>
+              <View style={styles.photoCaption}>
+                <Text role="sub">{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text>
+              </View>
+            </View>
+          ) : null}
+          <View style={styles.guide}>
+            <Text role="body">{k.guide}</Text>
+            <Text role="sub">{k.need_one}</Text>
+          </View>
+        </>
+      )}
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
-      <View style={phase === 'matched' ? styles.hidden : styles.inputWrap}>
-        {/* PR #14 리뷰 M1·v4 2-8(placeholder 금지): 안내는 입력 칸 안이 아니라 칸 위 한 줄 글(여러 줄 가능). 입력 칸은 비워 둔다.
-            읽기는 입력 칸의 힌트로 한 번(이 글은 두 번 읽지 않게 숨김). 자판이 열린 뒤에는 이미 한 일이라 접는다(공간 확보) */}
-        {open ? null : (
-          <Text20 testID="kb-hint" size={20} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
-            {k.placeholder}
-          </Text20>
-        )}
+      <View testID="kb-card" style={[styles.wordCard, phase === 'matched' ? styles.hidden : null]}>
+        <View accessible accessibilityLabel={k.word_a11y.split('{낱말}').join(word)}>
+          <WordLine word={word} />
+        </View>
         <TextInput
           ref={inputRef}
           testID="kb-input"
@@ -242,28 +253,21 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           editable={phase === 'writing'}
           importantForAutofill="no" // 자동완성 서비스가 글자 저장을 제안하지 않게(정책: 글자 미저장)
           // autoCorrect 는 지정하지 않는다: Android 에서 false 는 추천 줄까지 꺼서 "기기 설정 그대로"와 어긋남(리뷰 B).
-          // TODO(QA 실기기): 삼성 천지인·두벌식·Gboard 에서 추천 낱말·자동 띄어쓰기·조합 깨짐 확인
-          // TODO(QA 실기기): 입력칸은 본문 자리 그대로(자판 위로 옮기면 다시 그려져 비제어 입력이 지워짐).
-          //   320×640·글자 200%·천지인(자판 높음)에서 자판 열림 때 입력칸·다 썼어요가 가리지 않는지 확인(디자인 대조 1번)
           autoCapitalize="none"
           returnKeyType="done"
           blurOnSubmit
-          maxFontSizeMultiplier={FONT_SCALE_MAX}
-          style={[styles.input, kbOpen ? styles.inputFocused : null]}
+          maxFontSizeMultiplier={ds.type.fieldInput.maxFontScale}
+          style={[styles.input, roleText('fieldInput', 'elder').style, kbOpen ? styles.inputFocused : null]}
         />
       </View>
-      {phase === 'matched' ? (
-        // 알림은 announceForAccessibility 1회만(R11). liveRegion 을 같이 두면 두 번 읽힌다
-        <View style={styles.matched}>
-          <View style={styles.matchedIcon}>
-            <Icon name="icon-check" size={36} color={color.done} />
-          </View>
-          <Text20 size={32} weight="bold" style={styles.title}>{k.matched}</Text20>
-        </View>
-      ) : open ? null : (
-        <Text20 style={styles.sub}>{k.sub}</Text20>
-      )}
-      {/* 다른 낱말로 "다 썼어요": 어르신 대화상자(U0 Dialog, 어르신은 아래 시트 대신 Dialog). 뒤로가기 = 다시 써 볼게요 */}
+      {roman ? (
+        <Text testID="kb-roman" role="sub">{k.roman_hint}</Text>
+      ) : null}
+      {/* 200% 자판 열림: 넘어가기는 카드 아래 본문(스크롤로 닿음, 시안) */}
+      {open && large ? skipNode : null}
+      {/* AP-03 읽어 주기(시안 보드에는 없음 — 기존 기능 유지, 닫힘에서만): 낱말과 한 글자씩. 화면 읽기 켜짐이면 숨김(R16) */}
+      {phase === 'writing' && !open ? <ReadAloud text={ttsText.word(word, cells)} /> : null}
+      {/* 다른 낱말로 "다 썼어요": 어르신 대화상자(U0 Dialog). 뒤로가기 = 다시 써 볼게요 */}
       <Dialog
         visible={phase === 'sheet'}
         title={k.sheet_title}
@@ -278,7 +282,17 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
         {/* 확정된 칸만 채운다(받침 유지로 잠깐 찬 칸은 빼고, 재검토). 틀림 표시 없음 */}
         <WordCells cells={cells} filled={confirmedCount(text, word)} big idPrefix="kb-dialog-cell" />
       </Dialog>
-    </Screen>
+    </DsScreen>
+  );
+}
+
+// 따라 쓸 낱말 한 줄(시안: fieldInput 역할 글자, 상한 1.5 — 자판이 열려도 200%에서 카드가 잘리지 않게). 읽기는 감싼 View 가 한 번
+function WordLine({word}: {word: string}) {
+  const r = roleText('fieldInput', 'elder');
+  return (
+    <RNText testID="kb-word" maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, styles.wordText]} accessibilityElementsHidden importantForAccessibility="no">
+      {word}
+    </RNText>
   );
 }
 
@@ -328,23 +342,18 @@ function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[];
   );
 }
 
-// 약한 넘어가기 링크(글자 20·밑줄·터치 64). 기능 간 import 금지라 link/TextLink 대신 최소판.
-// TODO(ui/TextLink): 리팩터 줄이 TextLink 를 ui/ 로 올리면 교체.
-function SkipLink({label, disabled, onPress}: {label: string; disabled?: boolean; onPress: () => void}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{disabled: !!disabled}}
-      disabled={disabled}
-      onPress={onPress}
-      style={styles.skipLink}>
-      <Text20 weight="bold" maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.skipText}>{label}</Text20>
-    </Pressable>
-  );
-}
-
+const MATCH_ICON = 36;
 const styles = StyleSheet.create({
+  // v4(시안 ds4b): 사진 띠(높이 56) + 고지 줄, 낱말 카드(흰 면 + line 1.5), 입력 칸(흰 면, 열리면 action 3)
+  photoCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, overflow: 'hidden'},
+  photoStrip: {height: 56, alignSelf: 'stretch', backgroundColor: ds.color.paperSoft},
+  photoCaption: {paddingVertical: 8, paddingHorizontal: 14},
+  guide: {gap: ds.space.group},
+  wordCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 3, paddingHorizontal: 14, paddingBottom: 14, gap: 4},
+  wordText: {textAlign: 'center'},
+  matchedGroup: {gap: 20},
+  matchedHead: {flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap'},
+  writtenCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 18, gap: 6},
   title: {color: color.inkTitle},
   card: {backgroundColor: color.card, borderRadius: radius.card, padding: 14, gap: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 18},
   figure: {alignItems: 'center', gap: 2},
@@ -368,8 +377,8 @@ const styles = StyleSheet.create({
   skipText: {textDecorationLine: 'underline', color: color.ink},
   hidden: {display: 'none'},
   // 입력칸(오목): 종이색 면 + 아래 밑줄, 높이 72 이상, 글자 34
-  input: {minHeight: 72, paddingHorizontal: 18, paddingVertical: 8, backgroundColor: color.paperSoft, borderTopLeftRadius: radius.input, borderTopRightRadius: radius.input, borderBottomWidth: 3, borderBottomColor: color.line, fontSize: 34, color: color.inkTitle, fontWeight: 'bold'},
-  inputFocused: {borderBottomWidth: 4, borderBottomColor: color.action},
+  input: {minHeight: 56, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: ds.color.card, borderRadius: ds.radius.input, borderWidth: 1.5, borderColor: ds.color.line},
+  inputFocused: {borderWidth: 3, borderColor: ds.color.action},
   sub: {color: color.ink},
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},
   matchedIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: color.doneSoft, alignItems: 'center', justifyContent: 'center'},

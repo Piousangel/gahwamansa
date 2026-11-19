@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AccessibilityInfo, Keyboard} from 'react-native';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
@@ -12,10 +12,32 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({width: 360, height: 780, scale: 3, fontScale: mockFontScale}),
 }));
+// 자판 열림은 DsScreen 이 Keyboard 이벤트로 위 영역을 접는다(R-15) → 시스템 자판 이벤트를 붙잡아 테스트가 보낸다
+let kbHandlers: Record<string, ((e?: unknown) => void)[]> = {};
+beforeEach(() => {
+  kbHandlers = {};
+  jest.spyOn(Keyboard, 'addListener').mockImplementation(((ev: string, fn: (e?: unknown) => void) => {
+    (kbHandlers[ev] ??= []).push(fn);
+    return {remove: () => {}};
+  }) as never);
+});
 afterEach(() => {
   mockFontScale = 1;
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
+const openKb = async () => {
+  await act(async () => {
+    fireEvent(input(), 'focus');
+    (kbHandlers.keyboardDidShow ?? []).forEach(f => f({endCoordinates: {height: 270}}));
+  });
+};
+const closeKb = async () => {
+  await act(async () => {
+    fireEvent(input(), 'blur');
+    (kbHandlers.keyboardDidHide ?? []).forEach(f => f());
+  });
+};
 
 // 모든 API 호출 인자를 기록한다(입력 글자가 어디로도 나가지 않는지 보기 위해)
 function recordingApi(opts: FakeOptions) {
@@ -49,15 +71,14 @@ const type = async (t: string) => {
     fireEvent.changeText(input(), t);
   });
 };
-const filled = () => [0, 1].filter(i => screen.queryByTestId(`kb-cell-check-${i}`, {includeHiddenElements: true}));
 
 test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼어요"는 비활성, 넘어가기는 약한 링크', async () => {
   await toKeyboardStep();
   expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
-  expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자')).toBeTruthy();
-  expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
-  expect(screen.getByText('한 글자라도 쓰면 눌려요', {includeHiddenElements: true})).toBeTruthy(); // 이유 줄은 힌트로 읽어 중복 읽기 숨김(R8)
+  expect(screen.getByLabelText('따라 쓸 낱말, 나무')).toBeTruthy(); // v4: 본보기 낱말 한 줄(입력 칸 바로 위)
+  expect(screen.queryByText('천천히 써 봐요')).toBeNull(); // 시안 ds4b 보조 문구는 '한 글자라도 쓰면 눌려요'
+  expect(screen.getAllByText('한 글자라도 쓰면 눌려요', {includeHiddenElements: true}).length).toBeGreaterThanOrEqual(1);
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeDisabled();
   expect(screen.getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
   expect(screen.queryByTestId('kb-skip-strong')).toBeNull();
@@ -75,15 +96,12 @@ test('입력칸은 비제어(value 재주입 없음), 시스템 자판 설정 �
   expect(input().props.value).toBeUndefined();
 });
 
-test('맞은 음절 칸만 앞에서부터 채우고, 틀림 표시는 어디에도 없다', async () => {
+test('v4(시안 ds4b): 쓰는 중에는 음절 칸이 없고 본보기 낱말 한 줄만, 틀림 표시는 어디에도 없다', async () => {
   await toKeyboardStep();
-  await type('나');
-  expect(filled()).toEqual([0]);
-  await type('나모'); // 조합 중이거나 다른 음절: 채우지 않을 뿐
-  expect(filled()).toEqual([0]);
+  await type('나모');
+  expect(screen.queryByTestId('kb-cell-0')).toBeNull();
+  expect(screen.getByTestId('kb-word', {includeHiddenElements: true})).toHaveTextContent('나무');
   expect(screen.queryByText(/틀|아직|못/)).toBeNull();
-  await type('너무');
-  expect(filled()).toEqual([]);
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeEnabled();
 });
 
@@ -93,11 +111,15 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   const {calls} = await toKeyboardStep();
   await type(' 나무 '); // 공백은 무시
   expect(dismiss).toHaveBeenCalled();
-  expect(filled()).toEqual([0, 1]);
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
-  expect(screen.getByRole('button', {name: '마칠게요'})).toBeDisabled();
-  expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 자동 이동 없음
-  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled());
+  expect(screen.getByTestId('kb-written')).toHaveTextContent(/쓰신 낱말\s*나무/);
+  // 시안 ds4b: '마칠게요'는 보통 모양(비활성 아님), 1.5초 동안은 눌러도 무시
+  expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled();
+  await press('마칠게요');
+  expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 무시 + 자동 이동 없음
+  await act(async () => {
+    jest.advanceTimersByTime(1600);
+  });
   await press('마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const rec = calls.filter(c => c.name === 'recordSessionStep');
@@ -109,17 +131,15 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
 test('추천 낱말이 조사를 붙여도("나무가") 일치로 본다(칸 전부 체크 + 시트 없음, 리뷰 3)', async () => {
   await toKeyboardStep();
   await type('나무가');
-  expect(filled()).toEqual([0, 1]);
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
   expect(screen.queryByText('낱말을 한 번 더 볼까요?')).toBeNull();
 });
 
-test('조합 중 받침이 붙어도(나 → 남) 첫 칸 체크가 사라지지 않는다(리뷰 4)', async () => {
+test('조합 중(나 → 남)에는 일치로 보지 않는다(리뷰 4)', async () => {
   await toKeyboardStep();
   await type('나');
-  expect(filled()).toEqual([0]);
   await type('남');
-  expect(filled()).toEqual([0]);
+  expect(screen.queryByText('낱말을 다 쓰셨어요')).toBeNull();
 });
 
 test('일치하면 알림 1회 뒤 접근성 포커스를 "마칠게요"로 옮긴다(명세 P6, 리뷰 5)', async () => {
@@ -172,7 +192,6 @@ test('다른 낱말로 "다 썼어요": 시트(낱말·쓰신 낱말), 다시 �
 test('반례: 받침 유지로 칸은 다 찼어도 일치가 아니면 "다 썼어요" → 대화상자, 대화상자 칸은 확정된 칸만(재검토 ③)', async () => {
   await toKeyboardStep();
   await type('나뭄');
-  expect(filled()).toEqual([0, 1]); // 쓰는 중 화면: 조합 중 받침 유지
   expect(screen.queryByText('낱말을 다 쓰셨어요')).toBeNull(); // 자동 완료 없음
   await press('다 썼어요');
   expect(screen.getByText('낱말을 한 번 더 볼까요?')).toBeTruthy();
@@ -204,7 +223,9 @@ test('계측 AC-05: 맞게 써서 마치기도 finished, 넘어가기는 skipped
   jest.useFakeTimers(); // 마치기 1.5초를 실제로 기다리지 않는다(waitFor 가 가짜 시계를 돌림, 부하 정리 2차)
   const a = await toKeyboardStep();
   await type('나무');
-  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled());
+  await act(async () => {
+    jest.advanceTimersByTime(1600); // 1.5초 누름 무시가 끝난 뒤
+  });
   await press('마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const done1 = a.calls.filter(c => c.name === 'logEvent' && c.args[0] === 'course_step_completed').map(c => c.args[1]);
@@ -257,31 +278,39 @@ test('20초가 지나면 넘어가기가 또렷해진다', async () => {
   expect(screen.getByTestId('kb-skip-strong')).toBeTruthy();
 });
 
-test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고, 단계 제목도 접는다(PR #14 리뷰 M2·v4 2-5: 배율 무관)', async () => {
+test('자판 열림(100%, 시안 ds4b): 위 영역은 BackLink 줄 + 오른쪽 "넘어갈게요", 본문은 낱말 카드(본보기 낱말 + 입력 칸)만, Dock 다 썼어요', async () => {
   await toKeyboardStep();
-  await act(async () => {
-    fireEvent(input(), 'focus');
-  });
+  await openKb();
   expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
-  expect(screen.queryByText('천천히 써 봐요')).toBeNull();
   expect(screen.queryByText('한 글자라도 쓰면 눌려요')).toBeNull();
+  expect(screen.getByTestId('kb-word', {includeHiddenElements: true})).toBeTruthy(); // r1/7 H: 본보기 낱말이 입력 칸 바로 위에
+  const top = screen.getByTestId('kb-skip-top');
+  expect(top).toBeTruthy();
   expect(screen.queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeTruthy();
-  await act(async () => {
-    fireEvent(input(), 'blur');
-  });
+  await closeKb();
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
+});
+
+test('자판 열림 + 로마자 입력이면 카드 아래 영문 안내 한 줄(시안 ds4b)', async () => {
+  await toKeyboardStep();
+  await openKb();
+  await type('namu');
+  expect(screen.getByTestId('kb-roman')).toHaveTextContent("영어로 써지고 있어요. 자판의 '한/영'을 눌러 주세요");
+  await type('나무가');
+  expect(screen.queryByTestId('kb-roman')).toBeNull();
 });
 
 test('글자 150% 이상 + 자판 열림이면 제목·단계도 숨긴다', async () => {
   mockFontScale = 1.5;
   await toKeyboardStep();
   expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy();
-  await act(async () => {
-    fireEvent(input(), 'focus');
-  });
+  await openKb();
   expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
+  // 200% 시안: '넘어갈게요'는 위 줄이 아니라 카드 아래 본문(스크롤로 닿음)
+  expect(screen.queryByTestId('kb-skip-top')).toBeNull();
+  expect(within(screen.getByTestId('screen-body')).getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
 });
 
 test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면으로', async () => {
@@ -294,7 +323,7 @@ test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면
 
 test('이전(‹ 오늘 코스)은 기록 없이 코스 홈으로', async () => {
   const {calls} = await toKeyboardStep();
-  await act(async () => fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로 돌아가기'})[0])); // 상단 바(하단 링크도 같은 읽기, U13)
+  await act(async () => fireEvent.press(screen.getByRole('link', {name: '오늘 코스로'}))); // v4 BackLink(하단 링크 없음, U-8)
   await waitFor(() => screen.getByTestId('date-line'));
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false);
 });
