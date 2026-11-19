@@ -113,8 +113,30 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 def generatedEnvTs = file("../../src/lib/env.generated.ts")
 // 검사·생성은 공통 스크립트 한 곳(iOS 준비 N2): Gradle 은 부르기만 한다. iOS Xcode Build Phase 도 같은 스크립트(RELEASE.md)
 def appEnvScript = file("../../scripts/appEnv.js")
+// node 찾기(PR #50 리뷰 M1): Dock 에서 연 Android Studio 처럼 셸 PATH 가 없는 실행에서도 찾게.
+// 순서: NODE_BINARY(-PNODE_BINARY 또는 환경변수, RN 의 .xcode.env 와 같은 이름) → ~/.nvm 의 가장 높은 판 → /opt/homebrew/bin → /usr/local/bin → PATH 의 node
+def nodeBinary = {
+    def explicit = (project.findProperty("NODE_BINARY") ?: System.getenv("NODE_BINARY"))?.toString()
+    if (explicit) return explicit
+    def nvm = new File(System.getProperty("user.home"), ".nvm/versions/node")
+    def fromNvm = nvm.isDirectory() ? nvm.listFiles()?.findAll { new File(it, "bin/node").canExecute() }?.sort { a, b ->
+        def va = a.name.replace("v", "").tokenize(".").collect { it.isInteger() ? it.toInteger() : 0 }
+        def vb = b.name.replace("v", "").tokenize(".").collect { it.isInteger() ? it.toInteger() : 0 }
+        [va, vb].transpose().findResult { x, y -> x <=> y ?: null } ?: 0
+    } : null
+    if (fromNvm) return new File(fromNvm.last(), "bin/node").absolutePath
+    def fixed = ["/opt/homebrew/bin/node", "/usr/local/bin/node"].find { new File(it).canExecute() }
+    return fixed ?: "node"
+}()
+def startNode = { List<String> args ->
+    try {
+        return ([nodeBinary] + args).execute(null, file("../.."))
+    } catch (IOException e) {
+        throw new GradleException("빌드에 node 가 필요해요(찾은 경로: ${nodeBinary}). nvm·Homebrew 로 설치하거나 NODE_BINARY(환경변수 또는 ~/.gradle/gradle.properties)에 node 경로를 적어 주세요. Android Studio 는 터미널에서 열면 셸 PATH 를 씁니다. docs/team/RELEASE.md '설정이 앱에 들어가는 방식'")
+    }
+}
 def runAppEnv = { List<String> args ->
-    def proc = (["node", appEnvScript.absolutePath] + args).execute(null, file("../.."))
+    def proc = startNode([appEnvScript.absolutePath] + args)
     def out = new StringBuilder()
     def err = new StringBuilder()
     proc.waitForProcessOutput(out, err)
@@ -424,7 +446,7 @@ tasks.register("verifyOssLicenses") {
         if (cur != next) {
             throw new GradleException("오픈소스 라이선스 목록(Android)이 낡았어요(${ossDiff(cur, next) ?: '내용 차이'}). app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
         }
-        def proc = ["node", file("../../scripts/ossLicenses.js").absolutePath, "--check"].execute(null, file("../.."))
+        def proc = startNode([file("../../scripts/ossLicenses.js").absolutePath, "--check"])
         proc.waitForProcessOutput(System.out, System.err)
         if (proc.exitValue() != 0) throw new GradleException("오픈소스 라이선스 목록(JS)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
     }

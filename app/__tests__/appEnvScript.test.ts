@@ -142,6 +142,8 @@ describe('env.generated.ts 쓰기', () => {
     const err = {write: () => true};
     expect(() => main(['nope'], {appDir: dir, err})).toThrow(/알 수 없는 명령/);
     expect(() => main(['check', '--flavor', 'dev', '--build-type', 'debug'], {appDir: dir, err})).toThrow(/--flavor staging\|production/);
+    // 리뷰 L1: 버전 이름·코드는 함께
+    expect(() => main(['write', '--flavor', 'staging', '--build-type', 'debug', '--version-name', '1.0.0', '--out', path.join(dir, 'x.ts')], {appDir: dir, err})).toThrow(/함께 주세요/);
   });
 });
 
@@ -170,4 +172,8 @@ test('Gradle 은 규칙을 다시 갖지 않고 스크립트를 부른다', () =
   for (const cmd of ['"load-json"', '"check"', '"write"', '"verify-bundle"']) {
     expect(g).toContain(cmd);
   }
+  // 리뷰 M1: node 를 찾아 실행하고, 없으면 한국어 안내(영어 IOException 대신)
+  expect(g).toContain('NODE_BINARY');
+  expect(g).toContain('빌드에 node 가 필요해요');
+  expect(g).not.toMatch(/\["node", /);
 });

@@ -281,7 +281,11 @@ function main(argv, {out = process.stdout, err = process.stderr, appDir = APP} =
   if (cmd === 'check') {
     return;
   }
-  const v = o['version-name'] && o['version-code'] ? {versionName: o['version-name'], versionCode: Number(o['version-code']), gitSha: o['git-sha'] ?? ''} : defaultVersion(appDir);
+  // 리뷰 L1: 버전 이름·코드는 둘 다 주거나 둘 다 빼거나(하나만 오면 조용히 기본값으로 바뀌지 않게)
+  if (!!o['version-name'] !== !!o['version-code']) {
+    fail('--version-name 과 --version-code 는 함께 주세요(둘 다 빼면 package.json·git 값)');
+  }
+  const v = o['version-name'] ? {versionName: o['version-name'], versionCode: Number(o['version-code']), gitSha: o['git-sha'] ?? ''} : defaultVersion(appDir);
   if (!Number.isInteger(v.versionCode)) {
     fail('--version-code 는 정수여야 해요');
   }
@@ -300,7 +304,8 @@ if (require.main === module) {
   try {
     main(process.argv.slice(2));
   } catch (e) {
-    process.stderr.write(`${e instanceof EnvError ? e.message : e.stack}\n`);
+    // 리뷰 L2: 예상 못 한 오류도 한 줄로(Gradle 메시지가 스택으로 길어지지 않게). 자세한 건 직접 실행해서 본다
+    process.stderr.write(e instanceof EnvError ? `${e.message}\n` : `scripts/appEnv.js 오류: ${e && e.message} (자세히: node scripts/appEnv.js ${process.argv.slice(2).join(' ')})\n`);
     process.exit(1);
   }
 }

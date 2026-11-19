@@ -40,7 +40,26 @@ node scripts/appEnv.js verify-bundle --flavor production <번들 파일…>     
 ```
 - 버전을 주지 않으면 `package.json` version · `git rev-list --count HEAD` · 짧은 sha(iOS 처럼 빌드 도구가 버전을 넘기지 않는 경우). 실패는 종료 코드 1 + 한국어 한 줄, 경고는 `경고:` 줄.
 - 규칙 테스트: `__tests__/appEnvScript.test.ts`.
-- **iOS(빌드 2)**: Xcode 대상의 Build Phases 맨 앞에 Run Script 를 하나 두고 configuration 에 맞춰 부른다(예: `cd "$SRCROOT/.." && node scripts/appEnv.js write --flavor "${APP_FLAVOR:-staging}" --build-type "$( [ "$CONFIGURATION" = Debug ] && echo debug || echo release )"`, release 면 번들 뒤 `verify-bundle`). `APP_FLAVOR` 는 xcconfig·scheme 으로 정한다(iOS 감사 2.x flavor 행). 지금 iOS 프로젝트에는 아직 넣지 않았다.
+- **node 필수**: Android 빌드·IDE 동기화가 설정 단계에서 이 스크립트를 부른다(원래 JS 번들에도 필요). 찾는 순서: `NODE_BINARY`(환경변수 또는 `~/.gradle/gradle.properties` 의 `NODE_BINARY=/경로/node`) → `~/.nvm/versions/node` 가장 높은 판 → `/opt/homebrew/bin/node` → `/usr/local/bin/node` → PATH. 못 찾으면 "빌드에 node 가 필요해요" 로 멈춘다. Dock 에서 연 Android Studio 는 셸 PATH 가 없으니 터미널에서 `studio .` 로 열거나 `NODE_BINARY` 를 적는다(라이브러리 일부도 PATH 의 node 를 직접 부른다).
+- **iOS(빌드 2, 아직 프로젝트에 넣지 않음)** — Run Script 두 개:
+  1. **맨 앞**(Compile Sources 전) "env 생성": Xcode Run Script 는 PATH 가 거의 없으므로 RN 템플릿처럼 `.xcode.env` 를 먼저 불러 `NODE_BINARY` 를 쓴다. 출시 configuration 은 `--require-real-env`(Android `build-production.sh` 와 같게). 출력 파일이 없어 매번 돌아야 하므로 "Based on dependency analysis" 를 끈다.
+     ```sh
+     set -e
+     [ -f "$PODS_ROOT/../.xcode.env" ] && . "$PODS_ROOT/../.xcode.env"
+     [ -f "$PODS_ROOT/../.xcode.env.local" ] && . "$PODS_ROOT/../.xcode.env.local"
+     cd "$SRCROOT/.."   # app/
+     if [ "$CONFIGURATION" = "Debug" ]; then TYPE=debug; EXTRA=""; else TYPE=release; EXTRA="--require-real-env"; fi
+     "$NODE_BINARY" scripts/appEnv.js write --flavor "${APP_FLAVOR:-staging}" --build-type "$TYPE" $EXTRA
+     ```
+  2. **"Bundle React Native code and images" 뒤**(release 만) "번들 검사": 번들 경로는 `$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/main.jsbundle`.
+     ```sh
+     set -e
+     [ "$CONFIGURATION" = "Debug" ] && exit 0
+     [ -f "$PODS_ROOT/../.xcode.env" ] && . "$PODS_ROOT/../.xcode.env"
+     cd "$SRCROOT/.."
+     "$NODE_BINARY" scripts/appEnv.js verify-bundle --flavor "${APP_FLAVOR:-staging}" "$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/main.jsbundle"
+     ```
+  - `APP_FLAVOR` 는 xcconfig·scheme 으로 정한다(iOS 감사 flavor 행). 버전 코드 기본값은 git 커밋 수라 얕은 clone CI 에서는 작다(Android 와 같은 한계, release-versions 확인 단계로 막음 — 리뷰 L3).
 
 ### env.generated.ts 가 남는 규칙(Metro 가 어떤 서버로 붙나)
 - 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. 작업 이름에 변형이 있으면(`assembleStagingDebug`) 그 변형만 쓴다 — 네이티브 CMake 설정이 다른 flavor 의 preBuild 를 끌어와도 덮어쓰지 않는다(PR #7·#44). Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
