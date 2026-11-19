@@ -21,7 +21,7 @@ type SizeMove = {role: TypeRoleV4; note: string};
 export const text20SizeToRole: Record<number, SizeMove> = {
   20: {role: 'body', note: '설명 문단. 보조·날짜는 sub'},
   22: {role: 'bodyLg', note: '질문 문장·카드 문장·선택지'},
-  24: {role: 'heading', note: '섹션 제목이면 heading, 뒤로 링크면 BackLink, 말풍선은 bodyLg'},
+  24: {role: 'heading', note: '[note 필독] 쓰임이 셋: 섹션 제목이면 heading, 뒤로 링크면 BackLink, 말풍선은 bodyLg(700 금지, R-04)'},
   26: {role: 'heading', note: '단계 제목(StepHeader) → heading 또는 Heading level 1(화면 제목이면 title)'},
   28: {role: 'title', note: '화면 제목은 한 화면 1개(Heading level 1)'},
   30: {role: 'title', note: ''},

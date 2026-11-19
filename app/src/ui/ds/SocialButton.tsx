@@ -3,7 +3,7 @@ import {Image, Pressable, StyleSheet, Text as RNText, View} from 'react-native';
 import {brand} from '../tokens';
 import {assetRegistry} from '../assets/registry';
 import {KakaoSymbol} from '../assets/kakaoSymbol';
-import {koreanTextProps} from '../koreanText';
+import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {ds, roleText} from './roles';
 
 // 타사 로그인 버튼(v4, ui/ 로 이동한 판). 규정: design-system/assets/third-party-login/GUIDELINES.md.
@@ -44,7 +44,7 @@ export function SocialButton({provider, label, onPress, disabled, testID}: Socia
         {...koreanTextProps}
         maxFontSizeMultiplier={BRAND_LABEL.scaleCap}
         style={[styles.text, {color: kakao ? brand.kakaoLabel : brand.googleLabel}]}>
-        {label}
+        {keepAllChildren(label)}
       </RNText>
       <View style={kakao ? styles.kakaoBalance : styles.gBalance} />
     </Pressable>

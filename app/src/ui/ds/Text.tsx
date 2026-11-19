@@ -2,12 +2,13 @@ import React from 'react';
 import {Platform, Text as RNText} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {useScreenTitleRef} from '../screenTitle';
-import {roleText, type Tone, type TextRole} from './roles';
-import {useAudience, type LayoutOnlyStyle} from './audience';
+import {roleText, type TextRole, type TextTone} from './roles';
+import {pickLayout, useAudience, type LayoutOnlyStyle} from './audience';
 
 export type TextProps = {
   role: TextRole;
-  tone?: Tone;
+  /** 화면용 tone(본문·보조·제목 계열). onAction·action·info 는 Button·BackLink·Banner 안에서만(R-01·R-06·R-08) */
+  tone?: TextTone;
   children: React.ReactNode;
   /** 레이아웃만(margin·align·flex). 크기·색·굵기·높이는 role·tone 으로만 */
   style?: LayoutOnlyStyle;
@@ -17,7 +18,7 @@ export type TextProps = {
   nativeID?: string;
   /**
    * 말줄임 예외(SUMMARY 2-4). 원칙은 줄바꿈이고 numberOfLines prop 은 없다.
-   * 예외 3가지(낱말 칸·브랜드 버튼·번호 칸)만 이유를 적어 쓴다 — 위반 수는 dsBaseline 테스트가 센다.
+   * 예외 3가지(낱말 칸·브랜드 버튼·번호 칸)만 이유를 적어 쓴다 — 화면(features/·app/)에서 쓰면 lint 경고·dsBaseline 이 센다(#31).
    */
   ellipsisException?: {lines: number; reason: 'wordCell' | 'brandButton' | 'numberCell'};
 };
@@ -39,7 +40,7 @@ export function Text({role, tone = 'default', children, style, accessibilityRole
       accessibilityLabel={label}
       maxFontSizeMultiplier={r.maxFontSizeMultiplier}
       numberOfLines={ellipsisException?.lines}
-      style={[r.style, style]}>
+      style={[r.style, pickLayout(style)]}>
       {keepAllChildren(children)}
     </RNText>
   );

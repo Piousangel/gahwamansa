@@ -3,7 +3,7 @@ import {Pressable, StyleSheet, Text as RNText, View} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {Icon, type IconName} from '../assets/icons';
 import {ds, minTouch, roleText, type Tone} from './roles';
-import {useAudience, type LayoutOnlyStyle} from './audience';
+import {pickLayout, useAudience, type LayoutOnlyStyle} from './audience';
 
 export type ButtonKind = 'primary' | 'secondary' | 'text' | 'danger';
 export type ButtonProps = {
@@ -39,7 +39,7 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
   const minHeight = minTouch(primary ? 'primary' : kind === 'text' ? 'link' : 'secondary', a);
   const ink: Tone = disabled ? 'disabled' : primary ? 'onAction' : kind === 'danger' ? 'danger' : 'action';
   return (
-    <View style={[size === 'dock' ? styles.stretch : styles.inline, style]} testID={testID ? `${testID}-wrap` : undefined}>
+    <View style={[size === 'dock' ? styles.stretch : styles.inline, pickLayout(style)]} testID={testID ? `${testID}-wrap` : undefined}>
       {disabled && disabledReason ? (
         // 이유는 버튼 힌트로도 읽으므로 이 줄은 화면 읽기에서 숨긴다(TalkBack R8)
         <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>

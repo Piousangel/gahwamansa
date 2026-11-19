@@ -3,19 +3,18 @@ import React from 'react';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
-import type {HistoryDay} from '../src/api/contract/history';
 import {stackScreenOptions, backGestureOptions} from '../src/navigation/stackOptions';
 import {press} from '../testUtils/flow';
 
-const day = (session_date: string, a: string, b: string, choice: string | null): HistoryDay => ({
-  session_date,
-  day_index: 1,
-  completed: true,
-  photo: {caption: '사진', image_url: 'https://example.test/p.jpg', keyword: '나무'},
-  question: {prompt: `${a}과 ${b} 중 어느 쪽이 좋으세요?`, option_a: a, option_b: b},
-  choice_label: choice,
-});
-const DAYS = [day('2025-11-16', '봄', '가을', '가을'), day('2025-11-15', '산', '바다', '바다'), day('2025-11-14', '빵', '떡', null), day('2025-11-13', '곶감', '홍시', '홍시'), day('2025-11-10', '눈', '비', '눈')];
+// 자녀 C4(child_summary.latest)·C5(child_answer_history) 와 같은 값 — fake 는 자녀·어르신이 같은 상태를 본다(0050 parent_preview_child_view)
+const LATEST = {prompt: null, choiceLabel: '가을', answeredDate: '2025-11-16'};
+const HISTORY = [
+  {answeredDate: '2025-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'},
+  {answeredDate: '2025-11-15', promptShort: '산과 바다 중', choiceLabel: '바다'},
+  {answeredDate: '2025-11-13', promptShort: '곶감과 홍시 중', choiceLabel: '홍시'},
+  {answeredDate: '2025-11-10', promptShort: '눈과 비 중', choiceLabel: '눈'},
+];
+const DATA = {latest: LATEST, history: HISTORY};
 
 async function openPreview(opts: FakeOptions) {
   render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', ...opts})} role="parent" restore />);
@@ -35,7 +34,7 @@ test('설정: 답 보여 주기 행 아래 "가족에게 이렇게 보여요" �
 });
 
 test('답 있음: 호칭의 최근 답 카드(고른 답·날짜) + 지난 답 2줄(날짜 · 짧은 질문 · 고른 답). 답 없는 날은 건너뛴다, 사진·낱말 없음', async () => {
-  const device = await openPreview({consented: true, parentDays: DAYS});
+  const device = await openPreview({consented: true, ...DATA});
   expect(within(device).getByText('가족 휴대폰 화면')).toBeTruthy();
   const latest = within(device).getByTestId('preview-latest');
   expect(latest.props.accessibilityLabel).toBe('엄마의 최근 답, 가을, 2025년 11월 16일');
@@ -49,7 +48,7 @@ test('답 있음: 호칭의 최근 답 카드(고른 답·날짜) + 지난 답 2
 });
 
 test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마의 최근 답 / 답을 나누지 않는 중이에요", 고른 답 없음, 소개문은 sub_off', async () => {
-  const device = await openPreview({consented: false, parentDays: DAYS});
+  const device = await openPreview({consented: false, ...DATA});
   expect(within(device).getByText('가족 휴대폰 화면')).toBeTruthy();
   const card = within(device).getByTestId('preview-not-shared');
   expect(within(card).getByText('엄마의 최근 답')).toBeTruthy();
@@ -60,7 +59,7 @@ test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마�
 });
 
 test('아직 고른 답 없음: "고른 답이 생기면 여기에 보여요", 소개문은 그대로', async () => {
-  const device = await openPreview({consented: true, parentDays: []});
+  const device = await openPreview({consented: true, latest: null, history: []});
   expect(within(within(device).getByTestId('preview-empty')).getByText('고른 답이 생기면 여기에 보여요')).toBeTruthy();
   expect(screen.getByTestId('preview-sub').props.children).toMatch(/^최근 한 달/);
 });
@@ -73,7 +72,7 @@ test('스와이프 뒤로 자리(iOS 감사 2.4): 지금은 두 플랫폼 모두
 });
 
 test('리뷰 M2: 불러오기 실패(오프라인)면 빈 상태·기본 호칭을 보이지 않고 오류 줄 + 다시 하기 → 다시 불러오면 정상', async () => {
-  render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', consented: true, parentDays: DAYS, failParentHistory: 1})} role="parent" restore />);
+  render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', consented: true, ...DATA, failParentHistory: 1})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   await press('설정');
   await press('가족에게 이렇게 보여요');
@@ -96,4 +95,57 @@ test('리뷰 M1: 날짜·짧은 질문은 자녀 C4·C5 와 같은 lib 함수(fo
   expect(home.formatAnswerDate).toBe(lib.formatAnswerDate); // 자녀 화면이 쓰는 것과 같은 함수
   expect(lib.formatAnswerDate('2025-11-16', new Date('2026-11-19T00:00:00Z'))).toBe('2025년 11월 16일');
   expect(lib.pairShort('산', '바다')).toBe('산과 바다 중');
+});
+
+// 0050 대조: 같은 상태를 자녀 C4 홈 카드·C5 지난 답과 어르신 미리보기로 각각 그려 표시 값이 같은지 본다(PR #11 리뷰 M1)
+describe('자녀 C4·C5 와 같은 결과(0050 parent_preview_child_view)', () => {
+  const RECENT = [
+    {answeredDate: '2025-11-15', promptShort: '산과 바다 중', choiceLabel: '바다'},
+    {answeredDate: '2025-11-13', promptShort: '곶감과 홍시 중', choiceLabel: '홍시'},
+  ];
+  // 마지막 답이 30일보다 오래돼 C5 목록(최근 30일)에는 없고 C4 에만 있는 경우(예전 parent_history 출처에서 달랐던 경우)
+  const OLD_ONLY = {latest: {prompt: null, choiceLabel: '여름', answeredDate: '2025-09-01'}, history: [] as typeof RECENT};
+
+  async function childView(opts: FakeOptions) {
+    render(<AppRoot api={createFakeApi({parentTitle: '엄마', ...opts})} role="child" />);
+    const card = await waitFor(() => screen.getByTestId('child-home-card'));
+    const c4 = String(card.props.accessibilityLabel).split(', ').slice(0, 3); // 호칭의 최근 답, 답, 날짜
+    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await act(async () => {
+      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+    });
+    await waitFor(() => screen.getByText('엄마의 지난 답'));
+    const rows = screen.queryAllByTestId('child-past-item').map(r => String(r.props.accessibilityLabel));
+    screen.unmount();
+    return {c4, rows};
+  }
+  async function previewView(opts: FakeOptions) {
+    const device = await openPreview(opts);
+    const latest = within(device).getByTestId('preview-latest');
+    const p4 = String(latest.props.accessibilityLabel).split(', ');
+    const older = within(device).queryAllByTestId('preview-older').map(r => String(r.props.accessibilityLabel).split(', '));
+    screen.unmount();
+    return {p4, older};
+  }
+
+  test('최근 답 카드(호칭·답·날짜)와 지난 답 줄(날짜·서버 짧은 질문·답)이 자녀 화면과 같다', async () => {
+    const opts = {consented: true, latest: LATEST, history: [HISTORY[0], ...RECENT]};
+    const child = await childView(opts);
+    const preview = await previewView(opts);
+    expect(preview.p4).toEqual(child.c4);
+    // 미리보기 지난 답 2줄 = 자녀 C5 목록에서 최근 답과 같은 날을 뺀 앞 2줄(날짜·짧은 질문·답이 같은 줄에 다 들어 있다)
+    preview.older.forEach((parts, i) => {
+      const row = child.rows[i + 1];
+      parts.forEach(part => expect(row).toContain(part));
+    });
+    expect(preview.older).toHaveLength(2);
+  });
+
+  test('마지막 답이 30일보다 오래돼도 자녀 C4 와 같은 최근 답(예전 30일 출처 차이 해소)', async () => {
+    const opts = {consented: true, ...OLD_ONLY};
+    const child = await childView(opts);
+    const preview = await previewView(opts);
+    expect(preview.p4).toEqual(child.c4);
+    expect(preview.older).toHaveLength(0);
+  });
 });

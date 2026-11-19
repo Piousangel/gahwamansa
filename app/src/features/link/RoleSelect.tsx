@@ -46,7 +46,10 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
   const {height: winH, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
-  const showIntro = fontScale < 1.5; // 150% 이상이면 소개(제목·항목)도 숨겨 버튼을 지킨다
+  // 감사 M4·디자인 9절(리뷰 M1 리드 결정 11-19): 150% 이상이면 사진·기능 3줄을 숨기고 소개 한 줄('하루 한 장, 우리 집 앨범')은 남긴다.
+  // 100%·130% 에서 높이가 모자라면(사진 영역이 남지 않으면) 기능 줄을 셋째 → 둘째 → 첫째 순으로 줄 단위로 숨긴다(반쯤 잘린 줄 금지, onLayout 측정)
+  const [itemCount, setItemCount] = useState(fontScale < 1.5 ? 3 : 0);
+  const showItems = itemCount > 0;
   const replay = useRef(firstScreenPlayed).current;
   // 스플래시 심볼이 날아와 앉을 자리: 도착 전에는 진짜 심볼을 숨기고, 워드마크 줄은 위로 떠오르지 않는다(위치가 어긋나지 않게)
   const fromSplash = useRef(flightPending()).current;
@@ -70,6 +73,10 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
   const [area, setArea] = useState<{w: number; h: number} | null>(null);
   const onArea = (e: LayoutChangeEvent) => {
     const {width, height} = e.nativeEvent.layout;
+    if (height < AREA_MIN && itemCount > 0) {
+      setItemCount(n => n - 1); // 기능 줄이 사진 영역을 다 먹고 질문 밑으로 밀림 → 한 줄 숨기고 다시 잰다
+      return;
+    }
     setArea(a => (a && a.w === width && a.h === height ? a : {w: width, h: height}));
   };
   const lay = showPhoto && area ? stackLayout(area.w, area.h) : null;
@@ -138,6 +145,7 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
     return (
       <Screen scrollEnabled>
         {brand}
+        <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
         {ask}
       </Screen>
     );
@@ -154,10 +162,10 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
       {/* 워드마크~소개는 한 덩어리(시안 FS_D: 제목 위 10, 줄 간격 6). 남는 높이는 사진 영역으로 */}
       <View style={styles.head}>
       {brand}
-      {showIntro ? (
-        <View accessible accessibilityLabel={[f.intro_title, ...f.intro].join('. ')} style={styles.intro}>
-          <Text20 size={24} weight="bold">{f.intro_title}</Text20>
-          {f.intro.map((t, i) => (
+      {showItems ? (
+        <View accessible accessibilityLabel={[f.intro_title, ...f.intro.slice(0, itemCount)].join('. ')} style={styles.intro}>
+          <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
+          {f.intro.slice(0, itemCount).map((t, i) => (
             <Animated.View key={ICONS[i]} style={[styles.item, {opacity: items[i], transform: [{translateX: rise(items[i], -8)}]}]}>
               <Animated.View
                 testID={`intro-icon-circle-${i}`}
@@ -173,7 +181,9 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
             </Animated.View>
           ))}
         </View>
-      ) : null}
+      ) : (
+        <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
+      )}
       </View>
       <View testID="polaroid-area" style={styles.area} onLayout={onArea}>
         {/* 사진 묶음은 영역 위에 띄워 둔다(영역 크기를 밀어 올리지 않게: 재는 값 = 실제 남은 공간) */}
@@ -184,6 +194,9 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
     </Screen>
   );
 }
+
+// 사진 영역이 이보다 작으면 기능 줄이 넘친 것으로 본다(질문·버튼 하단 영역 밑으로 반쯤 잘림 방지)
+const AREA_MIN = 8;
 
 const styles = StyleSheet.create({
   seatHidden: {opacity: 0},

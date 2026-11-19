@@ -20,6 +20,12 @@ export const BANNER_LOOK: Record<BannerTone, {surface: ColorV4; text: ColorV4; i
   offline: {surface: 'paperSoft', text: 'inkBody', icon: 'info', border: 'line', iconName: 'icon-wifi-off'},
 };
 
+/**
+ * 띠 안 행동(PR #29 리뷰 M2): 옅은 면(infoSoft·paperSoft) 위 action 글자는 어르신 7:1 미달(6.63·6.47)이라
+ * 글자 링크가 아니라 흰 알약(보조 버튼: card 면 + action 테두리·글자 7.80)으로 둔다. 짝은 dsComponents.test 가 허용 목록으로 검사.
+ */
+export const BANNER_ACTION = {kind: 'secondary', text: 'action', surface: 'card'} as const;
+
 const c = ds.color;
 
 // 같은 자리 띠(SUMMARY 2-7): 이미 받은 내용이 있으면 화면을 바꾸지 않고 띠만 띄운다. 나타날 때·문구가 바뀔 때 한 번 읽는다(R11).
@@ -37,7 +43,7 @@ export function Banner({tone, text, action, testID = 'ds-banner'}: {tone: Banner
       <View style={styles.text}>
         <Text role="body">{text}</Text>
       </View>
-      {action ? <Button kind="text" size="inline" label={action.label} onPress={action.onPress} /> : null}
+      {action ? <Button kind={BANNER_ACTION.kind} size="inline" label={action.label} onPress={action.onPress} /> : null}
     </View>
   );
 }

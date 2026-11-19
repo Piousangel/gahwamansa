@@ -22,11 +22,11 @@
 | 10 | 응원(정해진 문구 키) | cheers(0020) | 예 | 31일 파기 | 메시지 > 기타 인앱 메시지 | 선택 | 앱 기능 |
 | 11 | 초대 번호·입력 시도 | invite_codes·redeem_attempts | 예 | 30일 파기 | 수집 신고 대상 아님(추정: 앱이 만든 1회용 번호, 사용자 데이터 아님) | — | — |
 | 12 | 이용 기록(이벤트 24종) | events(0022·0029·0034), 이름·속성 화이트리스트, `device_key` = 로그인 ID의 SHA-256(방침 표기 "가명값", 보안 회의 D3) | 예 | 14개월, 계정·가족 삭제 시 cascade, 답만 삭제 시 코스 이벤트도 삭제(0043) | 앱 활동 > 앱 상호작용 | 필수 | 분석, 앱 기능 |
-| 13 | 푸시 토큰(FCM) | device_tokens(0001·0032·0036): 사용자당 5개, 270일 미갱신 삭제, 로그아웃 시 `unregister_push_token` | 예 | 삭제 시 즉시, 무효 토큰 즉시 | 기기 또는 기타 ID | 필수(추정, §4-2) | 앱 기능 |
+| 13 | 푸시 토큰(FCM) | device_tokens(0001·0032·0036): 사용자당 5개, 270일 미갱신 삭제, 로그아웃 시 `unregister_push_token` | 예 | 삭제 시 즉시, 무효 토큰 즉시 | 기기 또는 기타 ID | 선택(알림 허용 때만, §4-2) | 앱 기능 |
 | 14 | 알림 발송 기록 | push_log(종류·날짜·profile·결과, **토큰 없음**) 31일, push_runs(숫자만) 13개월, push_claims 31일 | 예(서버 내부) | profile 삭제 시 cascade | 별도 신고 불필요(추정: 12·13의 서버 처리 기록) | — | — |
-| 15 | Firebase 설치 ID | `@react-native-firebase/app`·`messaging` 27.1.0(PR #19, main 포함 — 사실). `app/firebase.json`: 자동 초기화(`messaging_auto_init_enabled`)·설치 ID(`messaging_installation_id_enabled`)·데이터 수집 기본값(`app_data_collection_default_enabled`) 모두 false(사실, 병합 매니페스트로 확인 — reviews/2026-11-19-pr19-review) | **아직 아니오**: 앱이 토큰을 요청하는 것은 `FCM_WIRED`를 켜고 알림 권한을 허용한 뒤 첫 `getToken`부터. 다만 google-services.json이 있는 빌드는 앱을 켤 때마다 FirebaseApp을 초기화한다(리뷰 M2, 실기기 확인 중) | Google 기준 | 기기 또는 기타 ID | 필수(확인 중, §4-2) | 앱 기능, 분석(Crashlytics 병합 뒤) |
+| 15 | Firebase 설치 ID | `@react-native-firebase/app`·`messaging` 27.1.0(PR #19, main 포함 — 사실). `app/firebase.json`: 자동 초기화(`messaging_auto_init_enabled`)·설치 ID(`messaging_installation_id_enabled`)·데이터 수집 기본값(`app_data_collection_default_enabled`) 모두 false(사실, 병합 매니페스트로 확인 — reviews/2026-11-19-pr19-review) | 알림 허용 뒤에만 예. 앱은 알림 발송 연결(FCM)이 켜진 빌드에서 사용자가 알림을 허용한 뒤에만 Firebase 설치 ID를 만들고 FCM 토큰을 등록합니다. 알림을 거부하거나 허용하지 않은 기기, 그리고 현재 빌드(발송 연결 꺼짐)에서는 Firebase 설치 ID·토큰이 생성·전송되지 않습니다(2026-11-19 에뮬레이터 관찰). 근거: SDK 로그(FirebaseInstallations·FirebaseMessaging VERBOSE 0줄)와 앱 파일(`no_backup/PersistedInstallation.*.json` 없음), `dev-app-notes.md` "Firebase 리뷰 M2" 표 A·A2·B3·C. **한계: 네트워크 패킷은 잡지 못했다**(에뮬레이터 프록시 미사용). 앱 시작 때 FirebaseApp 로컬 초기화와 기기 안 파일(하트비트 기록 등)은 생긴다. | Google 기준 | 기기 또는 기타 ID | 선택(알림 허용 때만, §4-2) | 앱 기능, 분석(Crashlytics 병합 뒤) |
 | 16 | 비정상 종료 로그·진단(기기 모델·OS·앱 버전) | Crashlytics(앱에 아직 없음 — PR #19 구성 요소는 app·Messaging·Installations·Common·Datatransport뿐, 사실) | 예정(AU-05) | Google 90일 | 앱 정보 및 성능 > 비정상 종료 로그 / 진단 | 필수 | 분석 |
-| 15-1 | Firebase 알림 전달 지표(datatransport/Firelog) | PR #19로 함께 들어온 Google 전송 라이브러리(`TransportRegistrar`·`CctBackendFactory`, 사실). 전달 지표 내보내기 `messaging_android_notification_delivery_metrics_export_enabled`=false(병합 매니페스트 `delivery_metrics_exported_to_big_query_enabled=false`, 사실) | **아니오(현재 전송 0)** — 내보내기가 꺼져 보낼 대상이 없음(정적 근거, 실기기 확인은 §4-2와 함께) | — | 신고 안 함(켜지 않는 동안) | — | — |
+| 15-1 | Firebase 알림 전달 지표(datatransport/Firelog) | PR #19로 함께 들어온 Google 전송 라이브러리(`TransportRegistrar`·`CctBackendFactory`, 사실). 전달 지표 내보내기 `messaging_android_notification_delivery_metrics_export_enabled`=false(병합 매니페스트 `delivery_metrics_exported_to_big_query_enabled=false`, 사실) | **아니오(현재 전송 0)** — 내보내기가 꺼져 보낼 대상이 없음(정적 근거. 11-19 에뮬레이터 관찰에서 Messaging 로그 0줄 — Firelog 전송만 따로 본 것은 아니고 패킷도 못 잡음) | — | 신고 안 함(켜지 않는 동안) | — | — |
 | 17 | 서버 접속 기록(IP 등) | Supabase 플랫폼 | 예 | Pro 7일(supabase.com/pricing, 11-19) | 신고 안 함(IP 유형 없음, 위치 추정에 안 씀 — 기존 판단 유지) | — | — |
 | 18 | 관리자 감사 기록(방침 표기: 운영자 작업 기록) | admin_audit(0039 이후 모든 admin_* RPC — 0039·0040·0043~0048): 처리자·작업 종류·사유·**대상 profile·family uuid** 또는 detail(카카오 큐 번호, 약관 종류·버전). 서버는 사유·처리자에 `@`·연속 9자리 이상 숫자만 거부(0047 예정), 그 밖의 개인정보는 운영 규칙 | 예(서버 내부) | **삭제 뒤에도 1년 보관**(FK 없음, purge 0043) | 신고 판단 필요(추정: 가명 ID만이면 "삭제 후 보관" 설명에 포함) | — | 보안·법적 의무(추정) |
 | 19 | 초대 번호(링크·Install Referrer로 받은 것) | 기기 `invite_store`(MODE_PRIVATE, allowBackup=false) | **아니오**(연결할 때 번호만 = 11) | 최대 7일·사용 즉시 삭제 | Play "수집" 아님(기기 밖으로 안 나감) | — | — |
@@ -60,7 +60,7 @@
 | 메시지 > 기타 인앱 메시지 | 예 | 아니오 | 아니오 | 선택 | 앱 기능 |
 | 앱 정보 및 성능 > 비정상 종료 로그 | 예(AU-05 병합 시) | 아니오 | 아니오 | 필수 | 분석 |
 | 앱 정보 및 성능 > 진단 | 예(AU-05 병합 시) | 아니오 | 아니오 | 필수 | 분석 |
-| 기기 또는 기타 ID | 예 | 아니오 | 아니오 | 필수(§4-2 결과로 확정) | 앱 기능, 분석 |
+| 기기 또는 기타 ID | 예 | 아니오 | 아니오 | 선택(§4-2: 알림 허용 때만 생성·등록) | 앱 기능, 분석 |
 | 위치·연락처·사진·동영상·오디오·파일·캘린더·금융·건강·SMS·웹 기록·설치된 앱 | 아니오 | | | | |
 
 ### 2.3 기타 선언 (store §5 유지·갱신)
@@ -78,7 +78,7 @@
 
 ## 4. 실측 필요 (출시 AAB, QA-07·AU-05 이후)
 1. 병합 매니페스트 권한: PR #19 뒤 stagingRelease 기준 `INTERNET`·`POST_NOTIFICATIONS`·`WAKE_LOCK`·`ACCESS_NETWORK_STATE`·`c2dm.permission.RECEIVE`·`DYNAMIC_RECEIVER_NOT_EXPORTED`·`BIND_GET_INSTALL_REFERRER_SERVICE`, **`AD_ID`·위치 0**(사실, reviews/2026-11-19-pr19-review). Crashlytics(AU-05) 병합 뒤와 출시 AAB에서 다시 확인.
-2. **확인 중(L4, 실기기)**: 새로 설치한 staging release(`FCM_WIRED`=false)에서 알림 거부 상태로 실행해 `firebaseinstallations.googleapis.com`·`fcmregistrations.googleapis.com` 요청 0, 앱 데이터에 `PersistedInstallation.*.json` 없음, Firelog 전송 0인지 본다(PR #19 리뷰 M2). 결과에 따라 #15 "기기 ID 필수/선택"과 #15-1을 확정한다.
+2. **닫음(11-19, L4 에뮬레이터)**: 앱은 알림 발송 연결(FCM)이 켜진 빌드에서 사용자가 알림을 허용한 뒤에만 Firebase 설치 ID를 만들고 FCM 토큰을 등록합니다. 알림을 거부하거나 허용하지 않은 기기, 그리고 현재 빌드(발송 연결 꺼짐)에서는 Firebase 설치 ID·토큰이 생성·전송되지 않습니다(2026-11-19 에뮬레이터 관찰). 근거: SDK 로그(FirebaseInstallations·FirebaseMessaging VERBOSE 0줄)와 앱 파일(`no_backup/PersistedInstallation.*.json` 없음), `dev-app-notes.md` "Firebase 리뷰 M2" 표 A·A2·B3·C. **한계: 네트워크 패킷은 잡지 못했다**(에뮬레이터 프록시 미사용). 앱 시작 때 FirebaseApp 로컬 초기화와 기기 안 파일(하트비트 기록 등)은 생긴다. → #13·#15와 §2.2 "기기 또는 기타 ID"를 **선택**으로 정했다(원래 규칙: 알림 거부 기기에서 안 생기면 선택). 출시 AAB·실기기에서 같은 결과인지 한 번 더 보면 좋다(패킷 포함).
 3. Kakao SDK·Google Sign-In이 기기 정보를 각 사로 보내는지: 각 사의 Play 데이터 보안 SDK 안내 문서 대조(문서 미확인). 보내면 위 표에 행 추가.
 
 ## 5. 리드에게 올리는 발견(결정 필요)
