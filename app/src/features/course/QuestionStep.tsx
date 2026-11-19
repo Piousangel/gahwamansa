@@ -1,22 +1,16 @@
 import React, {useState} from 'react';
-import {StyleSheet, useWindowDimensions, View} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {color, radius} from '../../ui/tokens';
+import {StyleSheet, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
-import {p5Level} from './p5Space';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
-import {BackBar} from '../../app/BackBar';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
-import {SelectCard} from '../../ui/SelectCard';
+import {Choice, DsScreen, Text} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
+import {useBackAction} from '../../app/BackBar';
 import {appCopy, copy} from '../../copy/copy';
-import {StepError} from './StepError';
-import {ToCourseHomeLink} from './ToCourseHomeLink';
+import {StepErrorBanner, stepErrorDock} from './StepError';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
 
@@ -25,16 +19,13 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const review = !!route.params?.review;
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = () => navigation.popTo('CourseHome');
+  useBackAction(toCourseHome);
   const {api, consented, content, applyAnswer} = useSession();
   const {finish, error, setError} = useFinishStep();
   useStepStarted('question', review); // AC-05
   const [saving, setSaving] = useState(false);
   const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
-  const {height, fontScale} = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  // 공간 단계(감사 H2·디자인 판정 9절): 가용 높이에서 카드 2장과 '정했어요'가 스크롤 없이 보이게 줄인다
-  const level = p5Level(height - insets.top - insets.bottom, fontScale);
   const q = content?.question;
   if (!q) {
     return null;
@@ -66,102 +57,86 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     }
   };
 
+  const back = {label: copy.course.to_home, onPress: toCourseHome};
+  const header = <StepHeader name={copy.course.step.question} n={2} review={review} />;
+  const title = q.prompt ?? appCopy.question_title;
+
   if (review) {
     // 저장된 답만 보여 준다(content.answered_choice: 오늘 KST, 동의한 어르신). 없으면(거부·철회·미연결) 이름표 없이 두 선택지만
     const saved = content?.answered_choice ?? null;
     return (
-      <Screen
-        top={
-          <>
-            <BackBar course onBack={toCourseHome} />
-            <StepHeader name={copy.course.step.question} n={2} review />
-          </>
-        }
-        bottom={<BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
-        <Text20 size={28} weight="bold" style={styles.value}>{q.prompt ?? appCopy.question_title}</Text20>
+      <DsScreen
+        variant="step"
+        back={back}
+        header={header}
+        dock={{primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}}>
+        <Text role="title">{title}</Text>
         <ReviewChoice label={q.option_a} chosen={saved === 'A'} />
         <ReviewChoice label={q.option_b} chosen={saved === 'B'} />
-      </Screen>
+      </DsScreen>
     );
   }
 
+  // 시안 P5(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제), 단계 제목 한 줄 → 질문(제목) → '정답은 없어요…'(늘 한 줄, 가장 중요한 안내)
+  // → 선택지 2개(고른 것 테두리 5 + 면 + ✓ + '골랐어요') → Dock '정했어요'. 읽어 주기는 선택지 아래(R16: 화면 읽기 켜짐이면 없음)
   return (
-    <Screen
-      top={
-        <>
-          <BackBar course onBack={toCourseHome} />
-          <StepHeader name={copy.course.step.question} n={2} />
-        </>
-      }
-      bottom={
-        error ? (
-          <StepError error={error} onRetry={confirm} />
-        ) : (
-          <>
-            <BigButton
-              label={copy.course.next.question}
-              disabled={!choice}
-              disabledReason={copy.question.need_choice}
-              reasonHidden={level >= 4}
-              loading={saving}
-              onPress={confirm}
-            />
-            {level < 1 ? <ToCourseHomeLink onPress={toCourseHome} disabled={saving} /> : null}
-          </>
-        )
+    <DsScreen
+      variant="step"
+      back={back}
+      header={header}
+      dock={
+        error
+          ? stepErrorDock(error, confirm)
+          : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
       }>
-      {/* 위계(감사 L3·디자인 판정 9절, 모든 크기): 질문이 큰 제목(28) → 지시문(보조 20) → '정답은 없어요…'(0단계만).
-          질문이 없으면 지시문이 제목 자리 */}
-      <View testID="p5-title-group" style={styles.titleGroup}>
-        {q.prompt ? (
-          <Text20 testID="p5-question" size={28} weight="bold" style={[styles.value, reading ? styles.reading : null]}>{q.prompt}</Text20>
-        ) : (
-          <Text20 size={28} weight="bold" style={styles.value}>{appCopy.question_title}</Text20>
-        )}
-        {q.prompt && level < 2 ? <Text20 testID="p5-instruction" style={styles.hint}>{appCopy.question_title}</Text20> : null}
-        {level < 1 ? <Text20 testID="p5-hint" style={styles.hint}>{appCopy.question_hint}</Text20> : null}
+      {error ? <StepErrorBanner error={error} /> : null}
+      <View testID="p5-title-group" style={[styles.titleGroup, reading ? styles.reading : null]}>
+        <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
+        <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
       </View>
-      {/* 선택 카드 묶음은 라디오 그룹(talkback-spec R9). 3단계부터 카드 96 */}
-      <View testID="choice-group" accessibilityRole="radiogroup">
-        <SelectCard label={q.option_a} selected={choice === 'A'} compact={level >= 3} state={saving ? 'saving' : undefined} onPress={() => setChoice('A')} />
-        <SelectCard label={q.option_b} selected={choice === 'B'} compact={level >= 3} state={saving ? 'saving' : undefined} onPress={() => setChoice('B')} />
-      </View>
-      {/* AP-03 읽어 주기: 카드 아래(공간 예산 밖 — 카드 2장과 버튼이 먼저 보이게). 질문과 두 선택지를 읽는다 */}
+      <Choice
+        testID="choice-group"
+        mode="radio"
+        look="answer"
+        items={[
+          {key: 'A', label: q.option_a},
+          {key: 'B', label: q.option_b},
+        ]}
+        value={choice ?? undefined}
+        selectedLabel={copy.question.chosen}
+        disabled={saving}
+        onSelect={k => setChoice(k as 'A' | 'B')}
+      />
+      {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
       {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
-    </Screen>
+    </DsScreen>
   );
 }
 
-// 보기 전용 선택지 칸(누르지 않음). 고른 쪽은 '고른 답' 이름표 + 다음 줄 값(11-7 #17a), 읽기 "고른 답, 봄"
+// 보기 전용 선택지 칸(누르지 않음). 고른 쪽은 '고른 답' + ✓(P5 고른 표시와 같은 모양: 테두리 5·면), 읽기 "고른 답, 봄"
 function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
   return (
     <View
       accessible
       accessibilityLabel={chosen ? copy.review.chosen_a11y.split('{값}').join(label) : label}
       style={[styles.card, chosen ? styles.chosen : null]}>
-      <View style={styles.cardText}>
-        {chosen ? (
-          <Text20 weight="bold" oneLine style={styles.tag}>
-            {copy.review.chosen}
-          </Text20>
-        ) : null}
-        <Text20 size={32} weight="bold" style={styles.value}>
-          {label}
-        </Text20>
-      </View>
-      {chosen ? <Icon name="icon-check" size={32} color={color.done} /> : null}
+      <Text role="title" style={styles.grow}>{label}</Text>
+      {chosen ? (
+        <View style={styles.tag}>
+          <Icon name="icon-check" size={28} color={ds.color.doneInk} />
+          <Text role="bodyLg" tone="done">{copy.review.chosen}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  reading: {textDecorationLine: 'underline', textDecorationColor: color.sky},
-  // 시안 P5_P6_review: 선택 칸 최소 높이 100, 고른 칸 오른쪽 체크, 이름표 doneInk
-  card: {minHeight: 100, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.select, borderWidth: 2, borderColor: color.line, backgroundColor: color.card, paddingVertical: 16, paddingHorizontal: 20},
-  cardText: {flex: 1, gap: 4},
-  chosen: {borderWidth: 4, borderColor: color.action, backgroundColor: color.actionSoft, paddingHorizontal: 18},
-  tag: {color: color.doneInk},
-  value: {color: color.inkTitle},
-  titleGroup: {gap: 6},
-  hint: {color: color.inkSub},
+  // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대
+  reading: {borderLeftWidth: 4, borderLeftColor: ds.color.info, paddingLeft: 10},
+  card: {minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: ds.radius.select, borderWidth: 1.5, borderColor: ds.color.line, backgroundColor: ds.color.card, paddingVertical: 14, paddingHorizontal: 20},
+  chosen: {borderWidth: 5, borderColor: ds.color.action, backgroundColor: ds.color.actionSoft, paddingHorizontal: 16.5},
+  grow: {flex: 1},
+  tag: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  titleGroup: {gap: 20},
 });

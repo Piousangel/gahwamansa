@@ -53,8 +53,7 @@ const filled = () => [0, 1].filter(i => screen.queryByTestId(`kb-cell-check-${i}
 
 test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼어요"는 비활성, 넘어가기는 약한 링크', async () => {
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기')).toBeTruthy();
-  expect(screen.getByText('3 / 3')).toBeTruthy();
+  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자')).toBeTruthy();
   expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
@@ -260,7 +259,7 @@ test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고
   await act(async () => {
     fireEvent(input(), 'focus');
   });
-  expect(screen.queryByText('자판으로 쓰기')).toBeNull();
+  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
   expect(screen.queryByText('천천히 써 봐요')).toBeNull();
   expect(screen.queryByText('한 글자라도 쓰면 눌려요')).toBeNull();
@@ -275,12 +274,11 @@ test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고
 test('글자 150% 이상 + 자판 열림이면 제목·단계도 숨긴다', async () => {
   mockFontScale = 1.5;
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기')).toBeTruthy();
+  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy();
   await act(async () => {
     fireEvent(input(), 'focus');
   });
-  expect(screen.queryByText('자판으로 쓰기')).toBeNull();
-  expect(screen.queryByText('3 / 3')).toBeNull();
+  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
 });
 
 test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면으로', async () => {

@@ -7,7 +7,7 @@ import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {EVENT_NAMES} from '../src/api/contract/events';
-import {press, pressCourseNext} from '../testUtils/flow';
+import {press, pressCourseNext, pressBackLink} from '../testUtils/flow';
 
 // AP-05 B1 사진 크게 보기(시안 P4_zoom_review + 디자인 W0 DZ-06):
 // 폴라로이드 전체가 누름 영역, '닫기'(64)·시스템 뒤로로만 닫음(사진 다시 눌러 닫기 없음), 첫 안내는 한 번 열 때까지·최대 P4 세 번째 방문,
@@ -135,7 +135,7 @@ test('보기 전용(B2) P4 에서도 같은 크게 보기, 계측·방문 수는
 test('방문 수는 같은 날 다시 들어와도 한 번만', async () => {
   await toPhoto();
   await waitFor(async () => expect(await prefs.photoVisits()).toBe(1));
-  await press('오늘 코스로 돌아가기');
+  await pressBackLink();
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));

@@ -121,7 +121,7 @@ test('코스 진행 중 이전은 확인 없이 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
-  await act(async () => fireEvent.press(screen.getByLabelText('오늘 코스로 돌아가기')));
+  await act(async () => fireEvent.press(screen.getByRole('link', {name: '오늘 코스로'})));
   await waitFor(() => screen.getByTestId('date-line'));
   expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
 });

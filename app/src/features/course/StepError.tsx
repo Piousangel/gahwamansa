@@ -3,10 +3,13 @@ import {StyleSheet, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {color, radius} from '../../ui/tokens';
+import {Text, type DockProps} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
+import {Icon} from '../../ui/assets/icons';
 import type {Message} from '../../copy/copy';
 
 // 단계 화면의 하단 고정 영역에 들어가는 오류 패널: 무슨 일인지 + 다음에 할 일 1개(다시 하기 = 주 버튼).
-// 흔들지 않고, 색만이 아니라 외곽선·굵은 제목·문구로 알린다.
+// 흔들지 않고, 색만이 아니라 외곽선·굵은 제목·문구로 알린다. (v3 화면용 — P6 이전 뒤 지운다)
 export function StepError({error, onRetry}: {error: Message | null; onRetry: () => void}) {
   if (!error) {
     return null;
@@ -24,4 +27,26 @@ export function StepError({error, onRetry}: {error: Message | null; onRetry: () 
 const styles = StyleSheet.create({
   panel: {backgroundColor: color.dangerSoft, borderWidth: 3, borderColor: color.dangerInk, borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
   title: {color: color.dangerInk},
+});
+
+// v4(DsScreen) 단계 화면용: 무슨 일인지는 본문 맨 위 위험 띠(흰 면 + dangerInk 테두리 + 경고 아이콘 + 제목·본문 두 줄, 색만으로 알리지 않음),
+// 다시 하기는 Dock 주 버튼(stepErrorDock). 흔들지 않는다. 나타날 때 한 번 읽는다(live region).
+export function StepErrorBanner({error}: {error: Message}) {
+  return (
+    <View testID="step-error" accessibilityLiveRegion="polite" style={v4.box}>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Icon name="icon-warning" size={28} color={ds.color.dangerInk} />
+      </View>
+      <View style={v4.text}>
+        <Text role="bodyLg" tone="danger">{error.title}</Text>
+        <Text role="body">{error.body}</Text>
+      </View>
+    </View>
+  );
+}
+export const stepErrorDock = (error: Message, onRetry: () => void): DockProps => ({primary: {label: error.button, onPress: onRetry}});
+
+const v4 = StyleSheet.create({
+  box: {flexDirection: 'row', alignItems: 'flex-start', gap: 10, alignSelf: 'stretch', backgroundColor: ds.color.card, borderWidth: 2, borderColor: ds.color.dangerInk, borderRadius: ds.radius.card, paddingVertical: 10, paddingHorizontal: 14},
+  text: {flex: 1, gap: 2},
 });

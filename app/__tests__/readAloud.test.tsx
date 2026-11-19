@@ -116,7 +116,7 @@ test('P4·P5·P6 모두 읽을 글 아래 버튼 하나', async () => {
   await press('다 봤어요');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
-  await waitFor(() => screen.getByText('마음에 드는 쪽을 골라 주세요'));
+  await waitFor(() => screen.getByTestId('choice-group'));
   await press('읽어 주세요');
   expect(tts.speak).toHaveBeenLastCalledWith(expect.stringMatching(/, 아니면 .+\.$/));
 });

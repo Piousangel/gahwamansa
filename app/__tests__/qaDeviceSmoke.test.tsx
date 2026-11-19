@@ -9,7 +9,7 @@ import {Screen} from '../src/ui/Screen';
 import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
-import {press} from '../testUtils/flow';
+import {press, pressBackLink} from '../testUtils/flow';
 
 afterEach(() => {
   jest.useRealTimers();
@@ -90,13 +90,13 @@ test('B4: 사진 단계는 사진 높이를 화면 높이의 28% 이하로 줄�
   expect(((w - 28) * 236) / 272).toBeLessThanOrEqual(winH * 0.28 + 0.5); // 사진 폭 = 틀 - 안쪽 14x2, 비율 272:236
 });
 
-test('단계 화면: 제목 줄에 "n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
+test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
   await previewHome();
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
-  expect(screen.getByText('1 / 3')).toBeTruthy();
+  expect(screen.getByText('사진 보기 · 1 / 3')).toBeTruthy(); // v4 단계 제목 한 줄
   expect(screen.getByRole('header', {name: '사진 보기, 3단계 중 1단계'})).toBeTruthy();
-  await press('오늘 코스로 돌아가기');
+  await pressBackLink();
   await waitFor(() => screen.getByTestId('date-line'));
 });
 

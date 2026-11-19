@@ -68,12 +68,13 @@ test('하루 단위 순환: 콘텐츠 수를 넘기면 1일차로 돌아온다',
   expect(c?.photo?.caption).toBe('마을 입구 나무');
 });
 
-test('질문 화면: 제목은 늘 공통 문장, 서버 prompt 는 그 아래 질문 문장(AP-08 시안 P5_question)', async () => {
+test('질문 화면(시안 P5 ds4b): 서버 prompt 가 제목, 공통 지시문 줄은 없고 정답은 없어요 한 줄', async () => {
   await toHome(createFakeApi({day: 2}));
   await donePhoto();
   await pressCourseNext();
   await waitFor(() => screen.getByText('나들이를 간다면요?'));
-  expect(screen.getByText('마음에 드는 쪽을 골라 주세요')).toBeTruthy();
+  expect(screen.queryByText('마음에 드는 쪽을 골라 주세요')).toBeNull();
+  expect(screen.getByText('정답은 없어요. 마음 가는 쪽을 눌러 주세요')).toBeTruthy();
 });
 
 test('prompt 가 null 이면 공통 문장으로 대체한다', async () => {

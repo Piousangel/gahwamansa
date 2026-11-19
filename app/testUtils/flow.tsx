@@ -19,6 +19,13 @@ export async function pressLast(name: string | RegExp) {
   });
 }
 
+// v4 단계 화면(P4·P5) 위 BackLink '오늘 코스로'(보이는 글 = 읽기, R-14, role link)
+export async function pressBackLink(name: string | RegExp = '오늘 코스로') {
+  await act(async () => {
+    fireEvent.press(screen.getByRole('link', {name}));
+  });
+}
+
 export async function pressCourseNext() {
   await act(async () => {
     fireEvent.press(within(screen.getByTestId('screen-dock')).getByTestId('big-button').findByProps({accessibilityRole: 'button'}));

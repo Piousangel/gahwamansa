@@ -7,7 +7,7 @@ import {StepRow} from '../src/ui/StepRow';
 import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
-import {confirmDeleteAll, press, pressCourseNext, pressLast, toHomeConsented} from '../testUtils/flow';
+import {confirmDeleteAll, press, pressBackLink, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 
 // 글자 배율: jest 기본(2)과 같게 두고, 해님 크기 테스트만 바꾼다
 let mockFontScale = 2;
@@ -68,7 +68,7 @@ describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 
     await waitFor(() => screen.getByTestId('first-greeting'));
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
-    await press('오늘 코스로 돌아가기');
+    await pressBackLink();
     await waitFor(() => screen.getByTestId('date-line'));
     await new Promise<void>(r => setTimeout(() => r(), 30));
     expect(screen.queryByTestId('first-greeting')).toBeNull();
@@ -105,7 +105,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
     send.mockClear();
-    await press('오늘 코스로 돌아가기');
+    await pressBackLink();
     await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('사진 보기'), {timeout: 3000});
     expect(send.mock.calls.map(labelOf).at(-1)).toBe('사진 보기');
@@ -149,9 +149,9 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await waitFor(() => screen.getByTestId('date-line'));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
     await press('둘 중 고르기, 했어요');
-    await waitFor(() => screen.getAllByRole('button', {name: '오늘 코스로 돌아가기'}));
+    await waitFor(() => screen.getByRole('button', {name: '돌아가기'}));
     send.mockClear();
-    await pressLast('오늘 코스로 돌아가기'); // 하단 '돌아가기'(읽기 라벨 같음)
+    await press('돌아가기'); // 하단 '돌아가기'(v4: 보이는 글 = 읽기, 목적지는 힌트)
     await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'), {timeout: 3000});
   });

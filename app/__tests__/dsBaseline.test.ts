@@ -13,6 +13,7 @@ const {ESLint}: {
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
 // 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
+// → 179(L2-v4 P4·P5 ds 이전: text20Size −11, rnImport −2, fontScale −1)
 const BASELINE: Record<string, number> = {
   fontSize: 9,
   fontWeight: 8,
@@ -21,10 +22,10 @@ const BASELINE: Record<string, number> = {
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 12, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 16,
+  fontScale: 15,
   placeholder: 1,
-  text20Size: 113,
-  rnImport: 31,
+  text20Size: 102,
+  rnImport: 29,
   ellipsis: 0,
 };
 

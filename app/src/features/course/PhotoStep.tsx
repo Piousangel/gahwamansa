@@ -3,19 +3,16 @@ import {Image, Pressable, StyleSheet, useWindowDimensions, View} from 'react-nat
 import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
-import {Screen} from '../../ui/Screen';
-import {BackBar} from '../../app/BackBar';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
-import {color, shadow} from '../../ui/tokens';
+import {DsScreen, Text, type DockProps} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
+import {useBackAction} from '../../app/BackBar';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
-import {StepError} from './StepError';
-import {ToCourseHomeLink} from './ToCourseHomeLink';
+import {StepErrorBanner, stepErrorDock} from './StepError';
 import {useFinishStep, useStepStarted} from './useFinishStep';
 import {PhotoZoom} from './PhotoZoom';
-import {ReadAloud, ttsText} from './ReadAloud';
+import {ReadAloudNotice, ttsText, useReadAloudAction} from './ReadAloud';
 import {track} from '../track';
 import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
@@ -26,6 +23,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const review = !!route.params?.review;
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = () => navigation.popTo('CourseHome');
+  useBackAction(toCourseHome);
   const {finish, error, busy} = useFinishStep();
   useStepStarted('photo', review); // AC-05
   const [imageFailed, setImageFailed] = useState(false);
@@ -53,6 +51,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const {height: winH} = useWindowDimensions();
   const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236) + 28);
   const photo = content?.photo;
+  const read = useReadAloudAction(photo ? ttsText.photo(photo.recall_questions) : '', setReading);
   if (!photo) {
     return null;
   }
@@ -75,27 +74,25 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
     }
   };
+  const readable = read.allowed && photo.recall_questions.length > 0;
+  // 시안 P4(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제), 단계 제목 한 줄, 사진 카드(안에 AI 고지), 천천히 보세요, 회상 질문.
+  // Dock = 주 '다 봤어요' + 보조 '읽어 주세요'(AP-03, 화면 읽기 켜짐이면 없음). 보기 전용은 주 '돌아가기'만
+  const dock: DockProps = review
+    ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}
+    : error
+      ? stepErrorDock(error, go)
+      : {
+          primary: {label: copy.course.next.photo, loading: busy, onPress: go},
+          secondary: readable ? {label: read.label, loading: read.busy, onPress: read.onPress, testID: 'read-aloud'} : undefined,
+        };
   return (
-    <Screen
-      top={
-        <>
-          <BackBar course onBack={toCourseHome} />
-          <StepHeader name={copy.course.step.photo} n={1} review={review} />
-        </>
-      }
-      bottom={
-        review ? (
-          <BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />
-        ) : error ? (
-          <StepError error={error} onRetry={go} />
-        ) : (
-          <>
-            <BigButton label={copy.course.next.photo} loading={busy} onPress={go} />
-            <ToCourseHomeLink onPress={toCourseHome} disabled={busy} />
-          </>
-        )
-      }>
-      {/* B1: 폴라로이드 전체(캡션 포함)가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
+    <DsScreen
+      variant="step"
+      back={{label: copy.course.to_home, onPress: toCourseHome}}
+      header={<StepHeader name={copy.course.step.photo} n={1} review={review} />}
+      dock={dock}>
+      {!review && error ? <StepErrorBanner error={error} /> : null}
+      {/* B1: 사진 카드 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
       <Pressable
         ref={polaroidRef}
         testID="photo-polaroid"
@@ -105,12 +102,12 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
         accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
         onPress={openZoom}
-        style={[styles.polaroid, {maxWidth: frameW}]}>
+        style={[styles.card, {maxWidth: frameW}]}>
         {photo.image_url.startsWith('pending://') || imageFailed ? (
           // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
           <View style={[styles.photo, styles.pending]}>
-            <Icon name="icon-photo" size={40} color={color.inkSub} />
-            <Text20 style={styles.pendingText}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text20>
+            <Icon name="icon-photo" size={40} color={ds.color.inkSub} />
+            <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>
           </View>
         ) : (
           <Image
@@ -122,30 +119,35 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
             onError={() => setImageFailed(true)}
           />
         )}
-        <Text20 size={32} style={styles.caption}>{photo.caption}</Text20>
+        {/* 카드 아래 칸(시안 ds4b: 사진 밑 안쪽 8/14): 사진 설명(콘텐츠라 유지 — 시안 보드는 자리표시 사진이라 설명이 없다) +
+            AI 고지(늘 보이게): 실사풍이라 "실제 장소가 아니에요"를 같이 쓴다 */}
+        <View style={styles.cardLabel}>
+          <Text role="bodyLg">{photo.caption}</Text>
+          {showImage ? <Text role="sub" tone="muted">{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text> : null}
+        </View>
       </Pressable>
-      {canZoom && hint ? <Text20 testID="zoom-hint" weight="bold" style={styles.hint}>{copy.photo.zoom_hint}</Text20> : null}
+      {canZoom && hint ? <Text testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
       {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
-      {/* AI 고지(늘 보이게): 실사풍이라 "실제 장소가 아니에요"를 같이 쓴다 */}
-      {showImage ? <Text20 style={styles.sub}>{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text20> : null}
-      <Text20 size={22}>{appCopy.photo_look}</Text20>
-      {photo.recall_questions.map(q => (
-        <Text20 key={q} size={24} weight="bold" style={reading ? styles.reading : null}>{q}</Text20>
-      ))}
-      {/* AP-03 읽어 주기: 회상 질문 바로 아래 가운데(시안 PX_read_aloud) */}
-      {photo.recall_questions.length > 0 ? <ReadAloud text={ttsText.photo(photo.recall_questions)} onSpeaking={setReading} /> : null}
-    </Screen>
+      <Text role="body">{appCopy.photo_look}</Text>
+      {photo.recall_questions.length > 0 ? (
+        <View testID="recall-questions" style={reading ? styles.reading : null}>
+          {photo.recall_questions.map(q => (
+            <Text key={q} role="bodyLg">{q}</Text>
+          ))}
+        </View>
+      ) : null}
+      {readable ? <ReadAloudNotice notice={read.notice} /> : null}
+    </DsScreen>
   );
 }
 
-// 폴라로이드(명세 §6) 최소 적용: 흰 틀·안쪽 14·lifted 그림자. 기울기·테이프는 장식이라 빌드 1에서 생략.
+// 사진 카드(시안 P4 ds4b): 흰 면 + line 테두리 1.5 + 반경 22, 사진 위·AI 고지 아래(안쪽 8/14). 사진 비율 272:236 유지
 const styles = StyleSheet.create({
-  reading: {textDecorationLine: 'underline', textDecorationColor: color.sky},
-  polaroid: {alignSelf: 'center', width: '100%', maxWidth: 300, backgroundColor: color.card, padding: 14, borderRadius: 4, boxShadow: shadow.lifted, gap: 8},
-  photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft, borderRadius: 2},
-  caption: {textAlign: 'center'},
-  sub: {color: color.inkSub},
-  hint: {textAlign: 'center', color: color.ink},
+  // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대(글자 스타일을 바꾸지 않고 표시)
+  reading: {borderLeftWidth: 4, borderLeftColor: ds.color.info, paddingLeft: 10},
+  card: {alignSelf: 'center', width: '100%', backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, overflow: 'hidden'},
+  photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: ds.color.paperSoft},
+  cardLabel: {paddingVertical: 8, paddingHorizontal: 14, gap: 2},
+  center: {textAlign: 'center'},
   pending: {alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12},
-  pendingText: {textAlign: 'center', color: color.inkSub},
 });
