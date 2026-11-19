@@ -182,7 +182,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   //   키패드 내용 높이(pad)는 여백을 뺀 값으로 기록해 여백이 넘침 판정·여백 계산을 흔들지 않는다.
   const [areaH, setAreaH] = useState<{h: number; for: string} | null>(null);
   const spare = !overflow && areaH?.for === inputKey && pad && pad.for === inputKey && pad.keyH === keyH ? areaH.h - pad.h : 0;
-  const keysGap = Math.round(Math.min(KEYS_GAP_MAX, Math.max(0, spare)));
+  const keysGap = Math.floor(Math.min(KEYS_GAP_MAX, Math.max(0, spare))); // 재확인 8 L31: 반올림하면 0.5 넘쳐 스크롤이 생길 수 있다
   const onArea = (e: LayoutChangeEvent) => {
     const y = e.nativeEvent.layout.y;
     const h = e.nativeEvent.layout.height;

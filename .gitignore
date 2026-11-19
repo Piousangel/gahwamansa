@@ -27,3 +27,7 @@ app/src/lib/config.local.ts
 # AI 사진 원본(검수 전, 커밋 제외)
 content/photos-raw/
 content/audio-raw/
+
+# 파이썬 캐시(e2e/audit/fold-check.py, 재확인 8 L33)
+__pycache__/
+*.pyc

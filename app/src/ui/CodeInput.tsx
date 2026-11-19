@@ -29,16 +29,17 @@ const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
 // 디자인 결정(11-19, 키패드 남는 높이): 모든 줄 높이는 같고 키는 64~68 을 넘지 않는다.
 //   '모두 지움'은 좁은 화면에서 '모두 / 지움' 두 줄이 되는데, 기본 줄높이면 두 줄이 키(64)보다 커져 마지막 줄만 높아졌다(360×700 실측 80).
-//   → 글자 키는 줄높이를 글자 + 2 로 좁히고, 두 줄이 키 안(테두리 2×2 제외)에 들어가는 만큼만 확대한다(최대 FONT_SCALE_MAX).
+//   → 글자 키는 줄높이를 글자 + 2 로 좁히고, 그 키의 줄 수(lines)가 키 안(테두리 2×2 제외)에 들어가는 만큼만 확대한다(최대 FONT_SCALE_MAX).
+//   재확인 8 M11: 상한은 키마다 줄 수 기준 — '지움'은 한 줄이라 1.5 까지, '모두 지움'은 좁은 화면에서 두 줄이라 그 기준
 const WORD_LINE_EXTRA = 2;
 const KEY_BORDER_Y = 4;
-export function wordKeyScaleMax(h: number | undefined, textSize = 26): number {
+export function wordKeyScaleMax(h: number | undefined, textSize = 26, lines: 1 | 2 = 2): number {
   const box = h ?? Math.max(64, size.codeBox);
-  return Math.max(1, Math.min(FONT_SCALE_MAX, (box - KEY_BORDER_Y) / (2 * (textSize + WORD_LINE_EXTRA))));
+  return Math.max(1, Math.min(FONT_SCALE_MAX, (box - KEY_BORDER_Y) / (lines * (textSize + WORD_LINE_EXTRA))));
 }
 
 // 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
-function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
+function Key({label, a11y, onPress, textSize = 34, h, lines = 1}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number; /** 글자 키가 꺾이는 줄 수(확대 상한 기준) */ lines?: 1 | 2}) {
   const word = textSize < 34; // '모두 지움'·'지움'
   return (
     <Pressable
@@ -50,7 +51,7 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
       <Text
         testID={`key-${label}`}
         {...koreanTextProps}
-        maxFontSizeMultiplier={word ? wordKeyScaleMax(h, textSize) : FONT_SCALE_MAX}
+        maxFontSizeMultiplier={word ? wordKeyScaleMax(h, textSize, lines) : FONT_SCALE_MAX}
         style={[styles.keyText, {fontSize: textSize}, word ? {lineHeight: textSize + WORD_LINE_EXTRA} : null]}>
         {keepAllChildren(label)}
       </Text>
@@ -88,7 +89,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
       ))}
       {gap(4)}
       <View testID="key-row-4" onLayout={onRowLayout ? e => onRowLayout(4, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
-        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} />
+        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} lines={2} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
         <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
       </View>

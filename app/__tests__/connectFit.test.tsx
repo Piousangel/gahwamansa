@@ -356,11 +356,20 @@ describe('키패드 남는 높이', () => {
     expect(keyH()).toBeLessThanOrEqual(68);
   });
 
-  test('4단계(넘침)에서는 여백을 더하지 않는다', async () => {
+  test('4단계(넘침)에서는 여백을 더하지 않는다(영역·내용 onLayout 이 와도)', async () => {
     dims(360, 640);
     await openConnect();
     await viewport(560);
+    await area(600, 400); // 재확인 8 L34: 남는 높이가 있는 것처럼 재도 4단계는 여백 0
     expect(screen.queryByTestId('keys-gap')).toBeNull();
+  });
+
+  test('여백은 버림(Math.floor): 남는 높이 10.6 → 10', async () => {
+    dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await area(400.6, 390);
+    expect(keysGapNow()).toBe(10);
   });
 
   test('모든 줄 같은 높이: 글자 키(모두 지움·지움)는 두 줄이 키 안에 들어가는 줄높이·확대 상한', async () => {
@@ -376,5 +385,11 @@ describe('키패드 남는 높이', () => {
     expect(st.fontSize).toBe(26); // 글자 크기는 시안 그대로
     expect(wordKeyScaleMax(68)).toBeLessThanOrEqual(1.5);
     expect(wordKeyScaleMax(64)).toBeGreaterThanOrEqual(1);
+    // 재확인 8 M11: 한 줄인 '지움'은 1.5 까지(숫자 키와 같은 상한), 두 줄 '모두 지움'만 두 줄 기준
+    const del = screen.getByTestId('key-지움');
+    expect(del.props.maxFontSizeMultiplier).toBe(1.5);
+    expect(wordKeyScaleMax(k, 26, 1)).toBe(1.5);
+    const one = StyleSheet.flatten(del.props.style);
+    expect(one.lineHeight * del.props.maxFontSizeMultiplier + 4).toBeLessThanOrEqual(k + 0.01);
   });
 });
