@@ -18,7 +18,7 @@
 
 ## 2. 설정이 앱에 들어가는 방식
 
-빌드 때 Gradle 이 flavor 에 맞는 `app/env/<flavor>.env` 를 읽어 세 곳에 넣는다(새 라이브러리 없음).
+빌드 때 flavor 에 맞는 `app/env/<flavor>.env` 를 읽어 세 곳에 넣는다(새 라이브러리 없음). **읽기·검사·`env.generated.ts` 쓰기·release 번들 검사는 공통 스크립트 `app/scripts/appEnv.js` 한 곳**(iOS 준비 N2) — Gradle 은 이 스크립트를 부르기만 하고, iOS 는 Xcode Build Phase 에서 같은 스크립트를 부른다(아래 'iOS').
 
 1. `app/src/lib/env.generated.ts`(gitignore, 자동 생성 — 손으로 고치지 않음) → JS 가 `getAppEnv()` 로 읽음
 2. Android 리소스: `kakao_scheme`(카카오 웹 로그인 복귀), `app_env`, `supabase_url`
@@ -30,11 +30,23 @@ JS 쪽 우선순위(뒤가 앞을 덮음): 기본값(로컬+fake) → `env.gener
 - 앱 정보 값(AU-07, 선택): `TERMS_URL`·`PRIVACY_URL`(https 만)·`CONTACT_EMAIL`·`BIZ_NAME`·`BIZ_CEO`·`BIZ_REG_NO`(000-00-00000)·`BIZ_ADDRESS`. 형식이 틀리면 빌드 실패, 비어 있으면 설정 화면에서 그 행을 숨기고 **빌드 경고**. **production release 는 하나라도 비면 실패**(G-INT "값이 없어 숨겨진 앱 정보 행 0", 확인용만 `-PallowMissingAppInfo`). 앱은 `src/lib/appInfo.ts`(`readAppInfo`·`missingAppInfo`).
 - `production.env` 가 없으면 디버그 빌드는 `production.env.example`(가짜 값)으로 경고와 함께 되지만, **release 빌드는 실패**한다(확인용으로만 `-PallowPlaceholderEnv`). `scripts/build-production.sh` 는 시작 전에 멈춘다.
 
+### 공통 스크립트 `app/scripts/appEnv.js`(Gradle·iOS 공용)
+```bash
+node scripts/appEnv.js load-json [--require-real-env]                       # 두 flavor 검사 + 값(JSON) — Gradle 설정 단계
+node scripts/appEnv.js check --flavor production --build-type release [플래그] # 빌드 전 검사만
+node scripts/appEnv.js write --flavor staging --build-type debug [--version-name 1.0.0 --version-code 132 --git-sha abc] [--link-host h]
+node scripts/appEnv.js verify-bundle --flavor production <번들 파일…>         # release 번들 개발 전용 표식 검사
+# 플래그: --require-real-env(=-PrequireRealEnv) · --allow-placeholder(=-PallowPlaceholderEnv) · --allow-missing-app-info(=-PallowMissingAppInfo, 출시 경로에서는 무시)
+```
+- 버전을 주지 않으면 `package.json` version · `git rev-list --count HEAD` · 짧은 sha(iOS 처럼 빌드 도구가 버전을 넘기지 않는 경우). 실패는 종료 코드 1 + 한국어 한 줄, 경고는 `경고:` 줄.
+- 규칙 테스트: `__tests__/appEnvScript.test.ts`.
+- **iOS(빌드 2)**: Xcode 대상의 Build Phases 맨 앞에 Run Script 를 하나 두고 configuration 에 맞춰 부른다(예: `cd "$SRCROOT/.." && node scripts/appEnv.js write --flavor "${APP_FLAVOR:-staging}" --build-type "$( [ "$CONFIGURATION" = Debug ] && echo debug || echo release )"`, release 면 번들 뒤 `verify-bundle`). `APP_FLAVOR` 는 xcconfig·scheme 으로 정한다(iOS 감사 2.x flavor 행). 지금 iOS 프로젝트에는 아직 넣지 않았다.
+
 ### env.generated.ts 가 남는 규칙(Metro 가 어떤 서버로 붙나)
-- 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
+- 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. 작업 이름에 변형이 있으면(`assembleStagingDebug`) 그 변형만 쓴다 — 네이티브 CMake 설정이 다른 flavor 의 preBuild 를 끌어와도 덮어쓰지 않는다(PR #7·#44). Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
 - release 빌드는 번들 직전에 쓰고 **번들이 끝나면(실패해도) 지운다**. 그래서 `build-production.sh` 뒤에 `npm start` 만 해도 production 값이 남지 않고 기본값(로컬+fake)이 된다.
 - 지금 어느 값인지: `head -3 app/src/lib/env.generated.ts`(없으면 로컬+fake).
-- Metro 설정은 둘이다(개발자 메뉴 보안 재검토 R1). **개발 서버**(`npm start`·`npm run android`)는 `metro.config.js` 로, `config.local.ts` 와 개발자 메뉴를 그대로 둔다 — release 빌드 뒤 env.generated 가 지워져도 개발 흐름은 바뀌지 않는다. **출시 번들**은 Gradle 이 `react { bundleConfig }` 로 `metro.release.config.js` 를 쓴다: env.generated 의 `BUILD_TYPE=release` 가 없으면 번들을 멈추고, `config.local.ts` 를 빈 모듈로, production 이면 개발자 메뉴를 빈 대역으로 바꾼다. 번들 뒤 `verifyReleaseBundle` 이 산출물에서 테스트 계정·메뉴 표식을 찾으면 빌드를 실패시킨다. 손으로 확인: `npm run check:dev-menu`(임시 폴더 복사본에서, 작업 트리를 바꾸지 않음).
+- Metro 설정은 둘이다(개발자 메뉴 보안 재검토 R1). **개발 서버**(`npm start`·`npm run android`)는 `metro.config.js` 로, `config.local.ts` 와 개발자 메뉴를 그대로 둔다 — release 빌드 뒤 env.generated 가 지워져도 개발 흐름은 바뀌지 않는다. **출시 번들**은 Gradle 이 `react { bundleConfig }` 로 `metro.release.config.js` 를 쓴다: env.generated 의 `BUILD_TYPE=release` 가 없으면 번들을 멈추고, `config.local.ts` 를 빈 모듈로, production 이면 개발자 메뉴를 빈 대역으로 바꾼다. 번들 뒤 `verifyReleaseBundle`(→ `appEnv.js verify-bundle`) 이 산출물에서 테스트 계정·메뉴 표식을 찾으면 빌드를 실패시킨다. 손으로 확인: `npm run check:dev-menu`(임시 폴더 복사본에서, 작업 트리를 바꾸지 않음).
 
 ## 3. 로컬 개발
 

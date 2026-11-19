@@ -194,7 +194,7 @@ test('카카오 키는 환경 파일(app/env/<flavor>.env) 한 곳: 안드로이
   expect(fs.readFileSync(`${__dirname}/../src/lib/socialConfig.ts`, 'utf8')).not.toMatch(/[0-9a-f]{32}/);
   expect(fs.readFileSync(`${__dirname}/../env/staging.env`, 'utf8')).toMatch(/^KAKAO_NATIVE_APP_KEY=[0-9a-f]{32}$/m);
   const gradle = fs.readFileSync(`${__dirname}/../android/app/build.gradle`, 'utf8');
-  expect(gradle).toContain('file("../../env")');
+  expect(fs.readFileSync(`${__dirname}/../scripts/appEnv.js`, 'utf8')).toContain("path.join(APP, 'env')"); // env 파일 원본(공통 스크립트가 읽음)
   expect(gradle).toContain('resValue "string", "kakao_scheme", "kakao" + e.KAKAO_NATIVE_APP_KEY');
   const manifest = fs.readFileSync(`${__dirname}/../android/app/src/main/AndroidManifest.xml`, 'utf8');
   expect(manifest).toContain('android:scheme="@string/kakao_scheme"');
