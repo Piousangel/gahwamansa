@@ -11,6 +11,7 @@ const FIRST_GREETING = 'pref_p3_first_greeting_seen'; // 해님 첫 인사(연�
 const FIRST_DONE_DAY = 'pref_p7_first_done_day'; // 처음 코스를 마친 날(KST YYYY-MM-DD). 첫날 음악 권유 제외(V1)
 const ZOOM_OPENED ='pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라도 열었나(첫 안내 끝)
 const PHOTO_VISITS = 'pref_p4_visits'; // P4 방문 수(첫 안내는 세 번째 방문까지)
+const COVER_DAY = 'pref_cover_day'; // 덮개(사용자가 열지 않은 대화상자·시트)를 마지막으로 보인 날(KST YYYY-MM-DD). 하루 하나(A8)
 const PHOTO_VISIT_DAY = 'pref_p4_visit_day'; // 마지막으로 센 날(KST YYYY-MM-DD). 같은 날 다시 들어오면 세지 않는다(리뷰 L3)
 
 const ONCE_PREFIX = 'pref_evt_once_'; // + 이벤트 이름
@@ -82,6 +83,20 @@ export function createPrefs(store: KeyValueStore) {
       }
     },
     /** P4 진행 모드 진입 때 하루 한 번만 센다(day = KST 날짜). 센 뒤(또는 같은 날이면 그대로)의 방문 수를 돌려준다 */
+    coverDay: async (): Promise<string | null> => {
+      try {
+        return await store.getItem(COVER_DAY);
+      } catch {
+        return null;
+      }
+    },
+    setCoverDay: async (day: string) => {
+      try {
+        await store.setItem(COVER_DAY, day);
+      } catch {
+        // 무시(저장 못 하면 다음 실행에 한 번 더 뜰 수 있다)
+      }
+    },
     countPhotoVisit: async (day: string): Promise<number> => {
       let n = 0;
       try {
