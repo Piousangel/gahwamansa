@@ -8,7 +8,8 @@ const SKIP_HINT = 'pref_p7_skip_hint_seen';
 const BGM = 'pref_bgm_enabled'; // 배경 음악(기본 꺼짐, DECISIONS 11-17)
 const BGM_OFFERED = 'pref_bgm_offered'; // P7 첫 완료 권유를 이미 보였나(한 번만)
 const FIRST_GREETING = 'pref_p3_first_greeting_seen'; // 해님 첫 인사(연결 직후 앨범 첫 화면 1회, DECISIONS 11-17)
-const ZOOM_OPENED = 'pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라도 열었나(첫 안내 끝)
+const FIRST_DONE_DAY = 'pref_p7_first_done_day'; // 처음 코스를 마친 날(KST YYYY-MM-DD). 첫날 음악 권유 제외(V1)
+const ZOOM_OPENED ='pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라도 열었나(첫 안내 끝)
 const PHOTO_VISITS = 'pref_p4_visits'; // P4 방문 수(첫 안내는 세 번째 방문까지)
 const PHOTO_VISIT_DAY = 'pref_p4_visit_day'; // 마지막으로 센 날(KST YYYY-MM-DD). 같은 날 다시 들어오면 세지 않는다(리뷰 L3)
 
@@ -46,6 +47,22 @@ export function createPrefs(store: KeyValueStore) {
       } catch {
         // 무시
       }
+    },
+    /**
+     * 이 기기에서 처음 코스를 마친 날(KST). 없으면 today 로 남기고 today 를 돌려준다(P7 진입 때 부름).
+     * V1: 음악 권유는 첫날 빼므로, 돌려받은 날이 오늘이면 권유하지 않는다. 읽기·쓰기 실패면 today(= 권유 안 함, 안전한 쪽)
+     */
+    noteFirstDoneDay: async (today: string): Promise<string> => {
+      try {
+        const v = await store.getItem(FIRST_DONE_DAY);
+        if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+          return v;
+        }
+        await store.setItem(FIRST_DONE_DAY, today);
+      } catch {
+        // 무시
+      }
+      return today;
     },
     zoomOpened: () => getBool(ZOOM_OPENED, false),
     markZoomOpened: () => setBool(ZOOM_OPENED, true),

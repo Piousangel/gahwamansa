@@ -25,7 +25,8 @@ const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.
 // 화면을 그리지 않는다. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
 export function PushHost({role, source: given}: {role: Role; source?: PushTokenSource}) {
-  const {api, content, consented} = useSession();
+  const {api, content, consented, done} = useSession();
+  const courseDone = new Set(done).size >= 3; // 오늘 코스(3단계)를 다 마쳤나 — N1 은 도장 뒤(V1)
   const source = useMemo(() => given ?? pickTokenSource(getAppEnv().API_MODE), [given]);
   const deps = useMemo(() => configurePush(api, source), [api, source]);
   const route = useCurrentRouteName();
@@ -155,10 +156,11 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
     }
   }, [pending, role, route, content, api]);
 
-  // N1: 연결·동의한 어르신이 코스 홈에 있을 때, 이 계정에서 아직 답하지 않았으면 한 번(실행당 한 번만 확인)
+  // N1: 연결·동의한 어르신이 오늘 코스를 다 마치고(P7 도장 → '알겠어요') 코스 홈에 왔을 때, 이 계정에서 아직 답하지 않았으면 한 번
+  // (실행당 한 번만 확인). V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다. 링크 경로의 연결·동의 순서는 그대로
   const asked = useRef(false);
   useEffect(() => {
-    if (role !== 'parent' || !linked || !consented || route !== 'CourseHome' || pending || asked.current) {
+    if (role !== 'parent' || !linked || !consented || !courseDone || route !== 'CourseHome' || pending || asked.current) {
       return;
     }
     asked.current = true;
@@ -167,7 +169,7 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         navRef.navigate('PushPermission');
       }
     });
-  }, [role, linked, consented, route, pending, deps]);
+  }, [role, linked, consented, courseDone, route, pending, deps]);
 
   return null;
 }

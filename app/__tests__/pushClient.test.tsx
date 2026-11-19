@@ -28,6 +28,8 @@ import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {copy} from '../src/copy/copy';
 import {press} from '../testUtils/flow';
+// V1(11-19): N1 은 오늘 코스를 다 마친 뒤 코스 홈에서. 바로 N1 을 보려면 다 마친 상태로 시작한다
+const ALL_DONE: ('photo' | 'question' | 'hangul')[] = ['photo', 'question', 'hangul'];
 
 // AU-04 푸시 클라이언트(fake 토큰 경로). 서버 계약: dev-server-notes 2절(0032·0036·0037), 이벤트 0022·0034.
 declare const __dirname: string;
@@ -232,7 +234,7 @@ describe('앱 조립(PushHost)', () => {
     setPlatform('android', 34);
     const request = jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
-    const api = createFakeApi({linked: true, consented: true, pushEnabled: false});
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const en = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByLabelText(copy.push.permission.title), {timeout: 8000});
@@ -317,7 +319,7 @@ describe('앱 조립(PushHost)', () => {
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const settings = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
-    render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false})} role="parent" restore />);
+    render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE})} role="parent" restore />);
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
     await press(copy.push.permission.yes);
     await waitFor(() => screen.getByTestId('n1-system-off'));
@@ -353,7 +355,7 @@ describe('앱 조립(PushHost)', () => {
   test('리뷰 L6: N1 같은 진행 중 화면은 알림 탭이 끊지 않고, 떠난 뒤 처리', async () => {
     const src = createFakeTokenSource();
     setTokenSourceForTest(src);
-    const api = createFakeApi({linked: true, consented: true, pushEnabled: false});
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
@@ -364,7 +366,7 @@ describe('앱 조립(PushHost)', () => {
     expect(log).not.toHaveBeenCalledWith('push_opened', expect.anything());
     await press(copy.push.permission.no);
     await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'daily'}));
-    await waitFor(() => screen.getByTestId('photo-polaroid'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('date-line'), {timeout: 8000}); // 오늘 코스를 다 마쳤으니 일일 알림은 [P3](U1)
   });
 
   test('리뷰 L5·L7: 자녀 — 계정이 바뀌면 처리 못 한 탭을 버리고, 어르신 종류는 버린다', async () => {

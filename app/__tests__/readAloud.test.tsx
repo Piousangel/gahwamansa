@@ -160,6 +160,9 @@ test('읽지 않던 화면이 떠날 때는 다른 화면의 읽기를 멈추지
 });
 
 test('P8 응원: 응원 문장 아래 버튼, 닫으면 읽기도 멈춘다', async () => {
+  const p = createPrefs(memoryStore());
+  await p.markFirstGreetingSeen(); // V1: 첫 인사가 보이는 첫 P3 에서는 P8 을 묻지 않는다
+  setPrefsForTest(p);
   await toStep({cheers: ['love_you']});
   await waitFor(() => screen.getByTestId('cheer-dialog'));
   await press('읽어 주세요');

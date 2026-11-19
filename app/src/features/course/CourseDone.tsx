@@ -10,7 +10,7 @@ import {BigButton} from '../../ui/BigButton';
 import {color, space} from '../../ui/tokens';
 import {copy} from '../../copy/copy';
 import {StampRow} from './StampRow';
-import {kstWeekdayIndex, stampsFromDates} from './stamps';
+import {kstWeekdayIndex, kstYmd, stampsFromDates} from './stamps';
 import {SunStamp} from '../../ui/assets/album';
 import {useWeekStamps} from './useWeekStamps';
 import {useMotionMode} from '../../ui/motion';
@@ -79,10 +79,12 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const week = gaveUp ? null : fetched;
   const mode = useMotionMode();
   const toHome = () => navigation.popTo('CourseHome');
-  // AP-04 첫 완료 1회 권유(시안 PX_music): 연출이 끝난 뒤 '음악을 틀어 드릴까요?' → 들어 볼게요면 켜고 미리 듣기 상자.
+  // AP-04 완료 1회 권유(V1: 첫날 제외, 두 번째 완료한 날부터)(시안 PX_music): 연출이 끝난 뒤 '음악을 틀어 드릴까요?' → 들어 볼게요면 켜고 미리 듣기 상자.
   // 음원(CT-04)이 없거나 화면 읽기 켜짐이면 묻지 않는다. 한 번 보이면 다시 묻지 않는다(prefs bgmOffered)
   const music = useCourseBgm('done');
   const [offer, setOffer] = useState<'none' | 'ask' | 'preview'>('none');
+  // 처음 코스를 마친 날(없으면 오늘로 기록). 음원이 없어도 기록해야 나중에 음원이 풀렸을 때 첫날 판정이 맞다
+  const [firstDoneDay] = useState(() => prefs().noteFirstDoneDay(kstYmd()));
   useBackAction(toHome);
 
   const feedback = useRef(newStampFeedback()).current;
@@ -209,8 +211,9 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       return undefined;
     }
     let alive = true;
-    prefs()
-      .bgmOffered()
+    const today = kstYmd();
+    firstDoneDay
+      .then(first => (first === today ? true : prefs().bgmOffered())) // V1: 처음 코스를 마친 날은 권유하지 않는다(다음 완료 때)
       .then(seen => {
         if (alive && !seen) {
           prefs().markBgmOffered();
@@ -220,7 +223,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     return () => {
       alive = false;
     };
-  }, [phase, musicAvailable, musicOn]);
+  }, [phase, musicAvailable, musicOn, firstDoneDay]);
 
   const todayIdx = kstWeekdayIndex();
   const days = week ? stampsFromDates(week.weekStart, week.doneDates) : null;

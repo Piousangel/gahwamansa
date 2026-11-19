@@ -60,8 +60,21 @@ test('음원이 있으면 P3 "음악 켜기" → 누르면 켜지고 "음악 끄
   expect(await prefs.bgmEnabled()).toBe(false);
 });
 
-test('P7 첫 완료 1회 권유(출처 줄 포함) → 들어 볼게요 → 미리 듣기 → 끌게요면 꺼짐, 다음 완료에는 묻지 않음', async () => {
+test('V1: 처음 코스를 마친 날(첫날)에는 음악 권유가 없고, 그날을 기기에 남긴다', async () => {
   setBgmAssetForTest('bgm_test');
+  await finishCourse();
+  await act(async () => {
+    await new Promise<void>(r => setTimeout(() => r(), 2500)); // 연출이 끝난 뒤(권유가 뜰 시점)까지
+  });
+  expect(screen.queryByTestId('bgm-offer')).toBeNull();
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  expect(await prefs.noteFirstDoneDay('2000-01-01')).toBe(today);
+  expect(await prefs.bgmOffered()).toBe(false); // 다음 완료 때 묻는다
+});
+
+test('P7 완료 1회 권유(첫날 다음부터, 출처 줄 포함) → 들어 볼게요 → 미리 듣기 → 끌게요면 꺼짐, 다음 완료에는 묻지 않음', async () => {
+  setBgmAssetForTest('bgm_test');
+  await prefs.noteFirstDoneDay('2026-01-01'); // 이미 다른 날 코스를 마친 기기
   await finishCourse();
   const ask = await waitFor(() => screen.getByTestId('bgm-offer'), {timeout: 4000});
   expect(within(ask).getByText(/AI\(Google Lyria\)가 만든 연주곡이에요/)).toBeTruthy();
