@@ -378,8 +378,9 @@ const styles = StyleSheet.create({
   photoStrip: {height: PHOTO_STRIP_H, alignSelf: 'stretch', backgroundColor: ds.color.paperSoft},
   photoCaption: {paddingVertical: 8, paddingHorizontal: 14},
   guide: {gap: ds.space.group},
-  wordCardOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, paddingVertical: 6},
-  inputOpen: {flexGrow: 1, flexBasis: 140},
+  // 리뷰 M2: 3음절 낱말(라디오) + 200%(글자 51)에서도 한 줄 — 320 폭 카드 안쪽 약 260 = 낱말 약 153 + 간격 8 + 입력 칸 96(카드 좌우 여백 6)
+  wordCardOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, paddingVertical: 6, paddingHorizontal: 6},
+  inputOpen: {flexGrow: 1, flexBasis: 96, paddingHorizontal: 10},
   wordCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 3, paddingHorizontal: 14, paddingBottom: 14, gap: 4},
   matchedGroup: {gap: 20},
   matchedHead: {flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap'},
