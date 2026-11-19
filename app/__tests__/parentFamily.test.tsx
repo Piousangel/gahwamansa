@@ -47,10 +47,9 @@ test('그만두기 시트: 그만 보여 주기는 확인 없이 바로 실행 +
   await openFamily(api);
   await press('그만두기, 답 보여 주기만 그만두거나, 모두 지울 수 있어요');
   const sheet = screen.getByTestId('family-stop-sheet');
-  expect(within(sheet).getByText('무엇을 그만할까요?')).toBeTruthy();
+  expect(within(sheet).getByText('무엇을 할까요?')).toBeTruthy();
   expect(within(sheet).getByText('둘 중 하나를 골라 주세요')).toBeTruthy();
-  expect(within(sheet).getByRole('button', {name: '그만둘래요'})).toBeTruthy(); // 안전한 쪽(밑줄 링크, 시안)
-  expect(within(sheet).getByRole('button', {name: '닫기'})).toBeTruthy(); // N3 닫기(X)는 따로
+  expect(within(sheet).getAllByRole('button', {name: '닫기'})).toHaveLength(2); // 아래 안전한 쪽(밑줄 링크) + 위 X, 둘 다 상태를 바꾸지 않으므로 '닫기'(A5)
   await press('그만 보여 주기, 지난 답은 지워져요. 연결은 그대로예요');
   expect(withdraw).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요'));

@@ -69,7 +69,7 @@ export async function toHome(api: Api, accept = true) {
   await press(accept ? '좋아요' : '싫어요');
   if (!accept) {
     await waitFor(() => screen.getByText('고른 답은 저장되지 않아요'));
-    await press('알겠어요');
+    await press('오늘 코스로');
   }
   await waitFor(courseHomeShown);
 }
