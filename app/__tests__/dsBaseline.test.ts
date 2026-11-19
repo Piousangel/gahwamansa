@@ -13,7 +13,7 @@ const {ESLint}: {
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
 // 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
-// CG 자녀 시작 결정(ds DsScreen·StateView, 11-20): text20Size −2
+// 계정 지우기·지운 뒤(어르신·자녀 공용 ui/ds, 11-20): text20Size −8·rnImport −1·fontScale −1·fontSize −1
 // C1 호칭(ds Choice 2열·C2 건너뜀) + C4 호칭 겹침 안내(ds Sheet·Choice), 11-20: text20Size −1
 // P7 완료 앨범(ui/ds, 11-20): 165 → 162 (text20Size −2·rnImport −1)
 // C4 홈 나머지(부품 ui/ds, 11-20): 164 → 159 (text20Size −5)
@@ -25,17 +25,17 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 // L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
 const BASELINE: Record<string, number> = {
-  fontSize: 7,
+  fontSize: 6,
   fontWeight: 6,
   lineHeight: 2,
   color: 0,
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 14,
+  fontScale: 13,
   placeholder: 0,
-  text20Size: 77,
-  rnImport: 23,
+  text20Size: 69,
+  rnImport: 22,
   ellipsis: 0,
 };
 

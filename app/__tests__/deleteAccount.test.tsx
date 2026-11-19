@@ -80,7 +80,7 @@ test('자녀: 항상 가장 강한 경고, 확인 입력 후에만 삭제, 결�
   expect(del).not.toHaveBeenCalled();
   const confirm = screen.getByRole('button', {name: '계정 지우기'});
   expect(confirm).toBeDisabled();
-  fireEvent.changeText(screen.getByLabelText('확인 글자 입력'), '지우기');
+  fireEvent.changeText(screen.getByLabelText('아래 칸에 지우기 두 글자를 써 주세요'), '지우기');
   await press('계정 지우기');
   expect(del).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('계정과 부모님의 기록이 모두 지워졌어요'));
@@ -191,4 +191,27 @@ test('감사 H1 회귀: P9 모두 지우기를 한 번 누르면 지우지 않�
   await waitFor(() => expect(screen.queryByTestId('delete-confirm2')).toBeNull());
   expect(del).not.toHaveBeenCalled();
   expect(screen.getByText('모두 지울까요?')).toBeTruthy();
+});
+
+describe('v4 계정 지우기(ui/ds, 리드 결정 11-20)', () => {
+  const dockButtons = () => {
+    const {within: w} = require('@testing-library/react-native');
+    return w(screen.getByTestId('screen-dock')).getAllByRole('button');
+  };
+  test('어르신 P9: Dock 주 = 안 지울래요(#134 닫기 말), 보조 = 위험 외곽선 모두 지우기 — 안전한 쪽이 먼저', async () => {
+    await openParentDelete(createFakeApi({consented: true}));
+    const [first, second] = dockButtons();
+    expect(within(first).getByText('안 지울래요')).toBeTruthy();
+    expect(within(second).getByText('모두 지우기')).toBeTruthy();
+    const st = StyleSheet.flatten(typeof second.props.style === 'function' ? second.props.style({pressed: false}) : second.props.style);
+    expect(st).toMatchObject({borderColor: '#991B1B', borderWidth: 3});
+    expect(screen.getByRole('header', {name: '모두 지울까요?'})).toBeTruthy();
+  });
+  test('실패 상자: 위험 면 + 머리글 문구(색만으로 알리지 않음), 보조가 다시 하기로', async () => {
+    await openParentDelete(createFakeApi({consented: true, failDelete: 1}));
+    await confirmDeleteAll();
+    const box = await waitFor(() => screen.getByTestId('delete-fail'));
+    expect(StyleSheet.flatten(box.props.style)).toMatchObject({backgroundColor: '#FEE2E2', borderColor: '#991B1B'});
+    expect(within(dockButtons()[1]).getByText('다시 하기')).toBeTruthy();
+  });
 });
