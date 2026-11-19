@@ -5,7 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
-import {confirmDeleteAll, press, toHomeConsented} from '../testUtils/flow';
+import {confirmDeleteAll, press, pressLast, toHomeConsented} from '../testUtils/flow';
 import {warmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
@@ -28,7 +28,7 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   await waitFor(() => screen.getByText('모두 지웠어요'));
   // 스택 초기화: 이전 화면이 남아 있지 않다
   expect(screen.queryByTestId('date-line')).toBeNull();
-  await press('처음으로');
+  await pressLast('처음으로');
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
@@ -37,7 +37,7 @@ test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => 
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openParentDelete(api);
   await press('안 지울래요');
-  await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
+  await waitFor(() => screen.getAllByRole('button', {name: '오늘 코스로'}));
   expect(del).not.toHaveBeenCalled();
 });
 

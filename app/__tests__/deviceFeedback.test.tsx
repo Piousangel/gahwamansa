@@ -127,16 +127,16 @@ test('코스 진행 중 이전은 확인 없이 코스 홈으로', async () => {
   expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
 });
 
-test('어르신 번호 화면의 이전은 역할 선택으로, 설정의 이전은 코스 홈으로', async () => {
+test('어르신 번호 화면의 뒤로는 역할 선택(처음으로), 설정의 뒤로는 코스 홈으로', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
-  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로 가기'))));
+  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('처음으로'))));
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 
 test('설정의 이전은 코스 홈으로', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await press('설정');
-  await act(async () => fireEvent.press(await waitFor(() => screen.getByLabelText('이전 화면으로 가기'))));
+  await act(async () => fireEvent.press(await waitFor(() => screen.getAllByLabelText('오늘 코스로')[0]))); // 위 뒤로 바(아래 Dock 도 같은 목적지, B7)
   await waitFor(() => screen.getByTestId('date-line'));
 });
