@@ -778,25 +778,50 @@ describe('재검토 R1·R2', () => {
 
 describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
   const RN = require('react-native');
-  test('M10: C1 호칭은 높이 56·2열 격자(7개), \'‹ 이전\'은 역할 선택으로', async () => {
-    const {CHOICE_H} = require('../src/ui/ChoiceGrid');
-    expect(CHOICE_H).toBe(56);
+  test('M10·디자인 결정 a: C1 호칭은 ds Choice 2열(7개, 칸 높이 56 이상), 글자 150% 이상이면 1열, BackLink \'처음으로\'는 역할 선택으로', async () => {
+    const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
+    dims(1);
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
     const group = screen.getByTestId('title-group');
-    expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row');
-    expect(within(group).getAllByRole('radio')).toHaveLength(7);
-    await press('이전 화면으로 가기');
+    expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row'); // 2열(행 우선 — 읽는 순서 = 시선 흐름)
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.map(r => r.props.accessibilityLabel)).toEqual(['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님']);
+    for (const r of radios) {
+      const st = StyleSheet.flatten(typeof r.props.style === 'function' ? r.props.style({pressed: false}) : r.props.style);
+      expect(st.minHeight).toBeGreaterThanOrEqual(56);
+    }
+    expect(within(group).getByRole('radio', {name: '부모님'}).props.accessibilityState).toMatchObject({checked: true});
+    // 디자인 시스템 패널 r1: 자녀 스택 루트 AudienceProvider child → 주 버튼은 자녀 56(어르신 72 아님), 선택지는 반경 16·테두리 1.5
+    const primary = StyleSheet.flatten(screen.getByRole('button', {name: '번호 만들기'}).props.style);
+    expect(primary.minHeight).toBe(56);
+    const cell = StyleSheet.flatten(within(group).getByRole('radio', {name: '엄마'}).props.style);
+    expect(cell).toMatchObject({borderRadius: 16, borderWidth: 1.5});
+    screen.unmount();
+    dims(2); // 200%: 칸이 좁아 글이 꺾이지 않게 1열
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'));
+    expect(StyleSheet.flatten(screen.getByTestId('title-group').props.style).flexDirection).not.toBe('row');
+    await act(async () => fireEvent.press(screen.getByRole('link', {name: '처음으로'})));
     await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
   });
 
-  test('M10: C2 \'‹ 이전\'은 C1 으로, 연결 기다리기는 대기 화면 하나만 남긴다', async () => {
-    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+  test('V9: C1 → C2 없이 바로 C3(스택에 C1 이 남지 않음), 측정 이벤트는 C1 번호 발급 1번 + C3 보내기·복사', async () => {
+    const api = createFakeApi({who: 'child'});
+    const log = jest.spyOn(api, 'logEvent');
+    jest.spyOn(RN.Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
+    jest.spyOn(require('../src/ui/clipboard'), 'copyText').mockReturnValue(true);
+    render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
     await press('번호 만들기');
-    await waitFor(() => screen.getByRole('button', {name: '이전 화면으로 가기'}));
-    await press('이전 화면으로 가기');
-    await waitFor(() => screen.getByTestId('title-group'));
+    await waitFor(() => screen.getByTestId('wait-code'));
+    expect(screen.queryByText('번호가 만들어졌어요')).toBeNull();
+    expect(screen.queryByTestId('title-group')).toBeNull(); // C1 은 스택에서 내려감(reset)
+    const ev = (name: string) => log.mock.calls.filter(c => c[0] === name).map(c => c[1]);
+    expect(ev('invite_code_issued')).toEqual([{purpose: 'parent_code'}]);
+    await press('번호 보내기');
+    await press('복사하기');
+    await waitFor(() => expect(ev('invite_share_tapped')).toEqual([{channel: 'share_sheet'}, {channel: 'copy'}]));
   });
 
   test('M7: 약관 줄의 두 낱말은 주소가 있으면 링크(굵게·밑줄·읽기 역할 링크), 없으면 일반 글자', () => {
@@ -831,7 +856,8 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     expect(onOpen).toHaveBeenLastCalledWith('https://p.example', '개인정보 처리방침', 'privacy');
   });
 
-  test('C4 호칭 겹침 시트도 같은 격자(막힌 이름 비활성)', async () => {
+  test('C4 호칭 겹침 시트도 같은 2열 Choice(막힌 이름 비활성·보조 줄), 글자 100%', async () => {
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
     render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));
     await press('이름 고르기');
