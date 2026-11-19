@@ -384,6 +384,14 @@
 - L5 닫기 키(`child.home.title_sheet.close`) 문구는 리드가 라이터 확정 요청 목록에 올림.
 - 재검토 R1: 응원 대기 중 홈이 언마운트되면 보내고 그 '취소' 토스트를 hide(id). R2: 로그아웃·계정 삭제는 가명값을 먼저 받고 finally 에서 계정 키 정리(signOut·삭제 실패여도). R3: accountTag 는 솔트 없는 해시 → 기기 안 키에만, 서버·이벤트·로그 금지(주석 + __tests__/accountTagGuard: 쓰는 파일 고정·logEvent/rpc/console 줄에 tag 없음).
 
+### 독립 UX 감사 11-18 반영(감사 문서 9절 디자인 판정) · 11-18
+- H3·M5 P1: 공간 단계 0 그대로 → 1 제목 22 → 2 약관 줄 본문 끝 → 3 링크 줄도 키패드 아래(하단 고정 없음) → 4 키 64 + 스크롤·묶음 간격 12(Screen dense). 링크를 이전 바 줄로 올리던 단계 폐기. 글자 150% 이상·높이 700 미만은 측정 전에도 2단계부터. 기기별 실제 단계(S25 0·360×740 1·360×640 3·320×640 4)는 측정이 정하므로 에뮬레이터 audit-points 로 확인 필요.
+- M6: 키 글자 어절 단위 줄바꿈(koreanText keepAll), 글자 26 유지.
+- M7: ui/LegalText + shared/legalLinks — 이용약관·개인정보 처리방침은 주소가 있으면 굵게+밑줄·읽기 역할 링크(누르면 Linking, AP-06 앱 안 웹 화면은 후속). **TERMS_URL·PRIVACY_URL 이 아직 null 이라 지금은 일반 글자**(누를 수 없는데 링크처럼 보이지 않게). 문장 안 링크의 누름 영역 48 은 RN 중첩 Text 로는 못 늘려 실기기 확인 대상.
+- M4 FS: 150% 이상·높이 700 미만은 사진·기능 3줄을 통째로 숨기고 소개 한 줄 유지(줄 단위 onLayout 측정은 미구현 — 높이 기준으로 통째).
+- M10: ui/ChoiceGrid(높이 56·2열) — C1 호칭·C4 겹침 시트 공용. C1 ‹ 이전 = 역할 선택(로그아웃 확인 없음), C1→C2 는 navigate(from relation) 라 C2 ‹ 이전 = C1, ‘연결 기다리기’는 스택을 대기 화면 하나로. C2 합치기는 하지 않음(리드).
+- L2: C3 복사 확인은 번호 카드 위 인라인 띠(2초, polite 컨테이너), 토스트·announce 없음.
+- 범위 밖(다른 레인): H1·H2·M1~M3·M8·M9·L1·L3~L5·L8. L6 은 라이터.
 ### AU-04 푸시 클라이언트(fake 토큰 경로) · 2026-11-18 (보안 리뷰 xhigh 대상)
 - 범위: Firebase(US-10) 전. `@react-native-firebase` 미설치(DECISIONS 11-18), 토큰 공급자 인터페이스 `src/push/tokenSource.ts`(`PushTokenSource`: getToken·onTokenRefresh·getInitialOpen·onOpen·onForeground). fake API 모드 = 가짜 토큰(`FAKE_PUSH_TOKEN`, 실서버에 가지 않음), real 모드 = `nullTokenSource`(토큰 없음 → 등록 안 함). Firebase 붙일 때 `createFcmTokenSource` 하나 + `pickTokenSource` 한 줄.
 - 매니페스트 `POST_NOTIFICATIONS`. 요청은 N1 '알려 주세요'(어르신)·C3/C7 '알림 켜기'(자녀)에서만, 앱 시작 때 묻지 않는다.
@@ -403,6 +411,27 @@
 - `TextLink` 를 `ui/TextLink` 로 올림(N1 이 씀). `features/link/TextLink` 는 다시 내보내기만 — AU-10 에서 호출부 교체 후 삭제.
 - **Firebase 붙일 때 할 일(별도 항목)**: `@react-native-firebase/app`·`messaging` 정확 고정, flavor별 `google-services.json`(gitignore) + gradle 플러그인, 매니페스트 meta-data `com.google.firebase.messaging.default_notification_channel_id = daily`, `createFcmTokenSource`(getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage), 알림 거부 기기의 Firebase 설치 ID 생성 여부(QA-07), 실기기 수신 QA-07.
 
+### C7 '가족 연결' 알림 토글·자녀 명시 동의(AU-04 뒤, 리드 결정 11-18) · 11-19
+- features/child/FamilyPushRow: 켬 = set_push_enabled(true) + 토큰 등록, 끔 = set_push_enabled(false). 상태 = my_push_settings + 휴대폰 family 채널(channelEnabled). 권한 거절이면 켜는 길(시스템 창·설정), 채널만 꺼져 있으면 그 채널 설정 열기. 실패하면 되돌리고 토스트. 연결 전(enabled null)·상태 모름은 숨김.
+- 자녀 받기 동의는 누를 때만: C3 '알림 켜기'(시스템 창 허용 뒤) 또는 C7 토글. app/PushHost 의 자녀 시작 동기화는 토큰 등록만(권한 허용만으로 set_push_enabled(true) 하던 것 제거).
+- C7 앱 정보의 방침 링크 → AU-07 openInAppWeb 교체는 그 브랜치가 main 에 들어온 뒤(대기).
+
+### ux-audit 리뷰(2026-11-19) 반영 · 11-19
+- H1 P1: 2단계부터 본문 스크롤을 켜고 첫 화면 묶음(제목·안심 줄·키패드 영역, testID connect-first) 높이를 잰 창 높이로 고정(Screen onViewport). 하단 고정이 없으면 창이 화면 맨 아래까지라 아래 안전 영역도 뺀다. 약관·링크는 묶음 아래(첫 화면 밖). 계산식(4×키+138) 외에 키패드 실제 높이(keypad-pinned onLayout)가 영역보다 크면 다음 단계 — 실측에서 '모두 / 지움' 두 줄로 마지막 줄이 키 높이보다 커지는 것을 확인했기 때문.
+- 테스트: connectFit 을 onLayout 모의 좌표(창·영역 y·높이) 기준으로 다시 씀(상수 합산 자기 확인 삭제).
+- 에뮬레이터 실측(gahwa_small, emulator-5556, METRO_PORT 8091, DP_SIZE=360x640, app/e2e/audit/p1-fit.yaml): 이 에뮬레이터는 adb reverse 가 아니라 10.0.2.2:8081 로 번들을 받아 다른 레인 Metro(8081) 코드가 실린다 → 앱 데이터를 지우고 debug_http_host=10.0.2.2:8091 을 적어 두고 실행(p1-fit 은 clearState 없음). 1차(안전 영역 보정 전): 키 0~9 는 있으나 마지막 줄이 제스처 막대·흐림에 반쯤 가림 → 안전 영역 보정·실제 높이 비교 추가. **보정 뒤 재실측은 기기 부하(load 40)로 에뮬레이터 시스템 서비스가 멈춰 끝내지 못함(재실행 필요)**. 320×640 은 못 돌림.
+- M1 FS: 디자인 9절대로 줄 단위 — 사진 영역이 8 미만이면 기능 줄을 셋째 → 둘째 → 첫째 순으로 하나씩 숨기고 다시 잰다. 150% 이상은 기능 3줄·사진 숨김, 소개 한 줄 유지.
+- M2 약관 링크(구조만): 주소가 있으면 줄 높이 48(누름 영역), 문장은 한 번 읽고 TalkBack 동작(accessibilityActions)으로 이용약관 → 처리방침을 연다, 여는 곳은 onOpen 주입(기본 밖 브라우저 → L4-2 useInAppWeb 병합 뒤 교체). 주소 없으면 일반 글자.
+
+### ux-audit 재리뷰(2026-11-19 rereview) 반영 · 11-19
+- H1·H2: 단계 판정을 onLayout 콜백에서 effect 한 곳으로 옮겼다. 창 높이는 {h, 잰 단계}, 키패드 영역은 {h, 잰 단계, 그때 묶음 높이}, 키패드 실제 높이는 {h, 그때 keyH, 단계}로 기록하고, 지금 단계·지금 묶음 높이·지금 keyH 와 같은 값끼리만 비교한다. 그래서 2→3 전환 커밋의 옛 묶음 영역(3단계 건너뜀)·기본 배치(키 68·간격 8)로 잰 키패드 높이(첫 측정 한 단계 더 오름)로는 판정하지 않는다.
+- M1(흐림): **firstH 에서 흐림 28 을 뺀다(흐림은 끄지 않음)**. 이유: 2·3단계에서는 약관·링크가 첫 화면 아래에 있어 '더 있음' 표시가 필요하고, 9절 H2 표도 스크롤 단계에서 '아래 흐림 표시 유지'를 원칙으로 둔다. 키패드는 흐림 위에서 끝나고 흐림 구간에는 묶음과 링크 사이 여백만 깔린다.
+- M2(360×640 예산): **상단(TopSafe 52 + 이전 바 64 = 116)은 줄이지 않고 3단계 정의도 그대로, 기대값만 고친다**: 360×640 은 기기 inset 에 따라 3단계(키 12개) 또는 4단계(칸 + 1~9, 0·지움 줄은 한 번 스크롤). 근거: 9절 원칙은 '키 12개 중 1~9는 어떤 크기에서도 첫 화면'이고 '360×640 = 3단계'는 상단을 64(이전 바만)로 잡은 예산에서 나온 기대값이다. TopSafe 52(§15)·이전 바 터치 64(어르신 최소)는 다른 규칙이라 줄이면 그 규칙을 어긴다. 디자인에 9절 예산표의 상단 116 반영·기대값 수정을 요청(리드 전달).
+- M3: connectFit 을 실제 순서(영역 → 창, 키패드 → 영역)·하단 고정을 뺀 창 값으로 다시 씀. 재리뷰 재현 A(2→3 옛 영역)·B(기본 배치 키패드 422)를 테스트로 넣었다.
+- L1: 이 단계의 창 높이를 알기 전에는 묶음 opacity 0, 약관·링크를 그리지 않는다. L2: 스크롤 단계의 '번호가 없어요' 안내는 묶음 밖(링크·약관 사이)에 두고 열리면 showRange 로 보이게. L5: 창·글자 크기가 바뀌면 단계를 처음부터 다시 잰다.
+- L3(2단계 읽기 순서 본문 약관 → 하단 고정 링크): 9절 2단계 정의(약관만 본문 끝, 링크는 하단 고정) 그대로라 남는다. 디자인 확인 항목.
+- 약관 링크 주소 작업(⑥a) 때 남은 일: ① 호출부 두 곳(ConnectScreen LegalLine·ChildLogin)에 useInAppWeb onOpen 넘기기 ② 줄 높이 48 이 두 줄 문장 전체에 붙어 60 → 96 → P1 예산·하단 고정 재측정 ③ 밑줄 2px 은 RN 에서 못 정함(디자인 수용 여부).
+- 에뮬레이터 360·320 실측은 리드 배정 뒤(p1-fit.yaml, 스크린샷 판독 기준).
 ### AU-07 앱 정보 상수·앱 안 웹 화면 · 2026-11-18 (웹뷰 보안 리뷰 대상)
 - 값: `app/env/<flavor>.env` 공개 값 `TERMS_URL·PRIVACY_URL·CONTACT_EMAIL·BIZ_NAME·BIZ_CEO·BIZ_REG_NO·BIZ_ADDRESS` → Gradle 이 형식 검사·`env.generated.ts` → `lib/appInfo.readAppInfo()`(앱도 형식을 다시 보고 틀리면 숨김). 사업자 정보는 넷 다 있어야 구역을 보임. 버전 `"1.0.0 (n)"`(versionName·versionCode, 개발 실행은 '1.0.0'). 기존 `APP_VERSION·PRIVACY_URL·CONTACT_EMAIL` 내보내기는 호환용으로 유지.
 - 빠진 값: 빌드 경고(매 빌드), production release 는 실패(G-INT), `-PallowMissingAppInfo` 로만 우회. 지금 staging·production 모두 비어 있음(US-03·US-04 대기) → 행이 숨겨짐.
@@ -458,6 +487,39 @@
 5. M1 토글 main 반영 확인 → `FCM_WIRED = true` → staging 실기기 수신(QA-07: 허용·거절·나중에, 08~21 창, 탭 라우팅, 알림 거부 기기의 설치 ID 생성 여부).
 6. 출시 게이트(그때 추가): production release 는 `src/production/google-services.json` 이 없으면 실패하게(지금은 Firebase 전이라 넣지 않음).
 
+### ux-audit 재확인 2 반영 · 11-19
+- H3: 창 높이 표시를 단계가 아니라 하단 고정 구성(0 링크+약관 · 1 링크만 · 2 없음)으로 바꿨다. 3·4단계는 구성이 같아 창이 다시 오지 않아도 그대로 쓴다. 그리고 **묶음을 아예 숨기지 않는다**: 새 창을 기다리는 동안은 바로 전 묶음 높이, 한 번도 재지 못한 첫 프레임은 화면 크기로 어림한 높이(창 − TopSafe − 이전 바 64 − 여백·흐림 − 하단 고정 어림)로 그리고, 판정만 그 구성의 창 높이가 온 뒤에 한다. 숨김 자체가 없어 TalkBack 이 보이지 않는 요소를 읽는 문제도 없다(리뷰가 권한 no-hide-descendants 는 숨김이 없어져 필요 없음).
+- M4: 키패드 실제 높이 비교는 같은 키 높이로 잰 값인지만 본다(단계 조건 뺌).
+- L7: 위 '바로 전 높이 유지'로 전환 때 빈 프레임이 없다.
+- L9: 안내 줄 showRange 좌표 기준(본문 바로 아래 자식) 주석.
+- 4단계 '1~9 보임' 테스트는 그려진 칸·키 높이와 모의 영역 y 로 계산한다(상수만 더하던 것 대신). 최종 근거는 에뮬레이터 스크린샷.
+- 0049: DeleteScope 에 'none'(가족 연결 전 계정). 자녀 삭제 확인은 none 이면 child.delete_none(라이터 확인 전 _status) — '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보와 약관 동의 기록만 지워져요'. 완료 화면은 done_keep('내 계정이 지워졌어요'). **어르신 P9 는 none 이어도 '가족과 연결도 끊겨요'가 나온다 — L2(어르신) 레인 확인 필요.**
+- 디자인 9절 갱신(84f603d) cherry-pick: 상단 예산 116·360×640 기대 3~4단계·읽기 순서 유지·밑줄 수용.
+
+### P1 공간 단계 순수 함수(리드 결정 11-19, 재확인 3 H4·M5) · 11-19
+- 구조 변경: 단계는 features/link/p1Stage.ts pickStage({창 높이·폭, 글자 배율, inset, 문구}) 한 번으로 정한다(첫 렌더부터). 수치는 ui 실제 스타일(TopSafe 52·이전 바 64·본문 4/24/간격 16·하단 고정 위 6·링크 줄 64·아래 max(28,16+inset)·흐림 28·칸 68+12·키 4줄), 글 높이는 글자 종류별 폭 어림(한글 0.98·숫자/영문 0.6·띄어쓰기 0.3 × 글자 크기 × 배율 상한)으로 줄 수를 센다.
+- onLayout 은 판정 입력이 아니다. 사후 검증만: 같은 단계·같은 키 높이로 그린 키패드 실제 높이가 영역보다 크면 한 단계 올린다(최대 1회, 창·글자·inset 이 바뀌면 무효). 이벤트가 안 와도 판정이 멈추지 않는다(재확인 3 H4·앞 H1~H3 경쟁 상태가 구조적으로 사라짐). 2·3단계 묶음 높이는 잰 본문 창이 있으면 그것, 없으면 같은 식의 어림(그리기용).
+- 표 테스트(__tests__/p1Stage.test.ts): 320/360/411 × 640/740/914 × 1.0/1.3/1.5/2.0(제스처 inset 24) 전부 고정 + 성질(고른 단계는 들어가고 앞 단계는 안 들어감·단조·3버튼 ≥ 제스처·S25 411×891 = 0단계).
+- **디자인 9절과 다른 점(실측으로 확인 필요)**: 이 어림에서 360×740 글자 1.0 은 3단계(9절 기대 1단계), 360×640 은 4단계(9절 3~4). 어림이 보수적이면 스크롤이 조금 늘 뿐 키가 가려지지는 않고, 공격적이면 사후 검증이 한 단계 올린다. 에뮬레이터 p1-fit 스크린샷으로 계수(GLYPH 등)를 맞춘다.
+- M5: 약관 줄 링크(P1·C0)는 shared/legalLinks useLegalOpen → useInAppWeb → 라우트 Web{target}(앱 안 웹 화면). 오프라인이면 app_info.link_offline 을 화면 읽기로 한 줄. 지금은 TERMS_URL·PRIVACY_URL 이 env 에 없으면 글자 그대로.
+- PR1 리뷰 M1(같은 PR): 자녀 로그인(소셜·이메일) 성공 직후 record_terms_agreement(v1·v1), 실패하면 계정별 terms_pending_v1 을 남기고 다음 앱 시작(ChildGate 자녀 판정) 때 한 번 재시도. M2: 삭제 확인 none 분기는 PR2 child.delete_none 으로 해결, none 이면 가족 요약(호칭) 조회 안 함. DeleteDoneScreen 은 none → done_keep('내 계정이 지워졌어요')로 맞음.
+- 11-19 라이터 확정(PR #9 writer-batch): child.delete_none.body = '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보, 약관 동의 기록, 알림 받기 정보가 지워져요', title 그대로, _status 제거.
+
+### P1 에뮬레이터 실측(11-19, emulator-5556 gahwa_small, 제스처 내비, app/e2e/audit/p1-fit.yaml) · 재확인 4 반영
+| 크기 | 글자 | pickStage(키) | 실측 첫 화면 | 9절 기대 | 판정 |
+|---|---|---|---|---|---|
+| 360×640 | 1.0 | 4(64) | 칸 + 키 1~9 전부, 0·지움 줄은 흐림·제스처 막대에 반쯤 → 스크롤 한 번 | 3~4(b2cc65d) | 원칙 충족 |
+| 360×640 | 2.0 | 4(64) | 칸 + 키 1~3·4~6 일부, 나머지 스크롤 | — | 200%는 '스크롤로 모든 키'(리드 결정) 충족 |
+| 360×740 | 1.0 | 3(68) | 키 12개 전부 + 아래 약 35dp 여유, 링크·약관은 아래 | 1 | **다름**: 1단계(하단 고정에 링크+약관 두 줄)로는 키 4줄이 안 들어감(어림과 실측 일치). 디자인 9절 기대값 수정 필요 |
+| 360×740 | 2.0 | 4(64) | 칸 + 키 일부, 스크롤 | — | 200% 기준 충족 |
+| 320×640 | 1.0 | 4(64) | 칸 + 키 1~9 전부(제목 두 줄), 0 줄 스크롤 | 4 | 일치 |
+| 320×640 | 2.0 | 4(64) | 칸 + 키 1~6, 나머지 스크롤 | — | 200% 기준 충족 |
+- 계수: 글자 1.0 에서 어림 영역과 실측이 몇 dp 안에서 맞아(360×740 3단계 여유 34 어림 ↔ 실측 약 35) 글자 폭 계수는 바꾸지 않았다. 0·1단계 본문 아래 여백을 Screen fill 실제 값 8로 고쳐(24 → 8) 411×914 글자 1.3 이 2 → 1단계로 바뀌었다(표 갱신).
+- 안전망(리드 결정): P1 본문은 단계와 상관없이 늘 스크롤 가능(0·1단계 fill 도 Screen fillScrollable). 키패드는 띄우지 않고 잘라 내지 않는 보통 배치라, 어림이 틀려도 키가 잘려 못 누르는 상태가 없다.
+- 사후 검증(H5): 묶음 실제 높이가 예정보다 크면 넘친 만큼 키를 줄이고(64 이상), 아니면 한 단계, 그래도 넘치면 4단계(최대 2회·올리기만, 판정 입력이 바뀌면 무효).
+- M6: '번호가 없어요' 안내는 모든 단계에서 묶음 밖(키패드 아래) + showRange. M7: 약관 줄 링크가 안 닿으면 Banner(app_info.link_offline, 앱 정보 행과 같음). M8: 자녀 약관 재시도는 성공했을 때만 표시를 지운다.
+- 9절 적용 범위(리드 결정 11-19): '칸 + 1~9 첫 화면'은 글자 150%까지, 200%는 '모든 키를 스크롤로 누를 수 있음'.
+- 재측정(안전망·보통 배치 키패드 적용 뒤, 11-19): 360×640 1.0 → 4단계 1~9 첫 화면·0 줄 스크롤, 360×740 1.0 → 3단계 키 12개, 320×640 1.0 → 4단계 1~9, 글자 2.0 은 셋 다 4단계(스크롤로 모든 키), 411×891(S25) 1.0 → 0단계(링크·약관 하단 고정, 키 12개 + 여유). 위 표와 같다.
 ### 보안 회의 E5 — 백업·기기 이전 제외 · 2026-11-19
 - `res/xml/data_extraction_rules.xml`(Android 12+: cloud-backup·device-transfer 모두 모든 도메인 제외) + `res/xml/backup_rules.xml`(11 이하 자동 백업 제외), 매니페스트 `android:dataExtractionRules`·`android:fullBackupContent` 연결(`allowBackup="false"` 유지). 일부 제조사 D2D 가 allowBackup=false 를 무시하는 경우 대비.
 - 확인: stagingRelease 병합 매니페스트 `usesCleartextTraffic="false"`·`allowBackup="false"`·두 규칙 연결, 권한 INTERNET·POST_NOTIFICATIONS·DYNAMIC_RECEIVER_NOT_EXPORTED·INSTALL_REFERRER 뿐. 관문 행 release-gates G-25(백업)·G-26(평문 통신).

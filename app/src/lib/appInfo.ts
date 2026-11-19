@@ -65,6 +65,8 @@ const info = readAppInfo();
 // 기존 호출부 호환(P13·C7). 새 코드는 readAppInfo() 를 쓴다
 export const APP_VERSION = info.version;
 export const PRIVACY_URL: string | null = info.privacyUrl;
+// 약관 줄 링크(LegalText, 감사 M7). 주소가 없거나 형식이 틀리면 null → 링크 모양 없이 글자로
+export const TERMS_URL: string | null = info.termsUrl;
 export const CONTACT_EMAIL: string | null = info.contactEmail;
 // AU-06: 오픈소스 라이선스 화면(라우트 'Oss')이 있다. P13·C7 행은 이 값이 true 면 보인다
 export const OSS_LICENSES_READY = true;

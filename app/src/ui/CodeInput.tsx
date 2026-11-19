@@ -2,6 +2,7 @@ import React, {type RefObject} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {color, FONT_SCALE_MAX, radius, size} from './tokens';
 import {CODE_LENGTH, formatCode} from './codeInputLogic';
+import {keepAllChildren, koreanTextProps} from './koreanText';
 
 type Props = {
   value: string;
@@ -28,8 +29,13 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
       accessibilityLabel={a11y}
       onPress={onPress}
       style={({pressed}) => [styles.key, h ? {minHeight: h} : null, pressed ? styles.keyPressed : null]}>
-      <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={[styles.keyText, {fontSize: textSize}]}>
-        {label}
+      {/* 감사 M6·디자인 판정 9절: 어절 단위로만 줄바꿈('모두 / 지움'은 되고 '모두 지 / 움'은 안 됨), 글자 크기는 그대로(26 ≥ 22) */}
+      <Text
+        testID={`key-${label}`}
+        {...koreanTextProps}
+        maxFontSizeMultiplier={FONT_SCALE_MAX}
+        style={[styles.keyText, {fontSize: textSize}]}>
+        {keepAllChildren(label)}
       </Text>
     </Pressable>
   );

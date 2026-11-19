@@ -14,6 +14,8 @@ const digits = (code: string) => {
 };
 
 test('"다음" 버튼이 없고, 안심 줄·칸 아래 안내·링크 둘·약관 한 줄이 있다', () => {
+  // 기준 기기 글자 100%(0단계). jest 모의 기본 글자 배율 2 는 P1 2단계(창 높이를 잰 뒤에 약관·안내를 그림)라 따로 본다(connectFit)
+  jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 411, height: 914, scale: 2.6, fontScale: 1});
   render(<AppRoot api={createFakeApi()} role="parent" />);
   expect(screen.queryByRole('button', {name: '다음'})).toBeNull();
   expect(screen.getByText('이 앱은 돈이나 통장 번호를 묻지 않아요')).toBeTruthy();
@@ -218,4 +220,8 @@ test('첫 화면 띠(FS_link): 번호가 들어왔을 때만, 질문은 그대�
   expect(screen.getByText('가족이 보낸 번호가 있어요')).toBeTruthy();
   expect(screen.getByTestId('icon-mail', {includeHiddenElements: true})).toBeTruthy(); // 시안 봉투 아이콘
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });

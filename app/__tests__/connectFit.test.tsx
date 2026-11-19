@@ -1,103 +1,206 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
+import {copy} from '../src/copy/copy';
+import {pickStage} from '../src/features/link/p1Stage';
 import {createFakeApi} from '../src/features/fakeApi';
-import {BELOW_LINE_H, keypadKeyHeight} from '../src/features/link/keypadFit';
+import {keypadKeyHeight} from '../src/features/link/keypadFit';
 import {press} from '../testUtils/flow';
+
+const RN = require('react-native');
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 test('계산: 칸 68(시안) + 키 4줄(키 + 6) + 12 = 4 x 키 + 104', () => {
   expect(keypadKeyHeight(4 * 68 + 104)).toBe(68);
   expect(keypadKeyHeight(4 * 66 + 104)).toBe(66);
   expect(keypadKeyHeight(4 * 64 + 104)).toBe(64);
-  expect(keypadKeyHeight(4 * 60 + 104)).toBeNull(); // 64 미만이면 null(보조 문구를 숨겨 공간 확보)
+  expect(keypadKeyHeight(4 * 60 + 104)).toBeNull(); // 64 미만이면 null(다음 단계로)
 });
+
+const dims = (width: number, height: number, fontScale = 1) =>
+  jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width, height, scale: 2, fontScale});
 
 async function openConnect() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 }
-const layout = async (h: number) =>
+// 레이아웃 모의: 본문 창 높이(Screen 스크롤 창 onLayout)
+const viewport = async (h: number) =>
   act(async () => {
-    fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 328, height: h}}});
+    fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+  });
+const keyH = (label = '숫자 0') => {
+  const st = screen.getByLabelText(label).props.style;
+  return StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight as number;
+};
+const inDock = (id: string) => {
+  const dock = screen.queryByTestId('screen-dock');
+  return !!dock && within(dock).queryByTestId(id) !== null;
+};
+
+const firstHeight = () => StyleSheet.flatten(screen.getByTestId('connect-first').props.style).minHeight as number | undefined;
+const titleSize = () => StyleSheet.flatten(screen.getByRole('header').props.style).fontSize;
+// 2단계(하단 고정 = 위 6 + 링크 줄 64 + 아래 max(28, 16+inset))를 뺀 창. 360×640 제스처 내비: 위 116(TopSafe 52 + 이전 바 64)
+const FADE = 28;
+
+// 리드 결정(11-19): 단계는 pickStage(창·글자·inset·문구) 한 번으로 정한다. 아래는 화면이 그 결과를 그대로 그리는지,
+// 사후 검증(실제 키패드가 넘치면 한 단계, 최대 1회)만 onLayout 을 쓰는지 본다. jest 안전 영역 모의 inset 은 0.
+const stageOf = (w: number, h: number, f: number) =>
+  pickStage({
+    windowH: h,
+    windowW: w,
+    fontScale: f,
+    insets: {top: 0, bottom: 0},
+    text: {title: copy.connect.title, safe: copy.safe.money, below: copy.connect.auto_hint, legal: copy.legal.agree_parent, links: [copy.connect.no_code_link, copy.connect.view_course]},
   });
 
-test('어르신 번호 화면: 본문 스크롤 없이 6칸·키 4줄이 남은 높이에 맞춰진다', async () => {
-  await openConnect();
-  expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(false);
-  await layout(4 * 66 + 104 + BELOW_LINE_H); // 칸 아래 안내 한 줄 포함
-  const key = screen.getByLabelText('숫자 0');
-  const st = typeof key.props.style === 'function' ? key.props.style({pressed: false}) : key.props.style;
-  const flat = Array.isArray(st) ? Object.assign({}, ...st.filter(Boolean)) : st;
-  expect(flat.minHeight).toBe(66);
-  expect(flat.minHeight).toBeGreaterThanOrEqual(64);
-  for (const d of '0123456789') {
-    expect(screen.getByLabelText(`숫자 ${d}`)).toBeTruthy();
+describe('P1 화면 = pickStage 결과(이벤트를 기다리지 않음)', () => {
+  for (const [w, h, f] of [
+    [411, 914, 1],
+    [360, 914, 1.3],
+    [411, 740, 1],
+    [360, 640, 1],
+    [360, 640, 2], // 재확인 3 H4 재현 조건
+    [320, 640, 1],
+  ] as const) {
+    test(`${w}×${h} 글자 ${f}: 첫 렌더부터 판정 단계(onLayout 없이)`, async () => {
+      dims(w, h, f);
+      await openConnect();
+      const st = stageOf(w, h, f);
+      expect(titleSize()).toBe(st.level >= 1 ? 22 : 28);
+      expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 안전망: 늘 스크롤 가능
+      expect(inDock('legal-line')).toBe(st.level < 2);
+      expect(inDock('connect-links')).toBe(st.level < 3);
+      expect(keyH()).toBe(st.keyH);
+      expect(firstHeight()).toEqual(st.level === 2 || st.level === 3 ? expect.any(Number) : undefined);
+      // 묶음은 숨기지 않는다(빈 화면 없음)
+      expect(StyleSheet.flatten(screen.getByTestId('connect-first').props.style).opacity).toBeUndefined();
+      expect(screen.getByLabelText('숫자 1')).toBeTruthy();
+    });
   }
+
+  test('재확인 3 H4: 360×640 글자 200% 는 영역이 0 으로 눌려 onLayout 이 다시 오지 않아도 바로 4단계', async () => {
+    dims(360, 640, 2);
+    await openConnect();
+    expect(stageOf(360, 640, 2).level).toBe(4);
+    expect(firstHeight()).toBeUndefined(); // 4단계: 묶음 고정 없음, 보통 배치 + 스크롤
+    expect(keyH()).toBe(64);
+    expect(within(screen.getByTestId('screen-body')).getByTestId('connect-links')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-body')).getByTestId('legal-line')).toBeTruthy();
+  });
 });
 
-test('작은 화면: 제목 크기 → 링크를 위 줄로 → 그래도 모자라면 키 64 + 스크롤(잘리지 않음), 안심 줄은 끝까지 남는다(U4)', async () => {
-  await openConnect();
-  expect(screen.getByTestId('connect-safe')).toBeTruthy();
-  await layout(4 * 60 + 104);
-  expect(screen.getByTestId('connect-safe')).toBeTruthy(); // UX U4: 안심 줄은 줄어들어도 남는다
-  const {StyleSheet} = require('react-native');
-  expect(StyleSheet.flatten(screen.getByRole('header').props.style).fontSize).toBe(22);
-  await layout(4 * 60 + 104);
-  expect(within(screen.getByTestId('screen-dock')).queryByTestId('connect-links')).toBeNull(); // 링크가 위 줄로
-  expect(screen.getByTestId('connect-links')).toBeTruthy();
-  await layout(4 * 60 + 104);
-  expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true); // 마지막 수단
-  expect(screen.getByLabelText('숫자 0')).toBeTruthy();
-  expect(screen.getByTestId('connect-safe')).toBeTruthy();
+// 사후 검증(재확인 4 H5): 묶음이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
+const block = async (h: number) =>
+  act(async () => {
+    fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+  });
+const FILL_BOTTOM = 8;
+
+describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
+  test('넘침이 작으면 같은 단계에서 키를 줄인다(재현 F: 어림 68 → 실제 영역은 64 만 들어감)', async () => {
+    dims(411, 914);
+    await openConnect();
+    const st = stageOf(411, 914, 1);
+    expect(st.level).toBe(0);
+    await viewport(700);
+    const expected = 700 - 4 - FILL_BOTTOM;
+    await block(expected + 10); // 10 넘침 → 키 4줄에서 3 씩 덜면 들어감
+    expect(titleSize()).toBe(28); // 0단계 유지
+    expect(keyH()).toBe(Math.floor(st.keyH - 10 / 4));
+  });
+
+  test('64 로도 안 되면 한 단계, 올린 뒤에도 넘치면 곧바로 4단계(잘림 없이 보통 배치 + 스크롤), 더는 없다', async () => {
+    dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await block(700 - 4 - FILL_BOTTOM + 60); // 많이 넘침
+    expect(titleSize()).toBe(22); // 1단계
+    await block(700 - 4 - FILL_BOTTOM + 40); // 1단계 키로 그린 묶음도 넘침
+    expect(firstHeight()).toBeUndefined(); // 4단계: 묶음 고정 없음
+    expect(keyH()).toBe(64);
+    await block(900);
+    expect(keyH()).toBe(64); // 4단계에서 멈춤
+  });
+
+  test('다른 단계·다른 키 높이로 잰 묶음은 쓰지 않는다(옛 값으로 판정하지 않음)', async () => {
+    dims(411, 914);
+    await openConnect();
+    await block(2000); // 창을 모를 때
+    expect(titleSize()).toBe(28);
+  });
+
+  test('안전망: 단계와 상관없이 본문은 늘 스크롤할 수 있다(맞으면 스크롤이 생기지 않음)', async () => {
+    for (const [w, h] of [[411, 914], [320, 640]] as const) {
+      dims(w, h);
+      await openConnect();
+      expect(screen.getByTestId('screen-body').props.scrollEnabled).toBe(true);
+      screen.unmount();
+      jest.restoreAllMocks();
+    }
+  });
+
+  test('글자 크기가 바뀌면 판정을 처음부터(사후 조정도 무효)', async () => {
+    const spy = dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await block(700 - 4 - FILL_BOTTOM + 60);
+    expect(titleSize()).toBe(22);
+    spy.mockReturnValue({width: 411, height: 900, scale: 2, fontScale: 1});
+    await act(async () => {
+      fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 590}}});
+    });
+    await waitFor(() => expect(titleSize()).toBe(stageOf(411, 900, 1).level >= 1 ? 22 : 28));
+  });
 });
 
-test('키패드가 들어가면 4줄 모두 영역 안(키 x4 + 88 <= 영역)', async () => {
-  await openConnect();
-  const area = 4 * 66 + 104 + BELOW_LINE_H + 3;
-  await layout(area);
-  const {StyleSheet} = require('react-native');
-  const st = screen.getByLabelText('숫자 7').props.style;
-  const k = StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight as number;
-  expect(4 * k + 104 + BELOW_LINE_H).toBeLessThanOrEqual(area);
-  for (const d of ['7', '8', '9', '0']) {
-    expect(screen.getByLabelText(`숫자 ${d}`)).toBeTruthy();
-  }
+describe('2·3단계 묶음(그리기)', () => {
+  test('잰 본문 창이 오면 묶음 = 창 − 위 여백 − 흐림(재리뷰 M1), 판정은 바뀌지 않는다', async () => {
+    dims(360, 914, 1.3);
+    await openConnect();
+    const st = stageOf(360, 914, 1.3);
+    expect(st.level === 2 || st.level === 3).toBe(true);
+    await viewport(600);
+    expect(firstHeight()).toBe(600 - 4 - FADE);
+    expect(titleSize()).toBe(22);
+    expect(inDock('connect-links')).toBe(st.level < 3);
+  });
+
+  test('읽기·시선 순서(3단계 이상): 제목 → 안심 줄 → 키패드 → 링크 → 약관(M5)', async () => {
+    dims(320, 640);
+    await openConnect();
+    const ids = ['connect-safe', 'keypad-area', 'connect-links', 'legal-line'];
+    const found = screen.root.findAll((n: {props: {testID?: string}}) => ids.includes(n.props.testID ?? ''), {deep: true});
+    expect([...new Set(found.map((n: {props: {testID?: string}}) => n.props.testID))]).toEqual(ids);
+  });
+
+  test("재리뷰 L2: 스크롤 단계의 '번호가 없어요' 안내는 묶음 밖(링크 근처)", async () => {
+    dims(320, 640);
+    await openConnect();
+    await press('번호가 없어요');
+    expect(screen.getByTestId('connect-help')).toBeTruthy();
+    expect(within(screen.getByTestId('connect-first')).queryByTestId('connect-help')).toBeNull();
+  });
 });
 
-test('링크 두 개는 하단 영역에서 한 줄에 나란히', async () => {
+test('링크 두 개는 한 줄에 나란히', async () => {
+  dims(411, 914);
   await openConnect();
   const row = screen.getByTestId('connect-links');
   expect(within(row).getByRole('button', {name: '번호가 없어요'})).toBeTruthy();
   expect(within(row).getByRole('button', {name: '코스 보기'})).toBeTruthy();
-  const {StyleSheet} = require('react-native');
   expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('row');
 });
 
-// 실기기 예산(dp, P1 v4 "다음" 없음). 위 = max(inset, 24) + 이전 바 64, 본문 = 위 4 + 제목 두 줄(28 → 68, 22 → 58) + gap 16
-// (+ 안심 줄 30 + gap 16) + 아래 8, 하단 = 위 6 + 링크 줄 64(3단계에서는 위 줄로) + 약관 줄 34 + max(28, 16 + inset)
-const keypadArea = (H: number, insetTop: number, insetBottom: number, lv: number) => {
-  const top = Math.max(insetTop, 24) + 64;
-  const body = 4 + (lv >= 1 ? 58 : 68) + 16 + 46 + 8; // 안심 줄 30 + gap 16 은 늘 있다(U4)
-  const dock = 6 + (lv >= 2 ? 0 : 64) + 34 + Math.max(28, 16 + insetBottom);
-  return H - top - body - dock;
-};
-// 칸 68 + 칸 아래 안내 한 줄(BELOW_LINE_H) + 키 4줄
-const allFour = (area: number) => {
-  const k = keypadKeyHeight(area - BELOW_LINE_H);
-  return k !== null && 4 * k + 104 + BELOW_LINE_H <= area && k >= 64;
-};
-// 0 그대로, 1 제목 22, 2 링크 위 줄. 셋 다 안 되면 3단계(스크롤)
-const firstFit = (H: number, it: number, ib: number) => [0, 1, 2].find(lv => allFour(keypadArea(H, it, ib, lv)));
-
-test('갤럭시 S25(780dp, 상단 24·하단 48): 안심 줄을 둔 채 2단계(링크 위 줄)에서 4줄 모두 들어간다', () => {
-  expect(firstFit(780, 24, 48)).toBe(2);
-});
-
-test('360x640dp 제스처 내비게이션(하단 16): 안심 줄 유지(U4)로 100%에서도 3단계(스크롤) — 디자인 확인 항목', () => {
-  expect(firstFit(640, 24, 16)).toBeUndefined();
-});
-
-test('360x640dp 3버튼 내비게이션(하단 48): 64 키로는 안 들어가 4단계(스크롤)로 잘리지 않게 한다', () => {
-  expect(firstFit(640, 24, 48)).toBeUndefined();
+test('M6: 글자 키(모두 지움)는 어절 단위로만 줄바꿈(Android 는 음절 사이 WJ), 글자 22 이상', async () => {
+  const {keepAllChildren} = require('../src/ui/koreanText');
+  expect(keepAllChildren('모두 지움', 'android')).toBe('모⁠두 지⁠움');
+  await openConnect();
+  const k = screen.getByTestId('key-모두 지움', {includeHiddenElements: true});
+  expect(k.props.lineBreakStrategyIOS).toBe('hangul-word');
+  expect(StyleSheet.flatten(k.props.style).fontSize).toBeGreaterThanOrEqual(22);
 });
