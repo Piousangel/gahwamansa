@@ -16,13 +16,13 @@ const DST = path.join(ROOT, 'app/src/ui/tokensV4.ts');
 const AUDIENCES = ['elder', 'child'];
 const QUALIFIER = {어르신: 'elder', 자녀: 'child', 주: 'primary', 보조: 'secondary'};
 
-// 원본에 숫자가 없는 역할(label·numeral·hand 는 note 문장만 있음)은 DS 레인이 note 를 숫자로 옮긴다.
-// 원본에 elder/child 값이 생기면 원본이 이긴다(보충은 빈 칸만 채움). 줄높이는 lineHeightFor 표.
-const SUPPLEMENT = {
-  label: {elder: '20/30', child: '16/24', maxFontScale: 2}, // note: 어르신 20/30 이상, 자녀 16/24
-  numeral: {elder: '34/46', child: '28/38', maxFontScale: 1.5}, // note: 어르신 34, 상한 1.5. 자녀 값은 원본에 없음(DS 보충)
-  hand: {elder: '32/44', child: '32/44', weight: 400, maxFontScale: 1.5}, // note: 어르신 32, 30 미만 금지
-};
+/** 원본 필수 값. 없으면 기본값으로 채우지 않고 멈춘다(원본이 이긴다, PR #21 리뷰 L1) */
+function need(v, where) {
+  if (v === undefined || v === null || (typeof v === 'number' && Number.isNaN(v))) {
+    throw new Error(`gen-tokens-v4: 원본에 값이 없어요: ${where}`);
+  }
+  return v;
+}
 
 /** {size, lineHeight} · '52/68' · '22/30 + 아이콘 24' → {size, lineHeight, icon?} */
 function parseSize(s, where) {
@@ -63,14 +63,10 @@ function buildRoles(src, colors) {
     if (name === 'unit') {
       continue;
     }
-    const sup = SUPPLEMENT[name] ?? {};
-    const tone = parseTone(def.tone ?? sup.tone ?? 'inkBody', colors, name);
-    const role = {weight: def.weight ?? sup.weight ?? 400, maxFontScale: def.maxFontScale ?? sup.maxFontScale ?? 2};
+    const tone = parseTone(need(def.tone, `typeRoles.${name}.tone`), colors, name);
+    const role = {weight: need(def.weight, `typeRoles.${name}.weight`), maxFontScale: need(def.maxFontScale, `typeRoles.${name}.maxFontScale`)};
     for (const a of AUDIENCES) {
-      const v = def[a] ?? sup[a];
-      if (v === undefined) {
-        throw new Error(`gen-tokens-v4: ${name}.${a} 값이 없어요`);
-      }
+      const v = need(def[a], `typeRoles.${name}.${a}`);
       const t = tone[a] ?? tone.default;
       const icon = def[`icon${a === 'elder' ? 'Elder' : 'Child'}`];
       if (typeof v === 'object' && typeof v.size !== 'number') {
@@ -88,7 +84,6 @@ function buildRoles(src, colors) {
         }
       }
     }
-    role.supplemented = Boolean(SUPPLEMENT[name] && AUDIENCES.some(a => def[a] === undefined));
     roles[name] = role;
   }
   return roles;
@@ -142,6 +137,23 @@ function buildColorAliases(src, colors) {
   return out;
 }
 
+/** 'max(28, insets.bottom)' → 28 */
+function parseMaxMin(s, where) {
+  if (typeof s === 'number') {
+    return s;
+  }
+  return Number(need((/max\(\s*(\d+)/.exec(String(s)) ?? [])[1], `${where}(max(숫자, …))`));
+}
+
+/** 'card(흰) + line 테두리 1.5, 알약' → 'card'. 첫 색 이름이 color 에 없으면 멈춘다 */
+function parseSurface(s, colors) {
+  const name = (/([A-Za-z]+)/.exec(String(s)) ?? [])[1];
+  if (!name || !(name in colors)) {
+    throw new Error(`gen-tokens-v4: backLink.surface 의 면 색을 읽지 못했어요: ${s}`);
+  }
+  return name;
+}
+
 function build(src) {
   // contrast-v4.py 와 같은 기준: {value} 가 있는 항목만 색
   const colors = Object.fromEntries(
@@ -167,8 +179,8 @@ function build(src) {
     minFont: {elder: src.typeScaleV3.elder.min, child: src.typeScaleV3.child.min},
     dock: {
       maxHeightRatio: src.dock.maxHeightRatio,
-      padding: {top: src.dock.padding.top, bottomMin: 28, x: src.dock.padding.x},
-      socialGroupMax: src.dock.socialGroup?.maxItems ?? 1,
+      padding: {top: need(src.dock.padding.top, 'dock.padding.top'), bottomMin: parseMaxMin(src.dock.padding.bottom, 'dock.padding.bottom'), x: need(src.dock.padding.x, 'dock.padding.x')},
+      socialGroupMax: need(src.dock.socialGroup?.maxItems, 'dock.socialGroup.maxItems'),
     },
     // R-05·R-20: 1.2 미만이어도 되는 인접 쌍(이름으로 둔 것만). [audience, 큰 역할, 작은 역할]
     ratioCompensatedPairs: src.tests?.ratioCompensatedPairs ?? [],
@@ -177,8 +189,8 @@ function build(src) {
       height: src.backLink.height,
       minWidthElder: src.backLink.minWidthElder,
       tone: src.backLink.color,
-      surface: /^card/.test(src.backLink.surface) ? 'card' : 'paperSoft',
-      borderWidth: Number((/테두리\s*([\d.]+)/.exec(src.backLink.surface) ?? [0, 1.5])[1]),
+      surface: parseSurface(src.backLink.surface, colors),
+      borderWidth: Number(need((/테두리\s*([\d.]+)/.exec(src.backLink.surface) ?? [])[1], 'backLink.surface 테두리 두께')),
     },
     screenVariants: Object.keys(src.screenVariants).filter(k => !['count', 'overlays', 'variantControls', 'sections', 'oneScreenOnePurpose', 'build1'].includes(k)),
     v3Aliases: src.v3Aliases,
