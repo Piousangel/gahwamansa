@@ -53,9 +53,9 @@ tags:
     text: '정했어요'
     waitToSettleTimeoutMs: 1000
 - extendedWaitUntil:
-    visible: '자판으로 쓰기.*'
+    visible: '낱말 쓰기.*'
     timeout: 10000
-- tapOn: '자판으로 쓰기.*'
+- tapOn: '낱말 쓰기.*'
 - extendedWaitUntil:
     visible: '오늘은 넘어갈게요'
     timeout: 10000

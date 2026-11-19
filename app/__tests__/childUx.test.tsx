@@ -124,7 +124,7 @@ describe('U10 응원 취소', () => {
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
     expect(within(screen.getByTestId('toast')).getByText('엄마께 보냈어요')).toBeTruthy();
-    await press('취소');
+    await press('되돌리기');
     await waitFor(() => screen.getByText('응원을 보내지 않았어요'));
     await act(async () => {
       jest.advanceTimersByTime(4200);
@@ -147,7 +147,7 @@ describe('U10 응원 취소', () => {
       handlers.forEach(h => h('background'));
     });
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
-    expect(screen.queryByRole('button', {name: '취소'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
+    expect(screen.queryByRole('button', {name: '되돌리기'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
   });
 
   test('리뷰 M2: 토스트가 끝나는 순간 보내고, 그때부터 \'취소\'는 비활성(늦은 취소로 조용히 보내지는 틈 없음)', async () => {
@@ -155,13 +155,13 @@ describe('U10 응원 취소', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
-    const undo = screen.getByRole('button', {name: '취소'});
+    const undo = screen.getByRole('button', {name: '되돌리기'});
     expect(undo.props.accessibilityState?.disabled).toBe(false);
     await act(async () => {
       jest.advanceTimersByTime(4050);
     });
     expect(send).toHaveBeenCalledTimes(1);
-    const late = screen.queryByRole('button', {name: '취소'});
+    const late = screen.queryByRole('button', {name: '되돌리기'});
     if (late) {
       expect(late.props.accessibilityState?.disabled).toBe(true); // 사라지는 중에도 누를 수 없음
       fireEvent.press(late);
@@ -360,9 +360,9 @@ describe('AC-01 C6 곧 유료 시트', () => {
   const items = [{answeredDate: '2020-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}];
   async function openPaid(api: ReturnType<typeof createFakeApi>) {
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
     await waitFor(() => screen.getByTestId('child-past-topic'));
     await press('이야기 주제 추천, 곧 유료');
@@ -748,16 +748,16 @@ describe('재검토 R1·R2', () => {
     }
     const {rerender} = render(<Root on />);
     fireEvent.press(screen.getByText('보내기'));
-    expect(screen.getByRole('button', {name: '취소'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '되돌리기'})).toBeTruthy();
     rerender(<Root on={false} />);
     await act(async () => {});
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
-    const undo = screen.queryByRole('button', {name: '취소'});
+    const undo = screen.queryByRole('button', {name: '되돌리기'});
     expect(undo === null || undo.props.accessibilityState?.disabled === true).toBe(true);
     await act(async () => {
       await new Promise<void>(r => setTimeout(() => r(), 400));
     });
-    expect(screen.queryByRole('button', {name: '취소'})).toBeNull();
+    expect(screen.queryByRole('button', {name: '되돌리기'})).toBeNull();
   });
 
   test('R2: 로그아웃이 실패해도 이 계정의 기기 기억값은 정리', async () => {
@@ -783,6 +783,8 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     dims(1);
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
+    expect(StyleSheet.flatten(screen.getByTestId('title-group').props.style).flexDirection).not.toBe('row'); // #115 L1: 재기 전에는 1열
+    fireEvent(screen.getByTestId('title-group'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     const group = screen.getByTestId('title-group');
     expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row'); // 2열(행 우선 — 읽는 순서 = 시선 흐름)
     const radios = within(group).getAllByRole('radio');
@@ -861,6 +863,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));
     await press('이름 고르기');
+    fireEvent(screen.getByTestId('title-dup-options'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     const grid = screen.getByTestId('title-dup-options');
     expect(StyleSheet.flatten(grid.props.style).flexDirection).toBe('row');
     expect(within(grid).getByLabelText('엄마, 이미 쓰는 이름, 사용할 수 없음').props.accessibilityState.disabled).toBe(true);

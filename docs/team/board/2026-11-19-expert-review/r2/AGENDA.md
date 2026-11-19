@@ -497,7 +497,7 @@ r2 진행 방식: 패널은 2절의 각 안건 표결 칸에 **선택지 번호 
 | # | 이벤트 | 속성 | 판단 |
 |---|---|---|---|
 | E1 | `review_opened` | step, day_index | 다시 보기 흡수 판단 분자 |
-| E2 | `history_opened` | role_guess | 지난 날·지난 답 쓰임 |
+| E2 | `history_opened` | ~~role_guess~~ 없음(r2 패널 6 철회, 서버 `actor_role`) · `entry` 추가 제안(패널 4) | 지난 날·지난 답 쓰임 |
 | E3 | `preview_started` | source | 번호 없이 시작 이탈 |
 | E4 | `cheer_seen` | is_first | 응원 왕복률 — **자녀에게 절대 노출 금지** |
 | E5 | `push_prompt_shown` | is_first | N1 허용률 분모 |

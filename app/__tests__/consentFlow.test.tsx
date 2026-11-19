@@ -39,7 +39,7 @@ test('설정에서 다시 동의하면 그 뒤 답이 저장된다', async () =>
   await waitFor(() => screen.getByText('오늘부터 고른 답이 가족에게 보여요'));
   await press('좋아요');
   await waitFor(() => screen.getByLabelText('가족에게 답 보여 주기, 보여 주는 중이에요'));
-  await press('돌아가기');
+  await press('오늘 코스로');
   await waitFor(() => screen.getByTestId('date-line'));
   await runCourse();
   expect(save).toHaveBeenCalledTimes(1);
@@ -58,7 +58,7 @@ test('설정에서 동의 철회는 확인 후에만 호출되고 이후 저장�
   expect(withdraw).toHaveBeenCalledTimes(1);
   await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요')); // 11-8 settings.share.stopped 대체
   await waitFor(() => screen.getByLabelText('가족에게 답 보여 주기, 보여 주지 않는 중이에요'));
-  await press('돌아가기');
+  await press('오늘 코스로');
   await waitFor(() => screen.getByTestId('date-line'));
   await runCourse();
   expect(save).not.toHaveBeenCalled();
@@ -81,7 +81,7 @@ test('그만 보여 주기 확인에서 그대로 둘래요를 누르면 철회�
   await toHomeConsented(api);
   await press('설정');
   await press('그만 보여 주기'); // W0 ②: 행 오른쪽 동사 버튼 → 확인 펼침
-  await press('그대로 둘래요');
+  await press('닫기');
   expect(withdraw).not.toHaveBeenCalled();
   expect(screen.getByText('보여 주는 중이에요')).toBeTruthy();
 });

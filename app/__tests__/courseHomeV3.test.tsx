@@ -21,7 +21,7 @@ async function previewHome() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
 }
 
 test('미연결 안내는 띠 전체가 하나의 버튼(터치 48 이상, 어르신 기준 64), 큰 버튼은 아래 하나뿐', async () => {
@@ -38,7 +38,7 @@ test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버
   render(<AppRoot api={api} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
   expect(screen.getByText('세 가지를 차례로 해요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
   expect(screen.getByTestId('date-line')).toBeTruthy();
   await new Promise<void>(r => setTimeout(() => r(), 30));

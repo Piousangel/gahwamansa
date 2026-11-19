@@ -227,10 +227,10 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     expect(events(log)).not.toContain('child_report_viewed');
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
     await waitFor(() => expect(callsOf(log, 'child_report_viewed')).toEqual([undefined]));
   });

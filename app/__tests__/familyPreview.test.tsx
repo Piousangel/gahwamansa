@@ -110,11 +110,11 @@ describe('자녀 C4·C5 와 같은 결과(0050 parent_preview_child_view)', () =
     render(<AppRoot api={createFakeApi({parentTitle: '엄마', ...opts})} role="child" />);
     const card = await waitFor(() => screen.getByTestId('child-home-card'));
     const c4 = String(card.props.accessibilityLabel).split(', ').slice(0, 3); // 호칭의 최근 답, 답, 날짜
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
-    await waitFor(() => screen.getByText('엄마의 지난 답'));
+    await waitFor(() => screen.getByText('엄마의 지난 날'));
     const rows = screen.queryAllByTestId('child-past-item').map(r => String(r.props.accessibilityLabel));
     screen.unmount();
     return {c4, rows};

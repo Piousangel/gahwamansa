@@ -5,8 +5,8 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 
 const openPast = async () => {
-  await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
-  fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+  await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
+  fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
   await waitFor(() => screen.getByTestId('child-past'));
 };
 
