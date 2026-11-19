@@ -34,10 +34,10 @@ const BASELINE: Record<string, number> = {
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 13,
+  fontScale: 12,
   placeholder: 0,
   text20Size: 63,
-  rnImport: 22,
+  rnImport: 21,
   ellipsis: 0,
 };
 
@@ -70,12 +70,12 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
 // src/ 전체(ui/ 포함)에서 v3 토큰(ui/tokens)과 옛 컴포넌트 5종을 import·re-export 하는 문장 수를 센다. **완료 = 모두 0.**
 // 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
 const LEGACY_BASELINE: Record<string, number> = {
-  v3Tokens: 57, // ui/tokens
-  Screen: 19, // ui/Screen
-  BigButton: 16, // ui/BigButton
+  v3Tokens: 55, // ui/tokens
+  Screen: 16, // ui/Screen
+  BigButton: 13, // ui/BigButton
   ChoiceGrid: 0, // ui/ChoiceGrid
   BottomSheet: 2, // ui/BottomSheet
-  Text20: 39, // ui/Text20
+  Text20: 36, // ui/Text20
 };
 const LEGACY_MODULE: Record<string, string> = {v3Tokens: 'ui/tokens', Screen: 'ui/Screen', BigButton: 'ui/BigButton', ChoiceGrid: 'ui/ChoiceGrid', BottomSheet: 'ui/BottomSheet', Text20: 'ui/Text20'};
 
