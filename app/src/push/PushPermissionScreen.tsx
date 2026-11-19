@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {copy} from '../copy/copy';
@@ -9,7 +9,7 @@ import {TextLink} from '../ui/TextLink';
 import {BrandSymbol} from '../ui/assets/brandSymbol';
 import {useBusyLatch} from '../ui/useBusyLatch';
 import {color, fontSize, radius, shadow, space, touch} from '../ui/tokens';
-import {acceptParentPrompt, declineParentPrompt} from './pushClient';
+import {acceptParentPrompt, declineParentPrompt, skipParentPromptToday} from './pushClient';
 import {openNotifySettings, requestNotifyPermission, type NotifyPermission} from './notifyNative';
 import {pushDeps} from './runtime';
 
@@ -25,6 +25,18 @@ export function PushPermissionScreen() {
   const navigation = useNavigation();
   const {busy, begin, end} = useBusyLatch();
   const [blocked, setBlocked] = useState(false);
+  // PR #72 리뷰 M1: 답 없이 닫으면(하드웨어 뒤로 등) 거절로 기록하지 않고 '오늘은 넘김'만 기억 → 같은 날 앞으로 올 때 다시 묻지 않음
+  const answered = useRef(false);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', () => {
+        const d = pushDeps();
+        if (!answered.current && d) {
+          skipParentPromptToday(d);
+        }
+      }),
+    [navigation],
+  );
   const close = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -35,6 +47,7 @@ export function PushPermissionScreen() {
     if (!begin()) {
       return;
     }
+    answered.current = true;
     let p: NotifyPermission = 'granted';
     try {
       if (d) {
@@ -58,6 +71,7 @@ export function PushPermissionScreen() {
     if (!begin()) {
       return;
     }
+    answered.current = true;
     try {
       if (d) {
         await declineParentPrompt(d);

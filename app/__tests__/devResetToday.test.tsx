@@ -2,13 +2,16 @@
 import React, {useContext} from 'react';
 import {Text} from 'react-native';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
-import {devResetToday, DEV_RESET_REASON_TEXT} from '../src/dev/devResetToday';
+import {devResetToday, devResetTodayChecked, DEV_RESET_REASON_TEXT} from '../src/dev/devResetToday';
 import {DevMenuContext} from '../src/dev/devGate';
 import {DevMenuHost} from '../src/dev/DevMenuHost';
 import {createFakeApi} from '../src/features/fakeApi';
 
 const mockRpc = jest.fn();
-jest.mock('../src/lib/supabase', () => ({getSupabase: () => ({rpc: (n: string) => mockRpc(n)})}));
+let mockSession: unknown = {access_token: 't'};
+jest.mock('../src/lib/supabase', () => ({
+  getSupabase: () => ({rpc: (n: string) => mockRpc(n), auth: {getSession: async () => ({data: {session: mockSession}})}}),
+}));
 jest.mock('../src/lib/env', () => {
   const actual = jest.requireActual('../src/lib/env');
   return {...actual, getAppEnv: () => ({...actual.DEFAULT_ENV, APP_ENV: 'staging', API_MODE: 'real'})};
@@ -44,19 +47,22 @@ function Opener({appKey}: {appKey: number}) {
   return <Text onPress={open}>{`열기 ${appKey}`}</Text>;
 }
 // 실제 API 에는 fake 개발 훅(__dev)이 없다
-const realLikeApi = () => {
-  const api = createFakeApi({consented: true}) as Partial<ReturnType<typeof createFakeApi>>;
+const realLikeApi = (who: 'parent' | 'child' | 'none' = 'parent') => {
+  const api = createFakeApi({consented: true, linked: true, who}) as Partial<ReturnType<typeof createFakeApi>>;
   delete api.__dev;
   return api as ReturnType<typeof createFakeApi>;
 };
-const renderHost = () => render(<DevMenuHost api={realLikeApi()}>{({appKey}) => <Opener appKey={appKey} />}</DevMenuHost>);
+const renderHost = (who?: 'parent' | 'child' | 'none') => render(<DevMenuHost api={realLikeApi(who)}>{({appKey}) => <Opener appKey={appKey} />}</DevMenuHost>);
 const openMenu = async () => {
   fireEvent.press(screen.getByText(/^열기/));
   await waitFor(() => screen.getByText('개발자 메뉴'));
 };
 
 describe('메뉴(실제 서버 모드)', () => {
-  beforeEach(() => mockRpc.mockReset());
+  beforeEach(() => {
+    mockRpc.mockReset();
+    mockSession = {access_token: 't'};
+  });
   test('거절되면 사유 한 줄을 보이고 앱은 그대로', async () => {
     mockRpc.mockResolvedValue({data: {ok: false, reason: 'not_test_family'}, error: null});
     renderHost();
@@ -78,5 +84,47 @@ describe('메뉴(실제 서버 모드)', () => {
     });
     await waitFor(() => screen.getByText('열기 1'));
     expect(screen.queryByText('개발자 메뉴')).toBeNull();
+  });
+  test('PR #70 L1: 기기에 한 번 남는 기록(첫 완료·음악 권유)은 되돌리지 않는다고 적혀 있다', async () => {
+    renderHost();
+    await openMenu();
+    expect(screen.getByText('첫 완료 화면처럼 이 기기에 한 번만 남는 기록(음악 권유 등)은 되돌리지 않아요')).toBeTruthy();
+  });
+  test('PR #70 L3: 자녀 역할이면 버튼이 비활성이고 이유가 한 줄', async () => {
+    renderHost('child');
+    await openMenu();
+    await waitFor(() => screen.getByTestId('dev-reset-child'));
+    expect(screen.getByRole('button', {name: '오늘 코스 다시 하기(테스트 가족만)'}).props.accessibilityState?.disabled).toBe(true);
+  });
+  test('PR #70 L2: 연결 전 기기·세션 없음은 원인대로 한 줄(서버를 부르지 않음)', async () => {
+    renderHost('none');
+    await openMenu();
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: '오늘 코스 다시 하기(테스트 가족만)'}));
+    });
+    expect(screen.getByText(DEV_RESET_REASON_TEXT.not_linked)).toBeTruthy();
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+});
+
+describe('devResetTodayChecked(PR #70 L2)', () => {
+  const rpc = jest.fn(async () => ({data: {ok: true, sessions: 1, answers: 0}, error: null}));
+  test('세션 없음 → signed_out, 연결 전 → not_linked, 자녀 → parent_required, 어르신만 서버로', async () => {
+    expect(await devResetTodayChecked({rpc, hasSession: async () => false, whoAmI: async () => 'parent'})).toEqual({ok: false, reason: 'signed_out'});
+    expect(await devResetTodayChecked({rpc, hasSession: async () => true, whoAmI: async () => 'none'})).toEqual({ok: false, reason: 'not_linked'});
+    expect(await devResetTodayChecked({rpc, hasSession: async () => true, whoAmI: async () => 'child'})).toEqual({ok: false, reason: 'parent_required'});
+    expect(rpc).not.toHaveBeenCalled();
+    expect(await devResetTodayChecked({rpc, hasSession: async () => true, whoAmI: async () => 'parent'})).toEqual({ok: true, sessions: 1, answers: 0});
+  });
+  test('확인 중 오류는 failed', async () => {
+    expect(
+      await devResetTodayChecked({
+        rpc,
+        hasSession: async () => {
+          throw new Error('x');
+        },
+        whoAmI: async () => 'parent',
+      }),
+    ).toEqual({ok: false, reason: 'failed'});
   });
 });
