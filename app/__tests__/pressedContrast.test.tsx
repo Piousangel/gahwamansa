@@ -54,3 +54,8 @@ test('Text20 기본 글자색은 읽는 글 inkBody(차콜) — 누르는 갈색
   expect(c).not.toBe(colors.action);
   expect(contrast(c as string, colors.paper)).toBeGreaterThanOrEqual(ELDER);
 });
+
+test('Text20 머리글 기본색은 inkTitle(v4 title·heading 과 같음)', () => {
+  render(<Text20 accessibilityRole="header">설정</Text20>);
+  expect(StyleSheet.flatten(screen.getByText('설정').props.style).color).toBe(colors.inkTitle);
+});
