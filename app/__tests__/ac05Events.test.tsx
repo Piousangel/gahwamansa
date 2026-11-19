@@ -175,6 +175,23 @@ describe('자녀 퍼널', () => {
     await waitFor(() => expect(callsOf(log, 'child_signup_completed')).toEqual([{login_method: 'kakao'}]));
   });
 
+  test('이메일 경로(C0-b → C0-c): 틀린 번호면 없음, 맞는 번호로 확인되면 child_signup_completed{login_method: email} 한 번', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await press('이메일로 시작하기');
+    await waitFor(() => screen.getByText('이메일로 시작해요'));
+    fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
+    await press('인증번호 받기');
+    await waitFor(() => screen.getByLabelText('인증번호 6자리'));
+    fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000'); // fake: 틀린 번호
+    await waitFor(() => screen.getByText('인증번호가 맞지 않아요. 가장 최근 메일의 번호를 확인해 주세요'));
+    expect(events(log)).not.toContain('child_signup_completed');
+    fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '246810');
+    await waitFor(() => expect(callsOf(log, 'child_signup_completed')).toEqual([{login_method: 'email'}]));
+  });
+
   test('C4 답 카드를 처음 보면 child_first_answer_viewed{days_since_connect} 한 번(답 내용 없음)', async () => {
     const connected = new Date(Date.now() + 9 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10);
     const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);

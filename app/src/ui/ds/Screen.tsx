@@ -7,6 +7,7 @@ import {Dock, DockSpill, isSocialGroup, type DockProps, type DockSpillLevel} fro
 import {DOCK_PAD_TOP, dockBottomPad, dockCap, nextSpill} from './dockLayout';
 import {ds} from './roles';
 import {MoreBand} from './MoreBand';
+import {Button} from './Button';
 
 /** 빌드 1 구현 틀(SUMMARY Q8): step·form·intro. list·done·state 는 빌드 1 끝에(60h 안이면) */
 export type ScreenVariant = 'step' | 'form' | 'intro';
@@ -78,21 +79,37 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
   const dockKey = dock
     ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}`, dock.secondary?.label ?? '', dock.note?.text ?? ''].join('/')
     : '';
-  useEffect(() => setSpill(0), [width, height, fontScale, kb, dockKey]);
+  // R-12 예외(디자인 결정 11-19, PR #74): 자판이 열린 채 주 버튼 하나만으로도 보이는 창의 40%를 넘으면 Dock 을 풀고
+  //   주 버튼을 본문(입력 바로 아래, children 뒤·tail 앞)에 둔다. 자판이 닫히면 다시 Dock. 소셜 묶음은 해당 없음(자판 없는 화면)
+  const [undock, setUndock] = useState(false);
+  useEffect(() => {
+    setSpill(0);
+    setUndock(false);
+  }, [width, height, fontScale, kb, dockKey]);
 
   const onDockHeight = (content: number) => {
     if (!dock) {
       return;
     }
-    const total = content + DOCK_PAD_TOP + dockBottomPad(insets.bottom);
-    setSpill(level => {
-      const next = nextSpill(level, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
-      if (next === level && total > cap && __DEV__) {
+    // 자판이 열리면 아래 내비 inset 은 자판이 덮는다 → 재는 높이에서 뺀다(리드 지시 11-19, R-12 예외 측정)
+    const total = content + DOCK_PAD_TOP + dockBottomPad(kb > 0 ? 0 : insets.bottom);
+    const next = nextSpill(spill, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
+    if (next !== spill) {
+      setSpill(next);
+      return;
+    }
+    if (total > cap) {
+      if (kb > 0) {
+        // 소셜 묶음 화면에는 입력이 없다: 자판은 스택 위 다른 화면 것(C0-a 가 C0-b 밑에 남아 있을 때) → 풀지도 경고하지도 않는다
+        if (!isSocialGroup(dock.primary)) {
+          setUndock(true);
+        }
+      } else if (__DEV__) {
         console.warn(`[DS] Dock 이 상한(${cap})을 넘어요(${total}). 슬롯 문구를 줄이거나 행동을 본문으로 옮기세요.`);
       }
-      return next;
-    });
+    }
   };
+  const primary = dock && !isSocialGroup(dock.primary) ? dock.primary : null;
 
   const top =
     back || header ? (
@@ -110,9 +127,26 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
       moreBand={<MoreBand />}
-      bottom={dock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
+      bottom={dock && !undock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
       {children}
-      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} spill={spill} /> : null}
+      {undock && primary ? (
+        <View testID="dock-undocked">
+          <Button
+            kind={primary.kind ?? 'primary'}
+            size="dock"
+            label={primary.label}
+            onPress={primary.onPress}
+            disabled={primary.disabled}
+            loading={primary.loading}
+            loadingLabel={primary.loadingLabel}
+            disabledReason={primary.disabledReason}
+            icon={primary.icon}
+            accessibilityHint={primary.accessibilityHint}
+            testID={primary.testID}
+          />
+        </View>
+      ) : null}
+      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} spill={undock ? 2 : spill} /> : null}
       {tail}
     </BaseScreen>
   );
