@@ -431,4 +431,6 @@ tasks.register("verifyOssLicenses") {
 }
 // 리뷰 O1: 검사는 production release(출시 산출물)에서만 — staging release·디버그는 네트워크·node 상태와 무관하게 빌드.
 // preProductionReleaseBuild 는 CMake 공유 설정 때문에 staging release 에도 끌려오므로(S25 INF-1) 산출 작업에만 건다
-tasks.matching { it.name in ["assembleProductionRelease", "bundleProductionRelease"] }.configureEach { dependsOn("verifyOssLicenses") }
+// PR #44 리뷰 M1: assemble·bundle 만 걸면 installProductionRelease·packageProductionRelease 경로가 빠진다 →
+// 모든 production release 산출 경로가 지나는 JS 번들 작업에 건다
+tasks.matching { it.name == "createBundleProductionReleaseJsAndAssets" }.configureEach { dependsOn("verifyOssLicenses") }
