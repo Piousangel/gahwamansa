@@ -133,6 +133,18 @@ describe('DsScreen', () => {
     expect(screen.getByText('가화만사성')).toBeTruthy();
   });
 
+  test('tail 은 Dock 에서 넘친 슬롯보다 아래, 본문 맨 끝(C0 v4 출구)', () => {
+    render(
+      <DsScreen variant="form" dock={dock} tail={<Text role="sub" testID="tail">출구</Text>}>
+        <Text role="body">본문</Text>
+      </DsScreen>,
+    );
+    act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}}));
+    // 문서 순서(앞에서부터 찾은 차례)로 비교
+    const order = screen.root.findAll(n => typeof n.type === 'string' && (n.props.testID === 'dock-spill' || n.props.testID === 'tail')).map(n => n.props.testID);
+    expect(order).toEqual(['dock-spill', 'tail']);
+  });
+
   test('Dock 이 상한(640×40%=256)을 넘으면 note → 보조 순으로 본문 끝으로 보낸다', () => {
     render(
       <DsScreen variant="form" dock={dock}>

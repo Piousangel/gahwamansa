@@ -25,11 +25,11 @@ const DOCK_CASES: Case[] = [
   {
     name: 'C0 로그인 고르기(카카오·구글 + 이메일 링크)',
     screen: 'ChildLogin',
-    variant: 'intro',
+    variant: 'form',
     audience: 'child',
     dock: {
       primary: {social: [{provider: 'kakao', label: copy.login.kakao, onPress: noop}, {provider: 'google', label: copy.login.google, onPress: noop}]},
-      note: {text: copy.login.email_link, onPress: noop},
+      secondary: {kind: 'text', label: copy.login.email_link, onPress: noop},
     },
   },
   {
@@ -37,7 +37,7 @@ const DOCK_CASES: Case[] = [
     screen: 'ChildLogin',
     variant: 'form',
     audience: 'child',
-    dock: {primary: {label: copy.code.send, onPress: noop}, secondary: {kind: 'text', label: copy.login.other_email, onPress: noop}},
+    dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
     name: 'P4 사진 보기',

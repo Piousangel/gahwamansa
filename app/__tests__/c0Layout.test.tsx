@@ -1,14 +1,12 @@
-// 실기기 S25(1080×2340, 411×891dp, 글자 1.0) 버그 11-19: C0 카카오 버튼이 얇은 노란 띠로 잘림.
-// 원인: 하단 고정에 카카오·구글·약관 두 줄·연령·이메일까지 두어(≈ 368dp) 상한 40%(356dp)를 넘어 하단 고정 안에서 스크롤 → 맨 위 카카오가 잘림.
-// 고침(리드 결정 v4 Q1): 하단 고정은 타사 로그인 버튼 둘만, 약관·연령·이메일은 본문 끝. 상한 40% 그대로.
-// 한계: jest 에는 레이아웃 엔진이 없어 아래 '하단 고정 높이'는 컴포넌트 최소 높이로 계산한 값이다. 최종 근거는 에뮬레이터 캡처(e2e/audit/c0-fit.yaml).
+// C0 로그인 v4(시안 child/C0_login_ds4, 로그인 스택 3화면 분리 Q9). 실기기 S25 버그 11-19(카카오 버튼 잘림)의 재발 방지 포함:
+// Dock = 소셜 묶음(카카오·구글) + 보조 '이메일로 시작하기'뿐. 약관·연령·부모님 출구는 본문 끝(V4-INDEX C0).
+// 한계: jest 에는 레이아웃 엔진이 없다. 200%에서 이메일 링크가 본문 끝으로 가는 것(DsScreen 넘침 단계)은 dsLayout 테스트·에뮬레이터 캡처(e2e/audit/c0-fit.yaml)가 근거.
 import React from 'react';
 import {StyleSheet} from 'react-native';
 import {render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {SOCIAL_BUTTON_HEIGHT} from '../src/features/child/SocialButton';
-import {layout} from '../src/ui/tokens';
+import {SOCIAL_MIN_HEIGHT} from '../src/ui/ds/SocialButton';
 import {press} from '../testUtils/flow';
 
 afterEach(() => {
@@ -26,41 +24,88 @@ for (const [name, w, h] of [
   ['S25 411×891', 411, 891],
   ['360×640', 360, 640],
 ] as const) {
-  test(`${name} 글자 1.0: 하단 고정에는 카카오·구글 두 버튼만, 약관·연령·이메일은 본문 끝`, async () => {
+  test(`${name} 글자 1.0: Dock 은 카카오·구글 + 이메일 링크, 약관·연령·부모님 출구는 본문 끝`, async () => {
     await openC0(w, h);
-    const dock = screen.getByTestId('screen-dock');
-    const inDock = within(dock);
-    const buttons = inDock.getAllByRole('button');
-    expect(buttons.map(b => b.props.accessibilityLabel)).toEqual([expect.stringMatching(/카카오/), expect.stringMatching(/Google/)]);
-    expect(inDock.queryByTestId('legal-child')).toBeNull();
-    expect(inDock.queryByTestId('age-notice')).toBeNull();
-    expect(inDock.queryByRole('button', {name: '이메일로 시작하기'})).toBeNull();
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual([
+      expect.stringMatching(/카카오/),
+      expect.stringMatching(/Google/),
+      expect.stringMatching(/이메일로 시작하기/),
+    ]);
+    for (const id of ['legal-child', 'age-notice', 'parent-exit']) {
+      expect(dock.queryByTestId(id)).toBeNull();
+    }
     const body = within(screen.getByTestId('screen-body'));
     expect(body.getByTestId('legal-child')).toBeTruthy();
     expect(body.getByTestId('age-notice')).toBeTruthy();
-    expect(body.getByRole('button', {name: '이메일로 시작하기'})).toBeTruthy();
-    // 상한은 기본 40% 그대로. 두 버튼(+ 위 6·아래 최대 max(28, 16+48))이 들어간다 — iOS Apple 버튼이 더해져도 72 × 3
-    const maxH = StyleSheet.flatten(dock.props.style).maxHeight as number;
-    expect(maxH).toBe(Math.floor(h * layout.dock.maxHeightRatio));
-    const two = 6 + 2 * (SOCIAL_BUTTON_HEIGHT + 12) + Math.max(28, 16 + 48);
-    expect(two).toBeLessThanOrEqual(maxH);
-    if (h >= 740) {
-      // iPhone 에서 Apple 버튼까지 셋이어도 들어간다. 640 높이 + 3버튼 내비에서는 286 > 256 이라 Apple 추가 때(B2) 작은 화면 규칙(GUIDELINES: 하단 고정 해제) 필요
-      expect(two + (SOCIAL_BUTTON_HEIGHT + 12)).toBeLessThanOrEqual(maxH);
-    }
+    expect(body.getByRole('button', {name: '부모님이시면 처음으로'})).toBeTruthy();
+    expect(body.getByText('부모님은 로그인 없이 가족에게 받은 번호만 쓰면 돼요')).toBeTruthy();
   });
 }
 
+test('\'이런 앱이에요\' 카드는 키 760 이상에서만, 심볼·카드는 글자 150% 이상이면 숨김', async () => {
+  await openC0(360, 820);
+  expect(screen.getByTestId('login-preview')).toBeTruthy();
+  expect(screen.getByText('이런 앱이에요')).toBeTruthy();
+  expect(screen.getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy();
+  screen.unmount();
+  await openC0(360, 640);
+  expect(screen.queryByTestId('login-preview')).toBeNull();
+  expect(screen.getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy();
+  screen.unmount();
+  await openC0(360, 820, 2);
+  expect(screen.queryByTestId('login-preview')).toBeNull();
+  expect(screen.queryByTestId('brand-symbol', {includeHiddenElements: true})).toBeNull();
+});
+
+test('약관 링크는 400 + 밑줄, 문장은 sub 보조색(700 은 제목·버튼만, V4-INDEX C0)', async () => {
+  // 화면의 약관 주소는 빌드 설정에 따라 비어 있을 수 있어(그때는 일반 글자) 주소를 준 LegalText 로 본다
+  const {LegalText} = require('../src/ui/LegalText');
+  const {toneColor} = require('../src/ui/ds/roles');
+  render(<LegalText testID="lt" audience="child" text="로그인하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={[{label: '이용약관', url: 'https://x/t'}, {label: '개인정보 처리방침', url: 'https://x/p'}]} />);
+  expect(StyleSheet.flatten(screen.getByTestId('lt').props.style).color).toBe(toneColor('sub', 'muted', 'child'));
+  const links = screen.getAllByRole('link');
+  expect(links).toHaveLength(2);
+  for (const l of links) {
+    const st = StyleSheet.flatten(l.props.style);
+    expect(st.fontWeight).toBe('400');
+    expect(st.textDecorationLine).toBe('underline');
+  }
+});
+
 test('소셜 버튼은 최소 높이만(고정 높이 없음), 카카오·구글 같은 최소 높이(GUIDELINES: 같은 높이·같은 폭)', async () => {
   await openC0(411, 891);
-  const [kakao, google] = within(screen.getByTestId('screen-dock')).getAllByRole('button');
+  const [kakao, google] = within(screen.getByTestId('dock-social')).getAllByRole('button');
   const st = (n: typeof kakao) => StyleSheet.flatten(typeof n.props.style === 'function' ? n.props.style({pressed: false}) : n.props.style);
   for (const b of [kakao, google]) {
-    expect(st(b).minHeight).toBe(SOCIAL_BUTTON_HEIGHT);
+    expect(st(b).minHeight).toBe(SOCIAL_MIN_HEIGHT);
     expect(st(b).height).toBeUndefined();
-    expect(st(b).flexShrink ?? 0).toBe(0);
     expect(st(b).alignSelf).toBe('stretch');
   }
   expect(st(kakao).backgroundColor).toBe('#FEE500'); // 카카오 컨테이너 색 규정
-  expect(st(kakao).borderRadius).toBe(12);
+});
+
+test('C0-b 이메일: BackLink \'로그인으로\', Field \'이메일 주소\'(placeholder 없음), Dock 은 인증번호 받기만', async () => {
+  await openC0(360, 640);
+  await press('이메일로 시작하기');
+  await waitFor(() => screen.getByText('이메일로 시작해요'));
+  expect(screen.getByRole('link', {name: '로그인으로'})).toBeTruthy();
+  const field = screen.getByLabelText('이메일 주소');
+  expect(field.props.placeholder).toBeUndefined();
+  const dock = within(screen.getByTestId('screen-dock'));
+  expect(dock.getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual([expect.stringMatching(/인증번호 받기/)]);
+});
+
+test('C0-c 인증번호: BackLink \'이메일 주소로\', 보이는 라벨 \'인증번호\'·읽기 이름 \'인증번호 6자리\', Dock 없음', async () => {
+  await openC0(360, 640);
+  await press('이메일로 시작하기');
+  await waitFor(() => screen.getByText('이메일로 시작해요'));
+  const {fireEvent} = require('@testing-library/react-native');
+  fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
+  await press('인증번호 받기');
+  await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
+  expect(screen.getByRole('link', {name: '이메일 주소로'})).toBeTruthy();
+  expect(screen.getByText('인증번호')).toBeTruthy();
+  expect(screen.getByLabelText('인증번호 6자리')).toBeTruthy();
+  expect(screen.queryByTestId('screen-dock')).toBeNull();
 });
