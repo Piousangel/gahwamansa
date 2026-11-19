@@ -20,6 +20,8 @@ import {
   registerToken,
   retryPending,
   shouldPromptParent,
+  parentPromptState,
+  skipParentPromptToday,
   type PushDeps,
 } from '../src/push/pushClient';
 import {createFakeTokenSource, FAKE_PUSH_TOKEN, nullTokenSource, setTokenSourceForTest, type PushTokenSource} from '../src/push/tokenSource';
@@ -321,6 +323,41 @@ describe('앱 조립(PushHost)', () => {
     await act(async () => {});
     expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
     expect(my).toHaveBeenCalledTimes(1);
+  });
+
+  test('PR #72 M1: N1 을 뒤로(답 없이) 닫으면 같은 날 앞으로 와도 다시 뜨지 않고, 거절로 기록하지도 않는다', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const en = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    const {navRef} = require('../src/navigation/navRef');
+    await act(async () => {
+      navRef.goBack(); // 하드웨어 뒤로와 같은 경로(beforeRemove)
+    });
+    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
+    const sync = jest.spyOn(api, 'getTodayContent');
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(en).not.toHaveBeenCalled(); // 받기 동의도 거절도 보내지 않음
+  });
+
+  test('PR #72 M1: 넘긴 날이 지나면(다음 날) 다시 묻는다 — 넘김은 거절(no)이 아니다', async () => {
+    const d = deps();
+    expect(await parentPromptState(d, '2026-11-19')).toBe('ask');
+    await skipParentPromptToday(d, '2026-11-19');
+    expect(await parentPromptState(d, '2026-11-19')).toBe('skip');
+    expect(await parentPromptState(d, '2026-11-20')).toBe('ask');
   });
 
   test('어르신 일일 알림 탭: push_opened{daily} + [P3, 사진 보기]', async () => {

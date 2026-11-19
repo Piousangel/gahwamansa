@@ -5,7 +5,8 @@
 import {isPushTokenShape} from '../api/contract/push';
 import {isQuietEventFailure, type EventProps} from '../api/contract/events';
 import type {Api} from '../features/types';
-import {accountKey, PUSH_PROMPT_KEY} from '../lib/accountStore';
+import {accountKey, PUSH_PROMPT_KEY, PUSH_SKIP_DAY_KEY} from '../lib/accountStore';
+import {kstDate} from '../lib/localStamps';
 import type {KeyValueStore} from '../lib/kvStore';
 import {readPushToken, savePushToken} from '../lib/pushToken';
 import type {PushTokenSource} from './tokenSource';
@@ -93,12 +94,16 @@ export async function shouldPromptParent(deps: PushDeps): Promise<boolean> {
  * N1 판정(PR #65 리뷰 L3): ask = 띄운다, skip = 이미 답함·받는 중·연결 전, retry = 확인 못 함(오프라인·계정 표식 없음 → 다음에 다시).
  * 이 계정에서 이미 답했으면 서버에 묻지 않는다(앱이 앞으로 올 때마다 확인하므로 네트워크를 아낀다).
  */
-export async function parentPromptState({api, store}: PushDeps): Promise<'ask' | 'skip' | 'retry'> {
+export async function parentPromptState({api, store}: PushDeps, today: string = kstDate(new Date())): Promise<'ask' | 'skip' | 'retry'> {
   const tag = await tagOf(api);
   if (!tag) {
     return 'retry';
   }
   if (await readAnswer(store, accountKey(PUSH_PROMPT_KEY, tag))) {
+    return 'skip';
+  }
+  // 오늘 답 없이 닫았으면(뒤로) 오늘은 다시 묻지 않는다. 다음 날 코스를 마치면 다시(PR #72 리뷰 M1, 리드 결정: 거절로 기록하지 않음)
+  if ((await readAnswer(store, accountKey(PUSH_SKIP_DAY_KEY, tag))) === today) {
     return 'skip';
   }
   let enabled: boolean | null;
@@ -135,6 +140,14 @@ export async function acceptParentPrompt(
 }
 
 /** N1 '괜찮아요': 서버 호출 없음(받기 시각이 없으면 보내지 않음). 다시 묻지 않는다 — 켜기는 P13 설정에서 */
+/** N1 을 답 없이 닫음(하드웨어 뒤로 등): '오늘은 넘김'만 기억한다. 받기 거절('no')이 아니라서 다음 날 다시 묻는다 */
+export async function skipParentPromptToday({api, store}: PushDeps, today: string = kstDate(new Date())): Promise<void> {
+  const tag = await tagOf(api);
+  if (tag) {
+    await writeAnswer(store, accountKey(PUSH_SKIP_DAY_KEY, tag), today);
+  }
+}
+
 export async function declineParentPrompt({api, store}: PushDeps): Promise<void> {
   const tag = await tagOf(api);
   if (tag) {
