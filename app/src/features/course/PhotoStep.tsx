@@ -13,10 +13,10 @@ import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {ToCourseHomeLink} from './ToCourseHomeLink';
-import {useFinishStep} from './useFinishStep';
+import {useFinishStep, useStepStarted} from './useFinishStep';
 import {PhotoZoom} from './PhotoZoom';
 import {ReadAloud, ttsText} from './ReadAloud';
-import {track} from './track';
+import {track} from '../track';
 import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
 import {focusLater} from '../../ui/screenTitle';
@@ -27,6 +27,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
+  useStepStarted('photo', review); // AC-05
   const [imageFailed, setImageFailed] = useState(false);
   const [loaded, setLoaded] = useState(false); // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음)
   const [zoom, setZoom] = useState(false);

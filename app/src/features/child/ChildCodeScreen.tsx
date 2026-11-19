@@ -6,6 +6,8 @@ import {copy, withTitle} from '../../copy/copy';
 import {CodeShow} from '../link/CodeShow';
 import {buildShareMessage, formatExpiry} from '../../lib/childFormat';
 import {appShareLink} from '../../lib/env';
+import {useApi} from '../../shared/useChildData';
+import {track} from '../track';
 
 // C2: 번호가 만들어졌어요(큰 숫자) + 보내기 + 연결 기다리기
 // 대기 화면에서 "번호 다시 보기"로 왔으면 돌아가고(goBack), 처음 만든 뒤면 대기 화면으로 바꾼다(replace).
@@ -13,8 +15,10 @@ import {appShareLink} from '../../lib/env';
 export function ChildCodeScreen({navigation, route}: NativeStackScreenProps<ChildParams, 'Code'>) {
   const {code, title, renewed, expiresAt, from} = route.params;
   const t = copy.code;
+  const api = useApi();
   return (
     <CodeShow
+      onShare={() => track(api, 'invite_share_tapped', {channel: 'share_sheet'})} // AC-05
       top={<BackBar />} // 감사 M10: C1 에서 왔으면 '‹ 이전'은 C1(호칭)으로
       code={code}
       title={t.title}

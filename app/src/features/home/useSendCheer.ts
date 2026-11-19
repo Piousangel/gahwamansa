@@ -6,6 +6,7 @@ import {useScreenReader} from '../../ui/a11y';
 import {CheerKey, ChildParent, isOffline} from '../types';
 import type {Api} from '../types';
 import {CheerResultRow, summarizeCheer} from './cheerLogic';
+import {track} from '../track';
 
 const c = copy.child.cheer;
 
@@ -46,6 +47,9 @@ export function useSendCheer(api: Api, onReload: () => void) {
       }
       busy.current = false;
       setSending(false);
+      if (rows.length > already.length && rows.slice(already.length).some(r => r.outcome === 'ok')) {
+        track(api, 'cheer_sent', {message_key: key}); // AC-05: 이번에 한 분이라도 받았을 때 한 번(받는 분·수는 싣지 않음)
+      }
 
       const s = summarizeCheer(rows);
       // 다시 하기: 이번에 받은 분(ok)은 결과를 들고 가서 건너뛴다
