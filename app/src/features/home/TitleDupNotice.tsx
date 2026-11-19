@@ -1,10 +1,12 @@
-import React, {useRef, useState} from 'react';
+import React, {useState} from 'react';
 import {StyleSheet, View} from 'react-native';
-import {Button, Card, Choice, Sheet, Text} from '../../ui/ds';
-import {ds} from '../../ui/ds/roles';
-import {Icon} from '../../ui/assets/icons';
+import {Text20} from '../../ui/Text20';
+import {SmallButton} from '../../ui/SmallButton';
+import {BottomSheet} from '../../ui/BottomSheet';
+import {ChoiceGrid} from '../../ui/ChoiceGrid';
 import {useToast} from '../../ui/Toast';
 import {copy} from '../../copy/copy';
+import {color, radius} from '../../ui/tokens';
 import {isOffline, PARENT_TITLES} from '../types';
 import type {Api, ChildParent} from '../types';
 import type {TitleDup} from './titleDup';
@@ -18,7 +20,6 @@ const t = h.title_sheet;
 // 칩 줄(시안 '부모님 고르기'): 어르신 호칭을 연결 순서로, 새로 연결된 분 칩을 표시(현재). 겹친 동안만 보이는 표시용(누르는 동작은 시안에 정의 없음)
 export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: TitleDup; parents: ChildParent[]; onChanged: () => void}) {
   const [open, setOpen] = useState(false);
-  const opener = useRef(null); // 시트가 닫히면 '이름 고르기'로 포커스(ds Sheet returnFocusRef)
   const [picked, setPicked] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,66 +51,48 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
 
   return (
     <View style={styles.wrap}>
-      {/* 라이터 11-14(리뷰 M3): 칩은 누를 수 없는 표시용 → 줄 전체를 한 덩어리로 읽고 칩 각각은 읽지 않는다. 새로 연결된 분 칩은 ✓ + 굵은 테두리(색만으로 구분하지 않음) */}
-      <View testID="title-dup-chips" style={styles.chips} accessible accessibilityLabel={chipsA11y(parents, dup.target.parentId)}>
-        {parents.map(p => {
-          const cur = p.parentId === dup.target.parentId;
-          return (
-            <View key={p.parentId} style={[styles.chip, cur ? styles.chipOn : null]}>
-              {cur ? <Icon name="icon-check" size={20} color={ds.color.action} /> : null}
-              <Text role="body">{p.title}</Text>
-            </View>
-          );
-        })}
-      </View>
-      <Card tone="notice" testID="title-dup">
-        <Text role="bodyLg">{h.title_dup}</Text>
-        <Button
-          kind="secondary"
-          size="inline"
-          label={h.title_dup_button}
-          buttonRef={opener}
-          onPress={() => {
-            setPicked(null);
-            setError(null);
-            setOpen(true);
-          }}
-        />
-      </Card>
-      <Sheet
+    {/* 라이터 11-14(리뷰 M3): 칩은 누를 수 없는 표시용 → 줄 전체를 한 덩어리로 읽고 칩 각각은 읽지 않는다 */}
+    <View testID="title-dup-chips" style={styles.chips} accessible accessibilityLabel={chipsA11y(parents, dup.target.parentId)}>
+      {parents.map(p => {
+        const cur = p.parentId === dup.target.parentId;
+        return (
+          <View key={p.parentId} style={[styles.chip, cur ? styles.chipOn : null]}>
+            <Text20 weight="bold" style={cur ? styles.chipOnText : styles.chipText}>{p.title}</Text20>
+          </View>
+        );
+      })}
+    </View>
+    <View testID="title-dup" style={styles.box}>
+      <Text20 weight="bold" style={styles.text}>{h.title_dup}</Text20>
+      <SmallButton
+        label={h.title_dup_button}
+        onPress={() => {
+          setPicked(null);
+          setError(null);
+          setOpen(true);
+        }}
+      />
+      <BottomSheet
         testID="title-dup-sheet"
         visible={open}
         title={t.title}
-        sub={hint}
+        body={hint}
         closeLabel={t.close}
         onClose={() => setOpen(false)}
-        returnFocusRef={opener}
-        footer={
-          <>
-            <View accessibilityLiveRegion="polite">
-              {error ? (
-                <Text role="body" tone="danger" testID="title-dup-error">
-                  {error}
-                </Text>
-              ) : null}
-            </View>
-            <Button kind="primary" size="dock" label={t.save} onPress={save} disabled={!picked || saving} loading={saving} />
-            <Button kind="text" size="inline" label={t.later} onPress={() => setOpen(false)} />
-          </>
-        }>
-        <Choice
-          mode="radio"
-          columns={2}
+        error={error}
+        primary={{label: t.save, onPress: save, disabled: !picked || saving}}
+        secondary={{label: t.later, onPress: () => setOpen(false)}}>
+        <ChoiceGrid
           testID="title-dup-options"
-          accessibilityLabel={t.title}
-          items={PARENT_TITLES.map(name => {
+          choices={PARENT_TITLES.map(name => {
             const taken = dup.taken.includes(name);
-            return {key: name, label: name, disabled: taken, hint: taken ? t.taken : undefined, a11yLabel: taken ? withName(t.taken_a11y, name) : name};
+            return {value: name, label: name, disabled: taken, sub: taken ? t.taken : undefined, a11yLabel: taken ? withName(t.taken_a11y, name) : name};
           })}
-          value={picked ?? undefined}
+          selected={picked}
           onSelect={setPicked}
         />
-      </Sheet>
+      </BottomSheet>
+    </View>
     </View>
   );
 }
@@ -127,9 +110,10 @@ export function chipsA11y(parents: ChildParent[], targetId: string): string {
 const styles = StyleSheet.create({
   wrap: {gap: 14},
   chips: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
-  chip: {
-    minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18,
-    borderRadius: ds.radius.chip, borderWidth: 2, borderColor: ds.color.line, backgroundColor: ds.color.card,
-  },
-  chipOn: {backgroundColor: ds.color.actionSoft, borderColor: ds.color.action, borderWidth: 4, paddingHorizontal: 16},
+  chip: {minHeight: 48, justifyContent: 'center', paddingHorizontal: 18, borderRadius: 999, borderWidth: 2, borderColor: color.line, backgroundColor: color.card},
+  chipOn: {backgroundColor: color.inkTitle, borderColor: color.inkTitle},
+  chipText: {color: color.inkTitle},
+  chipOnText: {color: color.card},
+  box: {backgroundColor: color.noticeSoft, borderRadius: radius.card, padding: 16, gap: 8},
+  text: {color: color.inkTitle},
 });

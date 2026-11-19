@@ -70,7 +70,7 @@ test('가족 만들기(번호 만들기)를 두 번 빨리 눌러도 가족·번
   fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '246810'); // fake 의 올바른 메일 인증번호
   await waitFor(() => screen.getByText('부모님을 어떻게 부르세요?'));
   await twice(screen.getByRole('button', {name: '번호 만들기'}));
-  await waitFor(() => screen.getByTestId('wait-code')); // C2 없이 바로 C3
+  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
   expect(create).toHaveBeenCalledTimes(1);
   expect(issue).toHaveBeenCalledTimes(1);
 });

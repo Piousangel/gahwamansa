@@ -66,8 +66,10 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   // 코스 홈·설정에서 "번호 쓰기"로 왔으면 이전은 그 화면으로, 처음 화면에서 왔으면 역할 선택으로(QA B2)
   const fromCourse = route.params?.from === 'course';
   const back = fromCourse ? () => navigation.goBack() : resetRole;
-  // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
-  const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
+  // 번호가 맞으면 스택을 [동의] 하나로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③).
+  // 연결된 어르신에게 동의 → 코스 홈은 뿌리 화면: 뒤로는 앱을 나간다. 번호 화면을 뒤에 남기면 뒤로 두 번에 resetRole 이
+  // 기기 도장을 지웠다(네이버 패널 r1/4 재현, 리드 결정 11-20)
+  const toConsent = () => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Consent'}]}));
   // 밖에서 들어온 번호: 처음엔 경로 값, 화면이 떠 있는 동안 새 링크가 오면 그 번호(AP-09, 리뷰 H1).
   // initialParams 는 경로를 처음 만들 때만 쓰이므로 링크 저장소를 직접 구독한다. 지금 값(구독 즉시 1회)·지움(visible false)은 무시
   const [prefill, setPrefill] = useState<Prefill | undefined>(route.params?.prefill);

@@ -96,8 +96,6 @@ export const shadow = {
   soft: '0px 4px 12px rgba(116,72,33,0.18)',
   softPressed: '0px 1px 3px rgba(116,72,33,0.18)',
   lifted: '0px 6px 16px rgba(116,72,33,0.26)',
-  /** 시트(위로 드리움). v4 원본 tokens-v4.json shadow.sheet 와 같은 값(생성물에 shadow 가 아직 없어 여기 둔다, 디자인 시스템 패널 r1) */
-  sheet: '0px -8px 24px rgba(78,47,20,0.22)',
 } as const;
 
 export const layout = {

@@ -28,7 +28,8 @@ export async function pressBackLink(name: string | RegExp = '오늘 코스로') 
 
 export async function pressCourseNext() {
   await act(async () => {
-    fireEvent.press(within(screen.getByTestId('screen-dock')).getByTestId('big-button').findByProps({accessibilityRole: 'button'}));
+    // 코스 홈 v4: Dock 의 주 버튼(ds Button) 하나 — 지금 단계 이름 또는 '오늘 코스 다시 보기'
+    fireEvent.press(within(screen.getByTestId('screen-dock')).getAllByRole('button')[0]);
   });
 }
 

@@ -1,4 +1,4 @@
-# 공용: 새 설치 → 자녀 → C0 카카오(fake 성공) → C1 호칭 '엄마' → 번호 만들기 → C3 연결 기다리는 중(V9: C2 없이 바로)
+# 공용: 새 설치 → 자녀 → C0 카카오(fake 성공) → C1 호칭 '엄마' → C2 번호(123456) → C3 연결 기다리기
 appId: com.bumojasik.app.staging
 ---
 - launchApp:
@@ -17,6 +17,11 @@ appId: com.bumojasik.app.staging
 - tapOn: '엄마'
 - takeScreenshot: ${PREFIX}-c1
 - tapOn: '번호 만들기'
+- extendedWaitUntil:
+    visible: '번호가 만들어졌어요'
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-c2
+- tapOn: '연결 기다리기'
 - extendedWaitUntil:
     visible:
       id: 'wait-code'

@@ -22,13 +22,12 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
   const [pushAt, setPushAt] = useState(0); // 민 요소의 위 끝이 갈 곳(기본 = viewH). 겹쳐 그리는 흐림이 있으면 흐림 아래 끝(창 끝)
   const [blockY, setBlockY] = useState<number | null>(null);
   const [hs, setHs] = useState<Record<number, number>>({});
-  const [n, setN] = useState(count); // onHeights 로 받으면 받은 줄 수(Choice 2열은 줄 수가 열 수에 따라 바뀜)
   const [gap, setGap] = useState<{before: number; h: number} | null>(null);
   useEffect(() => {
     if (!viewH || blockY === null) {
       return;
     }
-    const heights = Array.from({length: n}, (_, i) => hs[i]);
+    const heights = Array.from({length: count}, (_, i) => hs[i]);
     if (heights.some(h => h === undefined)) {
       return; // 다 잰 뒤에
     }
@@ -38,7 +37,7 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
     if ((next?.before ?? -1) !== (gap?.before ?? -1) || Math.abs((next?.h ?? 0) - (gap?.h ?? 0)) > 1) {
       setGap(next);
     }
-  }, [viewH, pushAt, blockY, hs, gap, n, between, from, glue]);
+  }, [viewH, pushAt, blockY, hs, gap, count, between, from, glue]);
   return {
     /** h = 접힘 기준(여기서 걸치면 민다), pushTo = 민 요소가 갈 위치(겹쳐 그리는 흐림이 있으면 그 아래 끝, 없으면 생략) */
     onViewport: (h: number, pushTo?: number) => {
@@ -51,11 +50,5 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
       setHs(cur => (cur[i] === h ? cur : {...cur, [i]: h}));
     },
     gapStyle: (i: number): ViewStyle | undefined => (gap && gap.before === i ? {marginTop: gap.h} : undefined),
-    /** 줄 높이를 한꺼번에 받는다(ds Choice onItemHeights). 함께 쓰는 push 를 Choice 에 넘긴다 */
-    onHeights: (list: number[]) => {
-      setN(list.length);
-      setHs(cur => (list.length === Object.keys(cur).length && list.every((h, i) => cur[i] === h) ? cur : {...list}));
-    },
-    push: gap ? {index: gap.before, space: gap.h} : null,
   };
 }

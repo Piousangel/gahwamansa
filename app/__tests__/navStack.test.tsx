@@ -58,10 +58,33 @@ test('코스 홈 → 번호 쓰기 → 번호 성공 → 동의 → 코스 홈: 
   await press('좋아요');
   await waitFor(() => screen.getByTestId(HOME));
   expect(screen.queryByText('번호를 받으면 그때부터 답이 저장돼요')).toBeNull();
+  // 리드 결정 11-20(네이버 패널 r1/4): 연결된 어르신에게 P3 는 뿌리 화면 — 뒤로는 앱을 나가고 P1·동의로 가지 않는다
   await back();
-  await waitFor(() => expect(screen.queryByTestId(HOME)).toBeNull());
+  expect(screen.getByTestId(HOME)).toBeTruthy();
   expect(screen.queryByText('고른 답을 가족과 나눠요')).toBeNull();
-  expect(screen.getByText(CONNECT)).toBeTruthy(); // 스택: [번호, 코스 홈]
+  expect(screen.queryByText(CONNECT)).toBeNull();
+});
+
+test('회귀(r1/4): 연결된 첫날 P3 에서 뒤로를 두 번 눌러도 P1 이 나오지 않고 기기 도장·역할이 지워지지 않는다', async () => {
+  const {createLocalStamps, setLocalStampsForTest} = require('../src/lib/localStamps');
+  const {memoryStore} = require('../src/lib/kvStore');
+  const stamps = createLocalStamps(memoryStore());
+  setLocalStampsForTest(stamps);
+  const clear = jest.spyOn(stamps, 'clear');
+  const back = captureBack();
+  render(<AppRoot api={createFakeApi()} role="parent" />);
+  await enterCode('123456');
+  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await press('좋아요');
+  await waitFor(() => screen.getByTestId(HOME));
+  const before = clear.mock.calls.length; // 연결 상태로 처음 불러올 때 지우는 것(useWeekStamps 설계)은 뺀다
+  await back();
+  await back();
+  expect(screen.getByTestId(HOME)).toBeTruthy();
+  expect(screen.queryByText(CONNECT)).toBeNull();
+  expect(screen.queryByText(ROLE)).toBeNull();
+  expect(clear.mock.calls.length).toBe(before); // resetRole(기기 도장 지움)이 불리지 않는다
+  setLocalStampsForTest(null);
 });
 
 test('설정 → 번호 쓰기 → 코스 보기는 코스 홈으로(설정·번호가 쌓이지 않음)', async () => {

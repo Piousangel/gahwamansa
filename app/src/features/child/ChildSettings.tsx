@@ -211,7 +211,6 @@ export function ChildSettings() {
         }>
         <Choice
           mode="radio"
-          columns={2}
           testID="title-group"
           accessibilityLabel={rel.title}
           items={PARENT_TITLES.map(p => ({key: p, label: p}))}

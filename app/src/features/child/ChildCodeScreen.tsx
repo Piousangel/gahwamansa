@@ -9,11 +9,11 @@ import {appShareLink} from '../../lib/env';
 import {useApi} from '../../shared/useChildData';
 import {track} from '../track';
 
-// C2: 번호가 만들어졌어요(큰 숫자) + 보내기 + 돌아가기. v4(V9)부터 가입 흐름(C1)은 C2 없이 C3 로 가고, 이 화면은 재연결 번호(설정·홈 끊김 배너)에서만 쓴다.
+// C2: 번호가 만들어졌어요(큰 숫자) + 보내기 + 연결 기다리기
 // 대기 화면에서 "번호 다시 보기"로 왔으면 돌아가고(goBack), 처음 만든 뒤면 대기 화면으로 바꾼다(replace).
 // 그래서 스택에 대기 화면이 둘 쌓이지 않는다. 이전 바는 돌아갈 화면이 있을 때만 보인다.
 export function ChildCodeScreen({navigation, route}: NativeStackScreenProps<ChildParams, 'Code'>) {
-  const {code, title, renewed, expiresAt} = route.params;
+  const {code, title, renewed, expiresAt, from} = route.params;
   const t = copy.code;
   const api = useApi();
   return (
@@ -26,8 +26,8 @@ export function ChildCodeScreen({navigation, route}: NativeStackScreenProps<Chil
       shareMessage={buildShareMessage(t.share, copy.safe.money, code, expiresAt ? formatExpiry(expiresAt) : null, appShareLink(code))}
       sendLabel={t.send}
       primaryLabel={t.wait}
-      // 재연결 번호(설정 '새 폰 연결 번호'·홈 끊김 배너)에서만 온다 — 온 화면으로 돌아간다(C1 가입 흐름은 C2 없이 바로 C3, V9)
-      onPrimary={() => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('Wait'))}
+      // C1 에서 처음 만든 뒤면 [Relation, Code] 를 대기 화면 하나로 바꾼다(스택에 C1·C2 가 남지 않게), 대기 화면에서 왔으면 돌아간다
+      onPrimary={() => (from === 'relation' ? navigation.reset({index: 0, routes: [{name: 'Wait'}]}) : navigation.canGoBack() ? navigation.goBack() : navigation.replace('Wait'))}
     />
   );
 }

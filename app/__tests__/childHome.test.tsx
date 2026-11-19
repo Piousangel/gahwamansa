@@ -37,7 +37,7 @@ test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예�
     expect(StyleSheet.flatten(card.props.style).borderStyle).toBe('dashed');
     expect(card.props.accessibilityRole).toBeUndefined(); // 누르는 것 아님
   }
-  expect(screen.getByTestId('child-home-example-1').props.accessibilityLabel).toBe('예시, 이렇게 보여요, 봄과 가을 중 가을'); // 토스 패널 r1: 보기 안의 답
+  expect(screen.getByTestId('child-home-example-1').props.accessibilityLabel).toBe('예시, 이렇게 보여요, 산과 바다 중 가을');
   expect(screen.getByTestId('child-home-example-2').props.accessibilityLabel).toBe('예시, 지난 답, 산과 바다 중 바다');
   // 리뷰 M1·디자인 #92(a): 이야기 꺼내기도 예시 — 같은 모양(점선), 읽기 이름 '예시, 이야기 꺼내기, …'
   const starter = screen.getByTestId('child-home-empty-starter');
