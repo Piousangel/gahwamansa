@@ -1,0 +1,18 @@
+# CG 자녀 시작 결정 회귀 캡처(ds DsScreen·StateView). 어르신으로 연결된 폰에서 '자녀'를 고르면 막음 화면.
+# 전제: fake API 시작 상태를 개발 중에만 잠깐 {linked: true} 로 바꿔 실행(커밋하지 않음 — c5-past.yaml 머리 주석).
+# 주의: clearState 를 쓰지 않는다(c3-fit.yaml 머리 주석: Metro 호스트 고정이 지워짐).
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/cg-gate.yaml
+appId: com.bumojasik.app.staging
+name: CG 막음 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/wait-first-screen.yaml
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '이 폰은 부모님 휴대폰으로 쓰고 있어요'
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: cg-blocked
