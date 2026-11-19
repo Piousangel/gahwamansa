@@ -3,7 +3,9 @@ import {Image, Pressable, StyleSheet, useWindowDimensions, View} from 'react-nat
 import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
-import {DsScreen, Text, type DockProps} from '../../ui/ds';
+import {Button, DsScreen, Text, type DockProps} from '../../ui/ds';
+import {PhotoChip} from '../../ui/PhotoChip';
+import {shadow} from '../../ui/tokens';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {Icon} from '../../ui/assets/icons';
@@ -49,9 +51,11 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       alive = false;
     };
   }, [review]);
-  // 사진 높이는 화면 높이의 28% 이하(QA B4: 작은 화면에서 회상 질문이 더 보이게). 카드 폭 = 사진 폭 = 사진 높이 x 272/236(v4 카드는 안쪽 여백 없음)
-  const {height: winH} = useWindowDimensions();
-  const frameW = Math.min(300, Math.floor((winH * 0.28 * 272) / 236));
+  // 시안 P4_photo_ds4c: 사진은 둘레 카드 없이 가로를 채우고 높이 128(100%) / 100(글자 150% 이상 — 200% 보드). 큰 글자에서
+  // 질문 첫 문장이 첫 화면에 들게 사진을 줄이고, 사진 설명 줄은 '읽어 주세요' 아래로 미룬다
+  const {fontScale} = useWindowDimensions();
+  const large = fontScale >= 1.5;
+  const photoH = large ? PHOTO_H.large : PHOTO_H.base;
   const photo = content?.photo;
   const read = useReadAloudAction(photo ? ttsText.photo(photo.recall_questions) : '', setReading);
   if (!photo) {
@@ -77,81 +81,93 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     }
   };
   const readable = read.allowed && photo.recall_questions.length > 0;
-  // 시안 P4(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제), 단계 제목 한 줄, 사진 카드(안에 AI 고지), 천천히 보세요, 회상 질문.
-  // Dock = 주 '다 봤어요' + 보조 '읽어 주세요'(AP-03, 화면 읽기 켜짐이면 없음). 보기 전용은 주 '돌아가기'만
-  const readSlot: DockProps['secondary'] = readable ? {label: read.label, loading: read.busy, onPress: read.onPress, testID: 'read-aloud'} : undefined;
+  // 시안 P4_photo_ds4c(사진 중심 안): 위 BackLink '오늘 코스로'(U-8: 하단 링크 없음), 단계 제목 한 줄 → 큰 사진(안에 'AI가 만든 그림' 칩)
+  // → 사진 설명 한 줄(없는 날은 없음) → 회상 질문 → '읽어 주세요'(질문 바로 아래 본문 보조) → 천천히 보세요. Dock 은 '다 봤어요' 하나.
+  // 100%: 사진·단계·질문·읽어 주세요가 첫 화면. 200%: 사진 100, 설명 줄은 읽어 주세요 아래(질문 첫 문장이 첫 화면에).
   const dock: DockProps = review
-    ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}, secondary: readSlot}
+    ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}
     : error
-      ? stepErrorDock(error, go, readSlot)
-      : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}, secondary: readSlot};
+      ? stepErrorDock(error, go)
+      : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}};
+  const caption = photo.caption ? <Text testID="photo-caption" role="label">{photo.caption}</Text> : null;
   return (
     <DsScreen
       variant="step"
       back={{label: copy.course.to_home, onPress: toCourseHome}}
-      header={<StepHeader name={copy.course.step.photo} n={1} review={review} />}
       stepInfo={stepA11y(copy.course.step.photo, 1, review)}
       scrollRef={errorTop}
       dock={dock}>
-      {!review && error ? <StepErrorBanner error={error} /> : null}
-      {/* B1: 사진 카드 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
-      <Pressable
-        ref={polaroidRef}
-        testID="photo-polaroid"
-        disabled={!canZoom}
-        accessible={canZoom}
-        accessibilityRole={canZoom ? 'button' : undefined}
-        accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
-        accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
-        onPress={openZoom}
-        style={[styles.card, {maxWidth: frameW}]}>
-        {photo.image_url.startsWith('pending://') || imageFailed ? (
-          // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
-          <View style={[styles.photo, styles.pending]}>
-            <Icon name="icon-photo" size={40} color={ds.color.inkSub} />
-            <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>
+      <View style={[styles.body, large ? styles.bodyLarge : null]}>
+        {!review && error ? <StepErrorBanner error={error} /> : null}
+        <StepHeader name={copy.course.step.photo} n={1} review={review} />
+        {/* B1: 사진 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
+        <Pressable
+          ref={polaroidRef}
+          testID="photo-polaroid"
+          disabled={!canZoom}
+          accessible={canZoom}
+          accessibilityRole={canZoom ? 'button' : undefined}
+          accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
+          accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
+          onPress={openZoom}
+          style={[styles.photo, {height: photoH}]}>
+          {photo.image_url.startsWith('pending://') || imageFailed ? (
+            // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
+            <View style={styles.pending}>
+              <Icon name="icon-photo" size={large ? 28 : 36} color={ds.color.inkSub} />
+              <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>
+            </View>
+          ) : (
+            <Image
+              testID="photo-image"
+              source={{uri: photo.image_url}}
+              resizeMode="cover"
+              style={styles.image}
+              accessibilityLabel={photo.caption}
+              onLoad={() => setLoaded(true)}
+              onError={() => setImageFailed(true)}
+            />
+          )}
+          {/* AI 고지(늘 보이게, 사진 안 칩 — 모든 배율 20) */}
+          {showImage ? <PhotoChip label={appCopy.ai_photo_label} /> : null}
+        </Pressable>
+        {canZoom && hint ? <Text testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
+        {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
+        {large ? null : caption}
+        {photo.recall_questions.length > 0 ? (
+          <View testID="recall-questions" style={[styles.readBar, reading ? styles.reading : null]}>
+            {photo.recall_questions.map(q => (
+              <Text key={q} role="bodyLg">{q}</Text>
+            ))}
           </View>
-        ) : (
-          <Image
-            testID="photo-image"
-            source={{uri: photo.image_url}}
-            style={styles.photo}
-            accessibilityLabel={photo.caption}
-            onLoad={() => setLoaded(true)}
-            onError={() => setImageFailed(true)}
-          />
-        )}
-        {/* 카드 아래 칸(시안 ds4b: 사진 밑 안쪽 8/14): 사진 설명(콘텐츠라 유지 — 시안 보드는 자리표시 사진이라 설명이 없다) +
-            AI 고지(늘 보이게): 실사풍이라 "실제 장소가 아니에요"를 같이 쓴다 */}
-        <View style={styles.cardLabel}>
-          <Text role="bodyLg">{photo.caption}</Text>
-          {showImage ? <Text role="sub" tone="muted">{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text> : null}
-        </View>
-      </Pressable>
-      {canZoom && hint ? <Text testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
-      {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
-      <Text role="body">{appCopy.photo_look}</Text>
-      {photo.recall_questions.length > 0 ? (
-        <View testID="recall-questions" style={[styles.readBar, reading ? styles.reading : null]}>
-          {photo.recall_questions.map(q => (
-            <Text key={q} role="bodyLg">{q}</Text>
-          ))}
-        </View>
-      ) : null}
-      {readable ? <ReadAloudNotice notice={read.notice} /> : null}
+        ) : null}
+        {/* AP-03 읽어 주기: 질문 바로 아래 본문 보조 버튼(가로 채움). 화면 읽기 켜짐이면 없음(R16) */}
+        {readable ? (
+          <View testID="read-aloud" style={styles.read}>
+            <Button kind="secondary" label={read.label} loading={read.busy} onPress={read.onPress} />
+            <ReadAloudNotice notice={read.notice} />
+          </View>
+        ) : null}
+        {large ? caption : null}
+        <Text role="sub" tone="muted">{appCopy.photo_look}</Text>
+      </View>
     </DsScreen>
   );
 }
 
-// 사진 카드(시안 P4 ds4b): 흰 면 + line 테두리 1.5 + 반경 22, 사진 위·AI 고지 아래(안쪽 8/14). 사진 비율 272:236 유지
+/** 사진 높이(시안 ds4c: 100% 128, 200% 100). 장식 그림이 아니라 사진 틀이라 높이를 정한다(글자 상자 아님) */
+const PHOTO_H = {base: 128, large: 100} as const;
+
+// 사진(시안 ds4c): 둘레 카드·테두리 없이 반경 22 + 그림자, 칩은 왼쪽 아래. 본문 간격 14(100%) / 6(200%)
 const styles = StyleSheet.create({
-  // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대(글자 스타일을 바꾸지 않고 표시)
+  body: {gap: 14},
+  bodyLarge: {gap: 6},
   // 읽어 주는 중 표시: 왼쪽 막대. 자리는 늘 두고 색만 바꿔 글 폭·줄바꿈이 움직이지 않게(리뷰)
   readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
   reading: {borderLeftColor: ds.color.info},
-  card: {alignSelf: 'center', width: '100%', backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, overflow: 'hidden'},
-  photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: ds.color.paperSoft},
-  cardLabel: {paddingVertical: 8, paddingHorizontal: 14, gap: 2},
+  photo: {alignSelf: 'stretch', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
+  image: {width: '100%', height: '100%'},
+  read: {gap: 8},
   center: {textAlign: 'center'},
-  pending: {alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12},
+  pending: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 8},
 });
