@@ -1,0 +1,35 @@
+# C7 설정 회귀 캡처(부품 ui/ds 로 바꾼 뒤, 배치는 v2 그대로). 연결된 자녀 → 설정 → 부르는 이름 시트.
+# 전제: fake API 가 '자녀·연결됨·동의'로 시작해야 한다(selectApi 의 createFakeApi() 인자를 개발 중에만 잠깐 바꿈, 커밋하지 않음 — c5-past.yaml 머리 주석).
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c7-settings.yaml
+appId: com.bumojasik.app.staging
+name: C7 설정 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '설정'
+    timeout: 20000
+- tapOn: '설정'
+- extendedWaitUntil:
+    visible: '부르는 이름.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c7-first
+- swipe:
+    start: 50%, 80%
+    end: 50%, 25%
+- waitForAnimationToEnd
+- takeScreenshot: c7-scrolled
+- scrollUntilVisible:
+    element: '부르는 이름.*'
+    direction: UP
+- tapOn: '부르는 이름.*'
+- waitForAnimationToEnd
+- takeScreenshot: c7-sheet
