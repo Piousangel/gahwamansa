@@ -26,8 +26,8 @@ export type SheetProps = {
   onClose: () => void;
   /** X 읽는 이름(ui 는 문구를 모른다 — 호출부가 copy 에서) */
   closeLabel: string;
-  /** 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼, R12) */
-  returnFocusRef?: RefObject<unknown>;
+  /** 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼, R12). 필수 — 공용 부품이라 쓰는 곳마다 빠뜨리지 않게(PR #93 M1) */
+  returnFocusRef: RefObject<unknown>;
   children?: React.ReactNode;
   testID?: string;
 };
@@ -38,6 +38,7 @@ export type SheetProps = {
  * - 높이는 화면의 88%까지, 넘치면 시트 안에서만 스크롤 + 아래 '더 있음' 띠(R-19, 넘칠 때만).
  * - 글자는 역할 상한(선택지 bodyLg 2.0) — 150%로 묶지 않는다(V14 ③).
  * - 닫는 길: X · 밖 누르기 · 안드로이드 뒤로. 열리면 포커스가 제목으로, 닫히면 연 버튼으로. 모션은 불투명도만(옛 BottomSheet 와 같음).
+ * - 입력 없는 시트 전용: 자판 처리(KAV)가 없다. 입력이 든 시트(호칭 직접 쓰기 등)를 옮길 때 더한다(PR #93 L3).
  */
 export function Sheet(props: SheetProps) {
   // 시트는 Modal(별도 창)이라 화면의 AudienceProvider 가 닿지 않을 수 있어 바깥 audience 를 그대로 넘긴다
@@ -58,7 +59,9 @@ function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, c
   const {opacity, start} = useFadeIn(visible);
   const [view, setView] = useState(0);
   const [content, setContent] = useState(0);
-  const more = content > view + 1;
+  const [y, setY] = useState(0);
+  // 넘칠 때만, 끝까지 내리면 숨긴다(옛 Screen measure 와 같은 식, PR #93 L1)
+  const more = content > view + 1 && y + view < content - 2;
 
   return (
     <Modal
@@ -75,13 +78,19 @@ function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, c
       <Animated.View style={[styles.root, {opacity}]}>
         {/* 밖 누르기 = 닫기. 화면 읽기에서는 X 가 같은 일을 하므로 숨긴다 */}
         <Pressable testID="sheet-scrim" style={styles.scrim} onPress={onClose} accessible={false} importantForAccessibility="no" />
-        <View testID={testID} accessibilityViewIsModal style={[styles.panel, {maxHeight: Math.floor(height * SHEET_MAX_RATIO)}]}>
+        {/* 아래 inset(3버튼 내비·홈 인디케이터)은 패널 바닥 여백으로 — 스크롤 내용과 더 있음 띠가 모두 그 위에 놓인다(PR #93 L2) */}
+        <View testID={testID} accessibilityViewIsModal style={[styles.panel, {maxHeight: Math.floor(height * SHEET_MAX_RATIO), paddingBottom: insets.bottom}]}>
           <ScrollView
             testID={`${testID}-scroll`}
             style={styles.scroll}
             onLayout={e => setView(Math.round(e.nativeEvent.layout.height))}
             onContentSizeChange={(_w, h) => setContent(Math.round(h))}
-            contentContainerStyle={[styles.body, {paddingBottom: Math.max(28, 16 + insets.bottom)}]}>
+            onScroll={e => setY(Math.round(e.nativeEvent.contentOffset.y))}
+            // 관성 스크롤이 멈춘 마지막 위치는 onScroll(쓰로틀)로 안 올 수 있다 → 멈출 때도 기록(에뮬레이터 200% 실측)
+            onMomentumScrollEnd={e => setY(Math.round(e.nativeEvent.contentOffset.y))}
+            onScrollEndDrag={e => setY(Math.round(e.nativeEvent.contentOffset.y))}
+            scrollEventThrottle={16}
+            contentContainerStyle={[styles.body, {paddingBottom: 28}]}>
             <View style={styles.head}>
               <View ref={titleRef} accessible accessibilityRole="header" style={styles.titleWrap}>
                 <Heading level={2}>{title}</Heading>

@@ -54,10 +54,87 @@ test('선택지: 확정 문구 4개 1열 Choice(action, 버튼), 글자는 bodyL
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
 });
 
-test('ds Sheet: 넘칠 때만 아래 더 있음 띠(시트 안에서만 스크롤)', () => {
+const sheetProps = {title: '제목', closeLabel: '닫기', testID: 's'};
+const opener = {current: {tag: 'opener'}};
+
+describe('ds Sheet(공용, PR #93 L4)', () => {
+  test('닫는 길 3가지: X·밖 누르기·안드로이드 뒤로', () => {
+    const onClose = jest.fn();
+    render(
+      <Sheet visible {...sheetProps} onClose={onClose} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>,
+    );
+    fireEvent.press(screen.getByRole('button', {name: '닫기'}));
+    fireEvent.press(screen.getByTestId('sheet-scrim', {includeHiddenElements: true}));
+    act(() => screen.UNSAFE_getByType(RN.Modal).props.onRequestClose());
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  test('모달(뒤 화면을 읽지 않음), 열리면 포커스가 제목으로(300ms 뒤)', () => {
+    const spy = jest.spyOn(RN.AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+    render(
+      <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>,
+    );
+    expect(screen.getByTestId('s').props.accessibilityViewIsModal).toBe(true);
+    jest.useFakeTimers();
+    try {
+      act(() => screen.UNSAFE_getByType(RN.Modal).props.onShow?.());
+      expect(spy).not.toHaveBeenCalled();
+      act(() => jest.advanceTimersByTime(300));
+      expect(spy).toHaveBeenCalledWith(expect.anything(), 'focus');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('R12·M1: 닫히면 연 버튼으로 포커스가 돌아간다(returnFocusRef 필수)', () => {
+    jest.useFakeTimers();
+    try {
+      const spy = jest.spyOn(RN.AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+      render(
+        <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+          <RNText>내용</RNText>
+        </Sheet>,
+      );
+      spy.mockClear();
+      screen.rerender(
+        <Sheet visible={false} {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+          <RNText>내용</RNText>
+        </Sheet>,
+      );
+      act(() => jest.advanceTimersByTime(300));
+      expect(spy).toHaveBeenCalledWith(opener.current, 'focus');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('L2: 아래 inset(3버튼 내비 48)은 패널 바닥 여백 → 더 있음 띠·내용이 내비 위', () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 24, bottom: 48, left: 0, right: 0}));
+    try {
+      render(
+        <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+          <RNText>내용</RNText>
+        </Sheet>,
+      );
+      expect(StyleSheet.flatten(screen.getByTestId('s').props.style).paddingBottom).toBe(48);
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
+});
+
+test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(L1)', () => {
   render(
     <AudienceProvider value="child">
-      <Sheet visible title="제목" closeLabel="닫기" onClose={() => {}} testID="s">
+      <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
         <RNText>내용</RNText>
       </Sheet>
     </AudienceProvider>,
@@ -72,4 +149,26 @@ test('ds Sheet: 넘칠 때만 아래 더 있음 띠(시트 안에서만 스크�
     fireEvent(scroll, 'contentSizeChange', 360, 700);
   });
   expect(screen.getByTestId('more-band', {includeHiddenElements: true})).toBeTruthy();
+  act(() => {
+    fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {x: 0, y: 300}, contentSize: {width: 360, height: 700}, layoutMeasurement: {width: 360, height: 400}}});
+  });
+  expect(screen.queryByTestId('more-band', {includeHiddenElements: true})).toBeNull();
+});
+
+test('M1: 응원 시트를 닫으면 화면 읽기 포커스가 \'응원 보내기\'로 돌아간다', async () => {
+  await openSheet();
+  const spy = jest.spyOn(RN.AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+  jest.useFakeTimers();
+  try {
+    await act(async () => fireEvent.press(screen.getByRole('button', {name: '닫기'})));
+    act(() => jest.advanceTimersByTime(300));
+    // 시트가 받은 returnFocusRef 가 '응원 보내기' 누름 영역에 붙어 있고, 닫힌 뒤 그곳으로 포커스
+    const ref = screen.UNSAFE_getByType(Sheet).props.returnFocusRef as {current: unknown};
+    expect(ref.current).toBeTruthy();
+    const cheer = screen.getByRole('button', {name: '응원 보내기'});
+    expect((ref.current as {props?: {accessibilityLabel?: string}}).props?.accessibilityLabel ?? cheer.props.accessibilityLabel).toBe('응원 보내기');
+    expect(spy.mock.calls.some(c => c[1] === 'focus' && c[0] === ref.current)).toBe(true);
+  } finally {
+    jest.useRealTimers();
+  }
 });

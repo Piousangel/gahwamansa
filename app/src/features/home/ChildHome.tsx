@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -45,6 +45,7 @@ export function ChildHome() {
   const {api} = useSession();
   const {info, error, loading, load} = useChildSummary();
   const [sheet, setSheet] = useState(false);
+  const cheerButton = useRef<React.ComponentRef<typeof import('react-native').Pressable>>(null); // 시트가 닫히면 화면 읽기 포커스를 이 버튼으로(PR #93 M1)
   const [making, setMaking] = useState(false);
   const {show} = useToast();
   const {send, sending} = useSendCheer(api, load);
@@ -100,7 +101,7 @@ export function ChildHome() {
     !info ? (
       <BigButton label={c.cheer.button} disabled disabledReason={h.loading_reason} onPress={() => {}} />
     ) : reachable.length ? (
-      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} />
+      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} buttonRef={cheerButton} />
     ) : undefined;
 
   return (
@@ -130,7 +131,7 @@ export function ChildHome() {
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
       <AudienceProvider value="child">
-        <Sheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} sub={c.cheer.hint} testID="sheet">
+        <Sheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
           <Choice
             mode="action"
             testID="cheer"

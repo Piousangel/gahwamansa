@@ -24,7 +24,13 @@ tags:
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: cheer-sheet
-- scrollUntilVisible:
-    element: '오늘도 편안한 하루 보내세요'
-    direction: DOWN
+# 실제로 끝까지 내린다(PR #93 L5: scrollUntilVisible 은 줄 일부가 보이면 움직이지 않음). 시트 안에서 위로 두 번 밀기
+- swipe:
+    start: 50%, 85%
+    end: 50%, 40%
+- swipe:
+    start: 50%, 85%
+    end: 50%, 40%
+- waitForAnimationToEnd
+- assertVisible: '오늘도 편안한 하루 보내세요'
 - takeScreenshot: cheer-sheet-scrolled
