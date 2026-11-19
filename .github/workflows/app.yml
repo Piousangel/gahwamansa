@@ -30,6 +30,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 재발 방지(11-20, #133 사고: PR 이 main 의 파일을 지운 채 병합됨). 막지 않고 지운 파일 목록만 경고·요약으로 보인다.
+  # 한계: 이 워크플로의 paths 필터 안 파일이 바뀐 PR 에서만 돈다(문서만 지운 PR 은 server.yml·이 잡 모두 안 돈다).
+  deleted-files:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # base 와 head 의 갈림점을 찾는다
+      - name: main 에서 지운 파일(경고만)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          deleted="$(git diff --name-only --diff-filter=D "$BASE_SHA...$HEAD_SHA")"
+          count=$(printf '%s' "$deleted" | grep -c . || true)
+          {
+            echo "### main 에서 지운 파일: ${count}개"
+            if [ "$count" -gt 0 ]; then
+              echo 'PR 범위가 맞는지 확인하세요(의도한 삭제면 PR 본문에 이유를 적는다).'
+              echo '```'
+              printf '%s\n' "$deleted" | head -200
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -gt 0 ]; then
+            echo "::warning title=main 파일 삭제 ${count}개::$(printf '%s' "$deleted" | head -20 | tr '\n' ' ')"
+            printf '%s\n' "$deleted"
+          fi
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
