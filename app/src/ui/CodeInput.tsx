@@ -89,7 +89,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
       ))}
       {gap(4)}
       <View testID="key-row-4" onLayout={onRowLayout ? e => onRowLayout(4, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
-        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} lines={2} />
+        <Key h={keyHeight} label="모두 지움" a11y="모두 지움" onPress={onClear} textSize={26} lines={2} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
         <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
       </View>
