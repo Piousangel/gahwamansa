@@ -204,7 +204,7 @@ describe('코스 홈 v4', () => {
     expect(screen.queryByRole('button', {name: /낱말 쓰기/})).toBeNull();
     expect(screen.queryByRole('button', {name: '오늘 코스 다시 보기'})).toBeNull();
     await act(async () => fireEvent.press(row));
-    await waitFor(() => screen.getByRole('button', {name: '돌아가기'})); // 보기 전용 P4
+    await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'})); // 보기 전용 P4(Dock 돌아가기 = copy.review.back)
   });
 
   test('동의 거부: 날짜 아래 한 줄 띠 "고른 답은 저장되지 않아요" + "다시 정하기"(설정으로)', async () => {
