@@ -44,12 +44,16 @@ function groupA11y(code: string): string {
 }
 
 // 약관 한 줄(11-1 #1). 감사 M7: 두 낱말은 링크 모양(주소가 정해지면, ⑥a 방침 호스팅)
-function LegalLine() {
-  const {open, offline} = useLegalOpen(); // 앱 안 웹 화면(재확인 3 M5), 안 닿으면 Banner(재확인 4 M7, 앱 정보 행과 같은 모양)
+// legal 을 넘기면(번호 화면) 확인 중 줄·오프라인 Banner 는 호출부가 본문에 둔다(재확인 6 L27: 하단 고정을 키워 키패드 판정을 흔들지 않게)
+function LegalLine({legal: given}: {legal?: ReturnType<typeof useLegalOpen>}) {
+  const own = useLegalOpen(); // 앱 안 웹 화면(재확인 3 M5), 안 닿으면 Banner(재확인 4 M7, 앱 정보 행과 같은 모양)
+  const legal = given ?? own;
   return (
     <>
-      <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} onOpen={open} />
-      {offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
+      <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} onOpen={legal.open} />
+      {/* 재확인 6 L23: 연결 확인(최대 4초) 동안 진행 한 줄 */}
+      {!given && legal.busy ? <Text20 testID="legal-busy" style={styles.legal} accessibilityLiveRegion="polite">{copy.app.loading}</Text20> : null}
+      {!given && legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
     </>
   );
 }
@@ -132,6 +136,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const baseKey = level === picked.level ? picked.keyH : keyFor(level, input);
   const keyH = level >= 4 ? KEY_MIN : a?.key && a.key.level === level ? a.key.k : baseKey;
   const [help, setHelp] = useState(false);
+  const legal = useLegalOpen(); // 약관 줄 링크(앱 안 웹 화면), 오프라인 Banner 는 본문에(L27)
   const legalInBody = level >= 2;
   const noDock = level >= 3;
   const overflow = level >= 4;
@@ -149,13 +154,15 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   // 재확인 5 M9: 넘침은 묶음 컨테이너 높이(minHeight·flexGrow 로 늘어난 값)가 아니라 **내용 높이**로 잰다.
   //   내용 아래 끝 = 키패드 영역의 위치 y(제목·안심 줄 높이로만 정해짐) + 키패드 실제 높이(키 높이로만 정해짐).
   //   둘 다 창 높이·어림 minHeight·하단 고정(오프라인 Banner 등)과 무관하므로, 창이 바뀌어도 옛 컨테이너 높이로 잘못 판정하지 않는다.
-  const [areaAt, setAreaAt] = useState<{y: number; level: number; for: string} | null>(null);
+  // 재확인 6 L26: 영역 y 는 제목 크기(0단계 28 / 1단계 이상 22)·묶음 간격(4단계 12)에만 달려 있다 → 단계 대신 그 '모양'을 기록한다
+  const areaShape = level === 0 ? 0 : level >= 4 ? 2 : 1;
+  const [areaAt, setAreaAt] = useState<{y: number; shape: number; for: string} | null>(null);
   const [pad, setPad] = useState<{h: number; keyH: number; for: string} | null>(null);
   useEffect(() => {
     if (overflow || viewH === 0 || !areaAt || !pad) {
       return;
     }
-    if (areaAt.for !== inputKey || areaAt.level !== level || pad.for !== inputKey || pad.keyH !== keyH) {
+    if (areaAt.for !== inputKey || areaAt.shape !== areaShape || pad.for !== inputKey || pad.keyH !== keyH) {
       return; // 지금 판정 입력·단계·키 높이로 그린 내용일 때만
     }
     const expected = scroll ? firstH : fillExpected; // 첫 화면 묶음이 차지할 수 있는 높이(이 구성의 창 기준)
@@ -169,15 +176,57 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     } else {
       setAdj({for: inputKey, bumps: Math.min(2, bumps + 1)});
     }
-  }, [areaAt, pad, level, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
+  }, [areaAt, pad, level, areaShape, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
   const onArea = (e: LayoutChangeEvent) => {
     const y = e.nativeEvent.layout.y;
-    setAreaAt(cur => (cur && cur.y === y && cur.level === level && cur.for === inputKey ? cur : {y, level, for: inputKey}));
+    setAreaAt(cur => (cur && cur.y === y && cur.shape === areaShape && cur.for === inputKey ? cur : {y, shape: areaShape, for: inputKey}));
   };
   const onPad = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
     setPad(v => (v && v.h === h && v.keyH === keyH && v.for === inputKey ? v : {h, keyH, for: inputKey}));
   };
+
+  // 4단계 접힘 경계(리드 결정 L25·디자인 #54, RULES-V4 R-15 '모든 배율에서 접힘 경계는 줄·요소 경계'):
+  //   첫 화면 끝(스크롤 창 아래 끝)이 키 줄을 반쯤 가르면, 그 줄 앞에 여백을 넣어 줄 전체를 접힘 밖으로 민다. 키 높이 64 는 그대로.
+  //   접힘 바로 위 '더 있음' 흐림(28) 구간에는 키가 걸치지 않게 한다. 줄 위치는 여백을 뺀 값으로 기록해 여백이 판정을 흔들지 않는다.
+  const [rows, setRows] = useState<{for: string; key: number; y: Record<number, {y: number; h: number}>} | null>(null);
+  const [fold, setFold] = useState<{for: string; before: number; h: number} | null>(null);
+  const foldGap = overflow && fold?.for === inputKey ? {before: fold.before, h: fold.h} : undefined;
+  const onRowLayout = (row: number, y: number, h: number) => {
+    const base = y - (foldGap && row >= foldGap.before ? foldGap.h : 0);
+    setRows(cur => {
+      const same = cur && cur.for === inputKey && cur.key === keyH;
+      const prev = same ? cur.y[row] : undefined;
+      if (prev && prev.y === base && prev.h === h) {
+        return cur;
+      }
+      return {for: inputKey, key: keyH, y: {...(same ? cur.y : {}), [row]: {y: base, h}}};
+    });
+  };
+  useEffect(() => {
+    if (!overflow || viewH === 0 || !areaAt || areaAt.for !== inputKey || areaAt.shape !== areaShape || !rows || rows.for !== inputKey || rows.key !== keyH) {
+      return;
+    }
+    const top = FIRST_PAD + areaAt.y; // 키패드 위 끝(본문 안 y)
+    const foldAt = viewH; // 첫 화면 끝 = 스크롤 창 아래 끝(제스처 막대는 투명해 그 밑 내용도 보인다 — 에뮬레이터 실측 11-19)
+    const fadeAt = foldAt - SCREEN_FADE_H; // '더 있음' 흐림 시작
+    let next: {before: number; h: number} | null = null;
+    for (const r of [1, 2, 3, 4]) {
+      const at = rows.y[r];
+      if (!at) {
+        return; // 네 줄을 다 잰 뒤에
+      }
+      const rowTop = top + at.y;
+      if (rowTop + at.h > fadeAt) {
+        next = rowTop >= foldAt ? null : {before: r, h: Math.ceil(foldAt - rowTop)}; // 반쯤 걸린 줄 → 접힘 밖으로
+        break;
+      }
+    }
+    const cur = fold?.for === inputKey ? fold : null;
+    if ((next?.before ?? 0) !== (cur?.before ?? 0) || Math.abs((next?.h ?? 0) - (cur?.h ?? 0)) > 1) {
+      setFold(next ? {for: inputKey, ...next} : null);
+    }
+  }, [overflow, viewH, areaAt, areaShape, rows, keyH, inputKey, fold]);
 
   const ok = state.kind === 'ok';
   const groupRef = useRef<React.ComponentRef<typeof View>>(null);
@@ -253,7 +302,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         noDock ? undefined : (
           <>
             {links}
-            {legalInBody ? null : <LegalLine />}
+            {legalInBody ? null : <LegalLine legal={legal} />}
           </>
         )
       }>
@@ -270,7 +319,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
           {/* 키패드 내용 높이(늘어나지 않는 감싸개)로 넘침을 잰다(재확인 5 M9) */}
           <View testID="keypad-content" onLayout={onPad}>
-            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
+            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} foldGap={foldGap} onRowLayout={overflow ? onRowLayout : undefined} />
           </View>
         </View>
       </View>
@@ -283,7 +332,14 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
           {copy.connect.no_code_help}
         </Text20>
       ) : null}
-      {legalInBody ? <LegalLine /> : null}
+      {legalInBody ? <LegalLine legal={legal} /> : null}
+      {/* 재확인 6 L27·L23: 약관 링크 확인 중 줄·오프라인 Banner 는 늘 본문(하단 고정을 키우지 않아 키패드 판정을 흔들지 않음) */}
+      {legal.busy ? <Text20 testID="legal-busy" style={styles.legal} accessibilityLiveRegion="polite">{copy.app.loading}</Text20> : null}
+      {legal.offline ? (
+        <View onLayout={e => scrollRef.current?.showRange(e.nativeEvent.layout.y, e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
+          <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} />
+        </View>
+      ) : null}
     </Screen>
   );
 }
