@@ -7,6 +7,10 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {press} from '../testUtils/flow';
+import {warmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
+beforeAll(warmAppRoot);
 
 async function loginAsChild(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} />);

@@ -13,7 +13,7 @@ const c = t.color as Record<string, string>;
 const child = (ui: React.ReactElement) => <AudienceProvider value="child">{ui}</AudienceProvider>;
 const noop = () => {};
 type Spec = {size: number; lineHeight: number; tone: string};
-const spec = (role: keyof typeof t.type, a: Audience) => t.type[role][a] as unknown as Spec;
+const spec = (role: keyof typeof t.type, a: Audience) => (t.type[role] as unknown as Record<Audience, Spec>)[a];
 /** 눌리는 요소의 스타일(Pressable 은 함수 style → 렌더된 View 의 style) */
 const pressStyle = (id: string) => flat(screen.getByTestId(id).props.style);
 

@@ -1,13 +1,13 @@
 import React from 'react';
 import {BackHandler, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
+import {ds, roleText} from '../src/ui/ds/roles';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {StepRow} from '../src/ui/StepRow';
 import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
 import {press, toHomeConsented, confirmDeleteAll} from '../testUtils/flow';
-import {color} from '../src/ui/tokens';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
 
 // P3 코스 홈 v4(동결 시안 P3_course_home_v4): 리듬 규칙(D)·완료 상태 다시 보기(B)·제목 없음·미연결 띠.
@@ -139,7 +139,8 @@ describe('코스 홈 v4', () => {
     await press('오늘 코스 다시 보기');
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
     expect(screen.getByText('마을 입구 나무')).toBeTruthy();
-    expect(screen.queryByText('1 / 3')).toBeNull();
+    expect(screen.getByText('사진 보기')).toBeTruthy(); // 보기 전용은 단계 표시 없이 이름만
+    expect(screen.queryByText(/1 \/ 3/)).toBeNull();
     expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
     fireEvent.press(screen.getByText('돌아가기'));
     await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요'));
@@ -187,9 +188,9 @@ describe('코스 홈 v4', () => {
     await home({completedSteps: ['photo', 'question', 'hangul']});
     await press('사진 보기, 했어요');
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
-    const back = screen.getAllByRole('button', {name: '오늘 코스로 돌아가기'});
-    expect(back.length).toBe(2); // 상단 바·하단 '돌아가기'(copy 11-1 #3: 읽기 같음)
-    fireEvent.press(back[0]);
+    // v4 BackLink '오늘 코스로'(보이는 글 = 읽기). 하단 '돌아가기'는 힌트로 목적지를 읽는다(copy 11-1 #3)
+    expect(screen.getByRole('button', {name: '돌아가기'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
+    fireEvent.press(screen.getByRole('link', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
   });
 
@@ -302,7 +303,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
   }
   afterEach(() => jest.restoreAllMocks());
 
-  test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(화면에 행동 하나)', async () => {
+  test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(P4 는 v4 시안대로 보조 읽어 주세요가 함께)', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'A'});
     for (const [row, label] of [
       ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
@@ -311,7 +312,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
-      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button');
+      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /돌아가기/});
       expect(StyleSheet.flatten(dockButton.props.style).minHeight).toBe(72); // 주 버튼 높이
       fireEvent.press(dockButton);
       await waitFor(() => screen.getByTestId('date-line'));
@@ -342,16 +343,16 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     expect(cell.maxWidth).toBeLessThanOrEqual(96);
   });
 
-  test('N3: P5 보기 전용 — 질문 28, 선택 칸 최소 높이 100, 고른 칸 체크 아이콘, 이름표 doneInk', async () => {
+  test('N3: P5 보기 전용(v4) — 질문 title, 선택 칸 최소 높이 96, 고른 칸 체크 아이콘, 이름표 doneInk', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'B'});
     await press('둘 중 고르기, 했어요');
     await waitFor(() => screen.getByLabelText('고른 답, 가을'));
-    expect(StyleSheet.flatten(screen.getByText('더 좋아하는 계절은요?').props.style).fontSize).toBe(28);
+    expect(StyleSheet.flatten(screen.getByText('더 좋아하는 계절은요?').props.style).fontSize).toBe(roleText('title', 'elder').style.fontSize);
     const chosen = screen.getByLabelText('고른 답, 가을');
-    expect(StyleSheet.flatten(chosen.props.style).minHeight).toBe(100);
+    expect(StyleSheet.flatten(chosen.props.style).minHeight).toBe(96);
     expect(within(chosen).getByTestId('icon-check', {includeHiddenElements: true})).toBeTruthy();
-    expect(StyleSheet.flatten(within(chosen).getByText('고른 답', {includeHiddenElements: true}).props.style).color).toBe(color.doneInk);
-    expect(StyleSheet.flatten(screen.getByLabelText('봄').props.style).minHeight).toBe(100);
+    expect(StyleSheet.flatten(within(chosen).getByText('고른 답', {includeHiddenElements: true}).props.style).color).toBe(ds.color.doneInk);
+    expect(StyleSheet.flatten(screen.getByLabelText('봄').props.style).minHeight).toBe(96);
   });
 });
 

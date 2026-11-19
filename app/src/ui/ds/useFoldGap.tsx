@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {LayoutChangeEvent, ViewStyle} from 'react-native';
+import {foldPush} from './foldPush';
 
 /**
  * 접힘 경계 맞춤(RULES-V4 R-15 '모든 배율에서 접힘 경계는 줄·요소 경계'): 첫 화면 끝(스크롤 창 아래 끝)이
@@ -7,6 +8,7 @@ import type {LayoutChangeEvent, ViewStyle} from 'react-native';
  *
  * 쓰는 법: 묶음 View 는 본문(스크롤 내용)의 바로 아래 자식이어야 한다(onBlock 의 y = 스크롤 내용 안 위치).
  *   <Screen onViewport={fold.onViewport}> … <View onLayout={fold.onBlock} style={{gap}}> {items.map((x, i) => <View onLayout={fold.onItem(i)} style={fold.gapStyle(i)}/>)} </View>
+ * 계산은 ui/ds/foldPush(어르신 FoldStack 과 공용, PR #91 리뷰 L1) — 경계 동작은 그 주석과 foldPush.test.ts.
  * 요소 위치는 높이만으로 쌓아 계산한다(묶음 위 끝 + 앞 요소 높이 합 + 사이 간격). 간격(marginTop)은 높이를 바꾸지 않아 판정을 흔들지 않는다.
  * (onLayout y 에서 간격을 빼 기록하는 방식은 측정 시점과 간격 상태가 어긋나 켜졌다 꺼졌다 했다 — C3 에뮬레이터 실측 11-19)
  * from: 이 번호부터만 민다(앞 요소는 첫 화면에 남기는 것이 시안. 예: C4 빈 상태의 안내 한 줄)
@@ -25,26 +27,13 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
     if (!viewH || blockY === null) {
       return;
     }
-    let next: {before: number; h: number} | null = null;
-    let top = blockY;
-    let prevTop = blockY;
-    for (let i = 0; i < count; i++) {
-      const h = hs[i];
-      if (h === undefined) {
-        return; // 다 잰 뒤에
-      }
-      if (top >= Math.max(viewH, pushAt)) {
-        break; // 이미 접힘 밖(겹쳐 그리는 흐림이 있으면 그 아래 끝까지 — 흐림 속에서 시작하는 요소도 민다, PR #87 재확인 L6)
-      }
-      if (top + h > viewH && i >= from) {
-        const withPrev = i - 1 >= from && glue.includes(i - 1);
-        const to = Math.max(viewH, pushAt);
-        next = withPrev ? {before: i - 1, h: Math.ceil(to - prevTop)} : {before: i, h: Math.ceil(to - top)}; // 걸침 → 그 위에 간격(제목이면 함께)
-        break;
-      }
-      prevTop = top;
-      top += h + between;
+    const heights = Array.from({length: count}, (_, i) => hs[i]);
+    if (heights.some(h => h === undefined)) {
+      return; // 다 잰 뒤에
     }
+    // 계산은 foldPush 하나(어르신 FoldStack 과 같은 것, PR #91 리뷰 L1). 묶음 첫 요소도 민다(allowFirst = 묶음째)
+    const found = foldPush(viewH, blockY, heights, between, {allowFirst: true, from, glue, pushTo: pushAt});
+    const next = found ? {before: found.index, h: found.space} : null;
     if ((next?.before ?? -1) !== (gap?.before ?? -1) || Math.abs((next?.h ?? 0) - (gap?.h ?? 0)) > 1) {
       setGap(next);
     }

@@ -69,7 +69,10 @@ describe('대비(허용 목록 = 화이트리스트)', () => {
     const missing: string[] = [];
     for (const [name, role] of Object.entries(t.type)) {
       for (const a of ['elder', 'child'] as const) {
-        const spec = role[a] as {tone?: string; primary?: {tone: string}; secondary?: {tone: string}};
+        const spec = (role as Record<string, unknown>)[a] as {tone?: string; primary?: {tone: string}; secondary?: {tone: string}} | undefined;
+        if (!spec) {
+          continue; // 자녀 전용 역할(answer·answerRow)
+        }
         const tones = spec.tone ? [spec.tone] : [spec.primary!.tone, spec.secondary!.tone];
         for (const tone of tones) {
           const bgs = tone === 'onAction' ? ['action'] : ['paper', 'card'];
@@ -91,7 +94,7 @@ describe('대비(허용 목록 = 화이트리스트)', () => {
 
 type Spec = {size: number; lineHeight: number; tone: string};
 const one = (role: keyof typeof t.type, a: Audience): Spec => {
-  const s = t.type[role][a] as Spec | {primary: Spec};
+  const s = (t.type[role] as unknown as Record<Audience, Spec | {primary: Spec}>)[a];
   return 'primary' in s ? s.primary : s;
 };
 
@@ -126,7 +129,7 @@ describe('글자 역할', () => {
   });
   test('확대 상한은 역할마다 1.5 또는 2.0, 고정 영역 역할(title·button·backLink·numeral)은 1.5', () => {
     for (const r of Object.values(t.type)) {
-      expect([t.fontScaleCap.fixed, t.fontScaleCap.body]).toContain(r.maxFontScale);
+      expect([t.fontScaleCap.fixed, t.fontScaleCap.body, t.fontScaleCap.answer]).toContain(r.maxFontScale);
     }
     for (const r of ['display', 'title', 'button', 'backLink', 'numeral'] as const) {
       expect(t.type[r].maxFontScale).toBe(1.5);
@@ -135,7 +138,10 @@ describe('글자 역할', () => {
   test('글자 하한(어르신 20·자녀 16), 줄높이 ≥ 글자', () => {
     for (const [name, r] of Object.entries(t.type)) {
       for (const a of ['elder', 'child'] as const) {
-        const s = r[a] as Spec | Record<string, Spec>;
+        const s = (r as Record<string, unknown>)[a] as Spec | Record<string, Spec> | undefined;
+        if (!s) {
+          continue; // 한쪽 청중 전용 역할(answer·answerRow = 자녀, R-21)
+        }
         const specs = 'size' in s ? [s as Spec] : Object.values(s as Record<string, Spec>);
         for (const sp of specs) {
           expect([name, a, sp.size >= t.minFont[a]]).toEqual([name, a, true]);
@@ -143,6 +149,26 @@ describe('글자 역할', () => {
         }
       }
     }
+  });
+});
+
+describe('자녀 어르신 답 역할(R-21)', () => {
+  test('answer 40/52, answerRow 26/36 · 자녀 전용 · Jua 강조 · inkTitle', () => {
+    const ans = t.type.answer as unknown as {child: Spec; elder?: Spec; weight: number; maxFontScale: number};
+    const row = t.type.answerRow as unknown as {child: Spec; elder?: Spec; weight: number; maxFontScale: number};
+    expect(ans.child).toMatchObject({size: 40, lineHeight: 52});
+    expect(row.child).toMatchObject({size: 26, lineHeight: 36});
+    expect(ans.elder).toBeUndefined();
+    expect(row.elder).toBeUndefined();
+    expect(ans.weight).toBe(400);
+    expect(row.weight).toBe(400);
+  });
+  test('확대 상한: answer 1.3(200%에서 40→52), answerRow 1.5, 호칭 머리글(sub)보다 크다', () => {
+    const ans = t.type.answer as unknown as {maxFontScale: number};
+    expect(ans.maxFontScale).toBe(1.3);
+    expect(t.fontScaleCap.answer).toBe(1.3);
+    const row = t.type.answerRow as unknown as {child: Spec};
+    expect(row.child.size).toBeGreaterThan(one('sub', 'child').size);
   });
 });
 

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {AppState, Pressable, StyleSheet, Switch, View} from 'react-native';
-import {Text} from '../../ui/ds';
+import {SWITCH_COLORS, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useToast} from '../../ui/Toast';
 import {copy} from '../../copy/copy';
@@ -107,7 +107,7 @@ export function FamilyPushRow({api}: {api: Api}) {
         </Text>
       </View>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Switch value={enabled} onValueChange={toggle} disabled={busy} trackColor={{false: ds.color.lineSoft, true: ds.color.doneInk}} thumbColor={ds.color.card} />
+        <Switch value={enabled} onValueChange={toggle} disabled={busy} {...SWITCH_COLORS} />
       </View>
     </Pressable>
   );

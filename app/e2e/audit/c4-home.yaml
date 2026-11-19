@@ -1,0 +1,26 @@
+# C4 홈 회귀 캡처(부품 ui/ds, 배치는 v3 그대로). 연결된 자녀 홈: 연결 끊김 배너 + 답 카드.
+# 전제: fake API 시작 상태를 개발 중에만 잠깐 바꿔 실행(커밋하지 않음 — c5-past.yaml 머리 주석). 예:
+#   {who: 'child', childFamily: true, childLinked: true, consented: true, parents: [{title: '엄마', latest: {...}, starter: '...'}, {title: '아빠', connected: false}]}
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c4-home.yaml
+appId: com.bumojasik.app.staging
+name: C4 홈 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '.*최근 답.*'
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: c4h-first
+- swipe:
+    start: 50%, 75%
+    end: 50%, 25%
+- waitForAnimationToEnd
+- takeScreenshot: c4h-scrolled

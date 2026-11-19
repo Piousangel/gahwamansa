@@ -9,7 +9,8 @@ import {Screen} from '../src/ui/Screen';
 import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
-import {press} from '../testUtils/flow';
+import {press, pressBackLink} from '../testUtils/flow';
+import {P4_LAYOUT} from '../src/features/course/PhotoStep';
 
 afterEach(() => {
   jest.useRealTimers();
@@ -78,25 +79,25 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('B4: 사진 단계는 사진 높이를 화면 높이의 28% 이하로 줄여 회상 질문이 더 많이 보이게 한다', async () => {
+test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 날)·80(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
-  const w = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).maxWidth;
-  const winH = require('react-native').Dimensions.get('window').height;
-  expect(((w - 28) * 236) / 272).toBeLessThanOrEqual(winH * 0.28 + 0.5); // 사진 폭 = 틀 - 안쪽 14x2, 비율 272:236
+  const {fontScale} = require('react-native').Dimensions.get('window');
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? P4_LAYOUT.photo.large : P4_LAYOUT.photo.withCaption); // fake 콘텐츠는 설명 있음
 });
 
-test('단계 화면: 제목 줄에 "n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
+test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
   await previewHome();
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
-  expect(screen.getByText('1 / 3')).toBeTruthy();
+  const {fontScale} = require('react-native').Dimensions.get('window');
+  expect(screen.getByText(fontScale >= 1.5 ? '1 / 3' : '사진 보기 · 1 / 3')).toBeTruthy(); // v4 단계 제목 한 줄(큰 글자는 '1 / 3'만, #95)
   expect(screen.getByRole('header', {name: '사진 보기, 3단계 중 1단계'})).toBeTruthy();
-  await press('오늘 코스로 돌아가기');
+  await pressBackLink();
   await waitFor(() => screen.getByTestId('date-line'));
 });
 
