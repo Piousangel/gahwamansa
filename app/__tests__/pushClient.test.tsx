@@ -262,7 +262,7 @@ describe('앱 조립(PushHost)', () => {
     expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
   });
 
-  test('PR #65 L3: 오프라인으로 확인을 못 하면 앱이 앞으로 돌아올 때(active) 다시 확인해 띄운다, 답한 뒤에는 다시 안 띄움', async () => {
+  test('PR #65 L3: 오프라인으로 확인을 못 하면 앱이 앞으로 돌아와 오늘 상태를 새로 받은 뒤 다시 확인해 띄운다, 답한 뒤에는 서버에도 안 묻는다', async () => {
     const handlers: ((s: string) => void)[] = [];
     jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
       if (type === 'change') {
@@ -288,13 +288,39 @@ describe('앱 조립(PushHost)', () => {
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
     await press(copy.push.permission.no);
     await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
+    // 답한 뒤 앞으로 돌아와도 다시 띄우지 않고, 서버에도 묻지 않는다(이 계정 답 먼저 확인)
     const calls = my.mock.calls.length;
+    const sync = jest.spyOn(api, 'getTodayContent');
     await act(async () => {
       handlers.forEach(h => h('active'));
     });
-    await waitFor(() => expect(my.mock.calls.length).toBeGreaterThan(calls));
+    await waitFor(() => expect(sync).toHaveBeenCalled());
     await act(async () => {});
     expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(my.mock.calls.length).toBe(calls);
+  });
+
+  test('PR #65 리뷰: 자정을 넘겨 돌아오면 새로 받은 오늘 상태(아직 안 마침)로 판단해 N1 을 띄우지 않는다', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(my).toHaveBeenCalledTimes(1), {timeout: 8000});
+    api.__dev.nextDay(); // 다음 날: 오늘 단계 비어 있음
+    const sync = jest.spyOn(api, 'getTodayContent');
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(my).toHaveBeenCalledTimes(1);
   });
 
   test('어르신 일일 알림 탭: push_opened{daily} + [P3, 사진 보기]', async () => {

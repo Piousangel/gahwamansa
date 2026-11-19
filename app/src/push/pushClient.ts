@@ -85,19 +85,30 @@ async function writeAnswer(store: KeyValueStore, key: string, v: string) {
 }
 
 /** 어르신 N1 을 띄울지. 서버가 이미 받는 중이거나, 이 계정·이 기기에서 이미 답했으면 띄우지 않는다 */
-export async function shouldPromptParent({api, store}: PushDeps): Promise<boolean> {
+export async function shouldPromptParent(deps: PushDeps): Promise<boolean> {
+  return (await parentPromptState(deps)) === 'ask';
+}
+
+/**
+ * N1 판정(PR #65 리뷰 L3): ask = 띄운다, skip = 이미 답함·받는 중·연결 전, retry = 확인 못 함(오프라인·계정 표식 없음 → 다음에 다시).
+ * 이 계정에서 이미 답했으면 서버에 묻지 않는다(앱이 앞으로 올 때마다 확인하므로 네트워크를 아낀다).
+ */
+export async function parentPromptState({api, store}: PushDeps): Promise<'ask' | 'skip' | 'retry'> {
+  const tag = await tagOf(api);
+  if (!tag) {
+    return 'retry';
+  }
+  if (await readAnswer(store, accountKey(PUSH_PROMPT_KEY, tag))) {
+    return 'skip';
+  }
   let enabled: boolean | null;
   try {
     enabled = (await api.myPushSettings()).enabled;
   } catch {
-    return false; // 오프라인이면 이번엔 묻지 않는다(다음 진입에 다시)
+    return 'retry';
   }
   // 이미 받는 중(재설치 등)·연결 전(프로필 없음: 받기 동의를 남길 수 없음)이면 묻지 않는다
-  if (enabled !== false) {
-    return false;
-  }
-  const tag = await tagOf(api);
-  return !!tag && !(await readAnswer(store, accountKey(PUSH_PROMPT_KEY, tag)));
+  return enabled === false ? 'ask' : 'skip';
 }
 
 /**
