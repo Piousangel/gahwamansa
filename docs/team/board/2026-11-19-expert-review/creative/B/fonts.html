@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>팻말 글꼴 비교</title>
+<style>
+  body { margin: 0; padding: 24px; background: #D9DDE2; font: 16px/1.5 -apple-system, 'Apple SD Gothic Neo', sans-serif; color: #111; }
+  h2 { margin: 22px 0 4px; font-size: 20px; }
+  h2:first-child { margin-top: 0; }
+  p { margin: 0 0 8px; font-size: 15px; }
+  .strip { display: flex; gap: 10px; }
+  img { width: 360px; height: 640px; display: block; background: #fff; }
+</style>
+</head>
+<body>
+<script>
+  const F = [
+    ['brush', '나눔손글씨 붓 (Nanum Brush Script) (채택)', 'NHN, SIL OFL 1.1, 완성형 밖 10자 중 10자, github.com/google/fonts/blob/main/ofl/nanumbrushscript/OFL.txt'],
+    ['eastsea', '동해 독도 (East Sea Dokdo)', 'YoonDesign, SIL OFL 1.1, 완성형 밖 10자 중 7자, github.com/google/fonts/blob/main/ofl/eastseadokdo/OFL.txt'],
+    ['dokdo', '독도 (Dokdo)', 'FONTRIX, SIL OFL 1.1, 완성형 밖 10자 중 0자, github.com/google/fonts/blob/main/ofl/dokdo/OFL.txt'],
+    ['bhs', '검은고딕 (Black Han Sans) (v1 기준)', 'Zess Type, SIL OFL 1.1, 완성형 밖 10자 중 6자, github.com/google/fonts/blob/main/ofl/blackhansans/OFL.txt'],
+  ];
+  for (const [k, name, lic] of F) {
+    document.body.insertAdjacentHTML('beforeend', `<h2>${name}</h2><p>${lic}</p><div class="strip">${['P7', 'H', 'C4'].map(s => `<img src="img/font-${k}-${s}.png" alt="${name} ${s}">`).join('')}</div>`);
+  }
+</script>
+</body>
+</html>
