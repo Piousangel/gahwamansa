@@ -2,7 +2,8 @@
 // 앱 생명주기: 처음 만들 때 bindAppLifecycle 로 '앱이 뒤로 가면 모두 멈춤'을 건다(리뷰 M1).
 import {AppState} from 'react-native';
 import {createAudio, type Audio, type Unsubscribe} from './audioCore';
-import {createTtsEngine, loadSfx} from './engines';
+import {createClipPlayer, createTtsEngine, loadSfx} from './engines';
+import {lookupClip} from './voiceClips';
 
 /** 앱이 뒤로 가거나(background) 잠깐 가려지면(inactive) 읽기·배경 음악을 멈춘다. 돌아와도 다시 틀지 않는다(useBgm). */
 export function bindAppLifecycle(a: Audio): Unsubscribe {
@@ -17,7 +18,7 @@ export function bindAppLifecycle(a: Audio): Unsubscribe {
 let instance: Audio | null = null;
 export function audio(): Audio {
   if (!instance) {
-    instance = createAudio({tts: createTtsEngine(), loadSfx});
+    instance = createAudio({tts: createTtsEngine(), clips: createClipPlayer(lookupClip), loadSfx});
     bindAppLifecycle(instance);
   }
   return instance;

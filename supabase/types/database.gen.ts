@@ -276,6 +276,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"first_answer_notices": {
+                  Row: {
+                    "child_id": string,"created_at": string,"family_id": string,"reason": string | null,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "child_id": string,"created_at"?: string,"family_id": string,"reason"?: string | null,"status": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "child_id"?: string,"created_at"?: string,"family_id"?: string,"reason"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "first_answer_notices_child_id_fkey"
+      columns: ["child_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "first_answer_notices_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invite_codes": {
                   Row: {
                     "code": string,"created_by": string,"disabled_at": string | null,"expires_at": string,"family_id": string,"id": string,"max_uses": number | null,"reusable": boolean,"target_profile_id": string | null,"used_at": string | null,"used_by": string | null
@@ -458,6 +484,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"server_flags": {
+                  Row: {
+                    "enabled": boolean,"name": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "enabled"?: boolean,"name": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "enabled"?: boolean,"name"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"terms_agreements": {
                   Row: {
                     "agreed_at": string,"id": number,"privacy_version": string,"role": string,"terms_version": string,"user_id": string
@@ -580,6 +620,9 @@ isOneToOne: false
 "delete_scope_preview":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"dev_reset_today":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "discard_anonymous_session":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -594,6 +637,9 @@ isOneToOne: false
                            },
 "family_child_summary":
 { Args: { "p_family": string,"p_parent": string }; Returns: Json
+                           },
+"first_answer_backfill":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "get_my_cheers":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -729,6 +775,12 @@ isOneToOne: false
                            },
 "send_cheer":
 { Args: { "p_key": string,"p_parent": string }; Returns: Json
+                           },
+"server_flag":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
+"server_flag_seed_local":
+{ Args: { "p_name": string }; Returns: boolean
                            },
 "set_parent_title":
 { Args: { "p_title": string }; Returns: Json

@@ -97,7 +97,7 @@ test('연결 전 기기(설정 값 없음)는 알림 행이 없다', async () =>
   expect(screen.queryByRole('switch', {name: '알림'})).toBeNull();
 });
 
-// l2-appinfo 리뷰 M1: Android 13+ 에서 N1 '괜찮아요'로 답한 어르신(권한 = 묻기 전 'denied')도 P13 에서 켤 수 있다.
+// l2-appinfo 리뷰 M1: Android 13+ 에서 N1 '안 받을게요'로 답한 어르신(권한 = 묻기 전 'denied')도 P13 에서 켤 수 있다.
 describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설정에서만) 분리', () => {
   const RN = require('react-native');
   const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
@@ -109,7 +109,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     setPlatform(orig.OS, orig.Version);
     setTokenSourceForTest(null);
   });
-  // N1 → 괜찮아요(시스템 창 없음) → 설정
+  // N1 → 안 받을게요(시스템 창 없음) → 설정
   let n = 0;
   async function declinedThenSettings() {
     setPlatform('android', 34);

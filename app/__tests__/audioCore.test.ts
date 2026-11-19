@@ -4,7 +4,7 @@ import {stampSoundAllowed} from '../src/features/course/stampFeedback';
 
 // 공용 오디오 모듈(AU-03, dev-audio-spike 5절): 화면은 useReadAloud·useBgm, 효과음은 sfx(이름) + sfxAllowed 로.
 // 정책: 읽어 주기는 사용자가 직접 누른 소리라 무음·진동 모드에서도 허용, 화면 읽기 켜짐이면 막음(R16).
-//       효과음은 설정 켜짐 + 벨소리 모드 + 읽어 주기 중 아님. 읽어 주는 동안 배경 음악 10%(덕킹).
+//       효과음은 설정 켜짐 + 벨소리 모드 + 읽어 주기 중 아님. 읽어 주는 동안 배경 음악 5%(덕킹).
 
 function fakeTts(over: Partial<TtsEngine> = {}) {
   const handlers: {start?: () => void; done?: () => void} = {};
@@ -134,7 +134,7 @@ describe('정지(리뷰 M1·L2)', () => {
 });
 
 describe('배경 음악 덕킹(bgm)', () => {
-  test('읽어 주는 동안 10%, 끝나면 원래 크기', async () => {
+  test('읽어 주는 동안 5%, 끝나면 원래 크기', async () => {
     const {audio, tts} = setup();
     const track = fakeSound();
     const bgm = audio.bgm(track);
@@ -143,7 +143,7 @@ describe('배경 음악 덕킹(bgm)', () => {
     expect(track.setVolume).toHaveBeenLastCalledWith(1);
     await audio.speak('a', {screenReader: false});
     expect(track.setVolume).toHaveBeenLastCalledWith(BGM_DUCK_VOLUME);
-    expect(BGM_DUCK_VOLUME).toBe(0.1);
+    expect(BGM_DUCK_VOLUME).toBe(0.05); // -26dB(V25)
     tts!.handlers.done?.();
     expect(track.setVolume).toHaveBeenLastCalledWith(1);
     bgm.stop();

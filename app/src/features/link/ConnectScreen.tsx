@@ -146,13 +146,20 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const fillExpected = viewH > 0 ? viewH - FIRST_PAD - BODY_BOTTOM : 0;
   const onViewport = (h: number) => setView(v => (v && v.h === h && v.dock === dockConfig && v.for === inputKey ? v : {h, dock: dockConfig, for: inputKey}));
 
-  const [block, setBlock] = useState<{h: number; level: number; keyH: number; for: string} | null>(null);
+  // 재확인 5 M9: 넘침은 묶음 컨테이너 높이(minHeight·flexGrow 로 늘어난 값)가 아니라 **내용 높이**로 잰다.
+  //   내용 아래 끝 = 키패드 영역의 위치 y(제목·안심 줄 높이로만 정해짐) + 키패드 실제 높이(키 높이로만 정해짐).
+  //   둘 다 창 높이·어림 minHeight·하단 고정(오프라인 Banner 등)과 무관하므로, 창이 바뀌어도 옛 컨테이너 높이로 잘못 판정하지 않는다.
+  const [areaAt, setAreaAt] = useState<{y: number; level: number; for: string} | null>(null);
+  const [pad, setPad] = useState<{h: number; keyH: number; for: string} | null>(null);
   useEffect(() => {
-    if (overflow || !block || block.for !== inputKey || block.level !== level || block.keyH !== keyH || viewH === 0) {
-      return; // 지금 단계·지금 키 높이로 그린 묶음을 이 구성의 창 높이와 비교할 수 있을 때만
+    if (overflow || viewH === 0 || !areaAt || !pad) {
+      return;
     }
-    const expected = scroll ? firstH : fillExpected;
-    const over = block.h - expected;
+    if (areaAt.for !== inputKey || areaAt.level !== level || pad.for !== inputKey || pad.keyH !== keyH) {
+      return; // 지금 판정 입력·단계·키 높이로 그린 내용일 때만
+    }
+    const expected = scroll ? firstH : fillExpected; // 첫 화면 묶음이 차지할 수 있는 높이(이 구성의 창 기준)
+    const over = areaAt.y + pad.h - expected;
     if (over <= 1) {
       return;
     }
@@ -162,10 +169,14 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     } else {
       setAdj({for: inputKey, bumps: Math.min(2, bumps + 1)});
     }
-  }, [block, level, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
-  const onBlock = (e: LayoutChangeEvent) => {
+  }, [areaAt, pad, level, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
+  const onArea = (e: LayoutChangeEvent) => {
+    const y = e.nativeEvent.layout.y;
+    setAreaAt(cur => (cur && cur.y === y && cur.level === level && cur.for === inputKey ? cur : {y, level, for: inputKey}));
+  };
+  const onPad = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
-    setBlock(b => (b && b.h === h && b.level === level && b.keyH === keyH && b.for === inputKey ? b : {h, level, keyH, for: inputKey}));
+    setPad(v => (v && v.h === h && v.keyH === keyH && v.for === inputKey ? v : {h, keyH, for: inputKey}));
   };
 
   const ok = state.kind === 'ok';
@@ -249,7 +260,6 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        onLayout={onBlock}
         style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {minHeight: firstH} : null, !scroll ? styles.fillFirst : null]}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
@@ -257,8 +267,11 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4) */}
         <Text20 testID="connect-safe">{copy.safe.money}</Text20>
         {/* 키패드는 보통 배치(띄우지 않음, 잘라 내지 않음): 남는 높이를 차지하되 키패드보다 작아지지 않는다 → 넘치면 본문이 스크롤된다(안전망) */}
-        <View testID="keypad-area" style={overflow ? null : styles.area}>
-          <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
+        <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
+          {/* 키패드 내용 높이(늘어나지 않는 감싸개)로 넘침을 잰다(재확인 5 M9) */}
+          <View testID="keypad-content" onLayout={onPad}>
+            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
+          </View>
         </View>
       </View>
       {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}

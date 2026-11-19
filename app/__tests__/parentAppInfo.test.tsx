@@ -3,6 +3,7 @@ import React from 'react';
 import {StyleSheet} from 'react-native';
 import {color} from '../src/ui/tokens';
 import {setBgmPreview} from '../src/lib/bgmAsset';
+import {setVoiceClipsForTest} from '../src/audio/voiceClips';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
@@ -97,6 +98,20 @@ test('리뷰 L9 ②: 배경 음악이 공개(미리 듣기)되면 AI 음악 고�
     expect(within(screen.getByTestId('settings-ai-notice')).getByText('배경 음악은 AI(Google Lyria)가 만든 연주곡이에요')).toBeTruthy();
   } finally {
     setBgmPreview(false);
+  }
+});
+
+test('AI 음성 고지: 미리 생성 음성이 있을 때만 보인다(DECISIONS 11-19)', async () => {
+  const line = '읽어 주는 목소리는 AI가 만든 목소리예요. 사람이 읽은 게 아니에요';
+  await settings();
+  expect(screen.queryByText(line)).toBeNull();
+  screen.unmount();
+  setVoiceClipsForTest({'늘 고마워요': 1});
+  try {
+    await settings();
+    expect(within(screen.getByTestId('settings-ai-notice')).getByText(line)).toBeTruthy();
+  } finally {
+    setVoiceClipsForTest(null);
   }
 });
 

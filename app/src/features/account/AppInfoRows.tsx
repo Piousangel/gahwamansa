@@ -10,6 +10,7 @@ import {useInAppWeb} from '../../shared/useInAppWeb';
 import {readAppInfo} from '../../lib/appInfo';
 import {getAppEnv} from '../../lib/env';
 import {bgmAsset} from '../../lib/bgmAsset';
+import {hasVoiceClips} from '../../audio/voiceClips';
 import {copy} from '../../copy/copy';
 import {announce} from '../../ui/a11y';
 
@@ -19,7 +20,7 @@ const NEEDS_SETUP = '[설정 필요]';
 
 // P13 '앱' 구역 = 앱 정보 한 목록(법률 in-app-notices §3 순서, 디자인 판정 M8, AP-06).
 //  1 이용약관 · 2 개인정보 처리방침(앱 안 웹 화면, useInAppWeb: 인터넷 확인 동안 진행 표시·두 번 누름 막기, 안 닿으면 한 줄)
-//  3 오픈소스 라이선스(Oss) · 4 AI 안내(사진, 배경 음악은 음원이 있을 때만) · 5 병원 앱 아님 · 6 사업자 정보(누르면 펼침)
+//  3 오픈소스 라이선스(Oss) · 4 AI 안내(사진, 배경 음악은 음원이 있을 때만, 읽어 주는 목소리는 미리 생성 음성이 있을 때만) · 5 병원 앱 아님 · 6 사업자 정보(누르면 펼침)
 //  7 문의하기(법률 Q4: 열람·정정·삭제 요청 경로) — 버전 줄은 호출부(개발자 메뉴 관문과 함께)
 // 약관·방침·오픈소스·AI·병원·버전은 값과 무관하게 늘 보인다. 값이 빈 행은 개발·staging 에서 빨간 '[설정 필요]'(숨기지 않음).
 export function AppInfoRows() {
@@ -66,6 +67,7 @@ export function AppInfoRows() {
         <Text20 weight="bold">{ai.ai_title}</Text20>
         <Text20>{ai.ai_photo}</Text20>
         {bgmAsset() !== null ? <Text20>{ai.ai_music}</Text20> : null}
+        {hasVoiceClips() ? <Text20>{ai.ai_voice}</Text20> : null}
       </View>
       <View testID="settings-not-medical" accessible style={styles.notice}>
         <Text20>{ai.not_medical}</Text20>
