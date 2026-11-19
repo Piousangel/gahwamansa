@@ -1,5 +1,6 @@
 import React from 'react';
-import {render, screen, waitFor} from '@testing-library/react-native';
+import {StyleSheet} from 'react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {formatAnswerDate} from '../src/features/home/formatDate';
@@ -26,10 +27,52 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
   expectNoPressure();
 });
 
-test('답이 없으면 안내 한 줄만 보여 준다', async () => {
+test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예시 칩·점선, 누르는 것 아님) + 이야기 꺼내기 한 줄', async () => {
   render(<AppRoot api={createFakeApi({consented: true, parentTitle: '아빠', latest: null})} role="child" />);
-  await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
+  await waitFor(() => screen.getByTestId('child-home-empty'));
+  expect(screen.getByText('부모님이 오늘 사진을 보시면 여기에 답이 보여요')).toBeTruthy();
+  for (const i of [1, 2]) {
+    const card = screen.getByTestId(`child-home-example-${i}`);
+    expect(card.props.accessibilityLabel).toMatch(/^예시, /); // 실제 답으로 오인하지 않게 '예시'부터 읽는다
+    expect(StyleSheet.flatten(card.props.style).borderStyle).toBe('dashed');
+    expect(card.props.accessibilityRole).toBeUndefined(); // 누르는 것 아님
+  }
+  expect(screen.getByTestId('child-home-example-1').props.accessibilityLabel).toBe('예시, 부모님의 최근 답, 11월 16일 · 산과 바다 중 가을');
+  expect(screen.getByTestId('child-home-example-2').props.accessibilityLabel).toBe('예시, 지난 답, 11월 15일 · 산과 바다 중 바다');
+  expect(screen.getByText('가을에 자주 가시던 곳이 있었는지 여쭤봐요')).toBeTruthy();
+  expect(screen.queryByText('아빠의 최근 답')).toBeNull(); // 예시에는 실제 호칭을 쓰지 않는다(가짜 개인정보 없음)
+  expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
   expectNoPressure();
+});
+
+test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가르면 그 카드 위에 잰 만큼 간격, 안내 한 줄은 밀지 않는다', async () => {
+  render(<AppRoot api={createFakeApi({consented: true, parentTitle: '아빠', latest: null})} role="child" />);
+  await waitFor(() => screen.getByTestId('child-home-empty'));
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+  const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
+  await act(async () => {
+    lay('screen-body', 0, 300); // C4 홈은 옛 Screen(흐림은 겹쳐 그리는 것이라 스크롤 창이 바뀌지 않음) → 접힘 = 스크롤 창 300
+    lay('child-home-empty', 20, 400); // 묶음 위 끝 20, 사이 14
+    lay('child-home-empty-line', 0, 112); // 20~132
+    lay('child-home-example-1', 0, 120); // 146~266
+    lay('child-home-example-2', 0, 120); // 280~400 → 300 에 걸림
+    lay('child-home-empty-starter', 0, 90);
+  });
+  expect(mt('child-home-example-2')).toBe(300 - 280);
+  expect(mt('child-home-example-1')).toBeUndefined();
+  // 창이 커져 다 들어가면 간격 없음
+  await act(async () => {
+    lay('screen-body', 0, 700);
+  });
+  expect(mt('child-home-example-2')).toBeUndefined();
+});
+
+test('답이 하나라도 있으면 빈 상태 대신 실제 답 카드(첫날 화면은 아무 답도 없을 때만)', async () => {
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const api = createFakeApi({consented: true, parents: [{title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}, {title: '아빠'}]});
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByText('엄마의 최근 답'));
+  expect(screen.queryByTestId('child-home-empty')).toBeNull();
 });
 
 test('어르신이 답을 나누지 않으면 그렇게 알린다', async () => {
@@ -41,7 +84,7 @@ test('어르신이 답을 나누지 않으면 그렇게 알린다', async () => 
 test('조회 실패는 오류 상태이고 다시 불러올 수 있다', async () => {
   render(<AppRoot api={createFakeApi({failChildHome: 1, consented: true, latest: null})} role="child" />);
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
-  expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
+  expect(screen.queryByTestId('child-home-empty')).toBeNull();
 });
 
 test('날짜 표시: 오늘이면 "오늘", 올해면 월·일, 다른 해는 연도 포함', () => {

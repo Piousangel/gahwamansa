@@ -692,8 +692,7 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
     const api = createFakeApi({parents: [{title: '엄마'}, {title: '아빠'}]});
     const out = jest.spyOn(api, 'signOut');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByText('엄마의 최근 답'));
-    expect(screen.getByText('아빠의 최근 답')).toBeTruthy();
+    await waitFor(() => screen.getByTestId('child-home-empty')); // 두 분 다 아직 답이 없다 → 첫날 빈 상태 안 B
     await press('설정');
     await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
     await press('로그아웃');

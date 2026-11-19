@@ -23,6 +23,7 @@ import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
+import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
 
 const c = copy.child;
 const h = c.home;
@@ -50,6 +51,9 @@ export function ChildHome() {
   const many = list.length > 1;
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
   const dup = findTitleDup(list);
+  // C4 첫날 빈 상태 안 B(#59): 연결된 분이 모두 보여 주기로 했고 아직 고른 답이 없을 때(첫날). 나누지 않음·연결 끊김은 기존 카드
+  const firstDay = !!info && list.length > 0 && list.every(p => p.connected && p.shared && !p.latest);
+  const emptyFold = useEmptyFold();
 
   // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
   const firstSeen = list.find(p => p.shared && p.latest);
@@ -101,7 +105,7 @@ export function ChildHome() {
 
   return (
     <View style={styles.flex}>
-      <Screen top={top} bottom={bottom}>
+      <Screen top={top} bottom={bottom} onViewport={emptyFold.onViewport}>
         {error ? <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20> : null}
         {!info ? (
           <Text20>{appCopy.loading}</Text20>
@@ -118,9 +122,11 @@ export function ChildHome() {
               ))}
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
             {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
-            {list.map(p => (
-              <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />
-            ))}
+            {firstDay ? (
+              <ChildHomeEmpty fold={emptyFold} />
+            ) : (
+              list.map(p => <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />)
+            )}
           </>
         )}
       </Screen>
