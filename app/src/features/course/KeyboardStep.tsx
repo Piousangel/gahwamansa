@@ -120,7 +120,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
               <View style={styles.reviewThumb}>
                 <Image source={{uri: photo.image_url}} style={styles.reviewThumbImg} onError={() => setImageFailed(true)} />
               </View>
-              <Text20 style={styles.figcaption}>{appCopy.ai_photo_label}</Text20>
+              <Text20 style={styles.figcaption}>{`${appCopy.ai_photo_label} · ${appCopy.not_real_place}`}</Text20>
             </View>
           ) : null}
           <View style={styles.reviewWord}>
@@ -138,7 +138,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const open = kbOpen && phase === 'writing';
   const large = fontScale >= 1.5;
   // 로마자 감지(시안 ds4b): 영어로 써지고 있으면 카드 아래 한 줄 안내
-  const roman = phase === 'writing' && /[A-Za-z]/.test(text);
+  // 리뷰 L3: 낱말 자체에 영문이 있는 날(예 'TV')에는 켜지 않는다
+  const roman = phase === 'writing' && !/[A-Za-z]/.test(word) && /[A-Za-z]/.test(text);
   const fitKey = `${viewport}|${fontScale}`;
   const cardBottom = cardBox ? cardBox.y + cardBox.h : 0;
   const photoOff = photoOffFor === fitKey;
