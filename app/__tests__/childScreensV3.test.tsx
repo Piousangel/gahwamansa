@@ -554,6 +554,24 @@ describe('C7 설정 v2', () => {
     expect(screen.getByText('같은 이름이 이미 있어요. 다른 이름을 골라 주세요', {includeHiddenElements: true})).toBeTruthy(); // 이유는 버튼 힌트로 읽힘
   });
 
+  test('#146 리뷰(R-15): C2 재연결 번호 — 첫 화면 끝이 안내 줄을 가르면 그 줄을 통째로 접힘 밖으로', async () => {
+    await openSettings();
+    await press('새 폰 연결 번호, 엄마 폰을 바꿨을 때 써요');
+    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 304); // 접힘 = 304 − 띠 24 = 280
+      lay('code-show-block', 0, 300); // 묶음 위 끝 0, 사이 16
+      lay('code-show-card', 0, 120); // 0~120
+      lay('code-show-line-1', 0, 104); // 136~240
+      lay('code-show-line-2', 0, 52); // 256~308 → 280 에 걸림
+    });
+    expect(mt('code-show-line-2')).toBe(280 - 256 + 1);
+    expect(mt('code-show-line-1')).toBeUndefined();
+  });
+
   test('새 폰 연결 번호 → 그 어르신 재연결 번호 화면', async () => {
     const api = await openSettings();
     const issue = jest.spyOn(api, 'issueInviteCode');
