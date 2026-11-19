@@ -154,15 +154,12 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         {/* AI 고지(디자인 #95 최종): 칩 없이 사진 바로 아래 고정 한 줄. 설명 유무와 상관없이 같은 자리, 실제 사진일 때만 */}
         {showImage ? <AiNotice key="ai" text={aiNotice} /> : null}
         {large && !showImage ? <Text key="pending" role="sub" tone="muted">{pendingText}</Text> : null}
-        {canZoom && hint ? <Text key="zoom-hint" testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
         {late ? null : caption}
-        {/* 회상 질문: 100%는 한 덩어리(질문 사이 간격 없이 — 시안). 큰 글자는 문장마다 한 덩어리로 나눠(R-15) 접힘에 걸치면 그 문장만 아래로 —
-            200%에서도 첫 문장이 첫 화면에 든다 */}
-        {(large ? photo.recall_questions.map(q => [q]) : photo.recall_questions.length ? [photo.recall_questions] : []).map((qs, i) => (
+        {/* 회상 질문: 모든 배율에서 문장마다 한 덩어리(R-15) — 접힘에 걸치면 그 문장만 아래로 민다. 한 덩어리로 두면 320 폭 100%에서
+            세 줄 묶음이 통째로 밀려 질문이 첫 화면에서 사라졌다(에뮬레이터 실측 11-20, 시안 레드라인 '질문 첫 문장이 첫 화면') */}
+        {photo.recall_questions.map((q, i) => (
           <View key={`q${i}`} testID={i === 0 ? 'recall-questions' : undefined} style={[styles.readBar, reading ? styles.reading : null]}>
-            {qs.map(q => (
-              <Text key={q} role="bodyLg">{q}</Text>
-            ))}
+            <Text role="bodyLg">{q}</Text>
           </View>
         ))}
         {/* AP-03 읽어 주기: 질문 바로 아래 본문 보조 버튼(가로 채움). 화면 읽기 켜짐이면 없음(R16) */}
@@ -172,6 +169,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
             <ReadAloudNotice notice={read.notice} />
           </View>
         ) : null}
+        {/* 크게 보기 첫 안내(첫 3회)는 질문·읽어 주세요 아래: 시안 레드라인(질문 첫 문장이 첫 화면)을 안내 줄이 밀지 않게(에뮬레이터 실측 11-20) */}
+        {canZoom && hint ? <Text key="zoom-hint" testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
         {late ? caption : null}
 
         <Text key="look" role="sub" tone="muted">{appCopy.photo_look}</Text>
@@ -183,13 +182,14 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
 }
 
 /** P4 배치 값 한 곳(시안 P4_photo_ds4c, 디자인 #95 최종). 사진은 글자 상자가 아니라 사진 틀이라 높이를 정한다.
- *  사진: 100% 설명 없는 날 124 / 있는 날 88(같은 레드라인 — 질문 첫 문장·고지가 첫 화면), 글자 150% 이상 80. 본문 간격 8 / 6, 질문 사이 2(100%) */
-export const P4_LAYOUT = {photo: {noCaption: 124, withCaption: 88, large: 80}, gap: {base: 8, large: 6}, questionsGap: 2} as const;
+ *  사진: 100% 설명 없는 날 124 / 있는 날 88(같은 레드라인 — 질문 첫 문장·고지가 첫 화면), 글자 150% 이상 80. 본문 간격 8 / 6.
+ *  시안의 질문 사이 2(100%)는 쓰지 않는다: 질문을 문장마다 접힘 단위로 나눠 본문 간격(8)을 쓴다(위 주석) */
+export const P4_LAYOUT = {photo: {noCaption: 124, withCaption: 88, large: 80}, gap: {base: 8, large: 6}} as const;
 
 // 사진(시안 ds4c): 둘레 카드·테두리 없이 반경 22 + 그림자. 본문 간격은 P4_LAYOUT.gap — FoldStack gap
 const styles = StyleSheet.create({
   // 읽어 주는 중 표시: 옅은 하늘 면(글 폭·줄바꿈이 움직이지 않게 여백 없이 면만, 리뷰). 글자 inkBody 는 infoSoft 위 허용 짝
-  readBar: {borderRadius: 8, gap: P4_LAYOUT.questionsGap},
+  readBar: {borderRadius: 8},
   reading: {backgroundColor: ds.color.infoSoft},
   photo: {alignSelf: 'stretch', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
   image: {flex: 1, alignSelf: 'stretch'},

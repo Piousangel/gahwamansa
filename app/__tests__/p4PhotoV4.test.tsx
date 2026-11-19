@@ -78,3 +78,13 @@ test('리뷰 M2: 크게 보기(Modal)는 접힘 묶음 밖 — 높이 0 자식�
   expect(screen.UNSAFE_getAllByType(PhotoZoom)).toHaveLength(1);
   expect(within(screen.getByTestId('p4-body')).UNSAFE_queryAllByType(PhotoZoom)).toHaveLength(0);
 });
+
+test('에뮬레이터 실측 11-20: 질문은 100%에서도 문장마다 접힘 단위, 크게 보기 첫 안내는 질문·읽어 주세요 아래(레드라인을 밀지 않게)', async () => {
+  await toPhoto();
+  fireEvent(screen.getByTestId('photo-image'), 'load');
+  await waitFor(() => screen.getByTestId('zoom-hint'));
+  expect(order(['ai-notice', 'recall-questions', 'read-aloud', 'zoom-hint'])).toEqual(['ai-notice', 'recall-questions', 'read-aloud', 'zoom-hint']);
+  const kids = screen.getByTestId('p4-body').children.length;
+  const recall = screen.getAllByText(/\?$/).length; // 회상 질문 문장 수(fake 는 물음표로 끝남)
+  expect(kids).toBeGreaterThanOrEqual(recall + 4); // 단계·사진·고지·질문 문장들·읽어 주세요…
+});

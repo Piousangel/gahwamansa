@@ -104,10 +104,11 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
       <FoldStack viewport={viewport} gap={20} testID="p5-body" split="choice" onTop={setChoiceTop}>
         {error ? <StepErrorBanner key="error" error={error} /> : null}
         <React.Fragment key="header">{header}</React.Fragment>
-        <View key="title" testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
+        {/* 질문과 안내는 따로 접힘 단위(시안 ds4b 200%: 본문 형제, 간격 20) — 한 덩어리면 320×640 200%에서 둘이 통째로 밀려 첫 화면이 비었다(에뮬레이터 실측 11-20) */}
+        <View key="title" testID="p5-title" style={[styles.readBar, reading ? styles.reading : null]}>
           <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
-          <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
         </View>
+        <Text key="hint" testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
         <Choice
           key="choice"
           onItemHeights={setChoiceHeights}
@@ -157,5 +158,4 @@ const styles = StyleSheet.create({
   chosen: {borderWidth: 5, borderColor: ds.color.action, backgroundColor: ds.color.actionSoft, paddingHorizontal: 16.5, paddingVertical: 10.5},
   grow: {flex: 1},
   tag: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  titleGroup: {gap: 20},
 });
