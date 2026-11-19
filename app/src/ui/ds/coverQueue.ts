@@ -83,7 +83,17 @@ export function useCover(id: string, want: boolean, queue = coverQueue) {
     }
     // 리뷰 L3: 다시 실행돼도(StrictMode 이중 effect 등) 다시 청한다 — 같은 id 가 이미 떠 있으면 큐가 그대로 허락한다
     let alive = true;
-    queue.request(id).then(ok => alive && ok && setVisible(true));
+    queue.request(id).then(ok => {
+      if (!ok) {
+        return;
+      }
+      if (alive) {
+        setVisible(true);
+      } else {
+        // 리뷰 #150 L2: 허락이 오기 전에 화면이 내려갔으면 바로 놓는다(언마운트된 화면이 active 를 붙잡아 다른 덮개를 막지 않게)
+        queue.release(id);
+      }
+    });
     return () => {
       alive = false;
     };

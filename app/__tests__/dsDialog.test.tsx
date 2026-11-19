@@ -149,3 +149,19 @@ describe('덮개 큐 경합·고장(PR #148 리뷰 M1·L2·L3)', () => {
     expect(h.result.current.visible).toBe(true);
   });
 });
+
+test('리뷰 #150 L2: 허락이 오기 전에 언마운트되면 active 를 놓는다(다음 날 다른 덮개가 막히지 않음)', async () => {
+  let open: () => void = () => {};
+  const gate = new Promise<void>(r => (open = r));
+  let now = new Date('2026-11-20T01:00:00Z');
+  const q = createCoverQueue({store: {load: () => gate.then(() => null), save: async () => {}}, now: () => now});
+  const h = renderHook(() => useCover('push', true, q));
+  h.unmount(); // 읽기가 끝나기 전에 화면이 내려감
+  await act(async () => {
+    open();
+    await gate;
+    await new Promise<void>(r => setTimeout(() => r(), 0));
+  });
+  now = new Date('2026-11-21T01:00:00Z'); // 앱을 끄지 않은 채 다음 날
+  expect(await q.request('other')).toBe(true); // 수정 전: 내려간 화면의 'push' 가 active 로 남아 false
+});
