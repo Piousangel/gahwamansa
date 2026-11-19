@@ -926,12 +926,12 @@ describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
 });
 
 describe('CG 자녀 시작 결정(v4 공통 상태, 남은 자녀 화면 6번)', () => {
-  test('어르신 폰 막음: 제목 머리글 + 안내 + Dock 알겠어요(자녀 56), BackLink 처음으로 → 역할 선택', async () => {
+  test('어르신 폰 막음: 제목 머리글 + 안내 + Dock 처음으로(자녀 56, A5 닫기 말), BackLink 처음으로 → 역할 선택', async () => {
     render(<AppRoot api={createFakeApi({linked: true})} />);
     await act(async () => fireEvent.press(screen.getByText(/자녀 휴대폰이에요/)));
     await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
     expect(screen.getByRole('header', {name: '이 폰은 부모님 휴대폰으로 쓰고 있어요'})).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByRole('button', {name: '알겠어요'}).props.style).minHeight).toBe(56);
+    expect(StyleSheet.flatten(screen.getByRole('button', {name: '처음으로'}).props.style).minHeight).toBe(56);
     await act(async () => fireEvent.press(screen.getByRole('link', {name: '처음으로'})));
     await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
   });
