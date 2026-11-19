@@ -22,6 +22,22 @@ as $$
 $$;
 revoke execute on function public.server_flag(text) from public, anon, authenticated, service_role;
 
+-- 로컬 시드 전용(supabase/seed_dev_flags.sql이 부름, 리뷰 PR #37 L1): Vault에 project_url이 있으면(staging·production) 켜지 않는다.
+-- `db push --include-seed`·`db reset --linked`로 시드가 원격에 들어가도 스위치가 켜지지 않게 하는 장치. 켰으면 true.
+create function public.server_flag_seed_local(p_name text) returns boolean
+language plpgsql volatile security definer set search_path = ''
+as $$
+begin
+  if exists (select 1 from vault.secrets where name = 'project_url') then
+    raise notice 'server_flags %: Vault project_url이 있는 DB(원격)라 시드로 켜지 않습니다', p_name;
+    return false;
+  end if;
+  insert into public.server_flags (name, enabled) values (p_name, true)
+  on conflict (name) do update set enabled = true, updated_at = now();
+  return true;
+end $$;
+revoke execute on function public.server_flag_seed_local(text) from public, anon, authenticated, service_role;
+
 alter table public.admin_audit drop constraint admin_audit_action_check,
   add constraint admin_audit_action_check check (action in ('delete_account', 'delete_answers', 'content_publish', 'content_retire',
                                                             'content_image_url', 'test_family_mark', 'kakao_retry', 'kakao_resolve',

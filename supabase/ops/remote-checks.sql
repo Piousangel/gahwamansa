@@ -112,9 +112,13 @@ with checks(check_name, ok, detail) as (
                       where n.nspname = 'public' and c.relkind in ('v', 'm') and has_table_privilege(r.role, c.oid, pr.priv)),
          'false면 kakao_unlink_gave_up 등으로 감사 없이 큐를 고치거나 지울 수 있음'
   union all
+  -- server_flags는 RLS(정책 없음)라 RLS를 우회하지 못하는 역할로는 행이 안 보여 '꺼짐'으로 잘못(위험한 쪽으로) 나온다 → 그런 역할이면 판정 보류(null)(PR #37 L2)
   select '개발 스위치 꺼짐(dev_reset_enabled, 0051) — production은 반드시 true',
-         not coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false),
-         case when coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false)
+         case when (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then not coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false) end,
+         case when not (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then '이 역할(' || current_user || ')은 RLS를 우회하지 못해 판정 불가 — SQL Editor(postgres)에서 다시 실행'
+              when coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false)
               then '켜짐 — staging QA 중이면 정상(false 허용), production이면 바로 끄기: update server_flags set enabled = false where name = ''dev_reset_enabled'''
               else '꺼짐' end
   union all

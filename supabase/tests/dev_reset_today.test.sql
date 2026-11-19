@@ -3,7 +3,7 @@
 --             본인의 오늘(KST) daily_sessions·answers만 지운다(어제 기록·같은 가족 다른 어르신·콘텐츠 커서·응원·이벤트는 그대로), 감사 행.
 --             자녀·프로필 없는 기기·anon은 실행 불가, 스위치 표는 앱·anon·서비스 역할이 읽거나 쓸 수 없다.
 begin;
-select plan(19);
+select plan(24);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.daily_sessions; delete from public.content_photos; delete from public.content_questions;
 delete from public.server_flags; -- 로컬 시드가 켜 둔 스위치를 지우고 테스트가 직접 정한다
@@ -101,6 +101,19 @@ reset role;
 select ok(not exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r(role), unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p(priv)
                        where has_table_privilege(r.role, 'public.server_flags', p.priv)), '스위치 표는 앱·anon·서비스 역할이 읽거나 쓸 수 없다');
 select ok(not has_function_privilege('service_role', 'public.dev_reset_today()', 'execute'), '서비스 역할도 실행하지 않는다(본인 세션 전용)');
+
+-- 시드 원격 방지(PR #37 L1): Vault project_url이 있으면 시드가 스위치를 켜지 않는다
+delete from public.server_flags;
+delete from vault.secrets where name = 'project_url'; -- 트랜잭션 안(끝에 rollback)
+select is(public.server_flag_seed_local('dev_reset_enabled'), true, '로컬(Vault project_url 없음)에서는 시드가 켠다');
+select ok(public.server_flag('dev_reset_enabled'), '켜짐 확인');
+delete from public.server_flags;
+select vault.create_secret('https://ref.supabase.co', 'project_url');
+select is(public.server_flag_seed_local('dev_reset_enabled'), false, '원격(Vault project_url 있음)이면 시드가 켜지지 않는다(--include-seed·--linked reset 방지)');
+select ok(not public.server_flag('dev_reset_enabled'), '스위치는 꺼진 채(행 없음)');
+select ok(not (has_function_privilege('authenticated', 'public.server_flag_seed_local(text)', 'execute')
+            or has_function_privilege('anon', 'public.server_flag_seed_local(text)', 'execute')
+            or has_function_privilege('service_role', 'public.server_flag_seed_local(text)', 'execute')), '시드 함수는 앱·anon·서비스 역할이 못 부른다');
 
 select * from finish();
 rollback;

@@ -369,7 +369,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 2. **푸시**: ⑥ — `runs_with_note`(config_error·oauth_failed·invalid_ratio_hold)가 있으면 FCM 서비스 계정·프로젝트 확인. 일일 알림 `sent`가 0인데 대상이 있으면 `push_copy` 적재 여부(no_copy) 확인.
 3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
-5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
+5. 월 1회: `admin_audit` 지난 한 달 점검(§4, `action <> 'dev_reset_today'`로 QA 초기화 행은 따로 — 0051), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`(프로필 없는 계정은 `admin_delete_user`, 0049)로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 - 감사 사유 규칙(DECISIONS 11-18): `admin_delete_*`의 사유(reason)에는 **요청 번호만**(예: `REQ-2026-012 웹 삭제 요청`), 이름·메일·닉네임·기종 같은 개인정보 금지. 처리자(operator)는 사람 이름 대신 역할명(`owner`). admin_audit는 1년 보관되고 대상이 지워져도 남는다(0039). 요청 번호↔메일 대응은 문의 메일함의 삭제 요청 대장에만(내부관리계획 §6·§7). 0047·0049부터 서버가 `@`·전각 ＠·9자리 이상 숫자(구분자 제거 후)가 든 사유를 `pii_in_args`로 거부한다.
 
@@ -387,7 +387,10 @@ type UnregisterPushToken = { ok: true; removed: number };
   insert into public.server_flags (name, enabled) values ('dev_reset_enabled', true) on conflict (name) do update set enabled = excluded.enabled, updated_at = now();
   update public.server_flags set enabled = false, updated_at = now() where name = 'dev_reset_enabled';  -- 끄기
   ```
-- production: 켜지 않는다. remote-checks "개발 스위치 꺼짐" 줄이 production에서는 반드시 true(staging은 QA 중 false 허용). RLS가 켜져 있어 읽기 전용 역할로 돌리면 행이 안 보여 "꺼짐"으로 나올 수 있으니 SQL Editor(postgres)에서 확인한다.
+- production: 켜지 않는다. remote-checks "개발 스위치 꺼짐" 줄이 production에서는 반드시 true(staging은 QA 중 false 허용). 표가 RLS(정책 없음)라 RLS를 우회하지 못하는 역할로 돌리면 이 줄은 **판정 보류(null)** 로 나온다 — 그때는 SQL Editor(postgres)에서 다시 본다. 실측(리뷰 PR #37): postgres·service_role·`supabase_read_only_user`(`db query --remote --read-only`)는 모두 RLS를 우회하므로 정상 판정된다.
+- 원격 방지: 로컬 시드는 `server_flag_seed_local`을 부르고, 이 함수는 Vault에 `project_url`이 있는 DB(staging·production)에서는 켜지 않는다(pgTAP 확인). 그래도 원격에 시드를 넣는 명령(`db push --include-seed`, `db reset --linked`)은 쓰지 않는다(§18).
+- 후속(리뷰 PR #37 L3, 리드 결정 대기): 누가 언제 켰는지 기록이 없다(`updated_at`은 직접 넣어야 바뀜). 안 — 갱신 트리거로 `updated_at = now()`, 켜기·끄기를 `admin_audit`(action `flag_set`)에 남기는 트리거, 또는 remote-checks detail에 `updated_at` 표시.
+- 후속(L4): QA가 다시 하기를 반복하면 `dev_reset_today` 감사 행이 쌓인다 → 월 1회 감사 점검(§14-5)은 `action <> 'dev_reset_today'`로 나눠 본다.
 
 ## 16. 마이그레이션 대장(서버 기준, SV-17) — 계획 문서 대장(docs/plans/10 §2)은 리드가 이 표로 갱신
 | 번호 | 내용 | main | staging |
@@ -472,6 +475,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).
 11. **다시 확인**: `remote-checks.sql` 전부 true(심사 기간이면 심사 번호 줄만 예외). 결과를 staging 반영 기록에 붙인다.
+- **시드를 원격에 넣지 않는다**: `supabase db push --include-seed`, `supabase db reset --linked` 금지(시드는 로컬 전용 — 콘텐츠·약관·개발 스위치. 약관 게시는 B-3a, 콘텐츠는 publish-content). 개발 스위치 시드는 Vault project_url이 있으면 켜지지 않지만 그것에 기대지 않는다(0051 L1).
 - 되돌리기: down 파일은 수동·부분이라 원칙은 **앞으로 고치기**(새 마이그레이션). 함수는 이전 커밋으로 다시 배포, cron은 `select cron.unschedule('<이름>')`로 멈춤.
 
 ### C. production dry-run 점검(P1 업로드 직전, 사용자)
