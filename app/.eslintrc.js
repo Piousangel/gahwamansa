@@ -41,9 +41,20 @@ const DS_SYNTAX = [
     selector: `Property[key.name=/^(color|backgroundColor|borderColor|tintColor)$/]${LITERAL}`,
     message: '[DS:color] 색 리터럴 직접 금지 — tone 으로 고른다(외부 브랜드 색은 ui/ds SocialButton 안에서만).',
   },
+  // 고정 높이(R-09, PR #31 리뷰 L1): 같은 스타일 객체에 width 숫자가 함께 있으면 '고정 크기 상자'(아이콘·이미지·원·도장·테이프)로 따로 센다.
+  // [DS:height] = 글자 상자 후보(가로는 늘어나는데 높이만 고정) → AU-10 에 error 로 올리는 대상.
+  // [DS:fixedBox] = 가로·세로 모두 고정 → warn 유지·기준선만. 단 안에 글자(번호 원 등)가 있으면 R-09 위반이니 이행 때 minHeight·minWidth 로 바꾼다.
   {
-    selector: `Property[key.name=/^(height|maxHeight)$/]${LITERAL}, Property[key.name=/^(height|maxHeight)$/]${NEG_LITERAL}`,
+    selector: [LITERAL, NEG_LITERAL]
+      .map(v => `ObjectExpression:not(:has(> Property[key.name='width']${LITERAL})) > Property[key.name=/^(height|maxHeight)$/]${v}`)
+      .join(', '),
     message: '[DS:height] 고정 height·maxHeight 숫자 금지 — minHeight 만(글자가 커지면 따라 늘어난다).',
+  },
+  {
+    selector: [LITERAL, NEG_LITERAL]
+      .map(v => `ObjectExpression:has(> Property[key.name='width']${LITERAL}) > Property[key.name=/^(height|maxHeight)$/]${v}`)
+      .join(', '),
+    message: '[DS:fixedBox] 가로·세로 고정 상자 — 아이콘·이미지·장식만. 글자가 들어가면 minHeight·minWidth 로(R-09).',
   },
   {
     selector: "JSXAttribute[name.name='numberOfLines']",
