@@ -13,6 +13,9 @@ const ZOOM_OPENED ='pref_p4_zoom_opened'; // B1 크게 보기를 한 번이라�
 const PHOTO_VISITS = 'pref_p4_visits'; // P4 방문 수(첫 안내는 세 번째 방문까지)
 const PHOTO_VISIT_DAY = 'pref_p4_visit_day'; // 마지막으로 센 날(KST YYYY-MM-DD). 같은 날 다시 들어오면 세지 않는다(리뷰 L3)
 
+const ONCE_PREFIX = 'pref_evt_once_'; // + 이벤트 이름
+export type OnceEvent = 'app_first_open' | 'child_first_answer_viewed';
+
 export function createPrefs(store: KeyValueStore) {
   const getBool = async (key: string, fallback: boolean): Promise<boolean> => {
     try {
@@ -64,6 +67,10 @@ export function createPrefs(store: KeyValueStore) {
       }
       return today;
     },
+    /** AC-05 한 번만 보내는 이벤트(이 기기 기준): app_first_open·child_first_answer_viewed. 보낸 뒤 표시 */
+    // scope: 계정 가명값(accountTag)을 주면 그 계정 기준 1회(PR #61 리뷰 L2). 없으면 기기 기준 1회
+    eventOnceSent: (name: OnceEvent, scope?: string) => getBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, false),
+    markEventOnceSent: (name: OnceEvent, scope?: string) => setBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, true),
     zoomOpened: () => getBool(ZOOM_OPENED, false),
     markZoomOpened: () => setBool(ZOOM_OPENED, true),
     photoVisits: async (): Promise<number> => {

@@ -1,10 +1,10 @@
 // AC-03 N3 푸시를 눌러 앱을 열었을 때(자녀). 수신·리스너는 AU-04(푸시 클라이언트)가 붙이고, 여기서는 받은 data 로 무엇을 할지만 정한다.
-// 서버 0038 메시지 data = {kind}(개인 id·번호 없음). 자녀가 받는 알림은 연결·재연결뿐(DECISIONS U11).
+// 서버 0038 메시지 data = {kind}(개인 id·번호 없음). 자녀가 받는 알림은 연결·재연결(DECISIONS U11) + 연결 뒤 첫 답(0052, U11 예외).
 import {isQuietEventFailure, type EventProps} from '../../api/contract/events';
 import type {Api} from '../types';
 
 export type PushKind = NonNullable<EventProps['push_kind']>;
-const KINDS: readonly PushKind[] = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected'];
+const KINDS: readonly PushKind[] = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected', 'parent_first_answer'];
 
 export function parsePushKind(data: unknown): PushKind | null {
   const k = data && typeof data === 'object' ? (data as {kind?: unknown}).kind : null;
@@ -36,6 +36,8 @@ export function handleChildPushOpen(api: Api, data: unknown, toAlbum: () => void
   if (kind === 'parent_connected' || kind === 'parent_reconnected') {
     skipBanner = true;
     toAlbum();
+  } else if (kind === 'parent_first_answer') {
+    toAlbum(); // 0052 연결 뒤 첫 답 알림 → 앨범(답 카드). 연결 배너와는 관계없어 건너뛰지 않는다(PR #61 리뷰 L4)
   }
   return kind;
 }

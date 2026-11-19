@@ -1,4 +1,4 @@
-// 이벤트 계약(서버 0022 log_event + 0029 연결 퍼널 + 0034 빌드 1 추가). 플랫폼 무관 TS만. 이름·속성 키·값은 서버 화이트리스트
+// 이벤트 계약(서버 0022 log_event + 0029 연결 퍼널 + 0034 빌드 1 추가 + 0053 AC-05). 플랫폼 무관 TS만. 이름·속성 키·값은 서버 화이트리스트
 // (log_event 이름 목록 · event_prop_ok)와 글자까지 같아야 한다 — __tests__/eventsContract.test.ts 가 마이그레이션을 읽어 비교한다.
 // 근거: migrations/20261116000022_events.sql·…029_events_funnel.sql·…034_events_build1.sql, dev-server-notes 3절.
 // 앱은 쓰기만, 글자 내용(입력 낱말 등)·번호 값은 절대 싣지 않는다.
@@ -13,11 +13,13 @@ export const EVENT_NAMES = [
   'link_opened', 'referrer_found', 'code_prefilled',
   // 빌드 1 추가(0034): C6 곧 유료, B1 사진 크게 보기, 전환 분모, 푸시 열기
   'paid_sheet_opened', 'paid_interest_tapped', 'photo_zoom_opened', 'child_first_answer_viewed', 'push_opened',
+  // AC-05(0053): 단계 시작(단계별 이탈 = 시작 − 완료)
+  'course_step_started',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
 /** 0033 push_copy.kind = 0034 push_kind. 알림 종류. */
-export const PUSH_KINDS = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected'] as const;
+export const PUSH_KINDS = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected', 'parent_first_answer'] as const; // 0052 parent_first_answer(자녀 첫 답 알림)
 export type PushKind = (typeof PUSH_KINDS)[number];
 
 /** 문자열 속성: 키별 허용 값(서버 event_prop_ok 의 '^(a|b)$' 목록과 같음). */
@@ -28,11 +30,12 @@ export const EVENT_PROP_VALUES = {
   reason: ['expired', 'used', 'locked', 'invalid', 'rate_limited', 'busy', 'already_linked', 'not_parent_device'],
   step: ['photo', 'question', 'hangul'],
   channel: ['kakao', 'sms', 'copy', 'share_sheet', 'other'],
-  result: ['granted', 'denied', 'matched', 'kept', 'skipped'], // 0029: 권한(granted·denied) + 번호 채움 결과(matched·kept·skipped)
+  // 0029: 권한(granted·denied) + 번호 채움 결과(matched·kept·skipped). 0053: P6 낱말 쓰기는 finished·skipped 두 값만(정오 기록 금지)
+  result: ['granted', 'denied', 'matched', 'kept', 'skipped', 'finished'],
   message_key: ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'],
   source: ['app_link', 'referrer', 'manual'], // 0029 번호가 들어온 경로
   plan: ['monthly', 'yearly', 'gift'], // 0034 C6 가격 3안(관심 표시만)
-  push_kind: PUSH_KINDS, // 0034
+  push_kind: PUSH_KINDS, // 0034 + 0055(parent_first_answer)
 } as const;
 /** 형식만 검사하는 문자열 속성(서버 정규식): v2 · 1.0.0(-12) · 영문 시작 소문자 */
 export const EVENT_FORMAT_PROPS = ['consent_version', 'app_version', 'install_source'] as const;

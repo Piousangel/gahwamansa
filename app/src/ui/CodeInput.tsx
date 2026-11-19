@@ -17,6 +17,10 @@ type Props = {
   belowCells?: React.ReactNode;
   /** 칸 묶음 요소(맞지 않음 때 접근성 포커스를 옮긴다) */
   groupRef?: RefObject<React.ComponentRef<typeof View> | null>;
+  /** 접힘 경계 여백: 이 줄(1~4) 앞에 h 만큼 비운다 */
+  foldGap?: {before: number; h: number};
+  /** 키 줄(1~4)의 위치(키패드 안 y)·높이 알림 */
+  onRowLayout?: (row: number, y: number, h: number) => void;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
@@ -41,7 +45,9 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout}: Props) {
+  // 접힘 경계 여백(RULES-V4 R-15 '접힘 경계는 줄·요소 경계', 디자인 #54): 첫 화면 끝이 키 줄을 반쯤 가르면 그 줄 앞에 여백을 넣어 줄 전체를 접힘 밖으로 민다
+  const gap = (row: number) => (foldGap && foldGap.before === row && foldGap.h > 0 ? <View testID="fold-gap" style={{height: foldGap.h}} /> : null);
   return (
     <View>
       <View ref={groupRef} style={[styles.cells, keyHeight ? styles.cellsFitted : null]} accessible accessibilityLabel={groupLabel ?? `입력한 번호 ${formatCode(value)}`}>
@@ -56,14 +62,18 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
         ))}
       </View>
       {belowCells ? <View style={styles.below}>{belowCells}</View> : null}
-      {ROWS.map(r => (
-        <View key={r[0]} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
+      {ROWS.map((r, i) => (
+        <React.Fragment key={r[0]}>
+        {gap(i + 1)}
+        <View testID={`key-row-${i + 1}`} onLayout={onRowLayout ? e => onRowLayout(i + 1, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
           {r.map(d => (
             <Key key={d} h={keyHeight} label={d} a11y={`숫자 ${d}`} onPress={() => onDigit(d)} />
           ))}
         </View>
+        </React.Fragment>
       ))}
-      <View style={[styles.row, keyHeight ? styles.rowFitted : null]}>
+      {gap(4)}
+      <View testID="key-row-4" onLayout={onRowLayout ? e => onRowLayout(4, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
         <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
         <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
