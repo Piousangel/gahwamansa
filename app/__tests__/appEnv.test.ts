@@ -108,7 +108,8 @@ describe('환경 파일·빌드 설정(정적 검사)', () => {
 
   test('build.gradle 안전 규칙(리뷰 L1·L2·M1·M5): 값 허용 목록, 예시 값 release 차단, 생성 파일 정리, git 실패 시 중단', () => {
     const g = fs.readFileSync(`${root}/android/app/build.gradle`, 'utf8');
-    expect(g).toContain('==~ /sb_publishable_[A-Za-z0-9_-]+/');
+    // 값 검사는 공통 스크립트(scripts/appEnv.js, iOS 준비 N2) — Gradle 은 부르기만
+    expect(fs.readFileSync(`${root}/scripts/appEnv.js`, 'utf8')).toContain('/^sb_publishable_[A-Za-z0-9_-]+$/');
     expect(g).toContain('hasProperty("allowPlaceholderEnv")');
     expect(g).toContain('t.finalizedBy(cleanGeneratedAppEnv)');
     expect(g).toContain('versionCode 를 git 커밋 수로 정하지 못했어요');
