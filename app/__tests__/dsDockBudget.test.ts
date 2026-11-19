@@ -40,6 +40,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
+    name: 'CG 어르신 폰 막음(알겠어요 하나)',
+    screen: 'ChildGate',
+    variant: 'form',
+    audience: 'child',
+    dock: {primary: {label: copy.login.blocked_parent_device.button, onPress: noop}},
+  },
+  {
     name: 'C1 호칭 고르기(번호 만들기 하나)',
     screen: 'RelationScreen',
     variant: 'form',

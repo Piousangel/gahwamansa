@@ -1,10 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
-import {BackBar} from '../../app/BackBar';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
+import {DsScreen, Heading, StateView, Text} from '../../ui/ds';
 import {appCopy, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {useBootLoading} from '../../app/splash';
@@ -48,25 +45,26 @@ export function ChildGate() {
   }, [decide]);
 
   const blocked = copy.login.blocked_parent_device;
+  // v4(공통 상태, 남은 자녀 화면 6번): 배치는 그대로, 부품만 ui/ds. 어르신 폰 막음 = DsScreen form(BackLink '처음으로' + Dock 하나),
+  // 오류·확인 중 = StateView(오류는 나타날 때 한 번 읽음). audience 는 자녀 스택 루트(ChildStack)가 준다
   if (parentPhone) {
     return (
-      <Screen top={<BackBar onBack={resetRole} />} bottom={<BigButton label={blocked.button} onPress={resetRole} />}>
-        <Text20 size={26} weight="bold">{blocked.title}</Text20>
-        <Text20>{blocked.body}</Text20>
-      </Screen>
+      <DsScreen
+        variant="form"
+        back={{label: copy.login.back, onPress: resetRole}}
+        header={<Heading level={1}>{blocked.title}</Heading>}
+        dock={{primary: {label: blocked.button, onPress: resetRole}}}>
+        <Text role="bodyLg">{blocked.body}</Text>
+      </DsScreen>
     );
   }
   return (
-    <Screen>
+    <DsScreen variant="form">
       {error ? (
-        <>
-          <Text20 size={24} weight="bold">{error.title}</Text20>
-          <Text20>{error.body}</Text20>
-          <BigButton variant="secondary" label={error.button} onPress={decide} />
-        </>
+        <StateView testID="child-gate-error" kind="error" title={error.title} body={error.body || undefined} action={{label: error.button, onPress: decide}} />
       ) : (
-        <Text20>{appCopy.loading}</Text20>
+        <StateView testID="child-gate-loading" kind="loading" title={appCopy.loading} />
       )}
-    </Screen>
+    </DsScreen>
   );
 }
