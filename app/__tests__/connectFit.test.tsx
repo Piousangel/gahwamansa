@@ -6,6 +6,7 @@ import {copy} from '../src/copy/copy';
 import {pickStage} from '../src/features/link/p1Stage';
 import {createFakeApi} from '../src/features/fakeApi';
 import {keypadKeyHeight} from '../src/features/link/keypadFit';
+import {wordKeyScaleMax} from '../src/ui/CodeInput';
 import {press} from '../testUtils/flow';
 
 const RN = require('react-native');
@@ -100,8 +101,13 @@ const AREA_Y = 140;
 const content = async (bottom: number, y = AREA_Y) =>
   act(async () => {
     fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: 999}}});
-    fireEvent(screen.getByTestId('keypad-content'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: bottom - y}}});
+    // 실제 배치처럼 지금 그려진 칸·키 사이 여백(keys-gap)을 내용 높이에 더한다
+    fireEvent(screen.getByTestId('keypad-content'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: bottom - y + keysGapNow()}}});
   });
+const keysGapNow = () => {
+  const g = screen.queryByTestId('keys-gap');
+  return g ? (StyleSheet.flatten(g.props.style).height as number) : 0;
+};
 const block = content; // 아래 테스트의 '묶음 높이' = 내용 아래 끝
 const FILL_BOTTOM = 8;
 
@@ -325,4 +331,65 @@ test('M6: 글자 키(모두 지움)는 어절 단위로만 줄바꿈(Android 는
   const k = screen.getByTestId('key-모두 지움', {includeHiddenElements: true});
   expect(k.props.lineBreakStrategyIOS).toBe('hangul-word');
   expect(StyleSheet.flatten(k.props.style).fontSize).toBeGreaterThanOrEqual(22);
+});
+
+// 디자인 결정(11-19, 키패드 남는 높이): 모든 줄 같은 높이·키 64~68. 남는 높이는 칸·키 사이 최대 24 → 나머지는 키패드 위·아래 반씩
+describe('키패드 남는 높이', () => {
+  const area = async (h: number, contentH: number) =>
+    act(async () => {
+      fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y: AREA_Y, width: 312, height: h}}});
+      fireEvent(screen.getByTestId('keypad-content'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: contentH + keysGapNow()}}});
+    });
+
+  test('남는 높이가 24 이하면 전부 칸·키 사이 여백으로, 넘으면 24 까지만(나머지는 영역 가운데 정렬로 위·아래 반씩)', async () => {
+    dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await area(400, 390);
+    expect(keysGapNow()).toBe(10);
+    await area(500, 390);
+    expect(keysGapNow()).toBe(24);
+    expect(StyleSheet.flatten(screen.getByTestId('keypad-area').props.style).justifyContent).toBe('center');
+    // 여백이 들어간 뒤 다시 재도 내용 높이는 여백을 뺀 값이라 흔들리지 않는다
+    await area(500, 390);
+    expect(keysGapNow()).toBe(24);
+    expect(keyH()).toBeLessThanOrEqual(68);
+  });
+
+  test('4단계(넘침)에서는 여백을 더하지 않는다(영역·내용 onLayout 이 와도)', async () => {
+    dims(360, 640);
+    await openConnect();
+    await viewport(560);
+    await area(600, 400); // 재확인 8 L34: 남는 높이가 있는 것처럼 재도 4단계는 여백 0
+    expect(screen.queryByTestId('keys-gap')).toBeNull();
+  });
+
+  test('여백은 버림(Math.floor): 남는 높이 10.6 → 10', async () => {
+    dims(411, 914);
+    await openConnect();
+    await viewport(700);
+    await area(400.6, 390);
+    expect(keysGapNow()).toBe(10);
+  });
+
+  test('모든 줄 같은 높이: 글자 키(모두 지움·지움)는 두 줄이 키 안에 들어가는 줄높이·확대 상한', async () => {
+    dims(360, 740);
+    await openConnect();
+    const k = keyH();
+    expect(keyH('전부 지우기')).toBe(k);
+    expect(keyH('한 칸 지우기')).toBe(k);
+    const word = screen.getByTestId('key-모두 지움');
+    const st = StyleSheet.flatten(word.props.style);
+    const m = word.props.maxFontSizeMultiplier as number;
+    expect(2 * st.lineHeight * m + 4).toBeLessThanOrEqual(k + 0.01); // 두 줄 + 테두리 ≤ 키
+    expect(st.fontSize).toBe(26); // 글자 크기는 시안 그대로
+    expect(wordKeyScaleMax(68)).toBeLessThanOrEqual(1.5);
+    expect(wordKeyScaleMax(64)).toBeGreaterThanOrEqual(1);
+    // 재확인 8 M11: 한 줄인 '지움'은 1.5 까지(숫자 키와 같은 상한), 두 줄 '모두 지움'만 두 줄 기준
+    const del = screen.getByTestId('key-지움');
+    expect(del.props.maxFontSizeMultiplier).toBe(1.5);
+    expect(wordKeyScaleMax(k, 26, 1)).toBe(1.5);
+    const one = StyleSheet.flatten(del.props.style);
+    expect(one.lineHeight * del.props.maxFontSizeMultiplier + 4).toBeLessThanOrEqual(k + 0.01);
+  });
 });
