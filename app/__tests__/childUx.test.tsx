@@ -708,6 +708,8 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
 
   test('AC-08·감사 L2: 복사하면 토스트 대신 번호 카드 바로 위 인라인 \'복사했어요\' 띠(2초, polite) — 시스템 클립보드 미리보기와 겹치지 않음', async () => {
     const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+    // 100% 기준(카드 바로 위 띠). 큰 글자에서는 복사하기 옆으로 간다(PR #83 재확인 2 L11, childScreensV3)
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
     try {
       for (const v of [33, 32]) {
         setPlatform('android', v);

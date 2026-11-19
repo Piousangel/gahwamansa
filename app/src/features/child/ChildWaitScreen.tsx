@@ -144,7 +144,15 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   }
 
   const expired = !!state && !code && state.hadExpired;
-  const copyLink = code && big ? <Button kind="text" size="dock" label={w.copy} onPress={copyCode} testID="wait-copy" /> : null;
+  const copiedBand = copied ? <Banner key={copied} testID="wait-copied" tone="done" text={w.copied} /> : null;
+  // 재확인 2 L11: 큰 글자에서는 복사하기가 본문 맨 끝이라 '복사했어요' 띠도 그 바로 위에(카드 위면 화면 밖이라 안 보인다)
+  const copyLink =
+    code && big ? (
+      <View style={styles.group}>
+        {copiedBand}
+        <Button kind="text" size="dock" label={w.copy} onPress={copyCode} testID="wait-copy" />
+      </View>
+    ) : null;
   const notifyRow = notify.denied ? (
     <View testID="wait-notify" style={big ? styles.notifyOut : styles.notify}>
       <Text role="sub" tone="muted">
@@ -175,7 +183,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           </Card>
         ) : null}
         {/* 리뷰 L5: 연달아 누르면 다시 마운트해 다시 읽는다 */}
-        {copied ? <Banner key={copied} testID="wait-copied" tone="done" text={w.copied} /> : null}
+        {big ? null : copiedBand}
         {code ? (
           <Card tone="outlined" testID="wait-code">
             <Text role="body">{w.code_label}</Text>

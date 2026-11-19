@@ -93,6 +93,9 @@ describe('C3 연결 대기', () => {
     expect(order).toEqual(['wait-code', 'wait-notify', 'wait-steps', 'wait-copy']);
     await press('복사하기');
     expect(spy).toHaveBeenCalledWith('123456');
+    // 재확인 2 L11: '복사했어요' 띠는 본문 끝 복사하기 바로 위(카드 위가 아니라)
+    const ids = screen.root.findAll(n => typeof n.type === 'string' && ['wait-code', 'wait-steps', 'wait-copied', 'wait-copy'].includes(n.props.testID)).map(n => n.props.testID);
+    expect(ids).toEqual(['wait-code', 'wait-steps', 'wait-copied', 'wait-copy']);
   });
 
   test('디자인 결정 #83 ③(R-15): 첫 화면 끝이 단계 행을 가르면 그 행 위에 잰 만큼 간격 → 통째로 접힘 밖, 걸치지 않으면 간격 없음', async () => {
