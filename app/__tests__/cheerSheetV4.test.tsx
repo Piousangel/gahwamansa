@@ -12,7 +12,9 @@ const RN = require('react-native');
 afterEach(() => {
   jest.restoreAllMocks();
 });
-jest.setTimeout(20000);
+// PR #98 리뷰 L2: 부하(load 20+)에서 첫 화면·시트가 늦게 떠 흔들렸다 — waitFor 는 전역 asyncUtilTimeout 10초(jest.after.js)를 따르고,
+// 첫 화면 대기만 15초로 늘린다. 테스트 한 개의 상한도 30초로
+jest.setTimeout(30000);
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}]});
@@ -20,9 +22,9 @@ const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마'
 async function openSheet() {
   jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
   render(<AppRoot api={homeApi()} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}), {timeout: 15000});
   await press('응원 보내기');
-  await waitFor(() => screen.getByText('어떤 말을 보낼까요?'));
+  await waitFor(() => screen.getByText('어떤 말을 보낼까요?'), {timeout: 15000});
 }
 
 test('시트 머리: 제목(머리글) + 닫기 48×48 알약, 보조 한 줄, 손잡이 막대 없음(V14 ①)', async () => {
