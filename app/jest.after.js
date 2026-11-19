@@ -8,5 +8,10 @@ beforeEach(() => {
   finishFlight();
 });
 
+// 가짜 시계를 쓴 테스트가 중간에 실패해도 다음 테스트에 가짜 시계가 남지 않게(부하 정리 2026-11-19: 실제 대기 → 가짜 시계 전환과 함께)
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 // QA-13: waitFor 기본 대기(1초)가 부하에서 모자라 date-line 대기가 가끔 실패 → 5초로(testTimeout 20초 안)
 require('@testing-library/react-native').configure({asyncUtilTimeout: 5000});
