@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>디렉터 B 시안 모음</title>
+<style>
+  body { margin: 0; padding: 24px; background: #D9DDE2; font: 16px/1.5 -apple-system, 'Apple SD Gothic Neo', sans-serif; color: #111; }
+  h2 { margin: 28px 0 10px; font-size: 20px; }
+  h2:first-child { margin-top: 0; }
+  .strip { display: flex; gap: 10px; }
+  figure { margin: 0; }
+  img { width: 360px; height: 640px; display: block; background: #fff; }
+  figcaption { font-size: 14px; padding-top: 4px; }
+</style>
+</head>
+<body>
+<script>
+  const plans = [['b1-broadcast', '안 1 아침 방송'], ['b2-market', '안 2 장날 좌판'], ['b3-familyroom', '안 3 가족방 한 줄']];
+  const only = new URLSearchParams(location.search).get('p');
+  for (const [p, name] of plans) {
+    if (only && only !== p) continue;
+    const h = document.createElement('h2'); h.textContent = name; document.body.appendChild(h);
+    const s = document.createElement('div'); s.className = 'strip';
+    for (const sc of ['P3', 'P4', 'P7', 'C4']) for (const f of [100, 200]) {
+      s.insertAdjacentHTML('beforeend', `<figure><img src="img/${p}-${sc}-${f}.png" alt="${name} ${sc} ${f}%"><figcaption>${sc} · 360×640 · ${f}%</figcaption></figure>`);
+    }
+    document.body.appendChild(s);
+  }
+</script>
+</body>
+</html>
