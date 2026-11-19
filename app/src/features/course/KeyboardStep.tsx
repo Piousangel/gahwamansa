@@ -194,6 +194,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
     }
   };
   const skip = () => complete('skipped');
+  // AI 고지(리드 결정 11-20, #95 최종·법무 체크리스트): 사진이 나오는 곳은 'AI가 만든 그림 · 실제 장소가 아니에요' 한 줄로 일관되게
+  const aiNotice = `${appCopy.ai_photo_label} · ${appCopy.not_real_place}`;
 
   // 시안 P6_P7_N1_P2_ds4b:
   // - 닫힘: 사진 띠(+AI 고지) → '보이는 낱말을 아래 칸에 써요' → '한 글자라도 쓰면 눌려요' → 낱말 카드(따라 쓸 낱말 + 입력 칸). Dock = 다 썼어요 + 오늘은 넘어갈게요.
@@ -248,7 +250,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
                 <Image source={{uri: photo.image_url}} style={styles.photoStrip} resizeMode="cover" onError={() => setImageFailed(true)} />
               </View>
               <View style={styles.photoCaption}>
-                <Text role="sub">{appCopy.ai_photo_label}</Text>
+                <Text role="sub">{aiNotice}</Text>
               </View>
             </View>
           ) : null}
