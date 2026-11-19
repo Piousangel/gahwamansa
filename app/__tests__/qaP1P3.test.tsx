@@ -67,6 +67,8 @@ test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + �
 });
 
 test('P1#10 "번호가 없어요"를 누르면 도움말이 보인다', async () => {
+  // 기준 기기 글자 100%(0단계). jest 모의 기본 글자 배율 2 는 P1 2단계(창 높이를 잰 뒤에 약관·안내를 그림)라 따로 본다(connectFit)
+  jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 411, height: 914, scale: 2.6, fontScale: 1});
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('번호가 없어요');
@@ -95,4 +97,8 @@ test('P1#13·P3 하단 영역 위 1dp 실선 없음', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   expect(flat(screen.getByTestId('screen-dock')).borderTopWidth ?? 0).toBe(0);
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });

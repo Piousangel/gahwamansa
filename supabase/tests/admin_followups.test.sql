@@ -10,11 +10,11 @@ delete from public.answers; delete from public.content_photos; delete from publi
 -- ---- 전역: 앱 실행 가능 definer 허용 목록 ----
 select is((select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['child_answer_history', 'child_summary', 'create_family', 'delete_my_account', 'delete_scope_preview', 'discard_anonymous_session',
+          array['child_answer_history', 'child_summary', 'create_family', 'delete_my_account', 'delete_scope_preview', 'dev_reset_today', 'discard_anonymous_session',
                 'get_my_cheers', 'get_today_content', 'give_consent', 'issue_invite_code', 'log_event', 'mark_cheers_read', 'my_consented', 'my_day_index',
                 'my_family_id', 'my_profile_id', 'my_push_settings', 'my_role', 'my_terms_status', 'my_week_stamps', 'parent_family_list', 'parent_history', 'parent_preview_child_view', 'peek_invite_code',
                 'preview_content', 'record_session_step', 'record_terms_agreement', 'redeem_invite_code', 'register_push_token', 'save_answer', 'send_cheer', 'set_parent_title',
-                'set_parent_title_for', 'set_push_enabled', 'start_today', 'unregister_push_token', 'withdraw_consent'], -- 0046: my_terms_status·record_terms_agreement, 0050: parent_preview_child_view 추가
+                'set_parent_title_for', 'set_push_enabled', 'start_today', 'unregister_push_token', 'withdraw_consent'], -- 0046: my_terms_status·record_terms_agreement, 0050: parent_preview_child_view, 0051: dev_reset_today 추가
           '앱(authenticated)이 실행할 수 있는 definer 함수는 허용 목록과 같다(새 함수가 실수로 열리면 여기서 걸림)');
 select ok(not (has_function_privilege('anon', 'public.account_delete_core(uuid)', 'execute')
             or has_function_privilege('authenticated', 'public.account_delete_core(uuid)', 'execute')

@@ -1,11 +1,12 @@
 import React, {useState} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
 import {SmallButton} from '../../ui/SmallButton';
 import {BottomSheet} from '../../ui/BottomSheet';
+import {ChoiceGrid} from '../../ui/ChoiceGrid';
 import {useToast} from '../../ui/Toast';
 import {copy} from '../../copy/copy';
-import {color, radius, size} from '../../ui/tokens';
+import {color, radius} from '../../ui/tokens';
 import {isOffline, PARENT_TITLES} from '../types';
 import type {Api, ChildParent} from '../types';
 import type {TitleDup} from './titleDup';
@@ -81,25 +82,15 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
         error={error}
         primary={{label: t.save, onPress: save, disabled: !picked || saving}}
         secondary={{label: t.later, onPress: () => setOpen(false)}}>
-        <View style={styles.options}>
-          {PARENT_TITLES.map(name => {
+        <ChoiceGrid
+          testID="title-dup-options"
+          choices={PARENT_TITLES.map(name => {
             const taken = dup.taken.includes(name);
-            const on = picked === name;
-            return (
-              <Pressable
-                key={name}
-                accessibilityRole="radio"
-                accessibilityLabel={taken ? withName(t.taken_a11y, name) : name}
-                accessibilityState={{checked: on, disabled: taken}}
-                disabled={taken}
-                onPress={() => setPicked(name)}
-                style={[styles.option, on ? styles.optionOn : null, taken ? styles.optionTaken : null]}>
-                <Text20 size={22} weight="bold" style={taken ? styles.takenText : null}>{name}</Text20>
-                {taken ? <Text20 style={styles.takenText}>{t.taken}</Text20> : null}
-              </Pressable>
-            );
+            return {value: name, label: name, disabled: taken, sub: taken ? t.taken : undefined, a11yLabel: taken ? withName(t.taken_a11y, name) : name};
           })}
-        </View>
+          selected={picked}
+          onSelect={setPicked}
+        />
       </BottomSheet>
     </View>
     </View>
@@ -125,12 +116,4 @@ const styles = StyleSheet.create({
   chipOnText: {color: color.card},
   box: {backgroundColor: color.noticeSoft, borderRadius: radius.card, padding: 16, gap: 8},
   text: {color: color.inkTitle},
-  options: {gap: 8, paddingVertical: 4},
-  option: {
-    minHeight: size.touchMin, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, borderRadius: radius.childCard, borderWidth: 2, borderColor: color.lineSoft, backgroundColor: color.card,
-  },
-  optionOn: {borderColor: color.action, borderWidth: 3, backgroundColor: color.actionSoft},
-  optionTaken: {backgroundColor: color.disabledBg, borderColor: color.disabledBg},
-  takenText: {color: color.disabledInk},
 });
