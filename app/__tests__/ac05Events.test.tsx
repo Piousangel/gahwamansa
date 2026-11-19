@@ -15,6 +15,10 @@ import {EVENT_NAMES, EVENT_PROP_VALUES} from '../src/api/contract/events';
 import {enterCode, press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import type {Api} from '../src/features/types';
 import * as clipboard from '../src/ui/clipboard';
+import {warmAppRoot} from '../testUtils/warm';
+
+// 콜드 스타트 예열(#125 리뷰): 첫 AppRoot 테스트만 부하에 시간 초과하던 것. prefs 는 beforeEach 에서 새로 만드므로 예열이 app_first_open 을 먼저 쓰지 않는다(파일 전체로 확인)
+beforeAll(warmAppRoot);
 
 jest.setTimeout(20000);
 beforeEach(() => {
@@ -223,10 +227,10 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     expect(events(log)).not.toContain('child_report_viewed');
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
     await waitFor(() => expect(callsOf(log, 'child_report_viewed')).toEqual([undefined]));
   });

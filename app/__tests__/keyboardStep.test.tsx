@@ -74,7 +74,7 @@ const type = async (t: string) => {
 
 test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼어요"는 비활성, 넘어가기는 약한 링크', async () => {
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
+  expect(screen.getByText('낱말 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('따라 쓸 낱말, 나무')).toBeTruthy(); // v4: 본보기 낱말 한 줄(입력 칸 바로 위)
   expect(screen.queryByText('천천히 써 봐요')).toBeNull(); // 시안 ds4b 보조 문구는 '한 글자라도 쓰면 눌려요'
@@ -281,7 +281,7 @@ test('20초가 지나면 넘어가기가 또렷해진다', async () => {
 test('자판 열림(100%, 시안 ds4b): 위 영역은 BackLink 줄 + 오른쪽 "넘어갈게요", 본문은 낱말 카드(본보기 낱말 + 입력 칸)만, Dock 다 썼어요', async () => {
   await toKeyboardStep();
   await openKb();
-  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
+  expect(screen.queryByText('낱말 쓰기 · 3 / 3')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
   expect(screen.queryByText('한 글자라도 쓰면 눌려요')).toBeNull();
   expect(screen.getByTestId('kb-word', {includeHiddenElements: true})).toBeTruthy(); // r1/7 H: 본보기 낱말이 입력 칸 바로 위에
@@ -305,9 +305,9 @@ test('자판 열림 + 로마자 입력이면 카드 아래 영문 안내 한 줄
 test('글자 150% 이상 + 자판 열림이면 제목·단계도 숨긴다', async () => {
   mockFontScale = 1.5;
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy();
+  expect(screen.getByText('낱말 쓰기 · 3 / 3')).toBeTruthy();
   await openKb();
-  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
+  expect(screen.queryByText('낱말 쓰기 · 3 / 3')).toBeNull();
   // 200% 시안: '넘어갈게요'는 위 줄이 아니라 카드 아래 본문(스크롤로 닿음)
   expect(screen.queryByTestId('kb-skip-top')).toBeNull();
   expect(within(screen.getByTestId('screen-body')).getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
@@ -338,12 +338,12 @@ test('화면 읽기(TalkBack)가 켜져 있으면 넘어가기를 처음부터 �
 
 test('읽기 라벨: 제목 줄 한 덩어리, 읽어 주세요는 글자 있는 버튼 하나(AP-03, 빈 버튼 없음)', async () => {
   await toKeyboardStep();
-  expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
+  expect(screen.getByLabelText('낱말 쓰기, 3단계 중 3단계')).toBeTruthy();
   expect(screen.getAllByRole('button', {name: '읽어 주세요'})).toHaveLength(1);
   expect(screen.getByText('읽어 주세요')).toBeTruthy();
 });
 
-test('P3 단계 행·첫 화면 소개는 "자판으로 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {
+test('P3 단계 행·첫 화면 소개는 "낱말 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {
   render(<AppRoot api={createFakeApi()} />);
   expect(screen.getByText('사진 속 낱말을 자판으로 써요', {includeHiddenElements: true})).toBeTruthy();
 });

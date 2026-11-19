@@ -11,7 +11,7 @@ import {enterCode, press, toHome, toHomeConsented, pressCourseNext} from '../tes
 async function previewHome(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} role="parent" />);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
 }
 
 test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르지 않는다', async () => {

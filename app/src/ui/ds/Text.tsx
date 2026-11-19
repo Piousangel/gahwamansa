@@ -16,6 +16,8 @@ export type TextProps = {
   accessibilityLabel?: string;
   testID?: string;
   nativeID?: string;
+  /** 실제 줄 수 알림(ds 내부 배치 판정용 — Choice 2열이 칸에서 꺾이는지, #115 리뷰 L2) */
+  onLines?: (lines: number) => void;
   /**
    * 말줄임 예외(SUMMARY 2-4). 원칙은 줄바꿈이고 numberOfLines prop 은 없다.
    * 예외 3가지(낱말 칸·브랜드 버튼·번호 칸)만 이유를 적어 쓴다 — 화면(features/·app/)에서 쓰면 lint 경고·dsBaseline 이 센다(#31).
@@ -24,7 +26,7 @@ export type TextProps = {
 };
 
 /** v4 글자. 크기·줄높이·굵기·색·확대 상한은 역할(role)과 audience 로 정해진다(화면은 숫자를 고르지 않음). */
-export function Text({role, tone = 'default', children, style, accessibilityRole, accessibilityLabel, testID, nativeID, ellipsisException}: TextProps) {
+export function Text({role, tone = 'default', children, style, accessibilityRole, accessibilityLabel, testID, nativeID, ellipsisException, onLines}: TextProps) {
   const audience = useAudience();
   const r = roleText(role, audience, tone);
   const titleRef = useScreenTitleRef(accessibilityRole === 'header');
@@ -40,6 +42,7 @@ export function Text({role, tone = 'default', children, style, accessibilityRole
       accessibilityLabel={label}
       maxFontSizeMultiplier={r.maxFontSizeMultiplier}
       numberOfLines={ellipsisException?.lines}
+      onTextLayout={onLines ? e => onLines(e.nativeEvent.lines.length) : undefined}
       style={[r.style, pickLayout(style)]}>
       {keepAllChildren(children)}
     </RNText>

@@ -39,7 +39,8 @@ export function StateView({kind, title, body, action, testID = 'state-view'}: St
           <Icon name={icon.name} size={40} color={ds.color[icon.color]} />
         </View>
       ) : null}
-      <Text role="heading" accessibilityRole="header" style={styles.center}>
+      {/* 불러오는 중은 머리글이 아니다(PR #98 리뷰 L1: '잠시만요'가 제목처럼 읽혔음) — 빈·오류·오프라인만 머리글 */}
+      <Text role="heading" accessibilityRole={kind === 'loading' ? undefined : 'header'} style={styles.center}>
         {title}
       </Text>
       {body ? (
