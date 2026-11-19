@@ -13,6 +13,7 @@ const {ESLint}: {
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
 // 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
+// 응원 시트 v4(ds Sheet + Choice, 11-19): 170 → 168 (text20Size −1·rnImport −1)
 // C3 v4(연결 기다리는 중, 11-19): 177 → 170 (fixedBox −1·text20Size −6)
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 const BASELINE: Record<string, number> = {
@@ -25,8 +26,8 @@ const BASELINE: Record<string, number> = {
   numberOfLines: 0,
   fontScale: 15,
   placeholder: 0,
-  text20Size: 103,
-  rnImport: 27,
+  text20Size: 102,
+  rnImport: 26,
   ellipsis: 0,
 };
 
