@@ -34,7 +34,7 @@ const BASELINE: Record<string, number> = {
   numberOfLines: 0,
   fontScale: 13,
   placeholder: 0,
-  text20Size: 71,
+  text20Size: 69,
   rnImport: 22,
   ellipsis: 0,
 };

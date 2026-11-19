@@ -924,3 +924,34 @@ describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
     expect(await store.getItem('terms_pending_v1:z')).toBeNull();
   });
 });
+
+describe('CG 자녀 시작 결정(v4 공통 상태, 남은 자녀 화면 6번)', () => {
+  test('어르신 폰 막음: 제목 머리글 + 안내 + Dock 처음으로(자녀 56, A5 닫기 말), BackLink 처음으로 → 역할 선택', async () => {
+    render(<AppRoot api={createFakeApi({linked: true})} />);
+    await act(async () => fireEvent.press(screen.getByText(/자녀 휴대폰이에요/)));
+    await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
+    expect(screen.getByRole('header', {name: '이 폰은 부모님 휴대폰으로 쓰고 있어요'})).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByRole('button', {name: '처음으로'}).props.style).minHeight).toBe(56);
+    await act(async () => fireEvent.press(screen.getByRole('link', {name: '처음으로'})));
+    await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
+  });
+  test('확인 실패: StateView 오류(머리글·다시 하기), 다시 하면 결정이 이어진다', async () => {
+    const api = createFakeApi({who: 'child'});
+    render(<AppRoot api={api} />);
+    const who = jest.spyOn(api, 'whoAmI').mockRejectedValue(new Error('network down'));
+    await act(async () => fireEvent.press(screen.getByText(/자녀 휴대폰이에요/)));
+    await waitFor(() => screen.getByTestId('child-gate-error'));
+    who.mockRestore();
+    expect(within(screen.getByTestId('child-gate-error')).getByRole('header')).toBeTruthy();
+    await act(async () => fireEvent.press(within(screen.getByTestId('child-gate-error')).getByRole('button')));
+    await waitFor(() => screen.getByTestId('title-group'));
+  });
+  test('PR #98 리뷰 L1: 불러오는 중 StateView 제목은 머리글로 읽히지 않는다(빈·오류는 머리글)', () => {
+    const {StateView} = require('../src/ui/ds');
+    render(<StateView kind="loading" title="잠시만요" />);
+    expect(screen.queryByRole('header')).toBeNull();
+    screen.unmount();
+    render(<StateView kind="error" title="문제가 생겼어요" />);
+    expect(screen.getByRole('header', {name: '문제가 생겼어요'})).toBeTruthy();
+  });
+});
