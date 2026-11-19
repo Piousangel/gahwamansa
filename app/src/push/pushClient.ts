@@ -139,7 +139,6 @@ export async function acceptParentPrompt(
   return p;
 }
 
-/** N1 '괜찮아요': 서버 호출 없음(받기 시각이 없으면 보내지 않음). 다시 묻지 않는다 — 켜기는 P13 설정에서 */
 /** N1 을 답 없이 닫음(하드웨어 뒤로 등): '오늘은 넘김'만 기억한다. 받기 거절('no')이 아니라서 다음 날 다시 묻는다 */
 export async function skipParentPromptToday({api, store}: PushDeps, today: string = kstDate(new Date())): Promise<void> {
   const tag = await tagOf(api);
@@ -148,6 +147,7 @@ export async function skipParentPromptToday({api, store}: PushDeps, today: strin
   }
 }
 
+/** N1 '안 받을게요': 서버 호출 없음(받기 시각이 없으면 보내지 않음). 다시 묻지 않는다 — 켜기는 P13 설정에서 */
 export async function declineParentPrompt({api, store}: PushDeps): Promise<void> {
   const tag = await tagOf(api);
   if (tag) {
