@@ -16,7 +16,7 @@ import {TextLink} from './TextLink';
 import {BackBar} from '../../app/BackBar';
 import {formatCode} from '../../ui/codeInputLogic';
 import {firstBlockGuess, keyFor, pickStage, type Stage} from './p1Stage';
-import {KEY_MIN} from './keypadFit';
+import {KEY_MIN, KEYS_GAP_MAX} from './keypadFit';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
 import {LegalText} from '../../ui/LegalText';
@@ -177,12 +177,20 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       setAdj({for: inputKey, bumps: Math.min(2, bumps + 1)});
     }
   }, [areaAt, pad, level, areaShape, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
+  // 디자인 결정(11-19, 키패드 남는 높이): 키는 늘리지 않는다(64~68, 모든 줄 같은 높이). 키패드 영역에 남는 높이는
+  //   ① 칸(과 칸 아래 줄)과 키 사이 여백에 최대 24 → ② 그래도 남으면 키패드 묶음 위·아래로 반씩(영역 가운데 정렬).
+  //   키패드 내용 높이(pad)는 여백을 뺀 값으로 기록해 여백이 넘침 판정·여백 계산을 흔들지 않는다.
+  const [areaH, setAreaH] = useState<{h: number; for: string} | null>(null);
+  const spare = !overflow && areaH?.for === inputKey && pad && pad.for === inputKey && pad.keyH === keyH ? areaH.h - pad.h : 0;
+  const keysGap = Math.round(Math.min(KEYS_GAP_MAX, Math.max(0, spare)));
   const onArea = (e: LayoutChangeEvent) => {
     const y = e.nativeEvent.layout.y;
+    const h = e.nativeEvent.layout.height;
     setAreaAt(cur => (cur && cur.y === y && cur.shape === areaShape && cur.for === inputKey ? cur : {y, shape: areaShape, for: inputKey}));
+    setAreaH(cur => (cur && cur.h === h && cur.for === inputKey ? cur : {h, for: inputKey}));
   };
   const onPad = (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
+    const h = e.nativeEvent.layout.height - keysGap;
     setPad(v => (v && v.h === h && v.keyH === keyH && v.for === inputKey ? v : {h, keyH, for: inputKey}));
   };
 
@@ -321,7 +329,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
           {/* 키패드 내용 높이(늘어나지 않는 감싸개)로 넘침을 잰다(재확인 5 M9) */}
           <View testID="keypad-content" onLayout={onPad}>
-            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} foldGap={foldGap} onRowLayout={onRowLayout} />
+            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} foldGap={foldGap} onRowLayout={onRowLayout} keysGap={keysGap} />
           </View>
         </View>
       </View>
@@ -388,7 +396,7 @@ const FIRST_PAD = layout.bodyPadding.top;
 const BODY_BOTTOM = 8;
 
 const styles = StyleSheet.create({
-  area: {flexGrow: 1}, // 남는 높이를 차지하되 키패드보다 작아지지 않는다(줄어들지 않음)
+  area: {flexGrow: 1, justifyContent: 'center'}, // 남는 높이를 차지하되 키패드보다 작아지지 않는다(줄어들지 않음). 칸·키 사이 여백 뒤 남는 높이는 위·아래 반씩
   first: {gap: 16},
   firstDense: {gap: 12},
   fillFirst: {flexGrow: 1}, // 0·1단계: 창을 채우되 내용보다 작아지지 않는다(넘치면 본문 스크롤)

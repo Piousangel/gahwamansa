@@ -21,12 +21,25 @@ type Props = {
   foldGap?: {before: number; h: number};
   /** 키 줄(1~4)의 위치(키패드 안 y)·높이 알림 */
   onRowLayout?: (row: number, y: number, h: number) => void;
+  /** 칸(과 칸 아래 줄)과 키 사이에 더하는 여백(남는 높이, 최대 24는 화면이 정한다) */
+  keysGap?: number;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
+// 디자인 결정(11-19, 키패드 남는 높이): 모든 줄 높이는 같고 키는 64~68 을 넘지 않는다.
+//   '모두 지움'은 좁은 화면에서 '모두 / 지움' 두 줄이 되는데, 기본 줄높이면 두 줄이 키(64)보다 커져 마지막 줄만 높아졌다(360×700 실측 80).
+//   → 글자 키는 줄높이를 글자 + 2 로 좁히고, 두 줄이 키 안(테두리 2×2 제외)에 들어가는 만큼만 확대한다(최대 FONT_SCALE_MAX).
+const WORD_LINE_EXTRA = 2;
+const KEY_BORDER_Y = 4;
+export function wordKeyScaleMax(h: number | undefined, textSize = 26): number {
+  const box = h ?? Math.max(64, size.codeBox);
+  return Math.max(1, Math.min(FONT_SCALE_MAX, (box - KEY_BORDER_Y) / (2 * (textSize + WORD_LINE_EXTRA))));
+}
+
 // 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
 function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
+  const word = textSize < 34; // '모두 지움'·'지움'
   return (
     <Pressable
       accessibilityRole="button"
@@ -37,15 +50,15 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
       <Text
         testID={`key-${label}`}
         {...koreanTextProps}
-        maxFontSizeMultiplier={FONT_SCALE_MAX}
-        style={[styles.keyText, {fontSize: textSize}]}>
+        maxFontSizeMultiplier={word ? wordKeyScaleMax(h, textSize) : FONT_SCALE_MAX}
+        style={[styles.keyText, {fontSize: textSize}, word ? {lineHeight: textSize + WORD_LINE_EXTRA} : null]}>
         {keepAllChildren(label)}
       </Text>
     </Pressable>
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout, keysGap}: Props) {
   // 접힘 경계 여백(RULES-V4 R-15 '접힘 경계는 줄·요소 경계', 디자인 #54): 첫 화면 끝이 키 줄을 반쯤 가르면 그 줄 앞에 여백을 넣어 줄 전체를 접힘 밖으로 민다
   const gap = (row: number) => (foldGap && foldGap.before === row && foldGap.h > 0 ? <View testID="fold-gap" style={{height: foldGap.h}} /> : null);
   return (
@@ -62,6 +75,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
         ))}
       </View>
       {belowCells ? <View style={styles.below}>{belowCells}</View> : null}
+      {keysGap && keysGap > 0 ? <View testID="keys-gap" style={{height: keysGap}} /> : null}
       {ROWS.map((r, i) => (
         <React.Fragment key={r[0]}>
         {gap(i + 1)}
