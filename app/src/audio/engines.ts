@@ -6,6 +6,7 @@
 // 어느 것이든 불러오기·호출이 실패하면 null/unknown → 소리 없이 계속(화면을 막지 않음).
 import {Image, Platform} from 'react-native';
 import type {Ringer} from '../lib/audioPolicy';
+import {splitSentences} from './readText';
 import {ringerFromNative, type SfxName, type SoundHandle, type TtsEngine, type Unsubscribe} from './audioCore';
 
 /**
@@ -128,16 +129,80 @@ export function loadSfx(name: SfxName): SoundHandle | null {
   }
 }
 
+/** 우선 쓰는 TTS 엔진(Android). 없거나 한국어 음성이 없으면 기기 기본 엔진을 그대로 쓴다(DECISIONS 11-19 V13a). */
+export const GOOGLE_TTS_ENGINE = 'com.google.android.tts';
+
+type NativeVoice = {identifier?: unknown; name?: unknown; quality?: unknown; language?: unknown};
+/**
+ * 기기 보이스 고르기(DECISIONS 11-19): 네트워크 보이스는 읽는 문장이 엔진 회사 서버로 가므로 **쓰지 않는다**.
+ * 라이브러리 1.4.4 는 isNetworkConnectionRequired 를 넘기지 않아 이름으로 가린다(Google 엔진 이름 규칙 `…-network`·`…-local`).
+ * 순서: 네트워크 아닌 Enhanced → 이름에 local 이 있는 것 → 없음(null = 엔진 기본 한국어 보이스).
+ */
+export function pickLocalVoice(voices: unknown): string | null {
+  if (!Array.isArray(voices)) {
+    return null;
+  }
+  const ok = (voices as NativeVoice[]).filter(
+    v =>
+      v &&
+      typeof v.identifier === 'string' &&
+      v.identifier.length > 0 &&
+      (typeof v.language !== 'string' || /^ko/i.test(v.language)) &&
+      !/network/i.test(v.identifier) &&
+      !(typeof v.name === 'string' && /network/i.test(v.name)),
+  );
+  const best = ok.find(v => v.quality === 'Enhanced') ?? ok.find(v => /local/i.test(v.identifier as string));
+  return (best?.identifier as string | undefined) ?? null;
+}
+
+type SpeechModule = {
+  getAvailableVoices(lang?: string): Promise<unknown[]>;
+  getEngines?(): Promise<{name: string; isDefault?: boolean}[]>;
+  setEngine?(name: string): Promise<void>;
+  speak(text: string, o: object): Promise<string>;
+  stop(): Promise<void>;
+  onStart(cb: () => void): {remove(): void};
+  onFinish(cb: () => void): {remove(): void};
+  onStopped(cb: () => void): {remove(): void};
+  onError(cb: () => void): {remove(): void};
+};
+
+/**
+ * Android: Google 엔진이 있으면 그것으로 바꾼다. 바꾼 뒤 한국어 음성이 없으면 원래 기본 엔진으로 되돌린다.
+ * 실패는 모두 무시(기본 엔진으로 계속). iOS 는 엔진이 하나라 하지 않는다.
+ */
+async function preferGoogleEngine(Speech: SpeechModule): Promise<void> {
+  if (Platform.OS !== 'android' || !Speech.getEngines || !Speech.setEngine) {
+    return;
+  }
+  try {
+    const engines = await Speech.getEngines();
+    if (!Array.isArray(engines) || !engines.some(e => e?.name === GOOGLE_TTS_ENGINE)) {
+      return;
+    }
+    const prev = engines.find(e => e?.isDefault)?.name;
+    if (prev === GOOGLE_TTS_ENGINE) {
+      return;
+    }
+    await Speech.setEngine(GOOGLE_TTS_ENGINE);
+    const ko = await Speech.getAvailableVoices('ko');
+    if ((!Array.isArray(ko) || ko.length === 0) && prev) {
+      await Speech.setEngine(prev);
+    }
+  } catch {
+    // 기본 엔진으로 계속
+  }
+}
+
+/**
+ * 기기 TTS(@mhpdev/react-native-speech). 개선(DECISIONS 11-19 V13a, r1/F §2):
+ * - 엔진: Google 우선(preferGoogleEngine). 보이스: 네트워크 아닌 Enhanced 우선(pickLocalVoice) — 실행 중 외부 전송 0.
+ * - 문장 나눠 읽기: 문장마다 speak 를 따로 불러(네이티브가 차례로 이어 말함) 문장 사이에 쉼이 생긴다.
+ *   그래서 '끝남'은 마지막 문장이 끝날 때 한 번만 알린다(중간 문장 끝에 덕킹이 풀리거나 버튼이 기본으로 돌아가지 않게).
+ * - 보이스를 넣어 실패하면 보이스 없이(엔진 기본) 다시 읽고, 그 뒤로는 보이스를 쓰지 않는다.
+ */
 export function createTtsEngine(): TtsEngine | null {
-  let Speech: {
-    getAvailableVoices(lang?: string): Promise<unknown[]>;
-    speak(text: string, o: object): Promise<string>;
-    stop(): Promise<void>;
-    onStart(cb: () => void): {remove(): void};
-    onFinish(cb: () => void): {remove(): void};
-    onStopped(cb: () => void): {remove(): void};
-    onError(cb: () => void): {remove(): void};
-  };
+  let Speech: SpeechModule;
   try {
     Speech = require('@mhpdev/react-native-speech').default;
     if (!Speech) {
@@ -146,27 +211,98 @@ export function createTtsEngine(): TtsEngine | null {
   } catch {
     return null;
   }
+  let prepared: Promise<void> | null = null;
+  const prepare = () => (prepared ??= preferGoogleEngine(Speech));
   // 있음만 기억한다: 없음이면 매번 다시 물어 사용자가 한국어 음성을 설치하고 돌아온 경우를 잡는다(리뷰 L1)
   let korean = false;
+  let voice: string | null = null;
+
+  // 남은 문장 수: 끝남·오류마다 하나씩, 멈춤이면 0. 0 이 되는 순간 한 번만 onDone 을 알린다.
+  let remaining = 0;
+  const doneListeners = new Set<() => void>();
+  const startListeners = new Set<() => void>();
+  const fireDone = () => doneListeners.forEach(l => l());
+  const oneDone = () => {
+    if (remaining > 0) {
+      remaining -= 1;
+      if (remaining === 0) {
+        fireDone();
+      }
+    } else {
+      fireDone(); // 셈 밖의 끝 알림(이전 읽기 등): 그래도 '끝남'은 알린다
+    }
+  };
+  const allDone = () => {
+    remaining = 0;
+    fireDone();
+  };
+  try {
+    Speech.onStart(() => startListeners.forEach(l => l()));
+    Speech.onFinish(oneDone);
+    Speech.onError(oneDone);
+    Speech.onStopped(allDone);
+  } catch {
+    // 이벤트를 못 받으면 끝남을 모른다: stop 으로만 풀린다
+  }
+
+  const speakOne = async (s: string) => {
+    const base = ttsOptions();
+    if (voice) {
+      try {
+        await Speech.speak(s, {...base, voice});
+        return;
+      } catch {
+        voice = null; // 이 보이스로는 못 읽음 → 이후 엔진 기본
+      }
+    }
+    await Speech.speak(s, base);
+  };
+
   return {
     async hasKorean() {
       if (!korean) {
+        await prepare();
         const voices = await Speech.getAvailableVoices('ko');
         korean = Array.isArray(voices) && voices.length > 0;
+        voice = korean ? pickLocalVoice(voices) : null;
       }
       return korean;
     },
     speak: async text => {
-      await Speech.speak(text, ttsOptions());
+      await prepare();
+      const parts = splitSentences(text);
+      const list = parts.length > 0 ? parts : [text];
+      remaining += list.length;
+      for (let i = 0; i < list.length; i++) {
+        try {
+          await speakOne(list[i]);
+        } catch (e) {
+          remaining = Math.max(0, remaining - (list.length - i)); // 넣지 못한 문장은 셈에서 뺀다
+          if (i === 0) {
+            throw e; // 첫 문장부터 못 넣었으면 실패
+          }
+          if (remaining === 0) {
+            fireDone();
+          }
+          return;
+        }
+      }
     },
-    stop: () => Speech.stop(),
+    stop: async () => {
+      remaining = 0;
+      await Speech.stop();
+    },
     onStart(cb) {
-      const s = Speech.onStart(cb);
-      return () => s.remove();
+      startListeners.add(cb);
+      return () => {
+        startListeners.delete(cb);
+      };
     },
     onDone(cb) {
-      const subs = [Speech.onFinish(cb), Speech.onStopped(cb), Speech.onError(cb)];
-      return () => subs.forEach(s => s.remove());
+      doneListeners.add(cb);
+      return () => {
+        doneListeners.delete(cb);
+      };
     },
   };
 }
