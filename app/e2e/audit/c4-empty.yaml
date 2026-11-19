@@ -1,0 +1,26 @@
+# C4 첫날 빈 상태 안 B 실측(시안 child/C3_C4_P8_ds4 #42·#59). 연결됐고 아직 고른 답이 없는 자녀 홈을 연다.
+# 전제: fake API 가 '자녀·연결됨·동의·답 없음'으로 시작해야 한다. 개발 중에만 selectApi 의 createFakeApi() 인자를
+#   {who: 'child', childFamily: true, childLinked: true, consented: true, parentTitle: '엄마', latest: null} 로 잠깐 바꿔 실행한다(커밋하지 않음).
+# 기대: 첫 화면에 안내 한 줄 + (100%) 예시 카드, 첫 화면 끝은 요소 경계(R-15), 스크롤하면 이야기 꺼내기까지.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c4-empty.yaml
+appId: com.bumojasik.app.staging
+name: C4 빈 상태 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '부모님이 오늘 사진을 보시면.*'
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: c4-empty-first
+- scrollUntilVisible:
+    element: '가을에 자주 가시던 곳이.*'
+    direction: DOWN
+- takeScreenshot: c4-empty-scrolled
