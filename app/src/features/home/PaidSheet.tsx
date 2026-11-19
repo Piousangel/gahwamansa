@@ -95,7 +95,6 @@ export function PaidSheet({
       visible={visible}
       title={t.title}
       sub={t.body}
-      closeLabel={t.close}
       onClose={onClose}
       returnFocusRef={returnFocusRef ?? fallbackFocus}
       footer={
