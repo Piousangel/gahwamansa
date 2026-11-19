@@ -90,7 +90,7 @@ function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, c
             onMomentumScrollEnd={e => setY(Math.round(e.nativeEvent.contentOffset.y))}
             onScrollEndDrag={e => setY(Math.round(e.nativeEvent.contentOffset.y))}
             scrollEventThrottle={16}
-            contentContainerStyle={[styles.body, {paddingBottom: 28}]}>
+            contentContainerStyle={styles.body}>
             <View style={styles.head}>
               <View ref={titleRef} accessible accessibilityRole="header" style={styles.titleWrap}>
                 <Heading level={2}>{title}</Heading>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   scrim: {...StyleSheet.absoluteFill, backgroundColor: v3color.scrim},
   panel: {backgroundColor: c.paper, borderTopLeftRadius: ds.radius.sheet, borderTopRightRadius: ds.radius.sheet, boxShadow: shadow.lifted, overflow: 'hidden'},
   scroll: {flexGrow: 0},
-  body: {gap: 12, paddingTop: 12, paddingHorizontal: 20},
+  body: {gap: 12, paddingTop: 12, paddingHorizontal: 20, paddingBottom: 28}, // 아래 inset 은 패널 바닥 여백(PR #93 L2)
   head: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
   titleWrap: {flex: 1},
   close: {
