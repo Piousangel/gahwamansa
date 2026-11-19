@@ -119,6 +119,7 @@ describe('U10 응원 취소', () => {
   }
 
   test('취소를 누르면 서버로 보내지 않고 "응원을 보내지 않았어요"(한도에 안 셈)', async () => {
+    jest.useFakeTimers(); // 4초 '취소' 시간을 실제로 자지 않는다(부하 때 시간 제한, 2026-11-19)
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
@@ -126,9 +127,10 @@ describe('U10 응원 취소', () => {
     await press('취소');
     await waitFor(() => screen.getByText('응원을 보내지 않았어요'));
     await act(async () => {
-      await new Promise<void>(r => setTimeout(() => r(), 4200));
+      jest.advanceTimersByTime(4200);
     });
     expect(send).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   test('앱이 백그라운드로 가면 기다리지 않고 바로 보낸다', async () => {
@@ -149,13 +151,14 @@ describe('U10 응원 취소', () => {
   });
 
   test('리뷰 M2: 토스트가 끝나는 순간 보내고, 그때부터 \'취소\'는 비활성(늦은 취소로 조용히 보내지는 틈 없음)', async () => {
+    jest.useFakeTimers();
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
     const undo = screen.getByRole('button', {name: '취소'});
     expect(undo.props.accessibilityState?.disabled).toBe(false);
     await act(async () => {
-      await new Promise<void>(r => setTimeout(() => r(), 4050));
+      jest.advanceTimersByTime(4050);
     });
     expect(send).toHaveBeenCalledTimes(1);
     const late = screen.queryByRole('button', {name: '취소'});
@@ -165,6 +168,7 @@ describe('U10 응원 취소', () => {
     }
     expect(screen.queryByText('응원을 보내지 않았어요')).toBeNull();
     expect(send).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 });
 
