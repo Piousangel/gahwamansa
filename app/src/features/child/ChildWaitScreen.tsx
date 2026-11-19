@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Image, Share, StyleSheet, View} from 'react-native';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -10,8 +10,7 @@ import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {useToast} from '../../ui/Toast';
 import {SmallButton} from '../../ui/SmallButton';
-import {copyText, systemShowsCopyNotice} from '../../ui/clipboard';
-import {announce} from '../../ui/a11y';
+import {copyText} from '../../ui/clipboard';
 import {Icon} from '../../ui/assets/icons';
 import {assetRegistry} from '../../ui/assets/registry';
 import {appCopy, copy, withTitle} from '../../copy/copy';
@@ -35,6 +34,14 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const [renewed, setRenewed] = useState(false); // 이 화면에서 지난 번호 대신 새 번호를 만들었다
   // UX U12: 공유 창에서 돌아오면 '보냈어요 · 연결 기다리는 중', 주 버튼은 보조 '다시 보내기'로 낮춘다(새 번호를 또 만들지 않게)
   const [sent, setSent] = useState(false);
+  const [copied, setCopied] = useState(0); // 감사 L2: 번호 카드 위 '복사했어요' 띠(2초)
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const t = setTimeout(() => setCopied(0), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
   const {show} = useToast();
   const notify = useNotifyPermission();
   useBootLoading(!state && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
@@ -75,11 +82,8 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const copyCode = () => {
     if (code && copyText(code.code)) {
-      if (systemShowsCopyNotice()) {
-        announce(w.copied); // 시스템 확인과 겹치지 않게 토스트는 생략, 화면 읽기에는 한 번 알린다
-      } else {
-        show({text: w.copied});
-      }
+      // 감사 L2(디자인 판정): 토스트 대신 번호 카드 바로 위 인라인 띠 — 아래쪽 시스템 클립보드 미리보기(Android 13+, AC-08)와 겹치지 않는다
+      setCopied(n => n + 1);
     }
   };
   const settings = () => navigation.navigate('Settings');
@@ -131,6 +135,15 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
             <Text20 size={28} weight="bold" accessibilityRole="header">{withTitle(w.title, title)}</Text20>
           </>
         )}
+        {/* 늘 붙어 있는 live region 하나에 글만 바꾼다(새로 붙은 노드는 기기에 따라 안 읽힘) */}
+        <View accessibilityLiveRegion="polite">
+          {copied ? (
+            <View testID="wait-copied" style={styles.copied}>
+              <Icon name="icon-check" size={22} color={color.doneInk} />
+              <Text20 weight="bold" style={styles.copiedText}>{w.copied}</Text20>
+            </View>
+          ) : null}
+        </View>
         {code ? (
           <View testID="wait-code" style={styles.card}>
             <View style={styles.cardHead}>
@@ -208,6 +221,8 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
 }
 
 const styles = StyleSheet.create({
+  copied: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.doneSoft, borderRadius: radius.card, paddingVertical: 8, paddingHorizontal: 14},
+  copiedText: {flex: 1, color: color.doneInk},
   flex: {flex: 1},
   chip: {alignSelf: 'flex-start', backgroundColor: color.actionSoft, borderRadius: radius.chip, paddingHorizontal: 12, paddingVertical: 4},
   notice: {backgroundColor: color.noticeSoft, borderRadius: radius.card, padding: 16, gap: 6},

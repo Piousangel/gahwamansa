@@ -458,6 +458,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"server_flags": {
+                  Row: {
+                    "enabled": boolean,"name": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "enabled"?: boolean,"name": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "enabled"?: boolean,"name"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"terms_agreements": {
                   Row: {
                     "agreed_at": string,"id": number,"privacy_version": string,"role": string,"terms_version": string,"user_id": string
@@ -578,6 +592,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "delete_scope_preview":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"dev_reset_today":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "discard_anonymous_session":
@@ -729,6 +746,12 @@ isOneToOne: false
                            },
 "send_cheer":
 { Args: { "p_key": string,"p_parent": string }; Returns: Json
+                           },
+"server_flag":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
+"server_flag_seed_local":
+{ Args: { "p_name": string }; Returns: boolean
                            },
 "set_parent_title":
 { Args: { "p_title": string }; Returns: Json

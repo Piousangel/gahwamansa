@@ -1,22 +1,27 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {LayoutChangeEvent, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Icon} from '../../ui/assets/icons';
 import {focusLater} from '../../ui/screenTitle';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
-import {color, radius} from '../../ui/tokens';
+import {Screen, SCREEN_FADE_H, type ScreenScroll} from '../../ui/Screen';
+import {color, layout, radius} from '../../ui/tokens';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {CodeEntry} from './CodeEntry';
 import {TextLink} from './TextLink';
 import {BackBar} from '../../app/BackBar';
 import {formatCode} from '../../ui/codeInputLogic';
-import {BELOW_LINE_H, KEY_MIN, keypadKeyHeight} from './keypadFit';
+import {firstBlockGuess, keyFor, pickStage, type Stage} from './p1Stage';
+import {KEY_MIN} from './keypadFit';
 import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../copy/copy';
 import {useConnectFlow} from './useConnectFlow';
+import {LegalText} from '../../ui/LegalText';
+import {Banner} from '../../ui/Banner';
+import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
 import type {Prefill} from './useConnectFlow';
 import type {ConnectState, FailKind} from './connectMachine';
@@ -38,9 +43,15 @@ function groupA11y(code: string): string {
   return code.length === 0 ? g.empty : code.length >= 6 ? g.full : g.partial.split('{n}').join(String(code.length));
 }
 
-// 하단 약관 한 줄(11-1 #1). TODO(⑥a 방침 호스팅): 이용약관·처리방침 주소가 정해지면 두 낱말을 링크로
+// 약관 한 줄(11-1 #1). 감사 M7: 두 낱말은 링크 모양(주소가 정해지면, ⑥a 방침 호스팅)
 function LegalLine() {
-  return <Text20 testID="legal-line" style={styles.legal}>{copy.legal.agree_parent}</Text20>;
+  const {open, offline} = useLegalOpen(); // 앱 안 웹 화면(재확인 3 M5), 안 닿으면 Banner(재확인 4 M7, 앱 정보 행과 같은 모양)
+  return (
+    <>
+      <LegalText testID="legal-line" style={styles.legal} text={copy.legal.agree_parent} links={legalLinks()} onOpen={open} />
+      {offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
+    </>
+  );
 }
 
 // P1 번호 쓰기 v4 + P1c 연결 확인(시안 P1_connect_v4·P1c_confirm, ease-and-joy A④⑤). 문구는 copy-v3 11절 우선.
@@ -88,27 +99,73 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     flow.other();
   };
 
-  // 6칸 + 칸 아래 한 줄 + 키 4줄은 무조건 전부 보이게(최우선). 남은 높이로 키 높이(64~68)를 정하고, 모자라면 단계별로:
-  //   1단계 제목 28→22 → 2단계 링크 두 개를 이전 바 줄로 → 3단계 키 64 + 본문 스크롤.
-  //   안심 줄은 어느 단계에서도 숨기지 않는다(UX U4). 그래서 360×640 100%(제스처 내비)도 3단계 스크롤이 된다(dev-app-notes 표, 디자인 확인 중)
-  const [keyH, setKeyH] = useState<number | undefined>(undefined);
-  const [level, setLevel] = useState(0);
+  // 공간 단계(디자인 9절 H3, b2cc65d): 0 그대로 → 1 제목 28→22 → 2 약관 줄 본문 끝 → 3 링크 줄도 키패드 아래(하단 고정 없음)
+  //   → 4 키 64 + 보통 배치·묶음 간격 12. 판정은 순수 함수 pickStage(창·글자 배율·inset·문구, 표 __tests__/p1Stage.test.ts).
+  //   실측 기대(에뮬레이터 p1-fit 11-19, dev-app-notes 표): 411×914 0단계, 360×740 3단계, 360×640·320×640 4단계, 글자 2.0 은 4단계.
+  //   9절 적용 범위(리드 결정 11-19): '칸 + 키 1~9 첫 화면'은 글자 150%까지, 200%는 '모든 키를 스크롤로 누를 수 있음'.
+  // 안전망(리드 결정 11-19): 본문은 단계와 상관없이 늘 스크롤할 수 있다. 0·1단계도 내용이 창보다 크면 저절로 스크롤되고, 맞으면 스크롤이 없다.
+  //   키패드는 띄워 두지 않고(overflow hidden 없음) 보통 배치라 어림이 틀려도 키가 잘리지 않는다(최악이어도 '0' 줄을 스크롤로 누른다).
+  // 사후 검증(재확인 4 H5): 그린 뒤 첫 화면 묶음이 예정 높이보다 크면(넘침) ① 잰 넘침만큼 키 높이를 줄이고(64 이상이면 그 단계 유지)
+  //   ② 64로도 안 되면 한 단계 올리고 ③ 그래도 넘치면 4단계. 올리기만 하고 최대 2회라 진동이 없다. 이벤트가 안 와도 지금 단계 그대로(안전망이 받친다).
+  const {height: winH, width: winW, fontScale} = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const input = {
+    windowH: winH,
+    windowW: winW,
+    fontScale,
+    insets: {top: insets.top, bottom: insets.bottom},
+    text: {
+      title: copy.connect.title,
+      safe: copy.safe.money,
+      below: copy.connect.auto_hint,
+      legal: copy.legal.agree_parent,
+      links: [copy.connect.no_code_link, copy.connect.view_course] as [string, string],
+    },
+  };
+  const picked = pickStage(input);
+  const inputKey = `${winH}|${winW}|${fontScale}|${insets.top}|${insets.bottom}`;
+  // 사후 검증 결과(판정 입력이 바뀌면 무효): bumps 0~2, key = 그 단계에서 줄인 키 높이
+  const [adj, setAdj] = useState<{for: string; bumps: number; key?: {level: number; k: number}} | null>(null);
+  const a = adj?.for === inputKey ? adj : null;
+  const bumps = a?.bumps ?? 0;
+  const level = (bumps === 0 ? picked.level : bumps === 1 ? Math.min(4, picked.level + 1) : 4) as Stage['level'];
+  const baseKey = level === picked.level ? picked.keyH : keyFor(level, input);
+  const keyH = level >= 4 ? KEY_MIN : a?.key && a.key.level === level ? a.key.k : baseKey;
   const [help, setHelp] = useState(false);
-  const overflow = level >= 3;
-  const linksOnTop = level >= 2;
-  const onArea = (e: LayoutChangeEvent) => {
-    if (overflow) {
+  const legalInBody = level >= 2;
+  const noDock = level >= 3;
+  const overflow = level >= 4;
+  const scroll = level >= 2;
+  const scrollRef = useRef<ScreenScroll>(null);
+  // 첫 화면 묶음의 예정 높이: 0·1단계 = 창 − 위 여백 − 아래 여백, 2·3단계 = 창 − 위 여백 − 흐림(− 하단 고정 없으면 아래 inset).
+  // 잰 본문 창이 있으면 그것, 없으면 같은 식의 어림(그리기용. 판정은 pickStage)
+  const dockConfig = noDock ? 2 : legalInBody ? 1 : 0;
+  const [view, setView] = useState<{h: number; dock: number; for: string} | null>(null);
+  const viewH = view && view.dock === dockConfig && view.for === inputKey ? view.h : 0; // 다른 구성·다른 판정 입력에서 잰 창은 쓰지 않는다
+  const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : firstBlockGuess(level, input);
+  const fillExpected = viewH > 0 ? viewH - FIRST_PAD - BODY_BOTTOM : 0;
+  const onViewport = (h: number) => setView(v => (v && v.h === h && v.dock === dockConfig && v.for === inputKey ? v : {h, dock: dockConfig, for: inputKey}));
+
+  const [block, setBlock] = useState<{h: number; level: number; keyH: number; for: string} | null>(null);
+  useEffect(() => {
+    if (overflow || !block || block.for !== inputKey || block.level !== level || block.keyH !== keyH || viewH === 0) {
+      return; // 지금 단계·지금 키 높이로 그린 묶음을 이 구성의 창 높이와 비교할 수 있을 때만
+    }
+    const expected = scroll ? firstH : fillExpected;
+    const over = block.h - expected;
+    if (over <= 1) {
       return;
     }
-    const k = keypadKeyHeight(e.nativeEvent.layout.height - BELOW_LINE_H);
-    if (k !== null) {
-      setKeyH(k);
-    } else if (level < 2) {
-      setLevel(l => l + 1);
+    const k = Math.floor(keyH - over / 4); // 넘친 만큼 키 4줄에서 덜어 낸다(키패드 나머지 높이는 실제 그대로)
+    if (k >= KEY_MIN && k < keyH) {
+      setAdj({for: inputKey, bumps, key: {level, k}});
     } else {
-      setKeyH(KEY_MIN);
-      setLevel(3);
+      setAdj({for: inputKey, bumps: Math.min(2, bumps + 1)});
     }
+  }, [block, level, keyH, viewH, overflow, scroll, firstH, fillExpected, inputKey, bumps]);
+  const onBlock = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setBlock(b => (b && b.h === h && b.level === level && b.keyH === keyH && b.for === inputKey ? b : {h, level, keyH, for: inputKey}));
   };
 
   const ok = state.kind === 'ok';
@@ -174,36 +231,46 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   return (
     <Screen
       key="entry"
-      fill={!overflow}
-      scrollEnabled={overflow}
-      top={
-        linksOnTop ? (
-          <View style={styles.topRow}>
-            <BackBar onBack={back} />
-            {links}
-          </View>
-        ) : (
-          <BackBar onBack={back} />
-        )
-      }
+      fill={!scroll}
+      scrollEnabled
+      fillScrollable // 안전망: 0·1단계(fill)도 내용이 창보다 크면 스크롤(맞으면 스크롤이 생기지 않는다)
+      dense={overflow}
+      onViewport={onViewport}
+      scrollRef={scrollRef}
+      top={<BackBar onBack={back} />}
       bottom={
-        <>
-          {linksOnTop ? null : links}
-          <LegalLine />
-        </>
+        noDock ? undefined : (
+          <>
+            {links}
+            {legalInBody ? null : <LegalLine />}
+          </>
+        )
       }>
-      <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
-        {TITLE}
-      </Text20>
-      {help ? <Text20 accessibilityLiveRegion="polite">{copy.connect.no_code_help}</Text20> : null}
-      {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4). 모자라면 뒤 단계(제목 줄임·링크 위로·스크롤)로 */}
-      <Text20 testID="connect-safe">{copy.safe.money}</Text20>
-      <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
-        {/* 영역 크기를 키패드가 밀어 올리지 않게 위에 띄워 둔다(스크롤 모드에서는 보통 배치) */}
-        <View style={overflow ? null : styles.pinned}>
+      {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
+      <View
+        testID="connect-first"
+        onLayout={onBlock}
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {minHeight: firstH} : null, !scroll ? styles.fillFirst : null]}>
+        <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
+          {TITLE}
+        </Text20>
+        {/* 안심 줄은 모든 글자 크기·좁은 화면에서도 유지(UX U4, 동결 시안 P1_connect_v4) */}
+        <Text20 testID="connect-safe">{copy.safe.money}</Text20>
+        {/* 키패드는 보통 배치(띄우지 않음, 잘라 내지 않음): 남는 높이를 차지하되 키패드보다 작아지지 않는다 → 넘치면 본문이 스크롤된다(안전망) */}
+        <View testID="keypad-area" style={overflow ? null : styles.area}>
           <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} />
         </View>
       </View>
+      {/* 스크롤 단계: 읽기·시선 순서 제목 → 안심 줄 → 칸 → 키 → 링크 → 약관(talkback 기준표 P1) */}
+      {noDock ? links : null}
+      {/* 재리뷰 L2·재확인 4 M6: '번호가 없어요' 안내는 어느 단계에서도 묶음 밖(키패드 아래)에 두고, 열면 보이게 스크롤한다(키 공간을 줄이지 않음) */}
+      {help ? (
+        // showRange 의 y 는 본문 contentContainer 기준 — 이 줄은 본문 바로 아래 자식이어야 한다(재확인 2 L9)
+        <Text20 testID="connect-help" accessibilityLiveRegion="polite" onLayout={e => scrollRef.current?.showRange(e.nativeEvent.layout.y, e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
+          {copy.connect.no_code_help}
+        </Text20>
+      ) : null}
+      {legalInBody ? <LegalLine /> : null}
     </Screen>
   );
 }
@@ -244,12 +311,17 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
 const TITLE = copy.connect.title.replace('써 주세요', '써\u00A0주세요');
 // 연결 중 이전(리뷰 M1): 화면을 바꾸지 않고 하드웨어 뒤로도 삼킨다
 const noop = () => {};
+// 본문 위 여백(layout.bodyPadding.top). 첫 화면 묶음 = 창 높이 − 이 여백
+const FIRST_PAD = layout.bodyPadding.top;
+// 0·1단계(Screen fill) 본문 아래 여백 8(ui/Screen styles.fill). 묶음 예정 높이 = 창 − 위 여백 − 이것
+const BODY_BOTTOM = 8;
 
 const styles = StyleSheet.create({
-  area: {flex: 1, minHeight: 0, overflow: 'hidden'},
-  pinned: {position: 'absolute', top: 0, left: 0, right: 0},
+  area: {flexGrow: 1}, // 남는 높이를 차지하되 키패드보다 작아지지 않는다(줄어들지 않음)
+  first: {gap: 16},
+  firstDense: {gap: 12},
+  fillFirst: {flexGrow: 1}, // 0·1단계: 창을 채우되 내용보다 작아지지 않는다(넘치면 본문 스크롤)
   links: {flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 24},
-  topRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'},
   title: {color: color.inkTitle},
   sub: {color: color.inkSub},
   invalid: {color: color.dangerInk},

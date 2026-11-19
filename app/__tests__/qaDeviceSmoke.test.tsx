@@ -112,6 +112,8 @@ test('P3: 하단 큰 버튼은 지금 단계 이름(0/3 사진 보기 → 1/3 �
 });
 
 test('P1 v4: 하단은 번호가 없어요·코스 보기 → 약관 한 줄("다음" 없음, 자동 확인)', async () => {
+  // 기준 기기 글자 100%(0단계). jest 모의 기본 글자 배율 2 는 감사 H3 2단계(약관 줄 본문 끝)부터라 따로 본다(connectFit)
+  jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 411, height: 914, scale: 2.6, fontScale: 1});
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
   const order = texts(screen.getByTestId('screen-dock'));
