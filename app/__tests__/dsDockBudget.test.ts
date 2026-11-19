@@ -11,7 +11,7 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 import {copy} from '../src/copy/copy';
 import type {DockProps} from '../src/ui/ds';
 import {planDock} from '../src/ui/ds/dockLayout';
-import {INTRO_DOCK_RATIO, type ScreenVariant} from '../src/ui/ds/Screen';
+import {dockRatioFor, type ScreenVariant} from '../src/ui/ds/Screen';
 import type {Audience} from '../src/ui/tokensV4';
 
 const noop = () => {};
@@ -76,13 +76,23 @@ describe('Dock 예산(320×640·360×780 × 1.0~2.0)', () => {
     const over: string[] = [];
     for (const s of SIZES) {
       for (const fontScale of SCALES) {
-        const r = planDock(c.dock, {...s, fontScale, audience: c.audience}, c.variant === 'intro' ? INTRO_DOCK_RATIO : undefined);
+        // DsScreen 과 같은 비율: SocialGroup 이면 0.4(R-12, 리뷰 M1), 아니면 variant
+        const r = planDock(c.dock, {...s, fontScale, audience: c.audience}, dockRatioFor(c.variant, c.dock));
         if (!r.fits) {
           over.push(`${s.width}×${s.height} ×${fontScale}: ${Math.round(r.total)} > ${r.cap} (spill ${r.spill})`);
         }
       }
     }
     expect(over).toEqual([]);
+  });
+
+  test('C0 로그인(SocialGroup)은 0.4 로 재고, 200%에서는 이메일 링크가 본문으로 간다(B1 모양 금지)', () => {
+    const c0 = DOCK_CASES[0];
+    expect(dockRatioFor(c0.variant, c0.dock)).toBe(0.4);
+    const r = planDock(c0.dock, {width: 320, height: 640, fontScale: 2, audience: 'child'}, dockRatioFor(c0.variant, c0.dock));
+    expect(r.cap).toBe(256);
+    expect(r.spill).toBeGreaterThanOrEqual(1);
+    expect(r.fits).toBe(true);
   });
 
   test('과적한 Dock 은 이 테스트가 실패로 잡는다(장치 확인)', () => {

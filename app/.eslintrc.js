@@ -19,14 +19,15 @@ const NO_APP = {
 // features/ 바로 아래의 api 계층 파일(4단계 4-4 에서 src/api/ 로 이동 예정)은 아래 계층이 써도 된다
 const API_IN_FEATURES = ['types', 'fakeApi', 'realApi', 'selectApi', 'socialAuth'].map(f => `!**/features/${f}`);
 
-// 디자인 시스템 v4 강제 장치(SUMMARY 3절 '코드로 강제하는 방법' 2, RULES-V4): features/·app/ 에만(ui/ 는 컴포넌트를 만드는 곳이라 제외).
+// 디자인 시스템 v4 강제 장치(SUMMARY 3절 '코드로 강제하는 방법' 2, RULES-V4): features/·app/·push/ 화면에만(ui/ 는 컴포넌트를 만드는 곳이라 제외).
 // 처음엔 warn + 위반 수 기준선(__tests__/dsBaseline.test.ts, 늘면 실패·줄면 숫자를 내린다). 동결 창(AU-10)에 error 로 올린다.
 // 메시지 앞머리 [DS:종류] 로 기준선 테스트가 종류별로 센다(레이어 기준선 layerBaseline 은 [DS 메시지를 세지 않는다).
 const DS_IMPORT_PATHS = [
   {
     name: 'react-native',
-    importNames: ['Text', 'TextInput', 'Pressable'],
-    message: '[DS:rnImport] 화면에서 RN Text·TextInput·Pressable 직접 금지 — ui/ds 의 Text·Field·Button·Choice 를 쓴다(SUMMARY 3절).',
+    // Touchable* 은 Pressable 대체 우회(PR #31 리뷰 M3)
+    importNames: ['Text', 'TextInput', 'Pressable', 'TouchableOpacity', 'TouchableHighlight', 'TouchableWithoutFeedback', 'TouchableNativeFeedback'],
+    message: '[DS:rnImport] 화면에서 RN Text·TextInput·Pressable·Touchable* 직접 금지 — ui/ds 의 Text·Field·Button·Choice 를 쓴다(SUMMARY 3절).',
   },
 ];
 const LITERAL = "[value.type='Literal']";
@@ -54,9 +55,32 @@ const DS_SYNTAX = [
     selector: "JSXOpeningElement[name.name='Text20'] > JSXAttribute[name.name='size']",
     message: '[DS:text20Size] Text20 size 숫자 금지 — ui/ds Text role(대응표 ui/tokensV4Migration).',
   },
+  // R-10: 말줄임 예외는 ui/ 컴포넌트 안에서만(PR #31 리뷰 M2) — 화면이 ellipsisException·ellipsizeMode 를 쓰면 센다
+  {
+    selector: "JSXAttribute[name.name=/^(ellipsisException|ellipsizeMode)$/]",
+    message: '[DS:ellipsis] 말줄임 예외는 ui/ 컴포넌트 안에서만(R-10) — 화면은 줄바꿈.',
+  },
+  // R-03 우회(리뷰 M3): Animated.Text·TextInput, import * as RN 의 RN.Text 등
+  {
+    selector: "JSXMemberExpression[object.name='Animated'][property.name=/^(Text|TextInput)$/]",
+    message: '[DS:rnImport] Animated.Text 직접 금지 — ui/ds Text 를 Animated.View 로 감싼다.',
+  },
+  {
+    selector: "ImportDeclaration[source.value='react-native'] > ImportNamespaceSpecifier",
+    message: '[DS:rnImport] import * as … from react-native 금지 — 필요한 이름만 가져온다(Text·Pressable 우회 차단).',
+  },
+  // 리뷰 L4: JSX 속성 색 리터럴(<Icon color="#…">, Svg stroke·fill)
+  {
+    selector: "JSXAttribute[name.name=/^(color|stroke|fill)$/][value.type='Literal'][value.value=/^(#|rgb)/]",
+    message: '[DS:color] 색 리터럴 직접 금지 — tone·토큰 이름으로.',
+  },
 ];
 
 const layerRule = patterns => ['warn', {patterns}];
+const LOWER_LAYER = [
+  NO_APP,
+  {group: ['**/features/*', ...API_IN_FEATURES], message: 'features 를 아래 계층에서 import 금지(ARCHITECTURE 2절).'},
+];
 // features/ 는 같은 규칙(no-restricted-imports)에 RN 원시 import 경고도 얹는다(override 끼리는 규칙 옵션이 합쳐지지 않고 덮이므로 한 곳에)
 const featureImportRule = patterns => ['warn', {patterns, paths: DS_IMPORT_PATHS}];
 
@@ -91,10 +115,15 @@ module.exports = {
       // push/(AU-04)·navigation/ 도 같은 층: features 아래, app/ 은 모른다(조립은 app/PushHost)
       files: ['src/shared/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}', 'src/api/**/*.{ts,tsx}', 'src/push/**/*.{ts,tsx}', 'src/navigation/**/*.{ts,tsx}'],
       rules: {
-        'no-restricted-imports': layerRule([
-          NO_APP,
-          {group: ['**/features/*', ...API_IN_FEATURES], message: 'features 를 아래 계층에서 import 금지(ARCHITECTURE 2절).'},
-        ]),
+        'no-restricted-imports': layerRule(LOWER_LAYER),
+      },
+    },
+    {
+      // push/ 의 화면(N1 PushPermissionScreen 등)도 DS 규칙 대상(PR #31 리뷰 L2). 레이어 규칙은 위와 같고 RN 원시 import 경고를 얹는다
+      files: ['src/push/**/*.tsx'],
+      rules: {
+        'no-restricted-imports': ['warn', {patterns: LOWER_LAYER, paths: DS_IMPORT_PATHS}],
+        'no-restricted-syntax': ['warn', ...DS_SYNTAX],
       },
     },
     {
