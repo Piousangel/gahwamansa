@@ -182,9 +182,10 @@ export function ChildLoginEmail() {
             <Text role="bodyLg">{t.hint}</Text>
           </>
         }
-        dock={{primary: {label: t.send, onPress: send, loading: busy}}}>
+        dock={{primary: {label: t.send, onPress: send, loading: busy}}}
+        // 약관·연령은 tail: 200% 자판 열림에서 Dock 이 풀리면 주 버튼이 입력 바로 아래, 그 뒤에 약관(디자인 결정 PR #74)
+        tail={<LegalAndAge legal={legal} />}>
         <Field label={t.email_label} kind="email" value={email} onChangeText={setEmail} onSubmitEditing={send} error={note ?? undefined} testID="email-field" />
-        <LegalAndAge legal={legal} />
       </DsScreen>
     </AudienceProvider>
   );
