@@ -2,7 +2,7 @@
 -- 보호하는 것: 삭제마다 정확히 1건(앱 본인 삭제·관리자 삭제·연결 전 계정 삭제 모두), 개인 식별자 없음(family_id·profile_id·device_key null,
 --             props는 scope·role만, 지운 사람·가족 id 문자열 없음), 심사 가족 삭제는 기록하지 않음.
 begin;
-select plan(9);
+select plan(14);
 delete from public.events where name = 'account_deleted';
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -74,6 +74,31 @@ select ok(not exists (select 1 from public.events where name = 'account_deleted'
 select ok(not exists (select 1 from public.events where name = 'account_deleted'
                        and (select array_agg(k order by k) from jsonb_object_keys(props) k) <> array['role', 'scope']), 'props 키는 scope·role 두 개뿐');
 select ok(pg_temp.logged()::text !~ '7054', '지운 사람·가족의 id 문자열이 기록에 없다');
+select ok(not exists (select 1 from public.events where name = 'account_deleted' and ts <> date_trunc('hour', ts)), '기록 시각은 시 단위로 잘려 있다(리뷰 L2)');
+
+-- 측정 기록 실패를 주입해도 삭제는 성공(리뷰 L1)
+insert into auth.users (id, aud, role, is_anonymous) values
+  ('70540000-0000-0000-0000-0000000000d1', 'authenticated', 'authenticated', false),
+  ('70540000-0000-0000-0000-0000000000d2', 'authenticated', 'authenticated', false);
+insert into public.families (id, created_by, parent_title) values ('70540000-0000-0000-0000-0000000000f2', '70540000-0000-0000-0000-0000000000d1', '엄마');
+insert into public.profiles (id, user_id, family_id, role) values
+  ('70540000-0000-0000-0000-00000000d001', '70540000-0000-0000-0000-0000000000d1', '70540000-0000-0000-0000-0000000000f2', 'child');
+create function public.t0054_fail_account_deleted() returns trigger language plpgsql as $$
+begin
+  if new.name = 'account_deleted' then raise exception 'injected_failure'; end if;
+  return new;
+end $$;
+create trigger t_fail_account_deleted before insert on public.events for each row execute function public.t0054_fail_account_deleted();
+select pg_temp.act_as('70540000-0000-0000-0000-0000000000d1', false);
+select lives_ok($$ select public.delete_my_account() $$, '측정 기록이 실패해도 앱 본인 삭제는 성공');
+reset role;
+set local role service_role;
+select lives_ok($$ select public.admin_delete_user('70540000-0000-0000-0000-0000000000d2', '메일 요청 #56', 'ops') $$, '측정 기록이 실패해도 연결 전 계정 관리자 삭제는 성공');
+reset role;
+select is((select count(*)::int from auth.users where id in ('70540000-0000-0000-0000-0000000000d1', '70540000-0000-0000-0000-0000000000d2'))
+        + (select count(*)::int from public.families where id = '70540000-0000-0000-0000-0000000000f2'), 0, '계정·가족은 실제로 지워졌다');
+select is(jsonb_array_length(pg_temp.logged()), 5, '실패한 측정 행은 남지 않는다(0건 추가)');
+drop trigger t_fail_account_deleted on public.events; -- 함수·트리거 모두 끝의 rollback으로 사라진다
 
 select * from finish();
 rollback;

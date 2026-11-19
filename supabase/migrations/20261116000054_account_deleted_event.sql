@@ -4,6 +4,8 @@
 --   user_delete_core(0049)    — 앱 delete_my_account(연결 전)·관리자 admin_delete_user. scope none, 역할 none.
 -- 개인 식별자 없음: family_id·profile_id·device_key 모두 null, props는 {scope, role}만. (가족·프로필은 지워지므로 남길 수도 없다.)
 -- 심사 가족(is_review)의 삭제는 기록하지 않는다(심사 정리가 지표에 섞이지 않게).
+-- (리뷰 PR #66) L1 측정 기록이 실패해도 계정 삭제(법적 의무)는 막지 않는다: 기록을 예외 블록으로 감싸 실패하면 warning만(SQLSTATE만, 값 없음).
+--   L2 기록 시각은 시 단위로 자른다(date_trunc('hour')) — 같은 시각의 다른 이벤트·감사 행과 이어 붙여 사람을 짐작하지 못하게.
 -- 앱이 log_event로 보내는 account_deleted(0022 이름 목록)는 그대로 두지만 삭제 뒤라 실패한다. 지표는 device_key is null인 서버 기록을 센다.
 -- props 키 scope·role은 서버 전용(log_event의 event_prop_ok 목록에는 넣지 않는다 — 앱 계약 events.ts와 같은 목록 유지).
 
@@ -48,8 +50,12 @@ begin
 
   -- 0054: 식별자 없는 측정 기록(심사 가족 제외)
   if not coalesce(v_review, false) then
-    insert into public.events (family_id, profile_id, device_key, actor_role, name, props)
-    values (null, null, null, v_p.role, 'account_deleted', jsonb_build_object('scope', v_scope, 'role', v_p.role));
+    begin
+      insert into public.events (ts, family_id, profile_id, device_key, actor_role, name, props)
+      values (date_trunc('hour', now()), null, null, null, v_p.role, 'account_deleted', jsonb_build_object('scope', v_scope, 'role', v_p.role));
+    exception when others then
+      raise warning 'account_deleted_event_failed: %', sqlstate; -- 측정 실패는 삭제를 막지 않는다
+    end;
   end if;
   return jsonb_build_object('scope', v_scope);
 end $$;
@@ -66,7 +72,11 @@ begin
   select provider_id from auth.identities where user_id = p_user and provider = 'kakao';
   delete from auth.users where id = p_user;
   -- 0054: 식별자 없는 측정 기록(연결 전 계정은 가족이 없어 심사 가족일 수 없음)
-  insert into public.events (family_id, profile_id, device_key, actor_role, name, props)
-  values (null, null, null, 'none', 'account_deleted', jsonb_build_object('scope', 'none', 'role', 'none'));
+  begin
+    insert into public.events (ts, family_id, profile_id, device_key, actor_role, name, props)
+    values (date_trunc('hour', now()), null, null, null, 'none', 'account_deleted', jsonb_build_object('scope', 'none', 'role', 'none'));
+  exception when others then
+    raise warning 'account_deleted_event_failed: %', sqlstate; -- 측정 실패는 삭제를 막지 않는다
+  end;
   return jsonb_build_object('scope', 'none');
 end $$;

@@ -99,3 +99,13 @@ select (select count(*) from public.kakao_unlink_queue where gave_up_at is null)
        (select min(enqueued_at) from public.kakao_unlink_queue where gave_up_at is null) as oldest_waiting,
        (select count(*) from public.push_runs where kind = 'kakao_unlink' and note = 'config_error' and run_at > now() - interval '7 days') as config_error_runs_7d,
        (select coalesce(sum(sent), 0) from public.push_runs where kind = 'kakao_unlink' and run_at > now() - interval '7 days') as unlinked_7d;
+
+-- ⑨ 탈퇴 수(0054): 서버 삭제 함수가 남긴 account_deleted(식별자 없음, device_key is null)를 KST 날짜·범위·역할별로.
+--    가족이 없는 기록이라 테스터 가족(is_test)은 뺄 수 없다(심사 가족은 기록 자체가 없음). 시각은 시 단위로 잘려 있다.
+with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to)
+select (e.ts at time zone 'Asia/Seoul')::date as d, e.props ->> 'scope' as scope, e.props ->> 'role' as role, count(*) as deleted
+  from public.events e, p
+ where e.name = 'account_deleted' and e.device_key is null
+   and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
+ group by 1, 2, 3
+ order by 1, 2, 3;
