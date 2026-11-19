@@ -94,6 +94,12 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
     const {contentOffset, contentSize, layoutMeasurement} = e.nativeEvent;
     measure({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
   };
+  // 접근성 패널 r1(2026-11-20): scrollEventThrottle 64 가 끝 무렵 이벤트를 버려(에뮬레이터 실측: 끝 y 55 인데 마지막 값 43, 설정 화면 1184 인데 1074)
+  // 끝까지 내려도 '더 있음'이 남았다 — 옛 화면은 28 흐림이 마지막 줄 위에, v4 띠는 24 를 차지한 채. 손을 뗀 때·관성이 멈춘 때 마지막 위치로 다시 잰다.
+  const onDockScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const {contentOffset, contentSize, layoutMeasurement} = e.nativeEvent;
+    measureDock({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
+  };
 
   // 화면 제목에 접근성 포커스(R2): 위 고정 영역 → 본문 순서로 지금 마운트된 첫 머리글. 화면 읽기가 켜져 있을 때만, 화면당 한 번(마운트 때)
   const tops = useRef<unknown[]>([]);
@@ -153,6 +159,8 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={64}
             onScroll={onScroll}
+            onScrollEndDrag={onScroll}
+            onMomentumScrollEnd={onScroll}
             onLayout={e => {
               measure({view: e.nativeEvent.layout.height});
               onViewport?.(Math.round(e.nativeEvent.layout.height));
@@ -165,17 +173,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
           {more && (!fill || fillScrollable) && moreBand ? (
             <View testID="screen-more-band">{moreBand}</View>
           ) : more && (!fill || fillScrollable) ? (
-            <View testID="screen-more" pointerEvents="none" style={styles.more} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <Svg width="100%" height={FADE_H}>
-                <Defs>
-                  <LinearGradient id="screenMore" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={color.paper} stopOpacity={0} />
-                    <Stop offset="1" stopColor={color.paper} stopOpacity={1} />
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height={FADE_H} fill="url(#screenMore)" />
-              </Svg>
-            </View>
+            <MoreFade testID="screen-more" />
           ) : null}
         </View>
         {bottom ? (
@@ -188,20 +186,41 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
               bounces={false}
               testID="screen-dock-scroll"
               scrollEventThrottle={64}
-              onLayout={moreBand ? e => measureDock({view: e.nativeEvent.layout.height}) : undefined}
-              onContentSizeChange={moreBand ? (_w, h) => measureDock({content: h}) : undefined}
-              onScroll={moreBand ? e => measureDock({y: e.nativeEvent.contentOffset.y}) : undefined}
+              onLayout={e => measureDock({view: e.nativeEvent.layout.height})}
+              onContentSizeChange={(_w, h) => measureDock({content: h})}
+              onScroll={onDockScroll}
+              onScrollEndDrag={onDockScroll}
+              onMomentumScrollEnd={onDockScroll}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={[styles.dockPad, {paddingBottom: Math.max(layout.dock.paddingBottomMin, 16 + insets.bottom)}]}>
               {bottom}
             </ScrollView>
             {moreBand && dockMore ? <View testID="screen-dock-more-band">{moreBand}</View> : null}
+            {/* 접근성 패널 r1 A1(P1c 200% '다른 번호 쓰기'): 옛 화면 Dock 이 상한을 넘어 안에서 스크롤되면 마지막 줄이 화면 끝에 숨는데 표시가 없었다 → 본문과 같은 흐림 */}
+            {!moreBand && dockMore ? <MoreFade testID="screen-dock-more" /> : null}
           </View>
         ) : null}
       </KeyboardAvoidingView>
     </ScreenTitleContext.Provider>
   );
 }
+// 아래 '더 있음' 28 흐림(§15). 장식이라 화면 읽기에서 숨긴다
+function MoreFade({testID}: {testID: string}) {
+  return (
+    <View testID={testID} pointerEvents="none" style={styles.more} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Svg width="100%" height={FADE_H}>
+        <Defs>
+          <LinearGradient id={testID} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={color.paper} stopOpacity={0} />
+            <Stop offset="1" stopColor={color.paper} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height={FADE_H} fill={'url(#' + testID + ')'} />
+      </Svg>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   bg: {flex: 1, backgroundColor: color.paper},
   top: {paddingHorizontal: layout.bodyPadding.x},
