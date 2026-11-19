@@ -1,0 +1,30 @@
+# C5 지난 답 회귀 캡처(부품 ui/ds 로 바꾼 뒤, 배치는 v3 시안 C5_history). 연결된 자녀 → 지난 답 탭.
+# 전제: fake API 가 '자녀·연결됨·동의·지난 답 몇 개'로 시작해야 한다. 개발 중에만 selectApi 의 createFakeApi() 인자를
+#   {who: 'child', childFamily: true, childLinked: true, consented: true, parentTitle: '엄마', history: [...]} 로 잠깐 바꿔 실행한다(커밋하지 않음).
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c5-past.yaml
+appId: com.bumojasik.app.staging
+name: C5 지난 답 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '지난 답'
+    timeout: 20000
+- tapOn: '지난 답'
+- extendedWaitUntil:
+    visible: '.*지난 답'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c5-first
+- swipe:
+    start: 50%, 80%
+    end: 50%, 30%
+- waitForAnimationToEnd
+- takeScreenshot: c5-scrolled
