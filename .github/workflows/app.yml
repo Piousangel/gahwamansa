@@ -9,6 +9,7 @@ on:
       - 'supabase/migrations/**' # 계약 테스트가 서버 화이트리스트·허용값을 읽는다(eventsContract·pushPlatform)
       - 'scripts/sync-copy.sh'
       - 'design-system/**' # 토큰·브랜드 자산 동기 테스트
+      - 'docs/team/legal/publish-drafts/**' # termsAgreement 가 게시본 '버전 N'을 읽는다(PR #53 리뷰 M1)
       - '.github/workflows/app.yml'
   push:
     branches: [main]
@@ -18,6 +19,7 @@ on:
       - 'supabase/migrations/**'
       - 'scripts/sync-copy.sh'
       - 'design-system/**'
+      - 'docs/team/legal/publish-drafts/**'
       - '.github/workflows/app.yml'
 
 permissions:
