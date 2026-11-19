@@ -1,0 +1,57 @@
+# 앱 CI(경로별): app/ 이나 앱이 읽는 공유 파일이 바뀐 PR·main 푸시에서만. 비밀값 없음(fake 모드 테스트).
+# 서버 CI 는 server.yml. Android 빌드는 여기서 하지 않는다(긴 시간·서명 — 리드 맥·build-*.sh 에서).
+name: app
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'docs/team/copy.ko.json' # 앱 사본과 같은지(copySync)
+      - 'supabase/migrations/**' # 계약 테스트가 서버 화이트리스트·허용값을 읽는다(eventsContract·pushPlatform)
+      - 'scripts/sync-copy.sh'
+      - 'design-system/**' # 토큰·브랜드 자산 동기 테스트
+      - '.github/workflows/app.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'docs/team/copy.ko.json'
+      - 'supabase/migrations/**'
+      - 'scripts/sync-copy.sh'
+      - 'design-system/**'
+      - '.github/workflows/app.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      # 액션은 커밋 SHA 로 고정(태그 이동 방지). 주석은 그 SHA 의 태그
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.11.0' # package.json engines 최솟값
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: 설치(잠금 파일 그대로)
+        run: npm ci --no-audit --no-fund
+      - name: 문구 사본 = 원본
+        working-directory: .
+        run: bash scripts/sync-copy.sh --check
+      - name: 오픈소스 목록(JS) 최신
+        run: node scripts/ossLicenses.js --check
+      - name: 타입
+        run: npx tsc --noEmit
+      - name: 린트(오류 0, 경고 기준선은 layerBaseline 테스트가 지킨다)
+        run: npm run lint
+      - name: 테스트
+        run: npx jest --testPathIgnorePatterns __integration__ --maxWorkers=2 --ci

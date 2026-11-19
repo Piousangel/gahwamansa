@@ -550,3 +550,9 @@
 - 변경: `audio/engines.soundCategory()` Android `'Playback'`(STREAM_MUSIC), iOS `'Ambient'` 유지(무음 스위치). `mixWithOthers=true` 그대로 → 오디오 포커스 요청 없음(라이브러리: `if (!mixWithOthers) requestAudioFocus`). 무음·진동은 기존대로 `getRinger`(벨소리 모드)로 내지 않음. `MainActivity` 에 `volumeControlStream = STREAM_MUSIC` → 앱이 앞에 있을 때 볼륨 키가 미디어 볼륨.
 - 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
 - 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.
+
+### 경로별 CI(GitHub Actions) · 2026-11-19
+- `.github/workflows/app.yml`: `app/**`·문구 원본·`supabase/migrations/**`(계약 테스트가 읽음)·`design-system/**` 가 바뀐 PR·main 푸시에서만. Node 22.11(engines 최솟값), `npm ci` → 문구 사본 동일 → OSS(JS) 최신 → tsc → lint → jest(`--maxWorkers=2 --ci`, 통합 제외). 비밀값·Android 빌드 없음.
+- `.github/workflows/server.yml`: `supabase/**`·`scripts/photos/**`·루트 package 가 바뀐 경우만. ① 단위: Node 24 로 `supabase/functions/_shared/*.test.mts`·`supabase/ops/*.test.mjs`·`scripts/photos/*.test.mjs`(로컬 Node 26 에서 28/28·12/12). ② pgTAP: 루트 devDependency supabase CLI 3.1.0 으로 러너 안 도커에 로컬 스택(스튜디오·메일·엣지 등 제외) → `db reset`(처음부터 재생 + 시드) → `test db`. 원격 DB·secrets 안 씀.
+- 액션은 커밋 SHA 고정(checkout v4.2.2, setup-node v4.4.0 — `git ls-remote` 로 확인). `permissions: contents: read`, 같은 브랜치 실행은 앞 것을 취소.
+- 로컬에서 Actions 자체는 돌리지 못함(act 없음). pgTAP 단계는 공유 로컬 DB(54322)와 포트가 겹쳐 이 맥에서는 `supabase/ops/replay-check.sh` 가 같은 일을 한다. 첫 실행 결과를 PR 에서 확인할 것.
