@@ -10,7 +10,7 @@
 | R-01 | 글자색·면의 짝은 `allowed` 표(역할×면)에 있는 것만 쓴다. 어르신 7:1, 자녀 4.5:1, 경계·아이콘 3:1 | 토큰: `contrast-v4.py --check` OK + 컴포넌트가 쓰는 짝이 allowed에 있는지 | DS 레인(L4) |
 | R-02 | 화면은 역할(role·tone)만 고른다. hex 색·fontSize·fontWeight·lineHeight 숫자 리터럴 금지 | lint: `no-restricted-syntax`(features/·app/) → 처음엔 warn, AU-10에 error | DS 레인 |
 | R-03 | RN의 Text·TextInput·Pressable 직접 import 금지(공통 컴포넌트만) | lint: `no-restricted-imports` | DS 레인 |
-| R-04 | 한 화면에 700 굵기를 쓰는 역할은 2개 이하, 본문은 400 | 렌더: 화면 트리에서 role별 weight 집계 | 화면 레인 |
+| R-04 | 한 화면에 700 굵기를 쓰는 역할은 2개 이하, 본문은 400. **자녀 '어르신 답'(answer·answerRow, Jua)이 있는 화면은 R-21의 '700 또는 Jua 강조 글자 3개 이하(answer 1개)'를 함께 적용**하고, 이때도 700 굵기 역할은 2개 이하다 | 렌더: 화면 트리에서 role별 weight 집계 | 화면 레인 |
 | R-05 | 인접 역할 크기 비율 1.2 이상. 보완 쌍(`tests.ratioCompensatedPairs`)만 굵기·색으로 보완 | 토큰 | DS 레인 |
 | R-06 | 누를 수 있는 것은 면·밑줄·아이콘 중 하나를 반드시 함께 쓴다. action 글자색은 누르는 것에만 | 렌더: Button·Link·BackLink·ListRow 컴포넌트 계약 테스트 | DS 레인 |
 | R-07 | accent는 화면당 1곳이고 dangerInk와 같은 화면에 쓰지 않는다 | 렌더: 화면 렌더에서 accent·danger 톤 개수 | 화면 레인 |
@@ -28,6 +28,7 @@
 
 | R-19 | '더 있음' 표시는 **본문이 넘칠 때만** 보이고, 글자 위에 겹치는 흐림이 아니라 스크롤 영역 밖 24 띠(아래 화살표 아이콘만, 읽기 제외)로 둔다. 넘치지 않으면 띠도 없다 | 렌더: 표시 띠가 스크롤 영역과 겹치지 않음 | DS 레인 |
 | R-20 | 인접 크기 비율 1.2 미만 쌍은 색·밑줄·아이콘으로 보완하고 `tests.ratioCompensatedPairs`에 이름을 둔다(link/sub 추가) | 토큰 | DS 레인 |
+| R-21 | 자녀 화면의 '어르신이 고른 답·쓴 낱말'은 `answer`(대표 1개, 자녀 40/52, 확대 상한 1.3)·`answerRow`(목록·시트·여러 분 행, 26/36)만 쓴다(Jua, inkTitle). 호칭 머리글(sub 16~20)보다 항상 크고 위에 온다. **한 화면에 700 굵기 또는 Jua 강조 글자 역할은 3개 이하이고 그중 `answer`는 1개**. `title`(화면 제목)과 `answerRow`는 크기가 같지만 title은 화면 제목 1개, answerRow는 답 행이다. 노란 팻말(B2 v2)은 후보(accentSun, 오너 결정 전 allowed 미반영) | 토큰(typeRoles.answer·answerRow) + 렌더(역할 사용·화면당 answer 1개) | DS 레인·자녀 레인 |
 
 ## 디자인이 SUMMARY 값에서 바꾼 것 (이유 포함)
 1. **BackLink 알약 면: paperSoft → card(흰) + line 테두리 1.5.** action 글자가 paperSoft 위에서 6.47로 어르신 7:1에 못 미친다(card 위 7.80). SUMMARY 2-5·Q7에는 정정 줄을 붙였다.

@@ -66,6 +66,9 @@ function buildRoles(src, colors) {
     const tone = parseTone(need(def.tone, `typeRoles.${name}.tone`), colors, name);
     const role = {weight: need(def.weight, `typeRoles.${name}.weight`), maxFontScale: need(def.maxFontScale, `typeRoles.${name}.maxFontScale`)};
     for (const a of AUDIENCES) {
+      if (def[a] === undefined && AUDIENCES.some(x => def[x] !== undefined)) {
+        continue; // 한쪽 청중 전용 역할(answer·answerRow = 자녀 전용, R-21)
+      }
       const v = need(def[a], `typeRoles.${name}.${a}`);
       const t = tone[a] ?? tone.default;
       const icon = def[`icon${a === 'elder' ? 'Elder' : 'Child'}`];
@@ -175,7 +178,7 @@ function build(src) {
     },
     radius: Object.fromEntries(Object.entries(src.radius).filter(([k]) => k !== 'note')),
     touch: {elder: src.touch.elder, child: src.touch.child},
-    fontScaleCap: {body: src.touch.fontScaleCap.body, fixed: src.touch.fontScaleCap.titleDockNumeral},
+    fontScaleCap: {body: src.touch.fontScaleCap.body, fixed: src.touch.fontScaleCap.titleDockNumeral, answer: src.touch.fontScaleCap.answer},
     minFont: {elder: src.typeScaleV3.elder.min, child: src.typeScaleV3.child.min},
     dock: {
       maxHeightRatio: src.dock.maxHeightRatio,

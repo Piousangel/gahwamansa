@@ -126,6 +126,16 @@ export const tokensV4 = {
       elder: {size: 34, lineHeight: 44, tone: 'inkBody'},
       child: {size: 18, lineHeight: 26, tone: 'inkBody'},
     },
+    answer: {
+      weight: 400,
+      maxFontScale: 1.3,
+      child: {size: 40, lineHeight: 52, tone: 'inkTitle'},
+    },
+    answerRow: {
+      weight: 400,
+      maxFontScale: 1.5,
+      child: {size: 26, lineHeight: 36, tone: 'inkTitle'},
+    },
   },
   contrastMin: {elder: 7, child: 4.5, nonText: 3},
   textOnSurface: [
@@ -269,7 +279,7 @@ export const tokensV4 = {
     elder: {primary: 72, secondary: 64, link: 64, gap: 12, min: 64},
     child: {primary: 56, choice: 56, min: 48},
   },
-  fontScaleCap: {body: 2, fixed: 1.5},
+  fontScaleCap: {body: 2, fixed: 1.5, answer: 1.3},
   minFont: {elder: 20, child: 16},
   dock: {
     maxHeightRatio: 0.4,

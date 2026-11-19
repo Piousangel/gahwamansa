@@ -359,7 +359,8 @@
     "fontScaleCap": {
       "body": 2.0,
       "titleDockNumeral": 1.5,
-      "rule": "확대 상한은 역할 토큰에서만 정한다(화면 파일이 maxFontSizeMultiplier를 고르지 못함)"
+      "rule": "확대 상한은 역할 토큰에서만 정한다(화면 파일이 maxFontSizeMultiplier를 고르지 못함)",
+      "answer": 1.3
     }
   },
   "motion": {
@@ -705,6 +706,28 @@
       "tone": "inkBody",
       "maxFontScale": 1.5,
       "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 Jua 입력, 손글씨 아님"
+    },
+    "answer": {
+      "child": {
+        "size": 40,
+        "lineHeight": 52
+      },
+      "weight": 400,
+      "fontFace": "Jua",
+      "tone": "inkTitle",
+      "maxFontScale": 1.3,
+      "note": "자녀 화면에서 '어르신이 고른 답·쓴 낱말'의 대표 한 개(홈 C4 최근 답 등). 화면당 1개. Jua 서체. 확대 상한 1.3(200%에서 40→52). 근거(시안 C4_answer_role_ds4 렌더): 가장 긴 답 예시가 상한 1.3은 카드 여유 51, 1.5는 21(둘 다 3줄)이라 호칭·글꼴이 커질 때의 여유를 위해 1.3."
+    },
+    "answerRow": {
+      "child": {
+        "size": 26,
+        "lineHeight": 36
+      },
+      "weight": 400,
+      "fontFace": "Jua",
+      "tone": "inkTitle",
+      "maxFontScale": 1.5,
+      "note": "자녀 화면의 어르신 답 목록·행(지난 답 C5, 여러 분이 연결됐을 때 분별 답). **title(화면 제목, 26/36)과 크기는 같지만 쓰임이 다르다**: title은 화면 제목 1개, answerRow는 답 행이며 한 화면에 title과 answerRow가 함께 있으면 title이 위·위계상 먼저, 호칭 머리글(sub 16/24)보다는 항상 위."
     }
   },
   "typeRules": [
@@ -913,7 +936,8 @@
     ],
     "generated": "tokens-v4.json과 생성물 일치",
     "fontScale": "fontScale 2.0 Dock 슬롯·상한",
-    "roles": "각 role 상한·minHeight 존재"
+    "roles": "각 role 상한·minHeight 존재",
+    "answerSize": "answerRow(26) > 호칭 머리글(sub 16~20), answer(40) > title(26). 굵기 집계: '700 또는 Jua 강조 글자 3개 이하, 그중 answer는 1개'(R-21)"
   },
   "contrast": {
     "method": "WCAG 2.x 상대휘도 (L1+0.05)/(L2+0.05), design-system/scripts/contrast-v4.py 로 계산",
@@ -1743,5 +1767,8 @@
       "info": "글자는 infoSoft 띠 위에서 쓰는 것이 기본(7.35). 단독 글자색 금지(면 + 아이콘과 함께)",
       "onAction": "action 면 위 흰 글자 전용"
     }
+  },
+  "candidates": {
+    "answerSign": "오너가 B2 v2(쓴 낱말 노란 팻말)를 결정하기 전까지 **후보**. 쓰게 되면 answer 뒤 면을 accentSun(#FFE29A)으로(inkTitle 9.54, 자녀 4.5 통과). allowed 표에는 아직 넣지 않았다(결정 뒤 contrast-v4.py SURFACES에 추가하고 다시 생성)."
   }
 }
