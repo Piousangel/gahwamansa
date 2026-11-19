@@ -137,9 +137,10 @@ function Row({item}: {item: HistoryItem}) {
         </Text>
         <Text role="body">{`· ${q}`}</Text>
       </View>
-      {/* 고른 답: 시안 28 굵게 → heading 역할(제목 다음 위계). 말줄임 없음, 절반까지 */}
+      {/* 고른 답: 리드 결정 (a, PR #98 리뷰) — title 크기(자녀 26)만, 머리글 역할은 주지 않는다(호칭 머리글 heading 과 위계가 섞이지 않게).
+          굵은 역할은 title(답)·heading(호칭 머리글) 둘 — 한 화면 2역할 규칙 안. 말줄임 없음, 절반까지 */}
       <View style={styles.answer}>
-        <Text role="heading" style={styles.answerText}>
+        <Text role="title" style={styles.answerText}>
           {item.choiceLabel}
         </Text>
       </View>
