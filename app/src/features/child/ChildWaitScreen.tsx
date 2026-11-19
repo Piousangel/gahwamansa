@@ -1,12 +1,12 @@
-import React, {useEffect, useState} from 'react';
-import {useWindowDimensions, type LayoutChangeEvent} from 'react-native';
-import {Share, StyleSheet, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {Share, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {AudienceProvider, Banner, Button, Card, DsScreen, Heading, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {copyText} from '../../ui/clipboard';
 import {useToast} from '../../ui/Toast';
 import {announce} from '../../ui/a11y';
@@ -102,11 +102,19 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const settings = () => navigation.navigate('Settings');
   // 디자인 결정(PR #83 ②): 큰 글자(150% 이상)에서는 Dock = 주 버튼 하나, '복사하기'·알림 줄은 본문으로(번호 카드가 첫 화면에 통째로, R-15)
   const big = useWindowDimensions().fontScale >= 1.5;
-  const fold = useFoldGap();
+  // 접힘 경계 맞춤(R-15, 디자인 결정 ③): 3단계 제목·행 중 첫 화면 끝에 걸치는 요소를 통째로 민다(ui/ds useFoldGap)
+  const fold = useFoldGap(4, STEPS_GAP, 0, STEPS_GLUE);
   // PR #83 리뷰 M1: 보는 중에 번호가 만료돼 카드가 띠로 바뀌면 한 번 읽어 준다(v3 live region 대신 R11 '나타날 때 한 번')
   const expiredNow = !!state && !code && state.hadExpired;
+  //   재확인 L7: 처음 열 때부터 만료면 화면 제목 읽기와 겹치므로 알리지 않는다(번호 카드를 보던 중 바뀔 때만)
+  const hadCode = useRef(false);
   useEffect(() => {
-    if (expiredNow) {
+    if (code) {
+      hadCode.current = true;
+    }
+  }, [code]);
+  useEffect(() => {
+    if (expiredNow && hadCode.current) {
       announce(`${w.expired_title}. ${w.expired_body}`);
     }
   }, [expiredNow]);
@@ -220,57 +228,10 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   );
 }
 
-/** 3단계 묶음 안 요소 사이 간격(styles.steps gap) — 위치 계산에 쓴다 */
+/** 3단계 묶음 안 요소 사이 간격(styles.steps gap) — 접힘 위치 계산에 쓴다 */
 const STEPS_GAP = 12;
-
-/**
- * 접힘 경계 맞춤(R-15, 디자인 결정 PR #83 ③): 첫 화면 끝(스크롤 창 아래 끝)이 3단계 묶음의 한 요소(제목·단계 행)를 가르면
- * 그 요소 위에 간격(marginTop)을 넣어 통째로 접힘 밖으로 민다. 간격 크기는 잰 값(고정값 없음).
- * 요소 위치는 높이만으로 쌓아 계산한다(묶음 위 끝 + 앞 요소 높이 합 + 사이 간격). 간격은 높이를 바꾸지 않아 판정을 흔들지 않는다.
- * (처음 판: onLayout y 에서 간격을 빼 기록했더니 간격 상태와 측정 시점이 어긋나 간격이 켜졌다 꺼졌다 했다 — 에뮬레이터 실측)
- */
-export function useFoldGap() {
-  const [viewH, setViewH] = useState(0);
-  const [blockY, setBlockY] = useState<number | null>(null);
-  const [hs, setHs] = useState<Record<number, number>>({});
-  const [gap, setGap] = useState<{before: number; h: number} | null>(null);
-  useEffect(() => {
-    if (!viewH || blockY === null) {
-      return;
-    }
-    let next: {before: number; h: number} | null = null;
-    let top = blockY;
-    for (const i of [0, 1, 2, 3]) {
-      const h = hs[i];
-      if (h === undefined) {
-        return; // 다 잰 뒤에
-      }
-      if (top >= viewH) {
-        break; // 이미 접힘 밖
-      }
-      if (top + h > viewH) {
-        next = {before: i, h: Math.ceil(viewH - top)}; // 걸침 → 그 위에 간격
-        break;
-      }
-      top += h + STEPS_GAP;
-    }
-    if ((next?.before ?? -1) !== (gap?.before ?? -1) || Math.abs((next?.h ?? 0) - (gap?.h ?? 0)) > 1) {
-      setGap(next);
-    }
-  }, [viewH, blockY, hs, gap]);
-  const onItem = (i: number) => (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    setHs(cur => (cur[i] === h ? cur : {...cur, [i]: h}));
-  };
-  return {
-    onViewport: (h: number) => setViewH(h),
-    onBlock: (e: LayoutChangeEvent) => setBlockY(e.nativeEvent.layout.y),
-    onItem,
-    /** 요소 i 의 위 간격(없으면 undefined) */
-    gapStyle: (i: number) => (gap && gap.before === i ? {marginTop: gap.h} : undefined),
-    gapOn: (i: number) => !!gap && gap.before === i,
-  };
-}
+/** 묶음 제목(0)은 첫 단계와 붙여 민다(첫 화면 끝에 제목만 남지 않게, PR #83 재확인 L9) */
+const STEPS_GLUE = [0] as const;
 
 const styles = StyleSheet.create({
   head: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 12},

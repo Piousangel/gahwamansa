@@ -101,7 +101,7 @@ describe('C3 연결 대기', () => {
     const {StyleSheet} = require('react-native');
     const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
     await act(async () => {
-      lay('screen-body', 0, 480); // 스크롤 창 480
+      lay('screen-body-area', 0, 504); // 본문 영역 504 → 접힘 = 504 − 띠 24 = 480(재확인 H1)
       lay('wait-steps', 300, 300); // 묶음 위 끝 300, 요소 사이 12
       lay('wait-steps-title', 0, 28); // 300~328
       lay('wait-step-1', 0, 32); // 340~372
@@ -115,11 +115,45 @@ describe('C3 연결 대기', () => {
       lay('wait-step-3', 36, 48);
     });
     expect(mt('wait-step-3')).toBe(36);
-    // 창이 커져 다 들어가면 간격 없음
+    // 재확인 H1: 맨 아래로 내려 띠가 사라져 스크롤 창이 커져도(504) 다시 나와도(480) 접힘 기준(본문 영역 − 띠)은 그대로
     await act(async () => {
-      lay('screen-body', 0, 600);
+      lay('screen-body', 0, 504);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    await act(async () => {
+      lay('screen-body', 0, 480);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    // 본문 영역 자체가 커져 다 들어가면 간격 없음
+    await act(async () => {
+      lay('screen-body-area', 0, 624);
     });
     expect(mt('wait-step-3')).toBeUndefined();
+  });
+
+  test('재확인 L9: 첫 단계가 걸치면 묶음 제목과 함께 민다(첫 화면 끝에 제목만 남지 않게)', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 404); // 접힘 380
+      lay('wait-steps', 300, 300);
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 72); // 340~412 → 380 에 걸림
+      lay('wait-step-2', 0, 48);
+      lay('wait-step-3', 0, 48);
+    });
+    expect(mt('wait-steps-title')).toBe(380 - 300); // 제목째 접힘 밖
+    expect(mt('wait-step-1')).toBeUndefined();
+  });
+
+  test('재확인 L7: 처음 열 때부터 만료면 알리지 않는다(제목 읽기와 겹치지 않게)', async () => {
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    said.mockClear(); // 앞 테스트에서 쌓인 호출 지움
+    render(<AppRoot api={waitApi({childCodeExpired: true})} restore />);
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(said).not.toHaveBeenCalledWith(expect.stringContaining('번호 기간이 지났어요'));
   });
 
   test('C3 v4: 제목·설정 → 번호 카드(번호·만료 시각) → 3단계, 연결 칩·예시 카드 없음, 만료 전에는 새 번호 만들기가 없다', async () => {

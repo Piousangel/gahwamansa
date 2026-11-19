@@ -6,7 +6,7 @@ import {BackLink, type BackLinkProps} from './BackLink';
 import {Dock, DockSpill, isSocialGroup, type DockProps, type DockSpillLevel} from './Dock';
 import {DOCK_PAD_TOP, dockBottomPad, dockCap, nextSpill} from './dockLayout';
 import {ds} from './roles';
-import {MoreBand} from './MoreBand';
+import {MoreBand, MORE_BAND_H} from './MoreBand';
 import {Button} from './Button';
 
 /** 빌드 1 구현 틀(SUMMARY Q8): step·form·intro. list·done·state 는 빌드 1 끝에(60h 안이면) */
@@ -42,7 +42,7 @@ export type DsScreenProps = {
   /** R-12 예외(디자인 #74)를 켠다: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞)에.
    *  입력 화면(C0-b 등)만 켠다. 끈 화면(기본)은 Dock 유지 — 예: P6 는 200% 자판 열림에서도 '다 썼어요'를 Dock 에(V4-INDEX, PR #82 리뷰 L2) */
   dockReleaseOnKeyboard?: boolean;
-  /** 본문 스크롤 창 높이(접힘 경계 맞춤용, R-15) */
+  /** 접힘 기준 창 높이(R-15) = 본문 영역 − '더 있음' 띠. 띠 유무와 무관해 스크롤 끝에서 흔들리지 않는다(PR #83 재확인 H1) */
   onViewport?: (h: number) => void;
   scrollRef?: React.Ref<ScreenScroll>;
 };
@@ -148,7 +148,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
       // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
-      onViewport={onViewport}
+      onBodyArea={onViewport ? h => onViewport(h - MORE_BAND_H) : undefined}
       moreBand={<MoreBand />}
       bottom={dock && !undock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
       {children}
