@@ -705,6 +705,31 @@
       "tone": "inkBody",
       "maxFontScale": 1.5,
       "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 Jua 입력, 손글씨 아님"
+    },
+    "answer": {
+      "child": {
+        "size": 40,
+        "lineHeight": 52
+      },
+      "weight": 400,
+      "fontFace": "Jua",
+      "tone": "inkTitle",
+      "maxFontScale": 1.5,
+      "note": "자녀 화면에서 '어르신이 고른 답·쓴 낱말'의 대표 한 개(홈 C4 최근 답, 응원 시트 위 낱말 등). 화면당 1개. Jua 서체(굵기 400, 장식 서체라 한 화면 700 역할 집계에서 제외)."
+    },
+    "answerRow": {
+      "child": {
+        "size": 26,
+        "lineHeight": 36
+      },
+      "weight": 400,
+      "fontFace": "Jua",
+      "tone": "inkTitle",
+      "maxFontScale": 1.5,
+      "note": "자녀 화면의 어르신 답 목록·행(지난 답 C5, 여러 분이 연결됐을 때 분별 답). 호칭 머리글(sub 16/24, inkSubChild)보다 항상 크고 위계상 위."
+    },
+    "answerSign": {
+      "note": "오너 검토 중인 B2 v2 '노란 팻말': 쓴 낱말(answer) 뒤 면을 accentSun(#FFE29A)으로. inkTitle on accentSun 9.54로 자녀 4.5 통과(allowed 표 반영). 화면당 1개, 장식 면(누르지 않음)."
     }
   },
   "typeRules": [
@@ -913,7 +938,8 @@
     ],
     "generated": "tokens-v4.json과 생성물 일치",
     "fontScale": "fontScale 2.0 Dock 슬롯·상한",
-    "roles": "각 role 상한·minHeight 존재"
+    "roles": "각 role 상한·minHeight 존재",
+    "answerSize": "answerRow(26) > 호칭 머리글(sub 16~20) 와 answer(40) > title(26), 한 화면 700 굵기 역할 2개 이하(answer·answerRow는 Jua 400이라 집계 제외)"
   },
   "contrast": {
     "method": "WCAG 2.x 상대휘도 (L1+0.05)/(L2+0.05), design-system/scripts/contrast-v4.py 로 계산",
@@ -969,6 +995,11 @@
         "ratio": 9.88
       },
       {
+        "role": "inkTitle",
+        "surface": "accentSun",
+        "ratio": 9.54
+      },
+      {
         "role": "inkBody",
         "surface": "paper",
         "ratio": 13.01
@@ -1012,6 +1043,11 @@
         "role": "inkBody",
         "surface": "dangerSoft",
         "ratio": 11.78
+      },
+      {
+        "role": "inkBody",
+        "surface": "accentSun",
+        "ratio": 11.38
       },
       {
         "role": "inkSub",
@@ -1059,6 +1095,11 @@
         "ratio": 6.98
       },
       {
+        "role": "inkSub",
+        "surface": "accentSun",
+        "ratio": 6.73
+      },
+      {
         "role": "inkSubChild",
         "surface": "paper",
         "ratio": 5.16
@@ -1102,6 +1143,11 @@
         "role": "inkSubChild",
         "surface": "dangerSoft",
         "ratio": 4.67
+      },
+      {
+        "role": "inkSubChild",
+        "surface": "accentSun",
+        "ratio": 4.51
       },
       {
         "role": "action",
@@ -1149,6 +1195,11 @@
         "ratio": 6.39
       },
       {
+        "role": "action",
+        "surface": "accentSun",
+        "ratio": 6.17
+      },
+      {
         "role": "accent",
         "surface": "paper",
         "ratio": 7.34
@@ -1192,6 +1243,11 @@
         "role": "accent",
         "surface": "dangerSoft",
         "ratio": 6.65
+      },
+      {
+        "role": "accent",
+        "surface": "accentSun",
+        "ratio": 6.42
       },
       {
         "role": "info",
@@ -1239,6 +1295,11 @@
         "ratio": 7.09
       },
       {
+        "role": "info",
+        "surface": "accentSun",
+        "ratio": 6.84
+      },
+      {
         "role": "doneInk",
         "surface": "paper",
         "ratio": 8.23
@@ -1284,6 +1345,11 @@
         "ratio": 7.46
       },
       {
+        "role": "doneInk",
+        "surface": "accentSun",
+        "ratio": 7.2
+      },
+      {
         "role": "dangerInk",
         "surface": "paper",
         "ratio": 7.51
@@ -1327,6 +1393,11 @@
         "role": "dangerInk",
         "surface": "dangerSoft",
         "ratio": 6.8
+      },
+      {
+        "role": "dangerInk",
+        "surface": "accentSun",
+        "ratio": 6.57
       },
       {
         "role": "onAction",
@@ -1534,7 +1605,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "inkBody": [
         "paper",
@@ -1545,7 +1617,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "inkSub": [
         "paper",
@@ -1577,7 +1650,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "dangerInk": [
         "paper",
@@ -1598,7 +1672,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "inkBody": [
         "paper",
@@ -1609,7 +1684,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "inkSub": [
         "paper",
@@ -1620,7 +1696,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "inkSubChild": [
         "paper",
@@ -1628,7 +1705,8 @@
         "paperSoft",
         "noticeSoft",
         "infoSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "action": [
         "paper",
@@ -1639,7 +1717,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "accent": [
         "paper",
@@ -1650,7 +1729,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "info": [
         "paper",
@@ -1661,7 +1741,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "doneInk": [
         "paper",
@@ -1672,7 +1753,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "dangerInk": [
         "paper",
@@ -1683,7 +1765,8 @@
         "infoSoft",
         "sky",
         "doneSoft",
-        "dangerSoft"
+        "dangerSoft",
+        "accentSun"
       ],
       "onAction": [
         "action"

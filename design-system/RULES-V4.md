@@ -28,6 +28,7 @@
 
 | R-19 | '더 있음' 표시는 **본문이 넘칠 때만** 보이고, 글자 위에 겹치는 흐림이 아니라 스크롤 영역 밖 24 띠(아래 화살표 아이콘만, 읽기 제외)로 둔다. 넘치지 않으면 띠도 없다 | 렌더: 표시 띠가 스크롤 영역과 겹치지 않음 | DS 레인 |
 | R-20 | 인접 크기 비율 1.2 미만 쌍은 색·밑줄·아이콘으로 보완하고 `tests.ratioCompensatedPairs`에 이름을 둔다(link/sub 추가) | 토큰 | DS 레인 |
+| R-21 | 자녀 화면의 '어르신이 고른 답·쓴 낱말'은 `answer`(대표 1개, 자녀 40/52)·`answerRow`(목록·시트·여러 분 행, 26/36) 역할만 쓴다(Jua 400, inkTitle, 상한 1.5). 같은 화면의 호칭 머리글(sub 16~20)보다 항상 크고 위에 온다. 한 화면 700 굵기 역할은 2개 이하(answer·answerRow는 집계 제외). 노란 팻말은 answer 뒤 면 accentSun 1개(inkTitle 9.54) | 토큰(typeRoles.answer·answerRow, allowed에 accentSun) + 렌더(역할 사용·화면당 answer 1개) | DS 레인·자녀 레인 |
 
 ## 디자인이 SUMMARY 값에서 바꾼 것 (이유 포함)
 1. **BackLink 알약 면: paperSoft → card(흰) + line 테두리 1.5.** action 글자가 paperSoft 위에서 6.47로 어르신 7:1에 못 미친다(card 위 7.80). SUMMARY 2-5·Q7에는 정정 줄을 붙였다.

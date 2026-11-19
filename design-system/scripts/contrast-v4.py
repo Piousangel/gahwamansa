@@ -17,7 +17,7 @@ def cr(a, b):
     x, y = L(a), L(b); x, y = max(x, y), min(x, y); return round((x+.05)/(y+.05), 2)
 
 TEXT_ROLES = ['inkTitle', 'inkBody', 'inkSub', 'inkSubChild', 'action', 'accent', 'info', 'doneInk', 'dangerInk', 'onAction', 'disabledInk']
-SURFACES = ['paper', 'card', 'paperSoft', 'noticeSoft', 'actionSoft', 'infoSoft', 'sky', 'doneSoft', 'dangerSoft', 'action', 'disabledBg']
+SURFACES = ['paper', 'card', 'paperSoft', 'noticeSoft', 'actionSoft', 'infoSoft', 'sky', 'doneSoft', 'dangerSoft', 'accentSun', 'action', 'disabledBg']
 NONTEXT_ROLES = ['line', 'action', 'dangerInk', 'doneInk', 'info', 'accent']
 NONTEXT_SURFACES = ['paper', 'card', 'paperSoft', 'noticeSoft', 'actionSoft', 'infoSoft']
 # 의미상 제외: 흰 글자는 action 면 위에서만, 비활성 글자는 비활성 면 위에서만, 면 action·disabledBg 위에는 다른 글자를 쓰지 않음
