@@ -209,7 +209,9 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     }
     const top = FIRST_PAD + areaAt.y; // 키패드 위 끝(본문 안 y)
     const foldAt = viewH; // 첫 화면 끝 = 스크롤 창 아래 끝(제스처 막대는 투명해 그 밑 내용도 보인다 — 에뮬레이터 실측 11-19)
-    const fadeAt = foldAt - SCREEN_FADE_H; // '더 있음' 흐림 시작
+    // '더 있음' 흐림 시작. 3버튼 내비(inset 48)는 불투명 버튼이 창 아래를 덮어 그 밑 줄을 누르면 시스템 버튼이 눌린다(재확인 7 M10)
+    //   → 흐림과 시스템 버튼 중 큰 쪽 위에서 끝나지 않는 줄은 접힘 밖으로 민다. 제스처 내비(inset 작음)는 28 그대로
+    const fadeAt = foldAt - Math.max(SCREEN_FADE_H, insets.bottom);
     let next: {before: number; h: number} | null = null;
     for (const r of [1, 2, 3, 4]) {
       const at = rows.y[r];
@@ -226,7 +228,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
     if ((next?.before ?? 0) !== (cur?.before ?? 0) || Math.abs((next?.h ?? 0) - (cur?.h ?? 0)) > 1) {
       setFold(next ? {for: inputKey, ...next} : null);
     }
-  }, [overflow, viewH, areaAt, areaShape, rows, keyH, inputKey, fold]);
+  }, [overflow, viewH, areaAt, areaShape, rows, keyH, inputKey, fold, insets.bottom]);
 
   const ok = state.kind === 'ok';
   const groupRef = useRef<React.ComponentRef<typeof View>>(null);
@@ -319,7 +321,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
         <View testID="keypad-area" style={overflow ? null : styles.area} onLayout={onArea}>
           {/* 키패드 내용 높이(늘어나지 않는 감싸개)로 넘침을 잰다(재확인 5 M9) */}
           <View testID="keypad-content" onLayout={onPad}>
-            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} foldGap={foldGap} onRowLayout={overflow ? onRowLayout : undefined} />
+            <CodeEntry value={state.code} onChange={edit} keyHeight={keyH} groupLabel={groupA11y(state.code)} belowCells={below} groupRef={groupRef} foldGap={foldGap} onRowLayout={onRowLayout} />
           </View>
         </View>
       </View>

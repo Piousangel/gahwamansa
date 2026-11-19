@@ -252,6 +252,27 @@ describe('4단계 접힘 경계는 줄 경계', () => {
     expect(container).toBeTruthy();
   });
 
+  test('재확인 7 M10: 3버튼 내비(inset 48)는 시스템 버튼에 덮이는 줄도 접힘 밖으로(흐림 28 대신 48)', async () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 0, bottom: 48, left: 0, right: 0}));
+    try {
+      dims(360, 640);
+      await openConnect();
+      await viewport(560); // 접힘 560. 제스처라면 흐림 532 → 4번째 줄(458~522)은 통과
+      await areaY(130); // 줄 위 끝 248·318·388·458, 4번째 줄 아래 끝 522
+      await rowsAt([114, 184, 254, 324 + 6]); // 4번째 줄 464~528: 532 위지만 560 − 48 = 512 아래 → 버튼 밑
+      const gap = screen.getByTestId('fold-gap');
+      expect(StyleSheet.flatten(gap.props.style).height).toBe(560 - 464); // 줄 위 끝을 접힘(창 아래 끝)으로
+      expect(keyH()).toBe(64);
+      // 같은 줄 배치를 inset 0(제스처)에서는 밀지 않는다 — 위 '360×640 1.0' 테스트의 4번째 줄(458~522) 경우와 같음
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
+
   test('0~3단계에서는 여백을 넣지 않는다(첫 화면 묶음이 키패드를 담는다)', async () => {
     dims(411, 914);
     await openConnect();
