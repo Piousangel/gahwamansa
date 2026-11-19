@@ -186,6 +186,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - `{ok:true}` | `{ok:false, reason:'invalid_name'|'invalid_props'|'rate_limited'|'no_user'}`(예외 아님 → 계측 실패가 화면을 막지 않음). 가족·역할은 서버가 채움. 프로필 없는 기기(설치 직후 익명 로그인)도 기록 가능.
 - 빌드 1 추가(0034): `paid_sheet_opened{}` C6 시트 열림, `paid_interest_tapped{plan}` C6 소식 받기(관심 표시만), `photo_zoom_opened{day_index}` B1, `child_first_answer_viewed{days_since_connect}` 자녀가 연결 후 처음 답을 봄(전환 분모, 처음 1회만 보내기는 앱 몫), `push_opened{push_kind}` 알림을 눌러 앱을 엶. **앱 계약 `events.ts`(L4)에 이 이름·값을 같은 철자로 추가해야 한다.**
 - 연결 퍼널(0029): `link_opened{source}` 링크로 앱이 열림, `referrer_found{}` 설치 경로에서 번호를 찾음, `code_prefilled{source}` 번호 칸이 채워짐, 연결 성공은 기존 `parent_code_redeemed`. **번호 값은 어떤 키로도 보낼 수 없다**(code 키 없음, source는 3개 값만).
+- **`account_deleted`는 서버가 기록한다(0054)**: 앱은 삭제 뒤 사용자가 없어 보낼 수 없다. 삭제 공통 함수(`account_delete_core`: 앱 `delete_my_account`·`admin_delete_account` / `user_delete_core`: 연결 전 계정·`admin_delete_user`)가 삭제마다 1건 — `family_id`·`profile_id`·`device_key` 모두 null, `actor_role` = 지운 사람 역할(연결 전은 none), props `{scope: child|parent|family|none, role}`만. 심사 가족 삭제는 기록하지 않는다. 기록 시각은 시 단위로 자른다(`date_trunc('hour')`, 다른 행과 이어 붙이지 못하게). 측정 기록이 실패해도 삭제는 진행된다(예외 블록, warning `account_deleted_event_failed: <SQLSTATE>`만). 지표는 `name = 'account_deleted' and device_key is null`로 센다(`metrics.sql` ⑨)(scope·role 키는 서버 전용이라 log_event 속성 목록에는 없다). 앱은 이 이벤트를 보내지 않아도 된다.
 - 호출 상한: 기기(인증 uid의 sha256 가명키)당 24시간 200건(가정값). 지워진 계정의 남은 토큰은 `no_user`. 보관 14개월(0023 배치).
 - 미정: C6 "소식 받기" 관심 이벤트 이름(그로스 결정 후 목록 추가), 서버 RPC 안 자동 기록.
 
@@ -431,6 +432,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 병합 | 미반영 |
 | 0051 | 개발 스위치 server_flags + dev_reset_today(테스터 가족 오늘 코스 다시) | 브랜치 server-dev-reset-today | 미반영 |
 | 0052 | 자녀 '첫 답' 알림(parent_first_answer, 평생 1회) | 브랜치 server-first-answer-push(0051 위) | 미반영 |
+| 0053 | 이벤트 AC-05(course_step_started·finished) | PR #61 | 미반영 |
+| 0054 | account_deleted 서버 기록(식별자 없음) | 브랜치 server-account-deleted-event(0053 위) | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
