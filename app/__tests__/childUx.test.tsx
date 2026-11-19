@@ -601,6 +601,7 @@ describe('리뷰 M4: 기기 기억값은 계정별, 로그아웃 때 정리', ()
 describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
   const RN = require('react-native');
   const {color} = require('../src/ui/tokens');
+  const {toneColor} = require('../src/ui/ds/roles');
   const inDock = (id: string) => {
     const dock = screen.queryByTestId('screen-dock');
     return !!dock && within(dock).queryByTestId(id) !== null;
@@ -615,12 +616,13 @@ describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
     render(<AppRoot api={createFakeApi()} />);
     await press(/자녀 휴대폰이에요/);
     await waitFor(() => screen.getByTestId('age-notice'));
-    expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(color.inkSub);
+    expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(toneColor('sub', 'muted', 'child')); // v4 sub 보조색
     expect(inDock('age-notice')).toBe(false);
     await toEmailStage();
     expect(screen.getByTestId('legal-child')).toBeTruthy();
     expect(screen.getByTestId('age-notice')).toBeTruthy();
-    expect(inDock('legal-child')).toBe(true);
+    expect(inDock('legal-child')).toBe(false); // C0 v4: 약관·연령은 본문 끝(Dock 은 인증번호 받기만)
+    expect(inDock('age-notice')).toBe(false);
   });
 
   test('C0: 글자 150% 이상이면 약관·연령 줄을 함께 본문 끝으로', async () => {

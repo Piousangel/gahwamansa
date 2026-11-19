@@ -36,6 +36,8 @@ export type DsScreenProps = {
   stepInfo?: string;
   dock?: DockProps;
   children: React.ReactNode;
+  /** 본문 맨 끝(Dock 에서 넘친 슬롯 뒤). 예: C0 '부모님이시면 처음으로' 출구는 넘친 이메일 링크보다 아래(시안 C0 v4 200%) */
+  tail?: React.ReactNode;
   scrollRef?: React.Ref<ScreenScroll>;
 };
 
@@ -60,7 +62,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, scrollRef}: DsScreenProps) {
+export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -111,6 +113,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, scrol
       bottom={dock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
       {children}
       {dock ? <DockSpill secondary={dock.secondary} note={dock.note} spill={spill} /> : null}
+      {tail}
     </BaseScreen>
   );
 }

@@ -35,7 +35,7 @@ test('자녀 로그인 첫 화면: 카카오(공식 가이드) → 구글(공식
   expect(gs.backgroundColor).toBe('#FFFFFF');
   expect(gs.borderColor).toBe('#747775');
   expect(gs.borderWidth).toBe(1);
-  expect([gs.paddingLeft, gs.paddingRight]).toEqual([12, 12]);
+  expect(gs.paddingHorizontal).toBe(12);
   expect(gs.minHeight).toBeGreaterThanOrEqual(56);
   expect(within(google).getByTestId('google-g', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByRole('button', {name: '이메일로 시작하기'})).toBeTruthy();
@@ -77,11 +77,11 @@ test('그 밖의 실패는 "로그인이 안 됐어요"', async () => {
   await waitFor(() => screen.getByText('로그인이 안 됐어요'));
 });
 
-test('이메일로 받기 → 기존 이메일 인증번호 화면, 이전은 로그인 방법 화면', async () => {
+test('이메일로 받기 → 이메일 화면(C0-b), BackLink \'로그인으로\'는 로그인 고르기 화면', async () => {
   await openChildLogin(createFakeApi());
   await press('이메일로 시작하기');
   await waitFor(() => screen.getByText('이메일로 시작해요'));
-  await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로 가기')));
+  await act(async () => fireEvent.press(screen.getByRole('link', {name: '로그인으로'})));
   await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
 });
 

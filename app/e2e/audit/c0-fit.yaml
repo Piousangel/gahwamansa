@@ -20,3 +20,25 @@ tags:
 - takeScreenshot: c0-fit
 - assertVisible: '.*카카오.*'
 - assertVisible: '.*Google.*'
+# C0 v4: 로그인 고르기(C0-a) → 이메일(C0-b) → 인증번호(C0-c). 200%에서는 이메일 링크가 본문 끝이라 스크롤해서 찾는다(fake API 기준)
+- scrollUntilVisible:
+    element: '이메일로 시작하기'
+    direction: DOWN
+- takeScreenshot: c0a-scrolled
+- tapOn: '이메일로 시작하기'
+- extendedWaitUntil:
+    visible: '이메일로 시작해요'
+    timeout: 10000
+- takeScreenshot: c0b
+- tapOn:
+    id: 'email-field'
+- inputText: 'kid@example.test'
+- takeScreenshot: c0b-keyboard
+- hideKeyboard
+- tapOn: '인증번호 받기'
+- extendedWaitUntil:
+    visible: '이메일 주소로' # 자판이 열리면 제목은 접힌다(BackLink 만 남음)
+    timeout: 10000
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: c0c
