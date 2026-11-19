@@ -5,6 +5,10 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {kstDateLine, stampsFromDates} from '../src/features/course/stamps';
 import {press, pressCourseNext} from '../testUtils/flow';
+import {warmAppRoot} from '../testUtils/warm';
+
+// 부하 때 흔들림(리드 11-20): 첫 AppRoot 렌더 테스트(미연결 띠)가 콜드 스타트를 혼자 떠안았다 → 파일 시작 때 예열
+beforeAll(warmAppRoot);
 
 test('날짜 줄: KST 기준 "11월 20일 금요일"', () => {
   expect(kstDateLine(new Date('2026-11-20T01:00:00Z'))).toBe('11월 20일 금요일');

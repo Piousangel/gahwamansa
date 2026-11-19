@@ -11,6 +11,10 @@ import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {createStampFeedback, setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {color} from '../src/ui/tokens';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {warmAppRoot} from '../testUtils/warm';
+
+// 부하 때 흔들림(리드 11-20): 첫 AppRoot 렌더 테스트('단계 체크 시점')가 콜드 스타트를 혼자 떠안았다 → 파일 시작 때 예열
+beforeAll(warmAppRoot);
 
 // 어르신 UX 승인안(DECISIONS 11-18, docs/design/v3/_qa/ux-improvements-2026-11-18.md) U5·U6·U8·U9·U13 + P7 후속.
 let mockFontScale = 1;
