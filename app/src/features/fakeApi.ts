@@ -137,6 +137,17 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
           connectedDate: p.connectedDate ?? null,
         }))
       : [single()];
+  // 자녀 C5 지난 답(child_answer_history 모양). 어르신 미리보기(0050)도 같은 값을 쓴다
+  const historyList = (): ParentHistory[] => {
+    if (opts.parents) {
+      return many.map(p => ({parentId: p.parentId, title: p.title, shared: p.shared ?? true, items: (p.shared ?? true) ? (p.history ?? []) : []}));
+    }
+    const s = single();
+    const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
+    const items: HistoryItem[] =
+      opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), choiceLabel: savedLabel}] : []);
+    return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? items : []}];
+  };
   let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
   let contentDay = opts.day ?? 1; // 개발자 메뉴 "하루 넘기기"가 바꾼다
   // 개발자 메뉴(fake 모드 전용): 오늘 코스 초기화·하루 넘기기. Api 인터페이스 밖이라 realApi 에는 없다
@@ -212,14 +223,22 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         failHistoryServer -= 1;
         throw new ServerError('child_answer_history', 'boom', 'XX000');
       }
-      if (opts.parents) {
-        return many.map(p => ({parentId: p.parentId, title: p.title, shared: p.shared ?? true, items: (p.shared ?? true) ? (p.history ?? []) : []}));
+      return historyList();
+    },
+    // 어르신 미리보기(0050): 자녀 child_summary·child_answer_history 와 같은 값에서 본인(첫 어르신) 항목 1개
+    async parentPreviewChildView() {
+      if (failParentHistory > 0) {
+        failParentHistory -= 1;
+        throw new OfflineError('offline');
       }
-      const s = single();
-      const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
-      const items: HistoryItem[] =
-        opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), choiceLabel: savedLabel}] : []);
-      return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? items : []}];
+      if (!linked) {
+        throw new ServerError('parent_preview_child_view', 'parent_required', 'P0001');
+      }
+      const me = parentList()[0];
+      return {
+        summary: {parentTitle, shared: me.shared, latest: me.latest, parents: [me]},
+        history: historyList().slice(0, 1),
+      };
     },
     async sendCheer(parentId, key): Promise<SendCheerResult> {
       if (failCheer > 0) {

@@ -9,9 +9,10 @@ import {resetFirstScreenMotion} from '../src/features/link/RoleSelect';
 import {press, toHomeConsented} from '../testUtils/flow';
 
 let mockFontScale = 1;
+let mockHeight = 780;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
-  default: () => ({width: 360, height: 780, scale: 3, fontScale: mockFontScale}),
+  default: () => ({width: 360, height: mockHeight, scale: 3, fontScale: mockFontScale}),
 }));
 beforeEach(() => {
   resetFirstScreenMotion();
@@ -19,6 +20,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   mockFontScale = 1;
+  mockHeight = 780;
   jest.restoreAllMocks();
 });
 const measure = async (w = 312, h = 170) => {
@@ -103,10 +105,10 @@ test('글자 130%: 하단 영역 높이 상한을 없앤다', () => {
   expect(StyleSheet.flatten(dock.props.style).maxHeight).toBeGreaterThanOrEqual(780);
 });
 
-test('글자 150%: 소개 제목·사진 숨김, 두 버튼은 하단 영역에 다 있다', async () => {
+test('글자 150%(감사 M4): 사진·기능 줄 숨김, 소개 한 줄 유지, 두 버튼은 하단 영역에 다 있다', async () => {
   mockFontScale = 1.5;
   render(<AppRoot api={createFakeApi()} />);
-  expect(screen.queryByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeNull();
+  expect(screen.getByText('하루 한 장, 우리 집 앨범')).toBeTruthy();
   await measure();
   expect(screen.queryByTestId('intro-photo')).toBeNull();
   const dock = within(screen.getByTestId('screen-dock'));
@@ -144,4 +146,21 @@ test('자녀 쪽(설정 → 앱 정보)에도 AI 고지', async () => {
     fireEvent.press(screen.getByRole('button', {name: '앱 정보, 버전 1.0.0'}));
   });
   await waitFor(() => screen.getByText('앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요'));
+});
+
+test('리뷰 M1·디자인 9절 M4: 높이가 모자라면 기능 줄을 셋째 → 둘째 → 첫째 순으로 줄 단위로 숨긴다(소개 한 줄은 유지)', async () => {
+  mockHeight = 640;
+  render(<AppRoot api={createFakeApi()} />);
+  const lines = () => [0, 1, 2].filter(i => screen.queryByTestId(`intro-icon-circle-${i}`, {includeHiddenElements: true})).length;
+  expect(lines()).toBe(3);
+  const fire = async (h: number) =>
+    act(async () => {
+      fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+    });
+  await fire(0); // 사진 영역이 남지 않음 = 기능 줄이 질문 밑으로 밀림
+  expect(lines()).toBe(2);
+  expect(screen.queryByTestId('intro-icon-circle-2', {includeHiddenElements: true})).toBeNull(); // 셋째 줄부터
+  await fire(40); // 들어감 → 더 숨기지 않음
+  expect(lines()).toBe(2);
+  expect(screen.getByText('하루 한 장, 우리 집 앨범')).toBeTruthy();
 });

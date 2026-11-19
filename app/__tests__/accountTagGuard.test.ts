@@ -14,6 +14,7 @@ const ALLOWED = [
   'lib/accountStore.ts', // 주석만
   'push/pushClient.ts', // AU-04 N1 답 기억 키(accountStore)
   'app/PushHost.tsx', // AU-04 리뷰 L5: 알림 탭을 받은 계정과 처리하는 계정 비교(기기 안에서만)
+  'shared/childTerms.ts', // PR1 리뷰 M1: 약관 동의 기록 재시도 표시 키(accountStore)
 ].sort();
 
 function walk(dir: string): string[] {

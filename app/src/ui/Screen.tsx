@@ -7,6 +7,8 @@ import {ScreenTitleContext} from './screenTitle';
 import {useReportDock} from './toastPlacement';
 
 const FADE_H = 28; // §15: 본문이 넘치면 아래 28 높이 페이드로 "더 있음"
+/** 아래 '더 있음' 흐림 높이(첫 화면에 꼭 보여야 할 묶음이 이 밑에 깔리지 않게 빼는 데 쓴다, P1) */
+export const SCREEN_FADE_H = FADE_H;
 const TITLE_FOCUS_MS = 300; // talkback-spec R2: 화면 진입 300ms 뒤 제목에 접근성 포커스
 
 type Props = {
@@ -20,10 +22,16 @@ type Props = {
   dockMaxRatio?: number;
   /** 본문이 남은 높이를 꽉 채운다(스크롤 없는 한 화면 구성, 예: 첫 화면). */
   fill?: boolean;
+  /** 공간이 모자란 화면의 마지막 단계(감사 H3 4단계): 본문 묶음 간격 16 → 12 */
+  dense?: boolean;
+  /** fill 화면이어도 내용이 창보다 크면 스크롤(P1 안전망, 리드 결정 11-19). 맞으면 스크롤이 생기지 않는다 */
+  fillScrollable?: boolean;
   /** 첫 포커스를 제목 대신 이 요소로(예: '다시 정하기'로 연 설정의 확인 제목). 시간 차 없이 한 번만 옮겨 순서가 뒤집히지 않는다(AP-11) */
   initialFocusRef?: React.RefObject<unknown>;
   /** 본문 스크롤 연결점(감사 M3): 펼친 확인 패널처럼 새로 나타난 영역을 보이게 한다. top·bottom 은 본문 안 y */
   scrollRef?: React.Ref<ScreenScroll>;
+  /** 본문 보이는 높이(스크롤 창, dp)를 알린다 — 첫 화면 안에 꼭 들어가야 할 묶음 높이를 정할 때(감사 H3 P1) */
+  onViewport?: (h: number) => void;
   /**
    * '더 있음' 표시(R-19, v4 DsScreen 이 넘긴다): 주면 글자 위에 겹치는 페이드 대신 스크롤 영역 밖(아래)에 이 띠를 둔다.
    * 본문과 Dock 각각 넘치고 아직 끝까지 내리지 않았을 때만 보인다. 없으면 예전 페이드(기존 화면 그대로).
@@ -38,7 +46,7 @@ export type ScreenScroll = {
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, initialFocusRef, scrollRef, moreBand}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport, moreBand}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -139,13 +147,16 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             ref={bodyScroll}
             testID="screen-body"
             style={styles.body}
-            scrollEnabled={fill ? false : scrollEnabled}
+            scrollEnabled={fill ? !!fillScrollable : scrollEnabled}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={64}
             onScroll={onScroll}
-            onLayout={e => measure({view: e.nativeEvent.layout.height})}
+            onLayout={e => {
+              measure({view: e.nativeEvent.layout.height});
+              onViewport?.(Math.round(e.nativeEvent.layout.height));
+            }}
             onContentSizeChange={(_w, h) => measure({content: h})}
-            contentContainerStyle={[styles.bodyPad, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
+            contentContainerStyle={[styles.bodyPad, dense ? styles.dense : null, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}
           </ScrollView>
           {more && !fill && moreBand ? (
@@ -194,6 +205,7 @@ const styles = StyleSheet.create({
   body: {flex: 1, minHeight: 0},
   more: {position: 'absolute', left: 0, right: 0, bottom: 0, height: FADE_H},
   fill: {flexGrow: 1, paddingBottom: 8}, // 한 화면 구성은 아래 여백을 줄여 본문 공간을 확보
+  dense: {gap: 12},
   bodyPad: {
     paddingTop: layout.bodyPadding.top,
     paddingHorizontal: layout.bodyPadding.x,
