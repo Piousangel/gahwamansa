@@ -5,7 +5,11 @@ import React from 'react';
 import {render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, type FakeOptions} from '../src/features/fakeApi';
-import {press, typeCode} from '../testUtils/flow';
+import {enterCode, press, toHomeConsented, typeCode} from '../testUtils/flow';
+import {warmAppRoot} from '../testUtils/warm';
+
+// 리뷰 #149 L2: 첫 AppRoot 렌더(콜드 스타트)를 미리 치른다. 첫 실행 상태를 검사하는 파일이 아니라 안전
+beforeAll(warmAppRoot);
 
 const count = (name: string) =>
   [...screen.queryAllByRole('button', {name}), ...screen.queryAllByRole('link', {name})].filter(n => n.props.accessibilityLabel === name).length;
@@ -45,4 +49,29 @@ test('B7 알려진 중복: Connect 실패 패널(이 폰에서는 번호를 쓸 
   await typeCode('555555');
   await waitFor(() => screen.getByText('이 폰에서는 번호를 쓸 수 없어요'));
   expect(count('처음으로')).toBe(2);
+});
+
+test('B7 알려진 중복(리뷰 #149 L1): Connect 연결 단계 rate_limited 패널 — 뒤로 바·Dock 둘 다 "번호 쓰기로"', async () => {
+  const api = createFakeApi();
+  const real = api.peekInviteCode.bind(api);
+  jest.spyOn(api, 'peekInviteCode').mockImplementation(code => real(code === '222222' ? '123456' : code)); // 확인은 통과, 연결(redeem)에서 rate_limited
+  render(<AppRoot api={api} />);
+  await press(/부모님 휴대폰이에요/);
+  await enterCode('222222');
+  await waitFor(() => screen.getByText('잠깐 쉬었다 해요'));
+  expect(count('번호 쓰기로')).toBe(2);
+});
+
+test('B7 아님(리뷰 #149 L1 확인): 확인 단계 rate_limited 패널은 뒤로 바 "처음으로", Dock "번호 쓰기로"(목적지가 다름)', async () => {
+  render(<AppRoot api={createFakeApi()} />);
+  await press(/부모님 휴대폰이에요/);
+  await typeCode('222222');
+  await waitFor(() => screen.getByText('잠깐 쉬었다 해요'));
+  expect([count('처음으로'), count('번호 쓰기로')]).toEqual([1, 1]);
+});
+
+test('B7 알려진 중복(리뷰 #149 L1): P13 설정 — 뒤로 바·Dock 둘 다 "오늘 코스로"', async () => {
+  await toHomeConsented(createFakeApi({consented: true}));
+  await press('설정');
+  await waitFor(() => expect(count('오늘 코스로')).toBe(2));
 });
