@@ -37,9 +37,13 @@ test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예�
     expect(StyleSheet.flatten(card.props.style).borderStyle).toBe('dashed');
     expect(card.props.accessibilityRole).toBeUndefined(); // 누르는 것 아님
   }
-  expect(screen.getByTestId('child-home-example-1').props.accessibilityLabel).toBe('예시, 부모님의 최근 답, 11월 16일 · 산과 바다 중 가을');
-  expect(screen.getByTestId('child-home-example-2').props.accessibilityLabel).toBe('예시, 지난 답, 11월 15일 · 산과 바다 중 바다');
-  expect(screen.getByText('가을에 자주 가시던 곳이 있었는지 여쭤봐요')).toBeTruthy();
+  expect(screen.getByTestId('child-home-example-1').props.accessibilityLabel).toBe('예시, 부모님의 최근 답, ○월 ○일 · 산과 바다 중 가을');
+  expect(screen.getByTestId('child-home-example-2').props.accessibilityLabel).toBe('예시, 지난 답, ○월 ○일 · 산과 바다 중 바다');
+  // 리뷰 M1·디자인 #92(a): 이야기 꺼내기도 예시 — 같은 모양(점선), 읽기 이름 '예시, 이야기 꺼내기, …'
+  const starter = screen.getByTestId('child-home-empty-starter');
+  expect(starter.props.accessibilityLabel).toBe('예시, 이야기 꺼내기, 가을에 자주 가시던 곳이 있었는지 여쭤봐요');
+  expect(StyleSheet.flatten(starter.props.style).borderStyle).toBe('dashed');
+  expect(screen.queryByText(/11월 1[56]일/)).toBeNull(); // 디자인 #89: 예시에 실제 날짜 없음
   expect(screen.queryByText('아빠의 최근 답')).toBeNull(); // 예시에는 실제 호칭을 쓰지 않는다(가짜 개인정보 없음)
   expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
   expectNoPressure();
@@ -51,20 +55,61 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
   const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
   await act(async () => {
-    lay('screen-body', 0, 300); // C4 홈은 옛 Screen(흐림은 겹쳐 그리는 것이라 스크롤 창이 바뀌지 않음) → 접힘 = 스크롤 창 300
+    lay('screen-body', 0, 328); // C4 홈은 옛 Screen: 접힘 = 스크롤 창 − 아래 흐림 28 = 300(리뷰 L4)
     lay('child-home-empty', 20, 400); // 묶음 위 끝 20, 사이 14
     lay('child-home-empty-line', 0, 112); // 20~132
     lay('child-home-example-1', 0, 120); // 146~266
     lay('child-home-example-2', 0, 120); // 280~400 → 300 에 걸림
     lay('child-home-empty-starter', 0, 90);
   });
-  expect(mt('child-home-example-2')).toBe(300 - 280);
+  expect(mt('child-home-example-2')).toBe(328 - 280); // 흐림 위(300)에 걸치면 민다, 민 카드는 흐림 밑 창 끝(328)으로
   expect(mt('child-home-example-1')).toBeUndefined();
   // 창이 커져 다 들어가면 간격 없음
   await act(async () => {
     lay('screen-body', 0, 700);
   });
   expect(mt('child-home-example-2')).toBeUndefined();
+});
+
+test('리뷰 L3 ①: 동의한 분(답 없음) + 나누지 않는 분이 섞이면 빈 상태 대신 기존 카드', async () => {
+  const api = createFakeApi({consented: true, parents: [{title: '엄마'}, {title: '아빠', shared: false}]});
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByText('답을 나누지 않는 중이에요'));
+  expect(screen.queryByTestId('child-home-empty')).toBeNull();
+});
+
+test('리뷰 L3 ②: 빈 상태에서 다시 불러와 첫 답이 생기면 실제 답 카드로 바뀐다', async () => {
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const {AppState} = require('react-native');
+  const handlers: ((st: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, h: (st: string) => void) => {
+    handlers.push(h);
+    return {remove: () => {}};
+  }) as never);
+  const api = createFakeApi({consented: true, parentTitle: '아빠', latest: null});
+  const get = api.fetchChildSummary.bind(api);
+  let answered = false;
+  jest.spyOn(api, 'fetchChildSummary').mockImplementation(async () => {
+    const s = await get();
+    return answered ? {...s, parents: s.parents.map(p => ({...p, latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}))} : s;
+  });
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByTestId('child-home-empty'));
+  answered = true;
+  await act(async () => {
+    handlers.forEach(h => h('active')); // 앞으로 돌아오면 다시 불러온다(useFocusLoad)
+  });
+  await waitFor(() => screen.getByText('봄'));
+  expect(screen.queryByTestId('child-home-empty')).toBeNull();
+});
+
+test('리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 빈 상태 B 를 보이지 않는다', async () => {
+  const api = createFakeApi({consented: true, parentTitle: '아빠', latest: null});
+  const get = api.fetchChildSummary.bind(api);
+  jest.spyOn(api, 'fetchChildSummary').mockImplementation(async () => ({...(await get()), parents: []}));
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
+  expect(screen.queryByTestId('child-home-empty')).toBeNull();
 });
 
 test('답이 하나라도 있으면 빈 상태 대신 실제 답 카드(첫날 화면은 아무 답도 없을 때만)', async () => {

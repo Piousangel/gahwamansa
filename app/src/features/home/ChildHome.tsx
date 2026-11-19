@@ -5,7 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {TopBar} from '../../ui/TopBar';
-import {Screen} from '../../ui/Screen';
+import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {BottomSheet} from '../../ui/BottomSheet';
@@ -52,7 +52,8 @@ export function ChildHome() {
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
   const dup = findTitleDup(list);
   // C4 첫날 빈 상태 안 B(#59): 연결된 분이 모두 보여 주기로 했고 아직 고른 답이 없을 때(첫날). 나누지 않음·연결 끊김은 기존 카드
-  const firstDay = !!info && list.length > 0 && list.every(p => p.connected && p.shared && !p.latest);
+  //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
+  const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
 
   // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
@@ -105,7 +106,8 @@ export function ChildHome() {
 
   return (
     <View style={styles.flex}>
-      <Screen top={top} bottom={bottom} onViewport={emptyFold.onViewport}>
+      {/* 리뷰 L4: 옛 Screen 의 아래 흐림(SCREEN_FADE_H, 겹쳐 그림)에 걸치면 민다(기준 = 흐림 위), 민 요소는 흐림 밑(창 끝)으로 — 흐림 속에 위 테두리가 비치지 않게 */}
+      <Screen top={top} bottom={bottom} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
         {error ? <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20> : null}
         {!info ? (
           <Text20>{appCopy.loading}</Text20>

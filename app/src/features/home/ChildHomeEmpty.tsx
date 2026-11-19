@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
-import {AudienceProvider, Card, Text} from '../../ui/ds';
+import {AudienceProvider, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {copy} from '../../copy/copy';
@@ -41,13 +41,20 @@ export function ChildHomeEmpty({fold}: {fold: ReturnType<typeof useEmptyFold>}) 
             <Text role="bodyLg">{`${x.line} ${x.choice}`}</Text>
           </View>
         ))}
-        <View onLayout={fold.onItem(3)} style={fold.gapStyle(3)} testID="child-home-empty-starter">
-          <Card tone="outlined">
-            <Text role="sub" tone="default">
-              {e.starter_label}
-            </Text>
-            <Text role="bodyLg">{e.starter}</Text>
-          </Card>
+        {/* 이야기 꺼내기도 예시(PR #87 M1·디자인 #92 a): 예시 카드와 같은 모양(칩·점선·흐린 면), 읽기 이름도 '예시'로 시작 */}
+        <View
+          testID="child-home-empty-starter"
+          accessible
+          accessibilityLabel={`${e.chip}, ${e.starter_label}, ${e.starter}`}
+          onLayout={fold.onItem(3)}
+          style={[styles.example, fold.gapStyle(3)]}>
+          <View style={styles.chip}>
+            <Text role="sub">{e.chip}</Text>
+          </View>
+          <Text role="sub" tone="default">
+            {e.starter_label}
+          </Text>
+          <Text role="bodyLg">{e.starter}</Text>
         </View>
       </View>
     </AudienceProvider>
