@@ -13,6 +13,7 @@ import {OtpField} from './OtpField';
 import {SocialButton} from './SocialButton';
 import {TextLink} from '../link/TextLink';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {track} from '../track';
 import {LegalText} from '../../ui/LegalText';
 import {Banner} from '../../ui/Banner';
 import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
@@ -104,6 +105,7 @@ export function ChildLogin() {
     try {
       await api.verifyEmailCode(email.trim(), value);
       recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
+      track(api, 'child_signup_completed', {login_method: 'email'}); // AC-05(자녀 퍼널 2단계)
       navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
     } catch (e) {
       // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
@@ -134,6 +136,7 @@ export function ChildLogin() {
       const r = await api.signInWithSocial(provider);
       if (r === 'ok') {
         recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
+        track(api, 'child_signup_completed', {login_method: provider}); // AC-05(자녀 퍼널 2단계)
         navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
       }
     } catch (e) {

@@ -18,7 +18,7 @@
 
 ## 2. 설정이 앱에 들어가는 방식
 
-빌드 때 Gradle 이 flavor 에 맞는 `app/env/<flavor>.env` 를 읽어 세 곳에 넣는다(새 라이브러리 없음).
+빌드 때 flavor 에 맞는 `app/env/<flavor>.env` 를 읽어 세 곳에 넣는다(새 라이브러리 없음). **읽기·검사·`env.generated.ts` 쓰기·release 번들 검사는 공통 스크립트 `app/scripts/appEnv.js` 한 곳**(iOS 준비 N2) — Gradle 은 이 스크립트를 부르기만 하고, iOS 는 Xcode Build Phase 에서 같은 스크립트를 부른다(아래 'iOS').
 
 1. `app/src/lib/env.generated.ts`(gitignore, 자동 생성 — 손으로 고치지 않음) → JS 가 `getAppEnv()` 로 읽음
 2. Android 리소스: `kakao_scheme`(카카오 웹 로그인 복귀), `app_env`, `supabase_url`
@@ -30,11 +30,43 @@ JS 쪽 우선순위(뒤가 앞을 덮음): 기본값(로컬+fake) → `env.gener
 - 앱 정보 값(AU-07, 선택): `TERMS_URL`·`PRIVACY_URL`(https 만)·`CONTACT_EMAIL`·`BIZ_NAME`·`BIZ_CEO`·`BIZ_REG_NO`(000-00-00000)·`BIZ_ADDRESS`. 형식이 틀리면 빌드 실패, 비어 있으면 설정 화면에서 그 행을 숨기고 **빌드 경고**. **production release 는 하나라도 비면 실패**(G-INT "값이 없어 숨겨진 앱 정보 행 0", 확인용만 `-PallowMissingAppInfo`). 앱은 `src/lib/appInfo.ts`(`readAppInfo`·`missingAppInfo`).
 - `production.env` 가 없으면 디버그 빌드는 `production.env.example`(가짜 값)으로 경고와 함께 되지만, **release 빌드는 실패**한다(확인용으로만 `-PallowPlaceholderEnv`). `scripts/build-production.sh` 는 시작 전에 멈춘다.
 
+### 공통 스크립트 `app/scripts/appEnv.js`(Gradle·iOS 공용)
+```bash
+node scripts/appEnv.js load-json [--require-real-env]                       # 두 flavor 검사 + 값(JSON) — Gradle 설정 단계
+node scripts/appEnv.js check --flavor production --build-type release [플래그] # 빌드 전 검사만
+node scripts/appEnv.js write --flavor staging --build-type debug [--version-name 1.0.0 --version-code 132 --git-sha abc] [--link-host h]
+node scripts/appEnv.js verify-bundle --flavor production <번들 파일…>         # release 번들 개발 전용 표식 검사
+# 플래그: --require-real-env(=-PrequireRealEnv) · --allow-placeholder(=-PallowPlaceholderEnv) · --allow-missing-app-info(=-PallowMissingAppInfo, 출시 경로에서는 무시)
+```
+- 버전을 주지 않으면 `package.json` version · `git rev-list --count HEAD` · 짧은 sha(iOS 처럼 빌드 도구가 버전을 넘기지 않는 경우). 실패는 종료 코드 1 + 한국어 한 줄, 경고는 `경고:` 줄.
+- 규칙 테스트: `__tests__/appEnvScript.test.ts`.
+- **node 필수**: Android 빌드·IDE 동기화가 설정 단계에서 이 스크립트를 부른다(원래 JS 번들에도 필요). 찾는 순서: `NODE_BINARY`(환경변수 또는 `~/.gradle/gradle.properties` 의 `NODE_BINARY=/경로/node`) → `~/.nvm/versions/node` 가장 높은 판 → `/opt/homebrew/bin/node` → `/usr/local/bin/node` → PATH. 못 찾으면 "빌드에 node 가 필요해요" 로 멈춘다. Dock 에서 연 Android Studio 는 셸 PATH 가 없으니 터미널에서 `studio .` 로 열거나 `NODE_BINARY` 를 적는다(라이브러리 일부도 PATH 의 node 를 직접 부른다).
+  - 증상: 빌드·동기화에 `A problem occurred starting process 'command 'node''` 나 `does not specify compileSdk`(라이브러리 설정이 node 실행 실패로 중간에 멈춘 결과)가 보이면 **그 Gradle 이 쓰는 PATH 에 node 가 없는 것**이다. 다른 곳(GUI 등)에서 켜진 Gradle 데몬이 남아 있어도 같다 → 터미널에서 `./gradlew --stop` 뒤 다시(다른 사람 빌드가 돌고 있으면 `--no-daemon` 으로 한 번).
+- **iOS(빌드 2, 아직 프로젝트에 넣지 않음)** — Run Script 두 개:
+  1. **맨 앞**(Compile Sources 전) "env 생성": Xcode Run Script 는 PATH 가 거의 없으므로 RN 템플릿처럼 `.xcode.env` 를 먼저 불러 `NODE_BINARY` 를 쓴다. 출시 configuration 은 `--require-real-env`(Android `build-production.sh` 와 같게). 출력 파일이 없어 매번 돌아야 하므로 "Based on dependency analysis" 를 끈다.
+     ```sh
+     set -e
+     [ -f "$PODS_ROOT/../.xcode.env" ] && . "$PODS_ROOT/../.xcode.env"
+     [ -f "$PODS_ROOT/../.xcode.env.local" ] && . "$PODS_ROOT/../.xcode.env.local"
+     cd "$SRCROOT/.."   # app/
+     if [ "$CONFIGURATION" = "Debug" ]; then TYPE=debug; EXTRA=""; else TYPE=release; EXTRA="--require-real-env"; fi
+     "$NODE_BINARY" scripts/appEnv.js write --flavor "${APP_FLAVOR:-staging}" --build-type "$TYPE" $EXTRA
+     ```
+  2. **"Bundle React Native code and images" 뒤**(release 만) "번들 검사": 번들 경로는 `$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/main.jsbundle`.
+     ```sh
+     set -e
+     [ "$CONFIGURATION" = "Debug" ] && exit 0
+     [ -f "$PODS_ROOT/../.xcode.env" ] && . "$PODS_ROOT/../.xcode.env"
+     cd "$SRCROOT/.."
+     "$NODE_BINARY" scripts/appEnv.js verify-bundle --flavor "${APP_FLAVOR:-staging}" "$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/main.jsbundle"
+     ```
+  - `APP_FLAVOR` 는 xcconfig·scheme 으로 정한다(iOS 감사 flavor 행). 버전 코드 기본값은 git 커밋 수라 얕은 clone CI 에서는 작다(Android 와 같은 한계, release-versions 확인 단계로 막음 — 리뷰 L3).
+
 ### env.generated.ts 가 남는 규칙(Metro 가 어떤 서버로 붙나)
-- 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
+- 디버그 빌드(`npm run android:staging` 등)는 빌드할 때 **자기 flavor 값**으로 이 파일을 쓴다. 작업 이름에 변형이 있으면(`assembleStagingDebug`) 그 변형만 쓴다 — 네이티브 CMake 설정이 다른 flavor 의 preBuild 를 끌어와도 덮어쓰지 않는다(PR #7·#44). Metro 는 이 파일을 읽으므로, **마지막으로 빌드한 디버그 flavor** 의 서버로 붙는다(stagingDebug 와 productionDebug 를 번갈아 설치했다면 마지막 것).
 - release 빌드는 번들 직전에 쓰고 **번들이 끝나면(실패해도) 지운다**. 그래서 `build-production.sh` 뒤에 `npm start` 만 해도 production 값이 남지 않고 기본값(로컬+fake)이 된다.
 - 지금 어느 값인지: `head -3 app/src/lib/env.generated.ts`(없으면 로컬+fake).
-- Metro 설정은 둘이다(개발자 메뉴 보안 재검토 R1). **개발 서버**(`npm start`·`npm run android`)는 `metro.config.js` 로, `config.local.ts` 와 개발자 메뉴를 그대로 둔다 — release 빌드 뒤 env.generated 가 지워져도 개발 흐름은 바뀌지 않는다. **출시 번들**은 Gradle 이 `react { bundleConfig }` 로 `metro.release.config.js` 를 쓴다: env.generated 의 `BUILD_TYPE=release` 가 없으면 번들을 멈추고, `config.local.ts` 를 빈 모듈로, production 이면 개발자 메뉴를 빈 대역으로 바꾼다. 번들 뒤 `verifyReleaseBundle` 이 산출물에서 테스트 계정·메뉴 표식을 찾으면 빌드를 실패시킨다. 손으로 확인: `npm run check:dev-menu`(임시 폴더 복사본에서, 작업 트리를 바꾸지 않음).
+- Metro 설정은 둘이다(개발자 메뉴 보안 재검토 R1). **개발 서버**(`npm start`·`npm run android`)는 `metro.config.js` 로, `config.local.ts` 와 개발자 메뉴를 그대로 둔다 — release 빌드 뒤 env.generated 가 지워져도 개발 흐름은 바뀌지 않는다. **출시 번들**은 Gradle 이 `react { bundleConfig }` 로 `metro.release.config.js` 를 쓴다: env.generated 의 `BUILD_TYPE=release` 가 없으면 번들을 멈추고, `config.local.ts` 를 빈 모듈로, production 이면 개발자 메뉴를 빈 대역으로 바꾼다. 번들 뒤 `verifyReleaseBundle`(→ `appEnv.js verify-bundle`) 이 산출물에서 테스트 계정·메뉴 표식을 찾으면 빌드를 실패시킨다. 손으로 확인: `npm run check:dev-menu`(임시 폴더 복사본에서, 작업 트리를 바꾸지 않음).
 
 ## 3. 로컬 개발
 
@@ -98,6 +130,22 @@ keytool -exportcert -keystore app/android/app/debug.keystore -alias androiddebug
 
 - **1~3 전까지 주의(리뷰 M2)**: 지금 `staging.env` 의 카카오 키는 production 과 같다. 두 앱이 같은 `kakao{키}://oauth` 주소를 받으므로, **한 폰에 두 앱을 같이 설치하면** 카카오톡 없이 하는 카카오계정(웹) 로그인 복귀가 선택창이 뜨거나 다른 앱으로 갈 수 있다. 키를 나누기 전에는 staging 을 production 앱이 없는 폰에만 설치한다. 빌드할 때마다 Gradle 이 이 상태를 경고한다.
 - 키를 바꾼 뒤 `staging.env` 를 커밋하고 staging 을 다시 빌드한다(카카오 scheme 도 그 키로 바뀜).
+
+### 6.1 iOS 콘솔 등록(빌드 2 — 지금은 계획, iOS 준비 N8)
+번들 ID 는 Android 패키지와 같게 고정한다: production `com.bumojasik.app`, staging `com.bumojasik.app.staging`(App Store Connect 에 앱을 만들면 번들 ID 는 바꿀 수 없음, iOS 감사 N7). 아래는 **Apple Developer 계정·Team ID 가 생긴 뒤** 사용자 몫. 값(키·ID)은 env·xcconfig 로만 넣고 커밋할 수 있는 공개 값만 저장소에 둔다.
+
+| # | 어디 | 할 일 | 넣을 곳 |
+|---|---|---|---|
+| i1 | 카카오 디벨로퍼스 > 앱(1653853) > 플랫폼 > iOS | 번들 ID `com.bumojasik.app`(production 키), staging 키(위 1번에서 나눈 키)에 `com.bumojasik.app.staging` | 앱: Info.plist URL scheme `kakao{네이티브 키}`, `LSApplicationQueriesSchemes`(kakaokompassauth·kakaolink 등). **SceneDelegate 구조라 복귀 URL 은 `scene(_:openURLContexts:)` 에서 처리**(iOS 감사 2.2) |
+| i2 | Google Cloud(gahwa-mansaseong) > 사용자 인증 정보 | **iOS OAuth 클라이언트 2개**(번들 ID 별: production·staging). 각 클라이언트의 iOS client ID·reversed client ID 를 받는다 | env(예: `GOOGLE_IOS_CLIENT_ID`, 공개 값) → 앱 `GoogleSignin.configure({iosClientId})`, Info.plist URL scheme = reversed client ID |
+| i3 | 각 환경 Supabase > Auth > Providers > Google | **Authorized Client IDs** 에 그 환경의 iOS client ID 추가(웹·Android 와 쉼표로 함께). iOS 구글 ID 토큰 nonce 때문에 'Skip nonce check' 가 필요할 수 있음 — 재확인 후 결정(iOS 감사 2.2) | 대시보드 |
+| i4 | 각 환경 Supabase > Auth > Providers > Kakao | Client ID 는 Android 와 같은 네이티브 키(플랫폼만 추가) — 변경 없음 확인 | 대시보드 |
+| i5 | Firebase 콘솔(gahwa-mansaseong) > 프로젝트 설정 > 앱 추가 > iOS | 번들 ID 2개 등록(iOS 감사 N6) → `GoogleService-Info.plist` 2개(저장소 밖 보관, gitignore 위치에 복사). **APNs 인증 키(.p8)** 업로드(Apple 계정 필요, U6) | Xcode configuration 별 plist 복사 Build Phase, `FirebaseApp.configure()` |
+| i6 | Apple Developer > Identifiers | 두 번들 ID 에 Capability: Push Notifications, Associated Domains(초대 링크), Sign in with Apple(심사 4.8 — 카카오·구글을 주므로 필요) | entitlements 파일(iOS 감사 2.3) |
+| i7 | Apple > Sign in with Apple(Services ID·키) + Supabase > Providers > Apple | Supabase Apple provider 설정(Services ID·Team ID·Key ID·.p8) | 대시보드(비밀은 대시보드에만) |
+
+- 순서: i5(번들 ID 등록·plist)는 Apple 계정 없이 지금도 된다(무료). i1~i4 는 iOS 빌드를 시작하는 날, i6·i7·.p8 은 Apple 계정 뒤.
+- 환경 값은 env 생성 공통 스크립트(`app/scripts/appEnv.js`, N2 PR)가 env 에서 읽어 iOS 쪽 xcconfig 로도 내보내게 확장한다(키를 env 한 곳에 — 지금 Android 와 같은 원칙).
 
 ## 7. staging 빌드·배포
 

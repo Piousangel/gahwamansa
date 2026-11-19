@@ -5,9 +5,18 @@ import {press, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {kstDateLine} from '../src/features/course/stamps';
+import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
+import {memoryStore} from '../src/lib/kvStore';
 
 // P8 응원 도착(시안 P8_cheer, copy 5·6절). 앱을 열면 코스 홈 위 대화상자, "알겠어요"로만 닫힘(읽음 처리).
 // 서버 계약(0020)은 가정: getUnreadCheers / markCheersRead.
+// V1(11-19): 해님 첫 인사가 보이는 첫 P3 에서는 묻지 않는다(v1FirstDay.test). 여기서는 첫 인사를 이미 본 기기로 시작한다
+beforeEach(async () => {
+  const prefs = createPrefs(memoryStore());
+  await prefs.markFirstGreetingSeen();
+  setPrefsForTest(prefs);
+});
+afterEach(() => setPrefsForTest(null));
 async function home(opts: FakeOptions) {
   const api = createFakeApi({linked: true, consented: true, ...opts});
   const mark = jest.spyOn(api, 'markCheersRead');

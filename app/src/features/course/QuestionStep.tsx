@@ -18,7 +18,7 @@ import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
 import {ToCourseHomeLink} from './ToCourseHomeLink';
 import {isServerError} from '../types';
-import {errorMessage, useFinishStep} from './useFinishStep';
+import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
 
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). 고른 답은 바꿀 수 없고 기록 호출 0, 하단 '돌아가기'.
 export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
@@ -27,6 +27,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {api, consented, content, applyAnswer} = useSession();
   const {finish, error, setError} = useFinishStep();
+  useStepStarted('question', review); // AC-05
   const [saving, setSaving] = useState(false);
   const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 문장에 하늘색 밑줄
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);

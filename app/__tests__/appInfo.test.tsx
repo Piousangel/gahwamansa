@@ -53,13 +53,11 @@ describe('앱 정보 값', () => {
     expect(versionText({VERSION_NAME: '1.2.0', VERSION_CODE: null})).toBe('1.2.0');
   });
 
-  test('Gradle 이 같은 키를 검사하고 env.generated 에 쓴다(빠지면 경고, production release 실패)', () => {
+  test('빌드 스크립트(scripts/appEnv.js, Gradle·iOS 공용)가 같은 키를 검사하고 env.generated 에 쓴다(빠지면 경고, production release 실패)', () => {
+    const {APP_INFO_KEYS: scriptKeys} = require('../scripts/appEnv.js');
+    expect(scriptKeys).toEqual([...APP_INFO_KEYS]);
     const g = fs.readFileSync(path.join(__dirname, '../android/app/build.gradle'), 'utf8');
-    for (const k of APP_INFO_KEYS) {
-      expect(g).toMatch(new RegExp(`\\b${k}:`));
-    }
-    expect(g).toContain('allowMissingAppInfo');
-    expect(g).toContain('APP_INFO_RULES.keySet().collectEntries');
+    expect(g).toContain('allowMissingAppInfo'); // -P 플래그 → --allow-missing-app-info
   });
 });
 

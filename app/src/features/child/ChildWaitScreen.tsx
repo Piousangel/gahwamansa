@@ -22,6 +22,7 @@ import {buildShareMessage, codeA11y, formatExpiry} from '../../lib/childFormat';
 import {appShareLink} from '../../lib/env';
 import {useNotifyPermission} from './useNotifyPermission';
 import {useChildWaitState} from './useChildWaitState';
+import {track} from '../track';
 
 const w = copy.child.wait;
 
@@ -58,6 +59,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
     setBusy(true);
     try {
       await api.issueInviteCode();
+      track(api, 'invite_code_issued', {purpose: 'parent_code'}); // AC-05
       if (state.hadExpired) {
         setRenewed(true);
         show({text: w.renewed});
@@ -71,6 +73,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const send = () => {
     if (code) {
+      track(api, 'invite_share_tapped', {channel: 'share_sheet'}); // AC-05: Android 는 어느 앱으로 보냈는지 알 수 없다
       Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))})
         .then(r => {
           if (r?.action !== Share.dismissedAction) {
@@ -82,6 +85,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   };
   const copyCode = () => {
     if (code && copyText(code.code)) {
+      track(api, 'invite_share_tapped', {channel: 'copy'}); // AC-05
       // 감사 L2(디자인 판정): 토스트 대신 번호 카드 바로 위 인라인 띠 — 아래쪽 시스템 클립보드 미리보기(Android 13+, AC-08)와 겹치지 않는다
       setCopied(n => n + 1);
     }

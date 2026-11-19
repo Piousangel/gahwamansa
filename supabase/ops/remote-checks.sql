@@ -77,6 +77,16 @@ with checks(check_name, ok, detail) as (
   -- 9. 운영 상태
   select '카카오 해제 포기 0건', (select count(*) from public.kakao_unlink_queue where gave_up_at is not null) = 0, null
   union all
+  -- 첫 답 알림(0052): 선점(claimed) 뒤 Edge 결과 기록(push_record)이 1시간 넘게 없으면 실제 도달 여부를 모른다(평생 1회라 다시 안 감).
+  -- first_answer_notices는 RLS(정책 없음) → RLS를 우회하지 못하는 역할이면 판정 보류(null), 0051 스위치 줄과 같은 방식
+  select '첫 답 알림 결과 미기록(claimed 1시간 넘음) 0건(0052)',
+         case when (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then not exists (select 1 from public.first_answer_notices where status = 'claimed' and created_at < now() - interval '1 hour') end,
+         case when not (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then '이 역할(' || current_user || ')은 RLS를 우회하지 못해 판정 불가 — SQL Editor(postgres)에서 다시 실행'
+              else (select count(*)::text from public.first_answer_notices where status = 'claimed' and created_at < now() - interval '1 hour')
+                   || '건 — 있으면 push_runs(parent_first_answer)·Edge push-events 로그 확인(dev-server-notes §14-2)' end
+  union all
   select '심사 가족 번호 꺼짐(심사 기간이 아니면)', not exists (select 1 from public.invite_codes where reusable and disabled_at is null),
          '심사 제출 중에는 false가 정상'
   union all

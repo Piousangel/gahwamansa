@@ -1,0 +1,22 @@
+# P1 첫 화면 접힘 경계(재확인 6 L28·7 M10). 번호 화면 첫 화면에서 멈춘다 → run.sh FOLD_CHECK=1 이 fold-check.py 로 키 좌표를 본다
+# (보이는 키는 통째로 + 시스템 내비 바 위). 3버튼 내비 실측: adb shell cmd overlay enable com.android.internal.systemui.navbar.threebutton
+#   (끝나면 …navbar.gestural 로 되돌림). 실행 예:
+#   ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=360x640 FOLD_CHECK=1 app/e2e/run.sh audit/p1-fold.yaml
+appId: com.bumojasik.app.staging
+name: P1 접힘 경계
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '부모님 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '가족에게 받은.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- assertVisible: '숫자 1'
+- takeScreenshot: p1-fold-first

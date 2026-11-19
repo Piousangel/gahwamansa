@@ -51,7 +51,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [justDone, setJustDone] = useState<StepName | null>(null);
   const prevDone = useRef<StepName[] | null>(null);
   const afterTransition = useAfterTransition(navigation);
-  const firstGreeting = useFirstGreeting(linked === true, navigation);
+  const {show: firstGreeting, decided: greetingDecided} = useFirstGreeting(linked === true, navigation);
   const {fontScale} = useWindowDimensions();
   const music = useCourseBgm('home'); // AP-04: 음원(CT-04)이 없으면 available=false 라 버튼도 없다
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
@@ -131,8 +131,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         : c.greeting;
   return (
     <Screen bottom={dock}>
-      {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음) */}
-      <CheerDialog api={api} enabled={!preview} returnFocusRef={titleRef} />
+      {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음). V1: 첫 인사가 보이는 첫 P3 에서는 묻지 않고 첫 단계 뒤에 */}
+      <CheerDialog api={api} enabled={!preview && greetingDecided && !firstGreeting} returnFocusRef={titleRef} />
       <View style={styles.headGroup}>
         <View style={styles.titleRow}>
           <Header testID="date-line" label={kstDateLine()} nodeRef={titleRef} />
@@ -253,8 +253,14 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
 // 해님 첫 인사 1회(DECISIONS 11-17 "첫 인사는 어르신 연결 직후 앨범 첫 화면", PM 백로그 D4).
 // 연결된 상태로 처음 열린 코스 홈에서만 보이고, 보인 순간 기기에 기록한다. 이 방문 동안은 그대로 두고(다시 그려도 유지),
 // 첫 단계를 시작하거나 다른 화면으로 떠나면(blur) 거둔다 → 돌아와도 다시 나오지 않는다(디자인 판정 ①).
-function useFirstGreeting(linked: boolean, navigation: {addListener(name: 'blur', cb: () => void): () => void}): boolean {
+// V1(DECISIONS 11-19): 첫 P3 덮개는 이 인사 1개만 — decided(인사를 띄울지 판정 끝)가 되기 전과 인사가 보이는 동안은
+// P8 응원 대화상자를 묻지 않는다. 첫 단계를 마치고 돌아오면(blur 로 인사가 거둬진 뒤) 그때 묻는다.
+function useFirstGreeting(
+  linked: boolean,
+  navigation: {addListener(name: 'blur', cb: () => void): () => void},
+): {show: boolean; decided: boolean} {
   const [show, setShow] = useState(false);
+  const [decided, setDecided] = useState(false);
   useEffect(() => navigation.addListener('blur', () => setShow(false)), [navigation]);
   useEffect(() => {
     if (!linked) {
@@ -264,16 +270,20 @@ function useFirstGreeting(linked: boolean, navigation: {addListener(name: 'blur'
     prefs()
       .firstGreetingSeen()
       .then(seen => {
-        if (alive && !seen) {
+        if (!alive) {
+          return;
+        }
+        if (!seen) {
           setShow(true);
           prefs().markFirstGreetingSeen();
         }
+        setDecided(true);
       });
     return () => {
       alive = false;
     };
   }, [linked]);
-  return show;
+  return {show, decided};
 }
 
 // 화면 제목(R2: Screen 이 첫 포커스로 등록). nodeRef 를 주면 그 요소도 알려 준다(P8 응원 대화상자가 닫힌 뒤 포커스 복귀, R12).

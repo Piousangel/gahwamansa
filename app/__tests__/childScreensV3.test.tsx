@@ -19,9 +19,12 @@ jest.setTimeout(20000);
 beforeEach(() => {
   jest.spyOn(require('react-native').PixelRatio, 'getFontScale').mockReturnValue(1);
 });
+// U10 '취소' 시간(4초)이 지나야 실제로 보낸다. 실제로 4초를 자면 부하 때 테스트 제한(20초)에 닿으므로(2026-11-19 측정: 이 4개가 파일에서
+// 가장 느린 4.2초씩) 가짜 시계로 넘긴다 — 쓰는 테스트는 맨 앞에서 useCheerClock()
+const useCheerClock = () => jest.useFakeTimers();
 const afterUndoWindow = () =>
   act(async () => {
-    await new Promise<void>(r => setTimeout(() => r(), 4100));
+    jest.advanceTimersByTime(4100);
   });
 const openTab = async (name: string) => {
   await waitFor(() => screen.getByRole('tab', {name}));
@@ -151,6 +154,9 @@ describe('C3 연결 대기', () => {
 });
 
 describe('C4 홈 · 응원', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
   test('상단 바·탭 바, 오늘 답이면 "{답} 이야기", 지난 날이면 "이 답으로 이야기를 시작해 봐요"', async () => {
     const {unmount} = render(
       <AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', latest: {prompt: null, choiceLabel: '가을', answeredDate: today}})} role="child" />,
@@ -165,6 +171,7 @@ describe('C4 홈 · 응원', () => {
   });
 
   test('응원 보내기: 확정 4개만, 누르면 바로 보내고 "{호칭}께 보냈어요"', async () => {
+    useCheerClock();
     const api = createFakeApi({consented: true, parentTitle: '엄마', latest: null});
     const send = jest.spyOn(api, 'sendCheer');
     render(<AppRoot api={api} role="child" />);
@@ -199,6 +206,7 @@ describe('C4 홈 · 응원', () => {
   });
 
   test('하루 한도를 넘으면 보내지 않고 알린다(서버 daily_limit)', async () => {
+    useCheerClock();
     render(<AppRoot api={createFakeApi({consented: true, cheerDailyLimit: 0})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');
@@ -209,6 +217,7 @@ describe('C4 홈 · 응원', () => {
   });
 
   test('M3: 한 분은 받고 다른 분에서 끊기면 받은 분을 알리고, 다시 하기는 남은 분께만 보낸다', async () => {
+    useCheerClock();
     const api = createFakeApi({parents: [{title: '엄마', latest: null}, {title: '아빠', latest: null}]});
     const real = api.sendCheer.bind(api);
     const send = jest.spyOn(api, 'sendCheer').mockImplementation(async (id, key) => {
@@ -229,6 +238,7 @@ describe('C4 홈 · 응원', () => {
   });
 
   test('응원 실패(오프라인)는 토스트로 알린다', async () => {
+    useCheerClock();
     render(<AppRoot api={createFakeApi({consented: true, failCheer: 1})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
     await press('응원 보내기');

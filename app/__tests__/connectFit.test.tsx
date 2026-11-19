@@ -94,11 +94,15 @@ describe('P1 화면 = pickStage 결과(이벤트를 기다리지 않음)', () =>
   });
 });
 
-// 사후 검증(재확인 4 H5): 묶음이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
-const block = async (h: number) =>
+// 사후 검증(재확인 4 H5): 내용이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
+// 재확인 5 M9: 넘침은 내용 높이(키패드 영역 y + 키패드 실제 높이)로 잰다 — 묶음 컨테이너(minHeight·flexGrow) 높이가 아니다
+const AREA_Y = 140;
+const content = async (bottom: number, y = AREA_Y) =>
   act(async () => {
-    fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+    fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: 999}}});
+    fireEvent(screen.getByTestId('keypad-content'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: bottom - y}}});
   });
+const block = content; // 아래 테스트의 '묶음 높이' = 내용 아래 끝
 const FILL_BOTTOM = 8;
 
 describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
@@ -155,6 +159,124 @@ describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
       fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 590}}});
     });
     await waitFor(() => expect(titleSize()).toBe(stageOf(411, 900, 1).level >= 1 ? 22 : 28));
+  });
+});
+
+describe('재확인 5 M9: 컨테이너가 아니라 내용 높이로 넘침을 잰다', () => {
+  test('재현 G: 360×740(3단계·키 68) — 어림 minHeight 로 늘어난 묶음과 더 작은 실제 창을 비교해 4단계로 가지 않는다', async () => {
+    dims(360, 740);
+    await openConnect();
+    const st = stageOf(360, 740, 1);
+    expect(st).toEqual({level: 3, keyH: 68});
+    const guess = firstHeight() as number; // 어림 묶음 높이(minHeight)
+    // 묶음 컨테이너는 어림 minHeight 로 늘어나 있다(옛 판정은 이 값을 썼다)
+    await act(async () => {
+      fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: guess}}});
+    });
+    await viewport(guess + 4 + FADE - 20); // 실제 창은 어림보다 20 작다
+    const real = firstHeight() as number;
+    expect(real).toBe(guess - 20);
+    // 내용(제목·안심 줄 아래 키패드)은 실제 창 안에 들어간다
+    await content(real - 5);
+    expect(keyH()).toBe(68);
+    expect(firstHeight()).toBe(real); // 3단계 그대로(4단계면 minHeight 없음)
+    expect(inDock('connect-links')).toBe(false);
+  });
+
+  test('0단계에서 하단 고정에 오프라인 Banner 가 생겨 창이 줄어도, 내용이 들어가면 키·단계 그대로', async () => {
+    dims(411, 914);
+    await openConnect();
+    const st = stageOf(411, 914, 1);
+    await viewport(700);
+    await content(600); // 여유 있게 들어감
+    await viewport(640); // Banner 로 하단 고정이 커져 창이 60 줄어듦
+    expect(titleSize()).toBe(28);
+    expect(keyH()).toBe(st.keyH);
+    // 정말로 넘치게 되면(내용 아래 끝 > 예정) 그때 조정한다
+    await content(640 - 4 - FILL_BOTTOM + 8);
+    expect(keyH()).toBe(st.keyH - 2);
+  });
+
+  test('재확인 5 L22: fill 화면이어도 안전망으로 넘치면 아래 \'더 있음\' 흐림이 보인다', async () => {
+    dims(411, 914);
+    await openConnect();
+    const body = screen.getByTestId('screen-body');
+    await act(async () => {
+      fireEvent(body, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 600}}});
+      fireEvent(body, 'scroll', {nativeEvent: {contentOffset: {x: 0, y: 0}, contentSize: {width: 312, height: 900}, layoutMeasurement: {width: 312, height: 600}}});
+    });
+    expect(screen.getByTestId('screen-more', {includeHiddenElements: true})).toBeTruthy();
+  });
+});
+
+// 리드 결정 L25·디자인 #54(RULES-V4 R-15): 4단계 첫 화면 끝이 키 줄을 반쯤 가르면 그 줄 앞에 여백을 넣어 줄째로 접힘 밖으로(키 64 그대로)
+describe('4단계 접힘 경계는 줄 경계', () => {
+  const rowsAt = async (ys: number[], h = 64) =>
+    act(async () => {
+      ys.forEach((y, i) => fireEvent(screen.getByTestId(`key-row-${i + 1}`), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}}));
+    });
+  const areaY = async (y: number) =>
+    act(async () => {
+      fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: 400}}});
+    });
+  // 키패드 안 줄 위치: 칸 68 + 12 + 칸 아래 줄 34 = 114 부터 70 간격
+  const ROWS = [114, 184, 254, 324];
+
+  test('360×640 1.0: 0·지움 줄이 접힘에 반쯤 걸리면 그 줄 앞에 여백 → 줄 전체가 접힘 밖, 키 64 그대로', async () => {
+    dims(360, 640);
+    await openConnect();
+    expect(stageOf(360, 640, 1).level).toBe(4);
+    await viewport(560); // 4단계 창(하단 고정 없음, 모의 inset 0) → 접힘 560, 흐림 532부터
+    await areaY(130); // 키패드 위 끝 = 4 + 130 = 134 → 줄 위 끝 248·318·388·458
+    await rowsAt(ROWS);
+    // 4번째 줄(458~522)은 흐림(532) 위라 걸리지 않는다 → 여백 없음
+    expect(screen.queryByTestId('fold-gap')).toBeNull();
+    await viewport(500); // 접힘 500, 흐림 472 → 4번째 줄(458~522)이 반쯤
+    const gap = screen.getByTestId('fold-gap');
+    expect(StyleSheet.flatten(gap.props.style).height).toBe(500 - 458); // 줄 위 끝을 접힘으로
+    expect(keyH()).toBe(64);
+    // 여백을 넣은 뒤의 줄 위치(여백만큼 아래)로 다시 와도 판정이 흔들리지 않는다
+    await rowsAt([ROWS[0], ROWS[1], ROWS[2], ROWS[3] + 42]);
+    expect(StyleSheet.flatten(screen.getByTestId('fold-gap').props.style).height).toBe(42);
+  });
+
+  test('200%처럼 1~9 줄이 걸리면 그 줄(예: 7·8·9) 앞에서 끊는다(어떤 배율에서도 줄 경계)', async () => {
+    dims(360, 640, 2);
+    await openConnect();
+    await viewport(560);
+    await areaY(300); // 큰 글자: 제목·안심 줄이 길다 → 위 끝 304, 줄 418·488·558·628
+    await rowsAt(ROWS);
+    const gap = screen.getByTestId('fold-gap');
+    expect(StyleSheet.flatten(gap.props.style).height).toBe(560 - 488); // 2번째 줄(488~552)이 흐림(532)에 걸림 → 그 앞에서
+    const container = screen.getByTestId('key-row-2').parent;
+    expect(container).toBeTruthy();
+  });
+
+  test('재확인 7 M10: 3버튼 내비(inset 48)는 시스템 버튼에 덮이는 줄도 접힘 밖으로(흐림 28 대신 48)', async () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 0, bottom: 48, left: 0, right: 0}));
+    try {
+      dims(360, 640);
+      await openConnect();
+      await viewport(560); // 접힘 560. 제스처라면 흐림 532 → 4번째 줄(458~522)은 통과
+      await areaY(130); // 줄 위 끝 248·318·388·458, 4번째 줄 아래 끝 522
+      await rowsAt([114, 184, 254, 324 + 6]); // 4번째 줄 464~528: 532 위지만 560 − 48 = 512 아래 → 버튼 밑
+      const gap = screen.getByTestId('fold-gap');
+      expect(StyleSheet.flatten(gap.props.style).height).toBe(560 - 464); // 줄 위 끝을 접힘(창 아래 끝)으로
+      expect(keyH()).toBe(64);
+      // 같은 줄 배치를 inset 0(제스처)에서는 밀지 않는다 — 위 '360×640 1.0' 테스트의 4번째 줄(458~522) 경우와 같음
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
+
+  test('0~3단계에서는 여백을 넣지 않는다(첫 화면 묶음이 키패드를 담는다)', async () => {
+    dims(411, 914);
+    await openConnect();
+    expect(screen.queryByTestId('fold-gap')).toBeNull();
   });
 });
 
