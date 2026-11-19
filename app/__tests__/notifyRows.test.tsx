@@ -8,6 +8,7 @@ import * as notify from '../src/push/notifyNative';
 import {press} from '../testUtils/flow';
 import {copy} from '../src/copy/copy';
 import {createFakeTokenSource, FAKE_PUSH_TOKEN, setTokenSourceForTest} from '../src/push/tokenSource';
+const ALL_DONE: ('photo' | 'question' | 'hangul')[] = ['photo', 'question', 'hangul']; // V1: N1 은 코스를 다 마친 뒤
 
 afterEach(() => jest.restoreAllMocks());
 // Android 에서는 Text20 이 한글 사이에 WJ(단어 안 줄바꿈 막기)를 넣는다 — 비교 전에 뺀다
@@ -116,7 +117,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false); // 13+ 묻기 전 = denied
     setTokenSourceForTest(createFakeTokenSource());
     // N1 기억은 계정별(기기 저장소가 테스트 사이에 남으므로 계정 가명값을 새로)
-    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, accountTag: `acc-m1-${++n}`});
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE, accountTag: `acc-m1-${++n}`});
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByLabelText(copy.push.permission.title), {timeout: 8000});
     await press(copy.push.permission.no);
