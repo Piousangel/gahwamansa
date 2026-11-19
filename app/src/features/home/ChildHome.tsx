@@ -6,16 +6,14 @@ import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {TopBar} from '../../ui/TopBar';
 import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
-import {AudienceProvider, Choice, Sheet} from '../../ui/ds';
+import {AudienceProvider, Button, Card, Choice, Heading, Sheet, StateView, Text} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
 import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
 import {useSendCheer} from './useSendCheer';
 import {findTitleDup} from './titleDup';
 import {TitleDupNotice} from './TitleDupNotice';
 import {appCopy, copy, withTitle} from '../../copy/copy';
-import {color, radius} from '../../ui/tokens';
 import {CHILD_CHEER_KEYS, ChildParent, ChildSummary} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
 import {useBootLoading} from '../../app/splash';
@@ -93,38 +91,48 @@ export function ChildHome() {
   if (error && !info) {
     return (
       <Screen top={top}>
-        <View testID="child-home-error" style={styles.center}>
-          <Text20 size={24} weight="bold">{error.title}</Text20>
-          <Text20>{error.body}</Text20>
-          <BigButton variant="secondary" label={error.button} onPress={load} />
-        </View>
+        <AudienceProvider value="child">
+          <StateView testID="child-home-error" kind="error" title={error.title} body={error.body} action={{label: error.button, onPress: load}} />
+        </AudienceProvider>
       </Screen>
     );
   }
 
-  const bottom =
-    !info ? (
-      <BigButton label={c.cheer.button} disabled disabledReason={h.loading_reason} onPress={() => {}} />
-    ) : reachable.length ? (
-      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} buttonRef={cheerButton} />
-    ) : undefined;
+  // 하단 고정: ds Button(자녀 역할). 옛 Screen 틀(탭 화면 TopBar)은 그대로 — 탭 화면용 DsScreen list 틀은 아직 없다
+  const bottom = (
+    <AudienceProvider value="child">
+      {!info ? (
+        <Button kind="primary" size="dock" label={c.cheer.button} disabled disabledReason={h.loading_reason} onPress={() => {}} />
+      ) : reachable.length ? (
+        <Button kind="primary" size="dock" label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} buttonRef={cheerButton} />
+      ) : null}
+    </AudienceProvider>
+  );
+  const hasBottom = !info || reachable.length > 0;
 
   return (
     <View style={styles.flex}>
       {/* 리뷰 L4: 옛 Screen 의 아래 흐림(SCREEN_FADE_H, 겹쳐 그림)에 걸치면 민다(기준 = 흐림 위), 민 요소는 흐림 밑(창 끝)으로 — 흐림 속에 위 테두리가 비치지 않게 */}
-      <Screen top={top} bottom={bottom} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
-        {error ? <Text20 weight="bold" accessibilityLiveRegion="polite">{error.title}</Text20> : null}
+      <Screen top={top} bottom={hasBottom ? bottom : undefined} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
+        <AudienceProvider value="child">
+        {error ? (
+          <View accessibilityLiveRegion="polite">
+            <Text role="body">{error.title}</Text>
+          </View>
+        ) : null}
         {!info ? (
-          <Text20>{appCopy.loading}</Text20>
+          <StateView kind="loading" title={appCopy.loading} />
         ) : (
           <>
             {list
               .filter(p => !p.connected)
               .map(p => (
-                <View key={`off-${p.parentId}`} testID="child-home-disconnected" style={styles.banner} accessibilityLiveRegion="polite">
-                  <Text20 size={24} weight="bold">{withTitle(h.disconnected.title, p.title)}</Text20>
-                  <Text20>{h.disconnected.body}</Text20>
-                  <BigButton variant="secondary" label={h.disconnected.button} loading={making} onPress={() => makeCode(p)} />
+                <View key={`off-${p.parentId}`} accessibilityLiveRegion="polite">
+                  <Card tone="notice" testID="child-home-disconnected">
+                    <Heading level={2}>{withTitle(h.disconnected.title, p.title)}</Heading>
+                    <Text role="body">{h.disconnected.body}</Text>
+                    <Button kind="secondary" size="dock" label={h.disconnected.button} loading={making} onPress={() => makeCode(p)} />
+                  </Card>
                 </View>
               ))}
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
@@ -136,6 +144,7 @@ export function ChildHome() {
             )}
           </>
         )}
+        </AudienceProvider>
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
       <AudienceProvider value="child">
@@ -156,13 +165,22 @@ export function ChildHome() {
 }
 
 // 최근 답 카드(폴라로이드형 테이프 1곳 + 스티치 1줄). 어르신이 여럿이면 빈·나누지 않음 상태에도 호칭 머리를 단다.
+// v4(V4-INDEX '시안 없음, 토큰 효과만'): 배치는 v3 그대로, 글자는 ds 역할(호칭 sub·답 display·날짜 body·이야기 bodyLg), 면·선은 v4 토큰
 function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: boolean}) {
   const head = `${p.title}${c.title_suffix}`;
   if (!p.shared || !p.latest) {
     return (
       <View style={withHeader ? styles.card : styles.plain}>
-        {withHeader ? <Text20 weight="bold" style={styles.sub}>{head}</Text20> : <BrandSymbol size={72} />}
-        <Text20 style={styles.centerText}>{!p.shared ? c.not_shared : c.no_answer}</Text20>
+        {withHeader ? (
+          <Text role="sub" tone="muted">
+            {head}
+          </Text>
+        ) : (
+          <BrandSymbol size={72} />
+        )}
+        <Text role="bodyLg" style={styles.centerText}>
+          {!p.shared ? c.not_shared : c.no_answer}
+        </Text>
       </View>
     );
   }
@@ -175,18 +193,22 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
       accessible
       accessibilityLabel={[head, p.latest.choiceLabel, formatAnswerDate(p.latest.answeredDate), p.starter ? `${h.starter_label}, ${p.starter}` : today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old].join(', ')}>
       <View style={styles.tape} />
-      <Text20 weight="bold" style={styles.sub}>{head}</Text20>
-      <Text20 size={72} weight="bold" style={styles.choice}>{p.latest.choiceLabel}</Text20>
-      <Text20>{formatAnswerDate(p.latest.answeredDate)}</Text20>
+      <Text role="sub" tone="muted">
+        {head}
+      </Text>
+      <Text role="display">{p.latest.choiceLabel}</Text>
+      <Text role="body">{formatAnswerDate(p.latest.answeredDate)}</Text>
       <View style={styles.stitch} />
       {p.starter ? (
         // 기능 회의 B3(C4_starter): 첫마디가 있으면 기본 문장을 대체한다(둘 중 하나만)
         <View testID="child-home-starter" style={styles.starter}>
-          <Text20 weight="bold" style={styles.sub}>{h.starter_label}</Text20>
-          <Text20 size={24}>{p.starter}</Text20>
+          <Text role="sub" tone="muted">
+            {h.starter_label}
+          </Text>
+          <Text role="bodyLg">{p.starter}</Text>
         </View>
       ) : (
-        <Text20 size={24}>{today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old}</Text20>
+        <Text role="bodyLg">{today ? `${p.latest.choiceLabel}${c.talk}` : h.talk_old}</Text>
       )}
     </View>
   );
@@ -194,14 +216,11 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
 
 const styles = StyleSheet.create({
   flex: {flex: 1},
-  center: {alignItems: 'center', gap: 8, paddingTop: 48},
   centerText: {textAlign: 'center'},
   plain: {paddingVertical: 32, alignItems: 'center', gap: 8},
-  banner: {backgroundColor: color.noticeSoft, borderRadius: radius.card, padding: 16, gap: 6},
-  card: {backgroundColor: color.card, borderRadius: radius.childCard, padding: 20, paddingTop: 28, gap: 6, marginTop: 8},
-  tape: {position: 'absolute', top: -10, alignSelf: 'center', width: 96, height: 24, backgroundColor: color.tape, transform: [{rotate: '-3deg'}]},
-  stitch: {borderTopWidth: 2, borderStyle: 'dashed', borderColor: color.lineSoft, marginVertical: 8},
-  choice: {color: color.inkTitle},
+  card: {backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, padding: 20, paddingTop: 28, gap: 6, marginTop: 8},
+  // 테이프: 장식(글자 없음)이라 고정 상자 예외(R-09)
+  tape: {position: 'absolute', top: -10, alignSelf: 'center', width: 96, height: 24, backgroundColor: ds.color.tape, transform: [{rotate: '-3deg'}]},
+  stitch: {borderTopWidth: 2, borderStyle: 'dashed', borderColor: ds.color.lineSoft, marginVertical: 8},
   starter: {gap: 4},
-  sub: {color: color.inkSub},
 });
