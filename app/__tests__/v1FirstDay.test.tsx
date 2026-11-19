@@ -35,7 +35,7 @@ const settle = () =>
 async function home(opts: FakeOptions) {
   const api = createFakeApi({linked: true, consented: true, pushEnabled: false, ...opts});
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'), {timeout: 8000});
+  await waitFor(() => screen.getByTestId('date-line'));
   return api;
 }
 
@@ -49,7 +49,7 @@ describe('N1 은 첫 코스 완료 뒤', () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ['photo']});
     const my = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('date-line'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('date-line'));
     await settle();
     expect(n1()).toBeNull();
     expect(my).not.toHaveBeenCalled();
@@ -67,7 +67,7 @@ describe('N1 은 첫 코스 완료 뒤', () => {
     await waitFor(() => screen.getByTestId('p7-title'));
     expect(n1()).toBeNull(); // P7 위에는 띄우지 않는다
     await press('알겠어요');
-    await waitFor(() => expect(n1()).not.toBeNull(), {timeout: 8000});
+    await waitFor(() => expect(n1()).not.toBeNull());
     expect(screen.getByText(copy.push.permission.title, {exact: false, normalizer: (t: string) => t.replace(/\u2060/g, '').trim()})).toBeTruthy();
     expect(screen.getByText('하루 한 번만 알려 드려요', {normalizer: (t: string) => t.replace(/\u2060/g, '').trim()})).toBeTruthy();
   });
@@ -92,13 +92,13 @@ describe('첫 P3 덮개는 1개(해님 인사), P8 응원은 첫 단계 뒤', ()
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
     await press('다 봤어요');
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => screen.getByText('가족이 보낸 응원이에요'), {timeout: 8000});
+    await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
     expect(screen.queryByTestId('first-greeting')).toBeNull();
   });
 
   test('첫 인사를 이미 본 기기는 코스 홈에서 바로 응원을 띄운다(기존 동작)', async () => {
     await prefs.markFirstGreetingSeen();
     await home({cheers: ['love_you']});
-    await waitFor(() => screen.getByText('가족이 보낸 응원이에요'), {timeout: 8000});
+    await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
   });
 });

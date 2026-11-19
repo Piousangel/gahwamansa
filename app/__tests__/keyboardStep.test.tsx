@@ -89,6 +89,7 @@ test('맞은 음절 칸만 앞에서부터 채우고, 틀림 표시는 어디에
 });
 
 test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기는 1.5초 뒤부터, 이동은 마치기로만', async () => {
+  jest.useFakeTimers(); // 마치기 1.5초를 실제로 기다리지 않는다(waitFor 가 가짜 시계를 돌림, 부하 정리 2차)
   const dismiss = jest.spyOn(Keyboard, 'dismiss');
   const {calls} = await toKeyboardStep();
   await type(' 나무 '); // 공백은 무시
@@ -97,7 +98,7 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
   expect(screen.getByRole('button', {name: '마칠게요'})).toBeDisabled();
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 자동 이동 없음
-  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled(), {timeout: 6000});
+  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled());
   await press('마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const rec = calls.filter(c => c.name === 'recordSessionStep');
@@ -123,6 +124,7 @@ test('조합 중 받침이 붙어도(나 → 남) 첫 칸 체크가 사라지지
 });
 
 test('일치하면 알림 1회 뒤 접근성 포커스를 "마칠게요"로 옮긴다(명세 P6, 리뷰 5)', async () => {
+  jest.useFakeTimers(); // 마치기 1.5초를 실제로 기다리지 않는다(waitFor 가 가짜 시계를 돌림, 부하 정리 2차)
   const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   await toKeyboardStep();
@@ -134,7 +136,7 @@ test('일치하면 알림 1회 뒤 접근성 포커스를 "마칠게요"로 옮�
   const toFinish = () =>
     send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마칠게요');
   expect(toFinish()).toBe(false); // 알림 읽기가 끝나도록 바로 옮기지 않는다(재검토 ①)
-  await waitFor(() => expect(toFinish()).toBe(true), {timeout: 6000}); // 1.5초(마치기 활성)와 함께
+  await waitFor(() => expect(toFinish()).toBe(true)); // 1.5초(마치기 활성)와 함께
   send.mockRestore();
   announce.mockRestore();
 });
@@ -200,9 +202,10 @@ test('계측: 단계 시작 + 완료 때 course_step_completed {step:hangul, att
 });
 
 test('계측 AC-05: 맞게 써서 마치기도 finished, 넘어가기는 skipped — 두 값뿐', async () => {
+  jest.useFakeTimers(); // 마치기 1.5초를 실제로 기다리지 않는다(waitFor 가 가짜 시계를 돌림, 부하 정리 2차)
   const a = await toKeyboardStep();
   await type('나무');
-  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled(), {timeout: 6000});
+  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled());
   await press('마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const done1 = a.calls.filter(c => c.name === 'logEvent' && c.args[0] === 'course_step_completed').map(c => c.args[1]);
