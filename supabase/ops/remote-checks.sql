@@ -116,6 +116,12 @@ with checks(check_name, ok, detail) as (
          has_function_privilege('service_role', 'public.admin_delete_user(uuid,text,text)', 'execute')
            and not has_function_privilege('authenticated', 'public.admin_delete_user(uuid,text,text)', 'execute'), null
   union all
+  select '자녀 화면 내부 함수 실행 권한 없음(앱·anon·서비스 역할, 0050)',
+         not exists (select 1 from unnest(array['public.family_child_summary(uuid,uuid)', 'public.family_child_history(uuid,uuid)']) f(fn),
+                            unnest(array['authenticated', 'anon', 'service_role']) r(role)
+                      where has_function_privilege(r.role, f.fn, 'execute')),
+         'false면 가족 id를 넘겨 다른 가족의 답을 읽을 수 있음(대시보드 grant 확인)'
+  union all
   select '인증 감사 로그 최근 30일 쌓임(auth.audit_log_entries)',
          (select count(*) from auth.audit_log_entries where created_at > now() - interval '30 days') > 0,
          (select count(*)::text from auth.audit_log_entries where created_at > now() - interval '30 days') || '건(보관 기간은 빌드 2 F3)'
