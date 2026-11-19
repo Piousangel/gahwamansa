@@ -18,6 +18,14 @@ export {PUSH_KINDS, type PushKind};
 
 // ── 앱이 부르는 RPC(서버 0032 register_push_token·unregister_push_token, 0033·0036·0037 set_push_enabled·my_push_settings) ──
 // 근거: docs/team/dev-server-notes.md 2절. 토큰 형식은 서버 검사와 같다(0032: 20~4096자, [A-Za-z0-9_:-]).
+// 토큰 플랫폼(서버 0032 register_push_token: 'android'|'ios' 만, 그 밖은 invalid_platform). RN Platform.OS 를 이 값으로 바꾼다(iOS 준비 N3)
+export const PUSH_PLATFORMS = ['android', 'ios'] as const;
+export type PushPlatform = (typeof PUSH_PLATFORMS)[number];
+/** Platform.OS → 서버 값. 모르는 OS(web 등)는 null — 등록하지 않는다 */
+export function pushPlatformOf(os: string): PushPlatform | null {
+  return (PUSH_PLATFORMS as readonly string[]).includes(os) ? (os as PushPlatform) : null;
+}
+
 export const PUSH_TOKEN_RE = /^[A-Za-z0-9_:-]{20,4096}$/;
 export const isPushTokenShape = (t: unknown): t is string => typeof t === 'string' && PUSH_TOKEN_RE.test(t);
 

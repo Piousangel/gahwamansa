@@ -324,13 +324,15 @@ describe('안내 페이지 스크립트 동작(가짜 DOM)', () => {
   const page = fs.readFileSync(`${root}/../site/c/index.html`, 'utf8');
   const script = (/<script>([\s\S]*?)<\/script>/.exec(page) as RegExpExecArray)[1];
   type El = {hidden: boolean; href: string; textContent: string; addEventListener: jest.Mock};
-  function run(hash: string, ua: string) {
+  const GahwaPlatform = require('../../site/c/platform.js') as {detectPlatform: (ua: string, t?: number) => string};
+  function run(hash: string, ua: string, withPlatformJs = true) {
     const els: Record<string, El> = {};
     const get = (id: string) =>
       els[id] || (els[id] = {hidden: true, href: '', textContent: '', addEventListener: jest.fn()});
-    const doc = {getElementById: get, visibilityState: 'visible'};
+    const doc = {getElementById: get, querySelectorAll: () => [], visibilityState: 'visible'};
+    const win = withPlatformJs ? {GahwaPlatform} : {};
     // eslint-disable-next-line no-new-func
-    new Function('document', 'location', 'navigator', script)(doc, {hash}, {userAgent: ua});
+    new Function('document', 'location', 'navigator', 'window', script)(doc, {hash}, {userAgent: ua}, win);
     return els;
   }
   const PLAY = 'https://play.google.com/store/apps/details?id=com.bumojasik.app';
@@ -349,10 +351,26 @@ describe('안내 페이지 스크립트 동작(가짜 DOM)', () => {
     expect(els.install.href).toBe(`${PLAY}&referrer=code%3D123456`);
   });
 
-  test('Android 아님: 설치 전 화면', () => {
-    const els = run('#123%20456', 'iPhone');
-    expect(shown(els, 'state-install')).toBe(true);
+  test('iPhone: 아이폰 안내(Play 링크·버튼 없음), 번호는 보인다', () => {
+    const els = run('#123%20456', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+    expect(els.code.textContent).toBe('123 456');
+    expect(shown(els, 'state-ios')).toBe(true);
     expect(shown(els, 'state-open')).toBe(false);
+    expect(shown(els, 'state-install')).toBe(false);
+    expect(els.install?.href ?? '').toBe('');
+  });
+
+  test('데스크톱: 휴대폰 안내, Play 링크 없음', () => {
+    const els = run('#123456', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    expect(shown(els, 'state-desktop')).toBe(true);
+    expect(shown(els, 'state-open')).toBe(false);
+    expect(els.install?.href ?? '').toBe('');
+  });
+
+  test('platform.js 를 못 읽어도 Android 는 앱 열기 + 번호', () => {
+    const els = run('#123456', 'Mozilla/5.0 (Linux; Android 14)', false);
+    expect(els.code.textContent).toBe('123 456');
+    expect(shown(els, 'state-open')).toBe(true);
   });
 
   test.each(['#abc', '', '#<img src=x onerror=alert(1)>', '#1234567'])(

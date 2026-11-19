@@ -157,7 +157,10 @@ export function ChildLogin() {
   );
 
   if (stage === 'choose') {
-    // 시안 C0 "카카오로 시작해요": 카카오(주) → 구글 → 이메일로 받기(보조 링크). 이전은 역할 선택
+    // 시안 C0 "카카오로 시작해요": 카카오 → 구글(하단 고정) · 약관·연령 줄 · 이메일로 받기(본문 끝). 이전은 역할 선택
+    // 실기기 S25 버그(11-19, 리드 결정 v4 Q1): 하단 고정에 약관 두 줄·연령·이메일까지 두면(≈ 368dp) 상한 40%(891 → 356)를 넘어
+    // 하단 고정 안에서 스크롤되며 카카오 버튼이 얇은 띠로 잘렸다. 하단 고정에는 타사 로그인 버튼 둘만 둔다(상한 40% 그대로,
+    // iOS Apple 버튼이 더해져도 72dp × 3 이라 넘지 않음). 약관·연령·이메일은 본문 끝(스크롤)으로
     return (
       <Screen
         top={<BackBar onBack={resetRole} />}
@@ -165,9 +168,6 @@ export function ChildLogin() {
           <>
             <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
             <SocialButton kind="google" label={t.google} disabled={busy} onPress={() => social('google')} />
-            {/* 시안 C0: 소셜 버튼 → 약관 줄 → 연령 줄(디자인 판정 11-18 ②) → 이메일 링크. 150% 이상이면 두 줄은 본문 끝으로 */}
-            {large ? null : legalLines}
-            <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
           </>
         }>
         <Text20 size={28} weight="bold">{t.choose_title}</Text20>
@@ -179,7 +179,8 @@ export function ChildLogin() {
             {note === t.failed.title ? <Text20>{t.failed.body}</Text20> : null}
           </>
         ) : null}
-        {large ? legalLines : null}
+        {legalLines}
+        <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
       </Screen>
     );
   }

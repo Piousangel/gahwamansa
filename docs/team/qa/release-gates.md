@@ -58,6 +58,8 @@
 | G-22 | 앱 정보 행 숨김 0 (DECISIONS 11-18) | A+M | A: `app/src/lib/appInfo.ts`의 URL·문의·사업자·OSS 값이 null/false 0(`grep -nE "null\|= false" app/src/lib/appInfo.ts`, AU-07 이후 상수 파일 기준). M: production 빌드 P13·C7 앱 정보 캡처 | 약관·방침·OSS·AI 안내·병원 앱 아님·사업자 정보·문의·버전 8행 모두 보임(in-app-notices §3), 값이 게시본과 글자 일치 |
 | G-23 | 약관·방침 동의 기록(Q2, 서버 0046) | A+M | A: pgTAP(연결·로그인 완료 시 약관·방침 버전·시각 기록). M: staging에서 연결 1회·로그인 1회 후 행 확인(L1 조회) | 두 경로 모두 버전·시각 행 1개 |
 | G-24 | 푸시 문구 금지어(Q6) | A | push_copy·`copy.ko.json push.*` 테스트: `혜택\|이벤트\|무료\|할인\|유료\|다시 오` 0 | 0건 |
+| G-25 | 백업·기기 이전 제외(보안 회의 E5, 2026-11-19-encryption-keys) | A+M | A: `cd app/android && ./gradlew :app:processStagingReleaseMainManifest :app:processProductionReleaseMainManifest` 뒤 병합 매니페스트(`app/build/intermediates/merged_manifest/<variant>/process<Variant>MainManifest/AndroidManifest.xml`)에서 `grep -E 'allowBackup\|dataExtractionRules\|fullBackupContent'`. M: Android 12+ 실기기 1대에서 기기 이전(D2D, 예: 스마트 스위치) 뒤 새 폰이 이전 세션 없이 첫 화면인지 | release 두 변형 모두 `allowBackup="false"`, `dataExtractionRules="@xml/data_extraction_rules"`(cloud-backup·device-transfer 모든 도메인 제외), `fullBackupContent="@xml/backup_rules"`. 기기 이전 뒤 로그인·연결 상태가 따라오지 않음 |
+| G-26 | 평문 통신 끔(보안 회의 E5) | A | G-25 와 같은 병합 매니페스트에서 `grep usesCleartextTraffic` | release 두 변형 모두 `usesCleartextTraffic="false"`(RN 플러그인이 release 에 false — debug 만 true) |
 
 ## 3. G-CLOSED (비공개 테스트 시작) — G-INT 전 행 유지 + 아래
 

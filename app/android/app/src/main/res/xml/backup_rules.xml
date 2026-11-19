@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11(API 30) 이하 자동 백업 규칙(보안 회의 E5). allowBackup=false 와 함께 모든 도메인 제외(이중 안전). 12+ 는 data_extraction_rules.xml -->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

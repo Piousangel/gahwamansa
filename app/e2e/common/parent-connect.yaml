@@ -5,10 +5,7 @@ appId: com.bumojasik.app.staging
 - launchApp:
     clearState: true
 - runFlow:
-    file: dismiss-system-dialogs.yaml
-- extendedWaitUntil:
-    visible: '이 휴대폰은 누구 거예요\?'
-    timeout: 60000
+    file: wait-first-screen.yaml
 - takeScreenshot: ${PREFIX}-fs
 - tapOn: '부모님 휴대폰이에요.*'
 - extendedWaitUntil:

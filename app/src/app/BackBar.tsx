@@ -44,7 +44,8 @@ export function BackBar({onBack, course}: {onBack?: () => void; course?: boolean
 }
 
 const styles = StyleSheet.create({
-  bar: {minHeight: size.touchMin, justifyContent: 'center', alignSelf: 'flex-start', paddingRight: 16},
+  // S25 실기기(11-19) '뒤로 링크가 작다' 최소 수정: 누름 영역 64 이상(높이·폭), 글자 본문(22) 이상. 디자인 규칙 v4 결과가 나오면 맞춘다
+  bar: {minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', alignSelf: 'flex-start', paddingRight: 20, paddingVertical: 4},
   pressed: {opacity: 0.6},
-  text: {fontSize: 22, color: color.ink, fontWeight: 'bold'},
+  text: {fontSize: 24, color: color.ink, fontWeight: 'bold'},
 });

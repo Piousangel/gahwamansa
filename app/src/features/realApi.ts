@@ -9,7 +9,7 @@ import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
 import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
-import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled} from '../api/contract/push';
+import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
 import {parseDeleteScope} from '../api/contract/deleteScope';
 import type {
@@ -39,7 +39,8 @@ function fail(what: string, error: SbError): never {
 
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 // social: 네이티브 소셜 로그인 모듈(테스트에서 바꿔 끼움). 기본값은 필요할 때 불러온다(통합 테스트(node)는 네이티브 모듈 없이 돈다).
-export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi {
+// platform: 이 기기 OS(selectApi 가 Platform.OS 로 넘김, iOS 준비 N3). 통합 테스트(node)는 기본 android
+export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform: PushPlatform | null = 'android'): RealApi {
   const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
   // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
   // 못 읽었으면(오프라인) 새 익명 사용자를 만들지 않는다.
@@ -432,7 +433,10 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     },
     // 0032·0036·0037 푸시(계약 api/contract/push.ts)
     async registerPushToken(token) {
-      const {data, error} = await sb.rpc('register_push_token', {p_token: token, p_platform: 'android'});
+      if (!platform) {
+        return {ok: false, reason: 'invalid_platform'}; // 서버가 받지 않는 OS(web 등)는 부르지 않는다
+      }
+      const {data, error} = await sb.rpc('register_push_token', {p_token: token, p_platform: platform});
       if (error) fail('register_push_token', error);
       const r = parseRegisterPushToken(data);
       if (!r) throw new ServerError('register_push_token', 'contract_mismatch');

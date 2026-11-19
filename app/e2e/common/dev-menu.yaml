@@ -1,15 +1,24 @@
-# 공용: 지금 화면의 버전 줄('버전 1.0.0' — accessible 행이라 testID 가 계층에 안 잡혀 글자로 찾음)을 7번 눌러 개발자 메뉴를 열고 ${ROLE_LABEL}('어르신으로'·'자녀로')로 역할 전환.
+# 공용: 지금 화면의 버전 줄('버전 1.0.0 (n)' — accessible 행이라 testID 가 계층에 안 잡혀 글자로 찾음)을 7번 눌러 개발자 메뉴를 열고 ${ROLE_LABEL}('어르신으로'·'자녀로')로 역할 전환.
 # fake 모드는 같은 fake 서버 상태를 유지한 채 역할만 바꿔 처음부터(DevMenuHost.switchRole). 부르기 전에 버전 줄이 보이는 화면에 있어야 한다.
+# 안정화(2026-11-18 F6, 캡처 20261118-164501 step-054): scrollUntilVisible 의 빠른 스와이프(화면 가운데에서 시작)가 어르신 설정의
+# '연결된 가족' 행을 누른 것으로 잡혀 P16 으로 넘어갔다 → 왼쪽 9%(제스처 내비 뒤로 영역 밖)에서 천천히(600ms) 끌어 올린다(효과는 느린 속도, 리뷰 M3).
 appId: com.bumojasik.app.staging
 ---
-- scrollUntilVisible:
-    element: '버전.*1\.0\.0.*'
-    direction: DOWN
-# 앱은 4초 안 7번을 요구한다 → 명령 7개가 아니라 한 명령 안 반복(빠름)
+- repeat:
+    times: 8
+    while:
+      notVisible: '버전.*1\.0\.0.*'
+    commands:
+      - swipe:
+          start: 9%, 75%
+          end: 9%, 35%
+          duration: 600
+# 앱은 4초 안 7번을 요구한다 → 한 명령 안 반복(빠름). 누를 때마다 화면이 가라앉기를 기다리지 않게(누름 불투명도 변화로 지연)
 - tapOn:
     text: '버전.*1\.0\.0.*'
     repeat: 7
     delay: 150
+    waitToSettleTimeoutMs: 200
 - extendedWaitUntil:
     visible: '개발자 메뉴'
     timeout: 5000
