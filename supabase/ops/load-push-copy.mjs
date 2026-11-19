@@ -21,11 +21,21 @@ const rows = [
   {kind: 'cheer_arrived', title: p.cheer?.title, body: p.cheer?.body, body_fallback: null, body_many: p.cheer?.body_many ?? null},
   {kind: 'parent_connected', title: p.connected?.title, body: p.connected?.body, body_fallback: null, body_many: null},
   {kind: 'parent_reconnected', title: p.reconnected?.title, body: p.reconnected?.body, body_fallback: null, body_many: null},
+  // 0052 첫 답(자녀, 평생 1회). 자리값은 {호칭}만 — 답 내용·시각을 넣지 않는다(U11 예외 조건). 원본은 라이터 push.first_answer.
+  {kind: 'parent_first_answer', title: p.first_answer?.title, body: p.first_answer?.body, body_fallback: null, body_many: null, optional: true},
 ];
 const cheerKeys = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'];
 const cheers = cheerKeys.map((k) => ({message_key: k, text: copy.cheers?.[k]}));
 
 const problems = [];
+// 라이터 문구가 아직 없는 선택 종류는 빼고 적재한다(서버는 문구가 없으면 그 종류를 보내지 않음)
+for (const r of rows.filter((x) => x.optional && !x.title && !x.body)) console.log(`push.${r.kind}: 라이터 문구 대기 — 이번에는 적재하지 않아요`);
+for (let i = rows.length - 1; i >= 0; i--) if (rows[i].optional && !rows[i].title && !rows[i].body) rows.splice(i, 1);
+for (const r of rows) delete r.optional;
+// 첫 답 문구에는 {호칭} 외 자리값을 쓰지 않는다(답 내용·시각 금지)
+for (const r of rows.filter((x) => x.kind === 'parent_first_answer')) {
+  for (const f of [r.title, r.body]) if (/\{(?!호칭\})[^}]*\}/.test(f ?? '')) problems.push(`push.first_answer: {호칭} 외 자리값 금지: ${f}`);
+}
 for (const r of rows) {
   if (!r.title || !r.body) problems.push(`push.${r.kind}: 제목·본문 없음`);
   if ((r.title ?? '').length > 30) problems.push(`push.${r.kind}: 제목 30자 초과`);

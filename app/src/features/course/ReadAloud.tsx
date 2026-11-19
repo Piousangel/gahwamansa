@@ -7,6 +7,7 @@ import {SmallButton} from '../../ui/SmallButton';
 import {color, radius, size} from '../../ui/tokens';
 import {getMediaVolume, useReadAloud} from '../../audio';
 import {copy} from '../../copy/copy';
+import {readTextBuilders} from '../../audio/readText';
 
 const t = copy.tts;
 
@@ -19,14 +20,8 @@ const t = copy.tts;
 type Notice = null | 'no_korean' | 'muted' | 'failed';
 const FONT_MAX = 1.5;
 
-/** 읽어 주기 문장 만들기(copy tts.read 틀). 화면은 이것으로 읽을 글을 만든다 */
-export const ttsText = {
-  photo: (qs: string[]) => t.read.photo.split('{질문1}').join(qs[0] ?? '').split('{질문2}').join(qs[1] ?? '').trim(),
-  question: (prompt: string, a: string, b: string) =>
-    t.read.question.split('{질문}').join(prompt).split('{선택지1}').join(a).split('{선택지2}').join(b),
-  word: (word: string, letters: string[]) => t.read.word.split('{낱말}').join(word).split('{글자들}').join(letters.join(', ')),
-  cheer: (text: string) => t.read.cheer.split('{응원}').join(text),
-};
+/** 읽어 주기 문장 만들기(copy tts.read 틀, 순수 함수는 audio/readText — 미리 생성 음성 스크립트와 같은 함수). 화면은 이것으로 읽을 글을 만든다 */
+export const ttsText = readTextBuilders(t.read);
 
 export function ReadAloud({text, onSpeaking, testID = 'read-aloud'}: {text: string; onSpeaking?: (mine: boolean) => void; testID?: string}) {
   const {allowed, speaking, speak, stop} = useReadAloud();

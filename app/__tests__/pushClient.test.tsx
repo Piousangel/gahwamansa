@@ -150,7 +150,7 @@ describe('어르신 N1 받기 동의', () => {
     expect(en).toHaveBeenCalledTimes(2); // 보낸 뒤에는 다시 안 보냄
   });
 
-  test("'괜찮아요': 서버 호출 없음, 다시 묻지 않음", async () => {
+  test("'안 받을게요': 서버 호출 없음, 다시 묻지 않음", async () => {
     const d = deps();
     const en = jest.spyOn(d.api, 'setPushEnabled');
     expect(await shouldPromptParent(d)).toBe(true);
