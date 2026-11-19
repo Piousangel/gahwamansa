@@ -256,9 +256,12 @@ describe('U12 C3 공유 뒤', () => {
     expect(screen.queryByRole('button', {name: '번호 보내기'})).toBeNull();
   });
 
-  test('번호 기간이 지났으면 새 번호 만들기 근처에 "새 번호를 만들면 보낸 번호는 쓸 수 없어요"', async () => {
+  test('번호 기간이 지났으면 안내 띠 두 줄 + 새 번호 만들기("새 번호를 만들면…" 줄은 디자인 결정 PR #83 L2 로 뺌)', async () => {
     render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, childCodeExpired: true})} restore />);
-    await waitFor(() => screen.getByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요'));
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(screen.getByText('새 번호를 만들어 다시 보내 주세요')).toBeTruthy();
+    expect(screen.getByRole('button', {name: '새 번호 만들기'})).toBeTruthy();
+    expect(screen.queryByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요')).toBeNull();
   });
 });
 

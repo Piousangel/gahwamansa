@@ -235,7 +235,7 @@ describe('DsScreen', () => {
     expect(screen.queryByTestId('dock-undocked')).toBeNull();
   });
 
-  test('PR #82 리뷰 L4: 한 번 그리는 사이 onLayout 이 두 번 와도 넘침 단계를 하나씩 정확히 올린다', () => {
+  test('PR #82 L4·#83 L4: 한 번 그리기 전에 onLayout 이 두 번 와도(옛 배치 측정) 한 단계만 올린다', () => {
     render(
       <DsScreen variant="form" dock={dock}>
         <Text role="body">본문</Text>
@@ -246,8 +246,9 @@ describe('DsScreen', () => {
       fireEvent(d, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}});
       fireEvent(d, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}});
     });
-    // 두 번 다 넘침 → note·보조 모두 본문으로(오래된 0 으로 두 번 1 을 고르지 않는다)
-    expect(within(screen.getByTestId('dock-spill')).getByText('다시 쓰기')).toBeTruthy();
+    // 두 번째는 단계 0 으로 그린 채 잰 값 → 버린다. note 만 본문으로, 보조는 아직 Dock(단계 1 로 다시 잰 뒤 정함)
+    expect(within(screen.getByTestId('dock-spill')).getByTestId('dock-note')).toBeTruthy();
+    expect(within(screen.getByTestId('ds-dock')).getByText('다시 쓰기')).toBeTruthy();
   });
 
   test('SocialGroup 이 든 Dock 은 intro 라도 0.4(R-12, 리뷰 M4)', () => {

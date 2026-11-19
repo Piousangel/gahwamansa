@@ -34,6 +34,94 @@ const openTab = async (name: string) => {
 };
 
 describe('C3 연결 대기', () => {
+  const RN = require('react-native');
+  const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
+  beforeEach(() => {
+    dims(1); // jest 모의 기본 글자 배율은 2 → 100% 기준으로(200%는 테스트 안에서)
+  });
+
+  test('리뷰 M1: 보는 중에 번호가 만료되면 화면 읽기에 한 번 알린다(카드 → 만료 띠)', async () => {
+    const handlers: ((st: string) => void)[] = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, h: (st: string) => void) => {
+      handlers.push(h);
+      return {remove: () => {}};
+    }) as never);
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    const api = waitApi();
+    await openWait(api);
+    expect(said).not.toHaveBeenCalledWith(expect.stringContaining('번호 기간이 지났어요'));
+    const expiredApi = waitApi({childCodeExpired: true});
+    jest.spyOn(api, 'getChildState').mockImplementation(() => expiredApi.getChildState());
+    await act(async () => {
+      handlers.forEach(h => h('active')); // 앞으로 돌아와 다시 확인 → 만료
+    });
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(said).toHaveBeenCalledWith('번호 기간이 지났어요. 새 번호를 만들어 다시 보내 주세요');
+  });
+
+  test('리뷰 L1: 공유 창에서 돌아오면 안내 줄을 한 번 읽어 준다', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    await openWait(waitApi());
+    await press('번호 보내기');
+    await waitFor(() => screen.getByTestId('wait-after-share'));
+    expect(said).toHaveBeenCalledWith('번호를 보냈다면 다시 보내지 않아도 돼요');
+  });
+
+  test('디자인 결정 #83 ①: 번호 카드는 흰 면 + line 1.5 테두리(outlined)', async () => {
+    await openWait(waitApi());
+    const {StyleSheet} = require('react-native');
+    const {ds} = require('../src/ui/ds/roles');
+    const st = StyleSheet.flatten(screen.getByTestId('wait-code').props.style);
+    expect(st.borderWidth).toBe(1.5);
+    expect(st.borderColor).toBe(ds.color.line);
+    expect(st.backgroundColor).toBe(ds.color.card);
+  });
+
+  test('디자인 결정 #83 ②: 200%에서는 Dock = 주 버튼 하나, 복사하기는 본문 끝·알림 줄은 카드 바로 아래', async () => {
+    dims(2);
+    const notifyMod = require('../src/features/child/useNotifyPermission');
+    jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
+    const spy = jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    await openWait(waitApi());
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual([expect.stringMatching(/번호 보내기/)]);
+    const body = within(screen.getByTestId('screen-body'));
+    expect(within(screen.getByTestId('wait-code')).queryByTestId('wait-notify')).toBeNull();
+    expect(body.getByTestId('wait-notify')).toBeTruthy();
+    const order = screen.root.findAll(n => typeof n.type === 'string' && ['wait-code', 'wait-notify', 'wait-steps', 'wait-copy'].includes(n.props.testID)).map(n => n.props.testID);
+    expect(order).toEqual(['wait-code', 'wait-notify', 'wait-steps', 'wait-copy']);
+    await press('복사하기');
+    expect(spy).toHaveBeenCalledWith('123456');
+  });
+
+  test('디자인 결정 #83 ③(R-15): 첫 화면 끝이 단계 행을 가르면 그 행 위에 잰 만큼 간격 → 통째로 접힘 밖, 걸치지 않으면 간격 없음', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
+    await act(async () => {
+      lay('screen-body', 0, 480); // 스크롤 창 480
+      lay('wait-steps', 300, 300); // 묶음 위 끝 300, 요소 사이 12
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 32); // 340~372
+      lay('wait-step-2', 0, 48); // 384~432
+      lay('wait-step-3', 0, 48); // 444~492 → 480 에 걸림
+    });
+    expect(mt('wait-step-3')).toBe(480 - 444);
+    expect(mt('wait-step-2')).toBeUndefined();
+    // 간격이 들어간 뒤 같은 높이로 다시 와도 흔들리지 않는다(높이만으로 계산)
+    await act(async () => {
+      lay('wait-step-3', 36, 48);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    // 창이 커져 다 들어가면 간격 없음
+    await act(async () => {
+      lay('screen-body', 0, 600);
+    });
+    expect(mt('wait-step-3')).toBeUndefined();
+  });
+
   test('C3 v4: 제목·설정 → 번호 카드(번호·만료 시각) → 3단계, 연결 칩·예시 카드 없음, 만료 전에는 새 번호 만들기가 없다', async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
     await openWait(waitApi());
@@ -88,6 +176,7 @@ describe('C3 연결 대기', () => {
     expect(screen.getByText('새 번호를 만들어 다시 보내 주세요')).toBeTruthy();
     expect(screen.getByText('연결 기다리는 중')).toBeTruthy(); // v4: 제목은 그대로, 번호 카드·3단계 대신 안내 띠
     expect(screen.queryByTestId('wait-steps')).toBeNull();
+    expect(screen.queryByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요')).toBeNull(); // 디자인 결정 L2(a)
     await press('새 번호 만들기');
     await waitFor(() => screen.getByText('123 456'));
     expect(issue).toHaveBeenCalledTimes(1);

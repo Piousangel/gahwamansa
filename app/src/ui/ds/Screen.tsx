@@ -42,6 +42,8 @@ export type DsScreenProps = {
   /** R-12 예외(디자인 #74)를 켠다: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞)에.
    *  입력 화면(C0-b 등)만 켠다. 끈 화면(기본)은 Dock 유지 — 예: P6 는 200% 자판 열림에서도 '다 썼어요'를 Dock 에(V4-INDEX, PR #82 리뷰 L2) */
   dockReleaseOnKeyboard?: boolean;
+  /** 본문 스크롤 창 높이(접힘 경계 맞춤용, R-15) */
+  onViewport?: (h: number) => void;
   scrollRef?: React.Ref<ScreenScroll>;
 };
 
@@ -66,7 +68,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false}: DsScreenProps) {
+export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -86,7 +88,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
 
   // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1)
   const dockKey = dock
-    ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}`, dock.secondary?.label ?? '', dock.note?.text ?? ''].join('/')
+    ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}|${dock.primary.kind ?? ''}|${dock.primary.icon ?? ''}`, `${dock.secondary?.label ?? ''}|${dock.secondary?.kind ?? ''}|${dock.secondary?.icon ?? ''}`, dock.note?.text ?? ''].join('/') // PR #83 리뷰 L3: Dock 높이를 바꾸는 kind·icon 도
     : '';
   // R-12 예외(디자인 결정 11-19, PR #74): 자판이 열린 채 주 버튼 하나만으로도 보이는 창의 40%를 넘으면 Dock 을 풀고
   //   주 버튼을 본문(입력 바로 아래, children 뒤·tail 앞)에 둔다. 자판이 닫히면 다시 Dock. 소셜 묶음은 해당 없음(자판 없는 화면)
@@ -101,8 +103,12 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
     setUndock(known);
   }, [condKey]);
 
-  const onDockHeight = (content: number) => {
+  const onDockHeight = (content: number, rendered: DockSpillLevel = spillRef.current) => {
     if (!dock) {
+      return;
+    }
+    // PR #83 리뷰 L4: 지금 단계로 그린 Dock 의 측정만 쓴다(한 번 그리기 전에 온 두 번째 측정은 옛 배치라 버린다, P1 M9 와 같은 원칙)
+    if (rendered !== spillRef.current) {
       return;
     }
     // 자판이 열리면 아래 내비 inset 은 자판이 덮는다 → 재는 높이에서 뺀다(리드 지시 11-19, R-12 예외 측정)
@@ -142,6 +148,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
       // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
+      onViewport={onViewport}
       moreBand={<MoreBand />}
       bottom={dock && !undock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
       {children}
