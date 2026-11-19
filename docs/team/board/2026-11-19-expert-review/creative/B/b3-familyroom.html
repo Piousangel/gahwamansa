@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=360">
+<title>B3 가족방 한 줄</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="frame.css">
+<style>
+/* 안 3 가족방 한 줄: 방 바탕 · 남 말풍선 · 내 말풍선 · 먹 · 방 회 · 감잎 초록 · 읽음 주황 */
+:root { --bg: #E6ECF1; --card: #FFFFFF; --mine: #CFE8D5; --ink: #191C1F; --sub: #3E4750; --act: #184C3A; }
+body { font-family: 'Pretendard', sans-serif; }
+.t-title { font-size: calc(32px * var(--f15)); line-height: 1.36; font-weight: 700; letter-spacing: -0.02em; }
+.t-head { font-size: calc(26px * var(--f20)); line-height: 1.38; font-weight: 700; }
+.t-lg { font-size: calc(22px * var(--f20)); line-height: 1.45; }
+.t-body { font-size: calc(20px * var(--f20)); line-height: 1.5; }
+.t-sub { font-size: calc(20px * var(--f20)); line-height: 1.5; color: var(--sub); }
+.t-link { font-size: calc(22px * var(--f20)); line-height: 1.4; color: var(--act); text-decoration: underline; text-underline-offset: 4px; }
+.c-title { font-size: calc(26px * var(--f15)); line-height: 1.38; font-weight: 700; letter-spacing: -0.02em; }
+.c-body { font-size: calc(16px * var(--f20)); line-height: 1.5; }
+.c-lg { font-size: calc(18px * var(--f20)); line-height: 1.5; }
+.c-sub { font-size: calc(16px * var(--f20)); line-height: 1.5; color: var(--sub); }
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 16px; flex-wrap: wrap; }
+.tap { min-height: 64px; display: flex; align-items: center; }
+.scr[data-who="child"] .tap { min-height: 48px; }
+.btn { min-height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 8px 16px; font-weight: 700; }
+.btn.pri { background: var(--act); color: #fff; font-size: calc(30px * var(--f15)); line-height: 1.27; }
+.btn.sec { min-height: 64px; background: var(--card); color: var(--act); border: 2px solid var(--act); font-size: calc(24px * var(--f15)); line-height: 1.33; }
+.scr[data-who="child"] .btn.pri { min-height: 56px; font-size: calc(18px * var(--f15)); }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 64px; padding: 0 18px 0 10px; border-radius: 18px; background: var(--card); border: 1.5px solid var(--sub); color: var(--act); font-size: calc(24px * var(--f15)); }
+.back svg { width: 28px; height: 28px; flex: none; }
+
+/* 말풍선: 받은 것은 왼쪽 흰 면(왼쪽 위 모서리만 6), 내가 보낸 것은 오른쪽 초록 면(오른쪽 위 모서리만 6) */
+.msg { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 8px; margin-top: 14px; }
+.msg.mine { flex-direction: row-reverse; }
+.bub { background: var(--card); border-radius: 6px 22px 22px 22px; padding: 14px 16px; max-width: 300px; min-width: 220px; }
+.mine .bub { background: var(--mine); border-radius: 22px 6px 22px 22px; }
+.meta { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.ai-label { white-space: nowrap; }
+.slot { border: 2px dashed var(--sub); border-radius: 12px; padding: 6px 12px; margin-top: 8px; color: var(--sub); }
+.slot.now { border: 3px solid var(--act); color: var(--ink); background: #fff; }
+.slot.fill { border: 0; padding: 0; color: var(--ink); }
+.bub img { width: 100%; border-radius: 14px; object-fit: cover; }
+.who { padding-left: 4px; }
+</style>
+</head>
+<body>
+
+<section class="scr" data-id="P3" data-who="elder">
+  <div class="body pad">
+    <div class="top blk"><span class="t-sub">11월 20일 금요일</span><a class="t-link tap">설정</a></div>
+    <h1 class="t-title blk">오늘 가족에게 보낼 한 줄</h1>
+    <!-- 진행 = 보낼 말풍선이 채워지는 것. 이 안의 '한 곳' -->
+    <div class="msg mine" aria-label="보낼 한 줄, 세 칸 중 0칸 채움">
+      <div class="bub" style="width:290px">
+        <p class="slot now t-lg blk" style="margin-top:0">사진 보기<span class="sr">, 지금 할 차례</span></p>
+        <p class="slot t-lg blk">둘 중 고르기</p>
+        <p class="slot t-lg blk">한 단어 쓰기</p>
+      </div>
+    </div>
+    <p class="t-sub blk" style="margin-top:14px">세 칸이 차면 가족방에 가요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#3E4750" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">사진 보기</a></div>
+</section>
+
+<section class="scr" data-id="P4" data-who="elder">
+  <div class="body pad">
+    <div class="blk" style="padding-top:16px"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#184C3A" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a></div>
+    <div class="msg blk" style="margin-top:8px">
+      <figure class="bub" style="width:320px;padding:8px 8px 10px">
+        <img src="../../../../../../content/photos/day-15.jpg" alt="장날 아침. 나무 탁자 위 바구니에 무와 감자, 파가 담겨 있어요" style="height:224px">
+        <figcaption class="t-sub" style="padding:6px 8px 0">AI가 만든 그림</figcaption>
+      </figure>
+    </div>
+    <h1 class="t-head blk" style="margin-top:12px">장날 아침</h1>
+    <p class="t-body blk">천천히 보세요. 서두르지 않아도 돼요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#3E4750" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock">
+    <a class="btn pri tap">다 봤어요</a>
+    <a class="btn sec tap"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#184C3A" stroke-width="2.2" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg>읽어 주세요</a>
+  </div>
+</section>
+
+<section class="scr" data-id="P7" data-who="elder">
+  <div class="body pad">
+    <h1 class="t-title blk" style="margin-top:28px">가족방에 보냈어요</h1>
+    <div class="msg mine">
+      <div class="bub" style="flex:1 1 auto;min-width:0;max-width:260px">
+        <img class="blk" src="../../../../../../content/photos/day-15.jpg" alt="" style="height:110px">
+        <p class="t-lg blk" style="margin-top:8px">나들이는 시장 구경</p>
+        <p class="t-lg blk">떠오른 낱말 <b style="font-size:calc(28px * var(--f15))">바구니</b></p>
+      </div>
+      <div class="meta"><span class="t-sub">오전 9:12</span></div>
+    </div>
+    <p class="t-body blk" style="margin-top:16px">가족이 읽으면 다음에 여실 때 알려 드려요.<br>내일 아침에 새 사진이 와요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#3E4750" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">알겠어요</a></div>
+</section>
+
+<section class="scr" data-id="C4" data-who="child">
+  <div class="body pad">
+    <div class="top blk"><h1 class="c-title">부모님과 나</h1><a class="c-body tap" style="color:var(--act);text-decoration:underline">설정</a></div>
+    <p class="c-sub blk" style="text-align:center;margin-top:4px">11월 20일 금요일</p>
+    <p class="c-sub who blk" style="margin-top:8px">부모님</p>
+    <div class="msg" style="margin-top:4px">
+      <div class="bub" style="flex:1 1 auto;min-width:0;max-width:300px">
+        <img class="blk" src="../../../../../../content/photos/day-15.jpg" alt="장날 아침 사진. AI가 만든 그림" style="height:96px">
+        <p class="c-sub blk" style="margin-top:4px">장날 아침</p><p class="c-sub blk ai-label">AI가 만든 그림</p>
+        <p class="c-lg blk" style="margin-top:6px">나들이는 시장 구경</p>
+        <p class="c-lg blk">떠오른 낱말 <b style="font-size:calc(26px * var(--f15))">바구니</b></p>
+      </div>
+      <div class="meta"><span class="c-sub">오전 9:12</span></div>
+    </div>
+    <p class="c-sub blk" style="margin-top:8px">부모님이 쓰신 그대로예요. 앱이 고치지 않아요</p>
+    <div class="msg mine blk">
+      <div class="bub" style="background:#fff;border:2px dashed var(--act)"><p class="c-sub">통화할 때 이렇게 여쭤봐요</p><p class="c-body">장 구경 가면 제일 먼저 보시던 게 무엇인지 여쭤봐요</p></div>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#3E4750" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">응원 보내기</a></div>
+</section>
+
+<script src="frame.js"></script>
+</body>
+</html>
