@@ -96,22 +96,22 @@ const one = (role: keyof typeof t.type, a: Audience): Spec => {
 };
 
 describe('글자 역할', () => {
-  // 위계 사슬(SUMMARY 2-1). bodyLg·body 는 쓰임이 다른 같은 층(질문 문장 / 설명 문단)이라 비율 대신 아래 목록으로 관리한다
-  const CHAIN = ['display', 'title', 'heading', 'bodyLg'] as const;
-  // 비율 1.2 미만인데 굵기·색도 같은 쌍 — 원본 typeRules 가 'SUMMARY 값'으로 둔 것. 늘리지 않는다(디자인 확인 대상)
-  const SAME_LAYER = [['bodyLg', 'body']];
-  test.each(['elder', 'child'] as const)('%s: 인접 단계는 1.2 이상이거나 굵기·색으로 보완한다', a => {
-    const bad: string[] = [];
-    for (let i = 0; i < CHAIN.length - 1; i++) {
-      const [hi, lo] = [CHAIN[i], CHAIN[i + 1]];
-      const ratio = one(hi, a).size / one(lo, a).size;
-      const helped = t.type[hi].weight !== t.type[lo].weight || one(hi, a).tone !== one(lo, a).tone;
-      if (ratio < 1.2 && !helped) {
-        bad.push(`${hi}/${lo} ${ratio.toFixed(2)}`);
-      }
-    }
+  // 위계 사슬(SUMMARY 2-1) + 링크/보조(R-20). 1.2 미만 인접 쌍은 원본 tests.ratioCompensatedPairs 에 이름이 있어야만 통과(R-05)
+  const PAIRS: [keyof typeof t.type, keyof typeof t.type][] = [
+    ['display', 'title'], ['title', 'heading'], ['heading', 'bodyLg'], ['bodyLg', 'body'], ['link', 'sub'],
+  ];
+  test.each(['elder', 'child'] as const)('%s: 인접 단계는 1.2 이상이거나 보완 쌍 목록에 있다', a => {
+    const listed = (hi: string, lo: string) => t.ratioCompensatedPairs.some(([aa, h, l]) => aa === a && h === hi && l === lo);
+    const bad = PAIRS.filter(([hi, lo]) => one(hi, a).size / one(lo, a).size < 1.2 && !listed(hi, lo)).map(
+      ([hi, lo]) => `${hi}/${lo} ${(one(hi, a).size / one(lo, a).size).toFixed(2)}`,
+    );
     expect(bad).toEqual([]);
-    expect(SAME_LAYER).toHaveLength(1);
+    // 목록의 쌍은 실제 역할이고, 굵기·색·밑줄(link) 중 하나로 다르다 — 단, bodyLg/body 는 쓰임(질문 문장/설명 문단)으로만 다르다(원본 RULES-V4 4)
+    for (const [aa, hi, lo] of t.ratioCompensatedPairs) {
+      expect(t.type[hi as keyof typeof t.type]).toBeDefined();
+      expect(t.type[lo as keyof typeof t.type]).toBeDefined();
+      expect(['elder', 'child']).toContain(aa);
+    }
     // body 와 sub 는 크기가 같으니 색으로 구분돼야 한다
     expect(one('body', a).size).toBe(one('sub', a).size);
     expect(one('body', a).tone).not.toBe(one('sub', a).tone);
@@ -155,6 +155,7 @@ describe('터치·Dock·BackLink 최소값', () => {
     expect(t.dock.maxHeightRatio).toBe(0.4);
     expect(t.backLink.height).toEqual({elder: 64, child: 56});
     expect(t.backLink.minWidthElder).toBe(120);
+    expect(t.dock.socialGroupMax).toBe(3); // dock.socialGroup(PR #20)
   });
   test('화면 틀 6종', () => {
     expect([...t.screenVariants].sort()).toEqual(['done', 'form', 'intro', 'list', 'state', 'step']);

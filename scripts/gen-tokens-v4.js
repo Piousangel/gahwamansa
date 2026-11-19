@@ -165,7 +165,13 @@ function build(src) {
     touch: {elder: src.touch.elder, child: src.touch.child},
     fontScaleCap: {body: src.touch.fontScaleCap.body, fixed: src.touch.fontScaleCap.titleDockNumeral},
     minFont: {elder: src.typeScaleV3.elder.min, child: src.typeScaleV3.child.min},
-    dock: {maxHeightRatio: src.dock.maxHeightRatio, padding: {top: src.dock.padding.top, bottomMin: 28, x: src.dock.padding.x}},
+    dock: {
+      maxHeightRatio: src.dock.maxHeightRatio,
+      padding: {top: src.dock.padding.top, bottomMin: 28, x: src.dock.padding.x},
+      socialGroupMax: src.dock.socialGroup?.maxItems ?? 1,
+    },
+    // R-05·R-20: 1.2 미만이어도 되는 인접 쌍(이름으로 둔 것만). [audience, 큰 역할, 작은 역할]
+    ratioCompensatedPairs: src.tests?.ratioCompensatedPairs ?? [],
     backLink: {
       icon: {elder: src.backLink.icon.sizeElder, child: src.backLink.icon.sizeChild, stroke: src.backLink.icon.stroke},
       height: src.backLink.height,

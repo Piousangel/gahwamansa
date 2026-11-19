@@ -132,6 +132,13 @@ export const tokensV4 = {
       child: {size: 32, lineHeight: 44, tone: 'inkTitle'},
       supplemented: true,
     },
+    fieldInput: {
+      weight: 400,
+      maxFontScale: 1.5,
+      elder: {size: 34, lineHeight: 44, tone: 'inkBody'},
+      child: {size: 18, lineHeight: 26, tone: 'inkBody'},
+      supplemented: false,
+    },
   },
   contrastMin: {elder: 7, child: 4.5, nonText: 3},
   textOnSurface: [
@@ -280,7 +287,16 @@ export const tokensV4 = {
   dock: {
     maxHeightRatio: 0.4,
     padding: {top: 12, bottomMin: 28, x: 24},
+    socialGroupMax: 3,
   },
+  ratioCompensatedPairs: [
+    ['elder', 'heading', 'bodyLg'],
+    ['elder', 'bodyLg', 'body'],
+    ['child', 'heading', 'bodyLg'],
+    ['child', 'bodyLg', 'body'],
+    ['child', 'link', 'sub'],
+    ['elder', 'link', 'sub'],
+  ],
   backLink: {
     icon: {elder: 28, child: 24, stroke: 3},
     height: {elder: 64, child: 56},
