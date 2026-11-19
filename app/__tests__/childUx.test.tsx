@@ -256,9 +256,12 @@ describe('U12 C3 공유 뒤', () => {
     expect(screen.queryByRole('button', {name: '번호 보내기'})).toBeNull();
   });
 
-  test('번호 기간이 지났으면 새 번호 만들기 근처에 "새 번호를 만들면 보낸 번호는 쓸 수 없어요"', async () => {
+  test('번호 기간이 지났으면 안내 띠 두 줄 + 새 번호 만들기("새 번호를 만들면…" 줄은 디자인 결정 PR #83 L2 로 뺌)', async () => {
     render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, childCodeExpired: true})} restore />);
-    await waitFor(() => screen.getByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요'));
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(screen.getByText('새 번호를 만들어 다시 보내 주세요')).toBeTruthy();
+    expect(screen.getByRole('button', {name: '새 번호 만들기'})).toBeTruthy();
+    expect(screen.queryByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요')).toBeNull();
   });
 });
 
@@ -705,15 +708,21 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
 
   test('AC-08·감사 L2: 복사하면 토스트 대신 번호 카드 바로 위 인라인 \'복사했어요\' 띠(2초, polite) — 시스템 클립보드 미리보기와 겹치지 않음', async () => {
     const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+    // 100% 기준(카드 바로 위 띠). 큰 글자에서는 복사하기 옆으로 간다(PR #83 재확인 2 L11, childScreensV3)
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
     try {
       for (const v of [33, 32]) {
         setPlatform('android', v);
         render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-        await waitFor(() => screen.getByRole('button', {name: '복사하기'}));
+        await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+        const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
         await press('복사하기');
         expect(screen.queryByTestId('toast')).toBeNull();
-        const band = screen.getByTestId('wait-copied');
-        expect(band.parent?.parent?.props.accessibilityLiveRegion ?? band.parent?.props.accessibilityLiveRegion).toBe('polite');
+        expect(screen.getByTestId('wait-copied')).toBeTruthy();
+        expect(said).toHaveBeenCalledWith('복사했어요'); // v4 ds Banner: 나타날 때 한 번 읽어 준다(live region 대신)
+        // 번호 카드 바로 위(카드보다 앞)
+        const ids = screen.root.findAll(n => typeof n.type === 'string' && ['wait-copied', 'wait-code'].includes(n.props.testID)).map(n => n.props.testID);
+        expect(ids).toEqual(['wait-copied', 'wait-code']);
         await act(async () => {
           await new Promise<void>(r => setTimeout(() => r(), 2100));
         });

@@ -104,6 +104,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     : error
       ? stepErrorDock(error, go)
       : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}};
+  const aiNotice = `${appCopy.ai_photo_label} · ${appCopy.not_real_place}`;
+  const pendingText = imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder;
   const caption = photo.caption ? <Text key="caption" testID="photo-caption" role="label">{photo.caption}</Text> : null;
   return (
     <DsScreen
@@ -131,8 +133,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
             // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
             <View style={styles.pending}>
               <Icon name="icon-photo" size={large ? 28 : 36} color={ds.color.inkSub} />
-              {/* 큰 글자(사진 100)에서는 안내 글이 사진 칸을 넘으므로 칸 아래 한 줄로 */}
-              {large ? null : <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>}
+              {/* 큰 글자(사진 100)에서는 안내 글이 사진 칸을 넘으므로 칸 바로 아래 한 줄로 */}
+              {large ? null : <Text role="sub" tone="muted" style={styles.center}>{pendingText}</Text>}
             </View>
           ) : (
             <Image
@@ -140,21 +142,25 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
               source={{uri: photo.image_url}}
               resizeMode="cover"
               style={styles.image}
-              accessibilityLabel={photo.caption}
+              accessibilityLabel={`${photo.caption}, ${aiNotice}`}
               onLoad={() => setLoaded(true)}
               onError={() => setImageFailed(true)}
             />
           )}
-          {/* AI 고지(늘 보이게, 사진 안 칩 — 모든 배율 20) */}
-          {showImage ? <PhotoChip label={appCopy.ai_photo_label} /> : null}
+          {/* DECISIONS 실사풍 사진 고지: 'AI가 만든 그림 · 실제 장소가 아니에요' 병기(좁으면 칩 안에서 줄바꿈) */}
+          {showImage ? <PhotoChip label={aiNotice} /> : null}
         </Pressable>
+        {large && !showImage ? <Text key="pending" role="sub" tone="muted">{pendingText}</Text> : null}
         {canZoom && hint ? <Text testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
         {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
         {late ? null : caption}
-        {/* 회상 질문은 문장마다 한 덩어리(R-15: 접힘에 걸치면 그 문장만 아래로 — 200%에서도 첫 문장이 첫 화면에) */}
-        {photo.recall_questions.map((q, i) => (
+        {/* 회상 질문: 100%는 한 덩어리(질문 사이 간격 없이 — 시안). 큰 글자는 문장마다 한 덩어리로 나눠(R-15) 접힘에 걸치면 그 문장만 아래로 —
+            200%에서도 첫 문장이 첫 화면에 든다 */}
+        {(large ? photo.recall_questions.map(q => [q]) : photo.recall_questions.length ? [photo.recall_questions] : []).map((qs, i) => (
           <View key={`q${i}`} testID={i === 0 ? 'recall-questions' : undefined} style={[styles.readBar, reading ? styles.reading : null]}>
-            <Text role="bodyLg">{q}</Text>
+            {qs.map(q => (
+              <Text key={q} role="bodyLg">{q}</Text>
+            ))}
           </View>
         ))}
         {/* AP-03 읽어 주기: 질문 바로 아래 본문 보조 버튼(가로 채움). 화면 읽기 켜짐이면 없음(R16) */}
@@ -165,7 +171,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
           </View>
         ) : null}
         {late ? caption : null}
-        {large && !showImage ? <Text key="pending" role="sub" tone="muted">{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text> : null}
+
         <Text role="sub" tone="muted">{appCopy.photo_look}</Text>
       </FoldStack>
     </DsScreen>

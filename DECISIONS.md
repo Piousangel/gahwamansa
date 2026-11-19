@@ -502,3 +502,10 @@
 - frontend-design 스킬(anthropics/skills@41bbe19, Apache-2.0): 전문 검토 후 .claude/skills/frontend-design(로컬, gitignore)에 복사, "RULES-V4 우선" 머리말. 시안 HTML 기본값 점검용
 - 기각·참고: UI UX Pro Max(팔레트 194개 중 7:1 충족 2개뿐 — 데이터만 참고), DESIGN.md(대체 안 함, 필요 시 파생 생성), Astryx(웹 전용 — label 필수·disabledReason 등 API 규약만 차용)
 - 참고 발견: 종이색 #F6F3EE + 갈색 강조가 'AI 생성 기본값'(크림+테라코타)에 가깝다는 지적 → 바탕 교체가 아니라 단조로움 원인 후보로 디자인 레인이 검토
+
+## 2026-11-19 staging 반영 0056 (사용자 승인 "올려")
+- 일일 알림 대상 = push_consented_at만(답 보여 주기 동의와 분리). 실제 발송은 FCM_WIRED=false라 아직 없음. staging 0001~0056 일치
+
+## 2026-11-19 P4·P5 v4 이전(L2-v4, PR #91)
+- P4는 사진 중심 안(ds4c): 사진 128/100, 칩 'AI가 만든 그림 · 실제 장소가 아니에요'(실사풍 고지 병기 유지, 11-17 결정), 칩 글자는 배율과 상관없이 20 고정(`ui/PhotoChip`, R-11 예외 — 200%에서 사진을 가리지 않게). 설명 줄은 label, 큰 글자이거나 질문이 길어 '읽어 주세요'가 첫 화면에 못 들면 '읽어 주세요' 아래로
+- R-15 접힘 경계는 화면 공용 `ui/FoldStack`으로: 접힘에 걸치는 첫 요소를 통째로 아래로 민다(P1 CodeInput 규칙 일반화). 묶음 안 줄 단위가 필요한 요소(P5 선택지 2장)는 `split`으로 카드마다 / 버린 안: 화면마다 공간 단계(p5Space) — 기기·문구마다 표를 다시 짜야 해서

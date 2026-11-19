@@ -62,9 +62,9 @@ export function FoldStack({viewport, gap, children, testID, onFold, split, onTop
   );
 }
 
-// Children.toArray 는 key 앞에 '.$' 를 붙인다 → 화면이 준 key 로 되돌린다
-const keyOf = (c: React.ReactNode): string | null =>
-  React.isValidElement(c) && c.key != null ? String(c.key).replace(/^\.\$/, '') : null;
+// Children.toArray 는 key 를 '.$read'·배열 안이면 '.2:$q0' 꼴로 바꾼다 → 마지막 '$' 뒤(화면이 준 key)만 쓴다(PR #91 리뷰)
+export const keyOf = (c: React.ReactNode): string | null =>
+  React.isValidElement(c) && c.key != null ? String(c.key).replace(/^.*\$/, '') : null;
 
 function naturalTop(top: number, heights: (number | undefined)[], gap: number, index: number): number | null {
   if (index < 0 || heights.slice(0, index).some(h => h === undefined)) {

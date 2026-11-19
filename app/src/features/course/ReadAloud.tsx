@@ -21,7 +21,7 @@ export type Notice = null | 'no_korean' | 'muted' | 'failed';
 export const ttsText = readTextBuilders(t.read);
 
 /**
- * 읽어 주기 동작(누름·상태·예외 안내)만 — 버튼 자리는 화면이 정한다(P4 는 Dock 보조, P5·P6·P8 은 읽을 글 아래).
+ * 읽어 주기 동작(누름·상태·예외 안내)만 — 버튼 자리는 화면이 정한다(P4 는 질문 바로 아래 가로 채움, P5·P6·P8 은 읽을 글 아래 가운데).
  * allowed=false(화면 읽기 켜짐, R16)면 버튼을 두지 않는다.
  */
 export function useReadAloudAction(text: string, onSpeaking?: (mine: boolean) => void) {

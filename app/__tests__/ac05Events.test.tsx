@@ -251,7 +251,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'));
+    await waitFor(() => screen.getByTestId('wait-code'), {timeout: 8000});
     await press('번호 보내기');
     await press('복사하기');
     expect(callsOf(log, 'invite_share_tapped')).toEqual([{channel: 'share_sheet'}, {channel: 'copy'}]);

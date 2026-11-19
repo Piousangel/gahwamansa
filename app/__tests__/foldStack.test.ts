@@ -2,7 +2,8 @@
  * @jest-environment node
  */
 // R-15 접힘 경계 맞춤(FoldStack.foldPush): 접힘에 걸치는 첫 요소만 통째로 아래로, 다 들어가거나 한 화면보다 큰 요소는 그대로
-import {foldPush} from '../src/ui/FoldStack';
+import React from 'react';
+import {foldPush, keyOf} from '../src/ui/FoldStack';
 
 test('걸치는 요소 앞에 여백을 넣어 접힘 아래로 민다', () => {
   // top 0, 높이 100·200·80, gap 10, 화면 250 → 둘째(110~310)가 걸침 → 250-110+1 = 141
@@ -24,4 +25,9 @@ test('묶음이 스크롤 내용 안에서 내려와 있으면(top) 그만큼 �
 test('묶음 안 하위 줄(allowFirst): 첫 줄이 걸쳐도 민다(P5 선택지 카드마다)', () => {
   expect(foldPush(250, 200, [96, 96], 12, true)).toEqual({index: 0, space: 51});
   expect(foldPush(250, 100, [96, 96], 12, true)).toEqual({index: 1, space: 43}); // 둘째 208~304 걸침
+});
+
+test('keyOf: Children.toArray 의 key(.$read, 배열 안 .2:$q0)에서 화면이 준 key 를 되찾는다(PR #91 리뷰)', () => {
+  const kids = React.Children.toArray([null, React.createElement('a', {key: 'x'}), [React.createElement('b', {key: 'q0'}), React.createElement('b', {key: 'q1'})], React.createElement('c', {key: 'read'})]);
+  expect(kids.map(keyOf)).toEqual(['x', 'q0', 'q1', 'read']);
 });

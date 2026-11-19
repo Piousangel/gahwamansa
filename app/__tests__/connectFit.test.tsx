@@ -376,7 +376,7 @@ describe('키패드 남는 높이', () => {
     dims(360, 740);
     await openConnect();
     const k = keyH();
-    expect(keyH('전부 지우기')).toBe(k);
+    expect(keyH('모두 지움')).toBe(k);
     expect(keyH('한 칸 지우기')).toBe(k);
     const word = screen.getByTestId('key-모두 지움');
     const st = StyleSheet.flatten(word.props.style);

@@ -93,11 +93,12 @@ test('콘텐츠 없음 화면에서 다시 보기를 누르면 다시 불러온�
   expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
-test('실제 사진이면 사진 안 칩 "AI가 만든 그림"(글자 20, 배율 고정 — 시안 ds4c), 자리표시면 없다', async () => {
+test('실제 사진이면 사진 안 칩 "AI가 만든 그림 · 실제 장소가 아니에요"(글자 20, 배율 고정 — 시안 ds4c + 실사풍 고지 병기), 읽기에도 같은 고지', async () => {
   await toHome(createFakeApi({realImage: true}));
   await pressCourseNext();
   const chip = await waitFor(() => screen.getByTestId('photo-ai-chip', {includeHiddenElements: true}));
-  const text = within(chip).getByText('AI가 만든 그림', {includeHiddenElements: true});
+  const text = within(chip).getByText('AI가 만든 그림 · 실제 장소가 아니에요', {includeHiddenElements: true});
+  expect(screen.getByTestId('photo-image').props.accessibilityLabel).toMatch(/AI가 만든 그림 · 실제 장소가 아니에요$/);
   expect(StyleSheet.flatten(text.props.style).fontSize).toBeGreaterThanOrEqual(20);
   expect(text.props.allowFontScaling).toBe(false);
 });

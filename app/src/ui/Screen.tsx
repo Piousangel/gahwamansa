@@ -32,6 +32,8 @@ type Props = {
   scrollRef?: React.Ref<ScreenScroll>;
   /** 본문 보이는 높이(스크롤 창, dp)를 알린다 — 첫 화면 안에 꼭 들어가야 할 묶음 높이를 정할 때(감사 H3 P1) */
   onViewport?: (h: number) => void;
+  /** 본문 영역(스크롤 창 + 더 있음 띠) 높이. 띠가 나오고 사라져도 바뀌지 않는다(접힘 기준, PR #83 재확인 H1) */
+  onBodyArea?: (h: number) => void;
   /**
    * '더 있음' 표시(R-19, v4 DsScreen 이 넘긴다): 주면 글자 위에 겹치는 페이드 대신 스크롤 영역 밖(아래)에 이 띠를 둔다.
    * 본문과 Dock 각각 넘치고 아직 끝까지 내리지 않았을 때만 보인다. 없으면 예전 페이드(기존 화면 그대로).
@@ -46,7 +48,7 @@ export type ScreenScroll = {
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport, moreBand}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport, onBodyArea, moreBand}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -142,7 +144,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
         <View testID="screen-top" style={[styles.top, {paddingTop: topPad}]}>
           <ScreenTitleContext.Provider value={registerTop}>{top}</ScreenTitleContext.Provider>
         </View>
-        <View style={styles.body}>
+        <View testID="screen-body-area" style={styles.body} onLayout={onBodyArea ? e => onBodyArea(Math.round(e.nativeEvent.layout.height)) : undefined}>
           <ScrollView
             ref={bodyScroll}
             testID="screen-body"

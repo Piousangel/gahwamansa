@@ -149,7 +149,6 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
 }
 
 const styles = StyleSheet.create({
-  // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대
   // 읽어 주는 중 표시: 옅은 하늘 면(글 폭·줄바꿈이 움직이지 않게 면만, 리뷰). 글자 inkTitle·inkSub 는 infoSoft 위 허용 짝
   readBar: {borderRadius: 8},
   reading: {backgroundColor: ds.color.infoSoft},

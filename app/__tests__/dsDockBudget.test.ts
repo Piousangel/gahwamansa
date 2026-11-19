@@ -40,11 +40,18 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
-    name: 'P4 사진 보기(다 봤어요 + 읽어 주세요, 시안 ds4b)',
+    name: 'C3 연결 기다리는 중(번호 보내기 + 복사하기)',
+    screen: 'ChildWaitScreen',
+    variant: 'step',
+    audience: 'child',
+    dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
+  },
+  {
+    name: 'P4 사진 보기(다 봤어요 하나, 시안 ds4c)',
     screen: 'PhotoStep',
     variant: 'step',
     audience: 'elder',
-    dock: {primary: {label: copy.course.next.photo, onPress: noop}, secondary: {label: copy.tts.button, onPress: noop}},
+    dock: {primary: {label: copy.course.next.photo, onPress: noop}},
   },
   {
     name: 'P5 둘 중 고르기(정했어요, 비활성 이유 포함)',
