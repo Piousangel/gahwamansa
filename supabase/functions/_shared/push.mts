@@ -3,7 +3,7 @@
 // 계약: 0036 push_daily_claim()(선점)·push_record(…, p_note). FCM HTTP v1(https://firebase.google.com/docs/cloud-messaging/send/v1-api).
 // 리뷰 반영(2026-11-18-push-tokens-review): M3 무효 토큰은 UNREGISTERED·message.token 오류만, 설정 오류는 즉시 중단·기록, L6 해시 비교.
 
-export type Kind = 'daily' | 'cheer_arrived' | 'parent_connected' | 'parent_reconnected';
+export type Kind = 'daily' | 'cheer_arrived' | 'parent_connected' | 'parent_reconnected' | 'parent_first_answer'; // 0052 첫 답(자녀, 채널 family)
 export type Target = { profile_id: string; token: string; platform: string; kind?: Kind; channel?: string; title?: string; body?: string | null };
 export type Copy = { title: string; body: string };
 export type Targets = { window_open: boolean; copy: Copy | null; targets: Target[]; excluded: number };

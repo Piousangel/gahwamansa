@@ -159,9 +159,10 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             contentContainerStyle={[styles.bodyPad, dense ? styles.dense : null, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}
           </ScrollView>
-          {more && !fill && moreBand ? (
+          {/* 재확인 5 L22: fill 이어도 안전망(fillScrollable)으로 넘치면 '더 있음'을 보인다. moreBand(v4 DsScreen)면 스크롤 밖 띠(R-19), 아니면 예전 흐림 */}
+          {more && (!fill || fillScrollable) && moreBand ? (
             <View testID="screen-more-band">{moreBand}</View>
-          ) : more && !fill ? (
+          ) : more && (!fill || fillScrollable) ? (
             <View testID="screen-more" pointerEvents="none" style={styles.more} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Svg width="100%" height={FADE_H}>
                 <Defs>

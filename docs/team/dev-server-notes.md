@@ -195,6 +195,18 @@ type UnregisterPushToken = { ok: true; removed: number };
   - 환경 설정(사용자, US-12): Edge secrets `KAKAO_ADMIN_KEY`(카카오 앱 어드민 키, 저장소·채팅 금지) + 공용 `PUSH_CRON_SECRET`·Vault 값(푸시와 같음), `npx supabase functions deploy kakao-unlink`. 키가 없으면 선점하지 않는다(시도 횟수 보존).
   - 확인: `select count(*), min(enqueued_at), max(attempts), count(gave_up_at) from kakao_unlink_queue;` 앱은 할 일 없음(탈퇴는 서버가 처리).
 - **응원·연결 알림 보강(0041)**: 문구가 없는 종류는 cron이 할 일로 세지 않고, 직전 실행이 dry-run이면 1시간 쉰다. 큐의 어르신 프로필이 지워졌으면 연결 알림을 보내지 않는다. 문구 적재 스크립트는 대상 호스트를 보여 주고 환경 이름을 다시 입력받으며(production은 호스트 재입력) 금지어(혜택·무료·할인·유료·이벤트·쿠폰·광고·"다시 오세요")가 있으면 멈춘다. 서버 제약(`push_text_clean`, 0049)도 같은 목록(유료 포함, 방침 2절)이고, 보이지 않는 글자·문장부호·공백을 걷어내고 NFKC로 합친 뒤 검사한다(`혜·택`·`할­인`·NFD 분해 모두 거부). "무료한 오후"·"사진의 포인트"·"생일 이벤트"처럼 뜻이 다른 말도 거부된다(공백을 지우는 이상 "무료 한 달"과 구분할 수 없어 일부러 둠 — 문구를 바꿔 쓴다. 낱말 좁히기는 법률 줄 확인 뒤). 잠금 화면 내용 숨김(L3)은 앱 AU-04 채널 설정 몫.
+- **자녀 '첫 답' 알림(0052, DECISIONS 11-19 사용자 결정, U11 예외)**: 연결 뒤 어르신의 **첫 새 답** 때 그 가족 자녀마다 **평생 1회**. 종류 `parent_first_answer`, 채널 `family`, FCM data `kind=parent_first_answer`(앱은 눌렀을 때 자녀 홈으로 — 앱 줄 몫).
+  - 확정 문구(라이터, 11-19): 제목 `{호칭}께서 첫 답을 고르셨어요`, 본문 `앨범에서 보고 이야기해 볼까요?`(금지어·길이 통과, pgTAP).
+  - 문구: 라이터가 `docs/team/copy.ko.json`에 `push.first_answer.title`·`body`를 넣으면 `load-push-copy.mjs`가 적재(없으면 "라이터 문구 대기"로 건너뜀 → 서버는 그 종류를 보내지 않음). 자리값은 `{호칭}`만 허용(스크립트가 다른 자리값을 거부) — **답 내용·고른 답·시각은 넣지 않는다**. 금지어 검사는 push_copy 제약 그대로.
+  - 큐: `save_answer`가 새 답(같은 날 같은 질문 고치기는 아님)을 넣을 때, 아직 기록이 없는 자녀가 있고 같은 종류 미처리 큐가 없으면 `notification_queue`에 한 줄(payload `{parent_id}`만). 심사 가족 제외.
+  - 선점(push-events, KST 08~20시): 어르신이 **지금도 동의 중**일 때만. 기록 없는 자녀마다 `first_answer_notices`(자녀 PK = 평생 1회)에 한 줄:
+    - `claimed` → 대상(받을 수 있음: 알림 켬·받기 동의 시각·심사 아님 + 토큰 있음). Edge가 `push_record`로 결과를 남기면 `sent`(토큰 하나라도 성공) 또는 `failed`로 확정. 재시도 없음.
+    - `no_token`(받을 수 있지만 토큰 없음), `skipped`/`not_reachable`(알림 끔·받기 동의 없음) — 그 첫 답은 지나가고 나중에 켜도 다시 안 보냄.
+    - 실제 도달 확인: `select status, reason, count(*) from first_answer_notices group by 1, 2;`(`claimed`가 오래 남아 있으면 Edge 결과 기록이 안 된 것).
+  - **백필(0052 반영 시 1회)**: 반영 전에 이미 답이 있던 가족의 자녀(자녀 프로필이 생긴 뒤 그 가족 어르신 답이 있음)는 `skipped`/`backfill` — 몇 주째 답해 온 가족에 "첫 답" 알림이 가지 않는다(리뷰 PR #48 M1). down 뒤 다시 올리면 백필이 다시 도니 기록을 내보내 두고 복원한다(down 머리말).
+  - 서버 제약 `push_copy_first_answer_vars`: 첫 답 문구는 `{호칭}` 외 자리값 금지, body_fallback·body_many 없음.
+  - 라이터 확인 권장(리뷰): 나중에 연결된 형제 자녀도 "첫 답" 문구를 받는데 어르신에게는 첫 답이 아니다 — 문구를 그대로 둘지 라이터 판단. 철회면 아무에게도 안 보내고 기록도 안 남김(다시 동의하고 새로 답하면 그때가 첫 답). 나중에 연결된 형제 자녀는 연결 뒤 다음 새 답 때 1회.
+  - `first_answer_notices`는 앱·anon·서비스 역할 접근 불가, 자녀 프로필 삭제 시 함께 삭제. 확인: `select status, count(*) from first_answer_notices group by 1;`, `select * from push_runs where kind = 'parent_first_answer' order by id desc limit 5;`
 - **웹 삭제 요청 처리(0039, SV-07)** — 서비스 역할(Studio SQL Editor·스크립트)만:
   ```sql
   select public.admin_delete_account('<profile_id>', '메일 요청 #번호(접수일)', '<처리자>');  -- {ok, scope: child|parent|family} | {ok:false, reason:'not_found'}
@@ -417,6 +429,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 병합 | 미반영 |
 | 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 병합 | 미반영 |
 | 0051 | 개발 스위치 server_flags + dev_reset_today(테스터 가족 오늘 코스 다시) | 브랜치 server-dev-reset-today | 미반영 |
+| 0052 | 자녀 '첫 답' 알림(parent_first_answer, 평생 1회) | 브랜치 server-first-answer-push(0051 위) | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 

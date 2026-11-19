@@ -58,7 +58,7 @@ test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자')).toBeTruthy();
   expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
-  expect(screen.getByText('한 글자만 써도 누를 수 있어요', {includeHiddenElements: true})).toBeTruthy(); // 이유 줄은 힌트로 읽어 중복 읽기 숨김(R8)
+  expect(screen.getByText('한 글자라도 쓰면 눌려요', {includeHiddenElements: true})).toBeTruthy(); // 이유 줄은 힌트로 읽어 중복 읽기 숨김(R8)
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeDisabled();
   expect(screen.getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
   expect(screen.queryByTestId('kb-skip-strong')).toBeNull();
@@ -95,10 +95,10 @@ test('같게 쓰면 자판을 내리고 "낱말을 다 쓰셨어요", 마치기�
   expect(dismiss).toHaveBeenCalled();
   expect(filled()).toEqual([0, 1]);
   expect(screen.getByText('낱말을 다 쓰셨어요')).toBeTruthy();
-  expect(screen.getByRole('button', {name: '마치기'})).toBeDisabled();
+  expect(screen.getByRole('button', {name: '마칠게요'})).toBeDisabled();
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false); // 자동 이동 없음
-  await waitFor(() => expect(screen.getByRole('button', {name: '마치기'})).toBeEnabled(), {timeout: 6000});
-  await press('마치기');
+  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled(), {timeout: 6000});
+  await press('마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   const rec = calls.filter(c => c.name === 'recordSessionStep');
   expect(rec).toHaveLength(1);
@@ -122,7 +122,7 @@ test('조합 중 받침이 붙어도(나 → 남) 첫 칸 체크가 사라지지
   expect(filled()).toEqual([0]);
 });
 
-test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴다(명세 P6, 리뷰 5)', async () => {
+test('일치하면 알림 1회 뒤 접근성 포커스를 "마칠게요"로 옮긴다(명세 P6, 리뷰 5)', async () => {
   const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   await toKeyboardStep();
@@ -132,7 +132,7 @@ test('일치하면 알림 1회 뒤 접근성 포커스를 "마치기"로 옮긴�
   expect(announce).toHaveBeenCalledTimes(1);
   expect(announce).toHaveBeenCalledWith('낱말을 다 쓰셨어요');
   const toFinish = () =>
-    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마치기');
+    send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '마칠게요');
   expect(toFinish()).toBe(false); // 알림 읽기가 끝나도록 바로 옮기지 않는다(재검토 ①)
   await waitFor(() => expect(toFinish()).toBe(true), {timeout: 6000}); // 1.5초(마치기 활성)와 함께
   send.mockRestore();
@@ -244,7 +244,7 @@ test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고
   expect(screen.queryByText('자판으로 쓰기')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
   expect(screen.queryByText('천천히 써 봐요')).toBeNull();
-  expect(screen.queryByText('한 글자만 써도 누를 수 있어요')).toBeNull();
+  expect(screen.queryByText('한 글자라도 쓰면 눌려요')).toBeNull();
   expect(screen.queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
   expect(screen.getByRole('button', {name: '다 썼어요'})).toBeTruthy();
   await act(async () => {
