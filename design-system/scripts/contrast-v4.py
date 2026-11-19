@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """tokens-v4.json 의 색 값으로 역할×면 대비를 전수 계산해 contrast·allowed 를 다시 쓴다.
-사용: python3 design-system/scripts/contrast-v4.py          (다시 쓰기)
+사용: python3 design-system/scripts/contrast-v4.py [tokens.json]          (다시 쓰기, 기본 tokens-v4.json, v5는 design-system/tokens-v5.json)
       python3 design-system/scripts/contrast-v4.py --check  (파일과 계산이 다르면 exit 1)
 기준: 어르신 글자 7:1, 자녀 글자 4.5:1, 비텍스트(테두리·아이콘) 3:1. 토큰 테스트는 allowed 표만 본다."""
 import json, sys, os
-P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tokens-v4.json')
+ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
+P = os.path.abspath(ARGS[0]) if ARGS else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tokens-v4.json')
 d = json.load(open(P))
 col = {k: v['value'] for k, v in d['color'].items() if isinstance(v, dict) and 'value' in v}
 
@@ -22,13 +23,19 @@ NONTEXT_ROLES = ['line', 'action', 'dangerInk', 'doneInk', 'info', 'accent']
 NONTEXT_SURFACES = ['paper', 'card', 'paperSoft', 'noticeSoft', 'actionSoft', 'infoSoft']
 # 의미상 제외: 흰 글자는 action 면 위에서만, 비활성 글자는 비활성 면 위에서만, 면 action·disabledBg 위에는 다른 글자를 쓰지 않음
 SEMANTIC = {'onAction': ['action'], 'disabledInk': ['disabledBg']}
+# v5: 팻말 노랑(sign)은 signInk(먹) 글자만 허용하는 전용 면. 다른 글자색을 sign 위에 쓰지 않는다
+if 'sign' in col:
+    SURFACES = SURFACES + ['sign']
+    TEXT_ROLES = TEXT_ROLES + ['signInk']
+    SEMANTIC['signInk'] = ['sign']
+    NONTEXT_ROLES = NONTEXT_ROLES + ['signEdge']
 
 matrix = []; elder = {}; child = {}
 for r in TEXT_ROLES:
     for s in SURFACES:
         if r in SEMANTIC and s not in SEMANTIC[r]:
             continue
-        if r not in SEMANTIC and s in ('action', 'disabledBg'):
+        if r not in SEMANTIC and s in ('action', 'disabledBg', 'sign'):
             continue
         x = cr(col[r], col[s]); matrix.append({'role': r, 'surface': s, 'ratio': x})
         if r == 'disabledInk':
