@@ -57,6 +57,7 @@ export function Dialog(props: DialogProps) {
 }
 
 function DialogInner({visible, title, body, children, action, dismiss, onDismiss, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
+  const a = useAudience();
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef ?? undefined);
   useToastModalGuard(visible);
@@ -105,7 +106,7 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
           onDismiss();
         }
       }}>
-      <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity}]}>
+      <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
         <View testID={testID} role="alertdialog" accessibilityViewIsModal style={styles.card}>
           {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게 */}
           <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={title}>
@@ -134,7 +135,7 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
 }
 
 const styles = StyleSheet.create({
-  scrim: {flex: 1, backgroundColor: v3color.scrim, justifyContent: 'center', paddingHorizontal: ds.space.screenX.elder, paddingVertical: 32},
+  scrim: {flex: 1, backgroundColor: v3color.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
   bodyScroll: {flexGrow: 0, flexShrink: 1},

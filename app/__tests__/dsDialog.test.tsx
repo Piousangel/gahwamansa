@@ -102,3 +102,50 @@ describe('덮개 큐(하루 하나, A8)', () => {
     expect(second.result.current.visible).toBe(false);
   });
 });
+
+describe('덮개 큐 경합·고장(PR #148 리뷰 M1·L2·L3)', () => {
+  const slow = (value: string | null) => {
+    let saved: string | null = value;
+    const s: CoverStore = {
+      load: () => new Promise(r => setTimeout(() => r(saved), 10)),
+      save: async d => void (saved = d),
+    };
+    return s;
+  };
+  const at = () => new Date('2026-11-20T01:00:00Z');
+
+  test('M1: 첫 읽기 전에 두 덮개가 동시에 청해도 하나만 허락(두 읽기가 같은 순간에 끝나는 경우)', async () => {
+    let open: () => void = () => {};
+    const gate = new Promise<void>(r => (open = r));
+    const store: CoverStore = {load: () => gate.then(() => null), save: async () => {}};
+    const q = createCoverQueue({store, now: at});
+    const both = Promise.all([q.request('a'), q.request('b')]);
+    open();
+    expect(await both).toEqual([true, false]);
+  });
+
+  test('M1: 같은 덮개를 동시에 두 번 청하면 둘 다 허락(같은 덮개라 겹치지 않음)', async () => {
+    const q = createCoverQueue({store: slow(null), now: at});
+    expect(await Promise.all([q.request('a'), q.request('a')])).toEqual([true, true]);
+  });
+
+  test('L2: 저장소가 계속 고장이면 실행마다 하나(fail-open), 같은 실행 안에서는 하나', async () => {
+    const broken: CoverStore = {load: () => Promise.reject(new Error('x')), save: () => Promise.reject(new Error('x'))};
+    const run1 = createCoverQueue({store: broken, now: at});
+    expect(await run1.request('a')).toBe(true);
+    run1.release('a');
+    expect(await run1.request('b')).toBe(false);
+    const run2 = createCoverQueue({store: broken, now: at}); // 앱을 다시 켬
+    expect(await run2.request('b')).toBe(true);
+  });
+
+  test('L3: effect 가 다시 돌아도(StrictMode 이중 effect) 같은 덮개는 다시 청해 보인다', async () => {
+    const q = createCoverQueue({store: slow(null), now: at});
+    const Strict = ({children}: {children: React.ReactNode}) => <React.StrictMode>{children}</React.StrictMode>;
+    const h = renderHook(() => useCover('push', true, q), {wrapper: Strict});
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 40));
+    });
+    expect(h.result.current.visible).toBe(true);
+  });
+});
