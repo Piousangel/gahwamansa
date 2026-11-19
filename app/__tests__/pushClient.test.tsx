@@ -20,6 +20,8 @@ import {
   registerToken,
   retryPending,
   shouldPromptParent,
+  parentPromptState,
+  skipParentPromptToday,
   type PushDeps,
 } from '../src/push/pushClient';
 import {createFakeTokenSource, FAKE_PUSH_TOKEN, nullTokenSource, setTokenSourceForTest, type PushTokenSource} from '../src/push/tokenSource';
@@ -246,14 +248,116 @@ describe('앱 조립(PushHost)', () => {
     expect(request).toHaveBeenCalled();
   });
 
-  test('N1 은 동의 안 한 어르신·이미 받는 중이면 뜨지 않는다', async () => {
-    const api = createFakeApi({linked: true, consented: false, pushEnabled: false});
+  test('PR #65 L1: 답 보여 주기에 동의하지 않은 어르신에게도 코스를 마치면 N1 을 띄운다(별개 동의)', async () => {
+    const api = createFakeApi({linked: true, consented: false, pushEnabled: false, completedSteps: ALL_DONE});
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+  });
+
+  test('N1 은 이미 받는 중이면 뜨지 않는다', async () => {
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: true, completedSteps: ALL_DONE});
     const my = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('screen-dock'));
+    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => expect(my).toHaveBeenCalled());
     await act(async () => {});
-    expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull();
-    expect(my).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+  });
+
+  test('PR #65 L3: 오프라인으로 확인을 못 하면 앱이 앞으로 돌아와 오늘 상태를 새로 받은 뒤 다시 확인해 띄운다, 답한 뒤에는 서버에도 안 묻는다', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('denied');
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const real = api.myPushSettings.bind(api);
+    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => expect(my).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    my.mockImplementation(real);
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await press(copy.push.permission.no);
+    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
+    // 답한 뒤 앞으로 돌아와도 다시 띄우지 않고, 서버에도 묻지 않는다(이 계정 답 먼저 확인)
+    const calls = my.mock.calls.length;
+    const sync = jest.spyOn(api, 'getTodayContent');
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(my.mock.calls.length).toBe(calls);
+  });
+
+  test('PR #65 리뷰: 자정을 넘겨 돌아오면 새로 받은 오늘 상태(아직 안 마침)로 판단해 N1 을 띄우지 않는다', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(my).toHaveBeenCalledTimes(1), {timeout: 8000});
+    api.__dev.nextDay(); // 다음 날: 오늘 단계 비어 있음
+    const sync = jest.spyOn(api, 'getTodayContent');
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(my).toHaveBeenCalledTimes(1);
+  });
+
+  test('PR #72 M1: N1 을 뒤로(답 없이) 닫으면 같은 날 앞으로 와도 다시 뜨지 않고, 거절로 기록하지도 않는다', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const en = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    const {navRef} = require('../src/navigation/navRef');
+    await act(async () => {
+      navRef.goBack(); // 하드웨어 뒤로와 같은 경로(beforeRemove)
+    });
+    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
+    const sync = jest.spyOn(api, 'getTodayContent');
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(en).not.toHaveBeenCalled(); // 받기 동의도 거절도 보내지 않음
+  });
+
+  test('PR #72 M1: 넘긴 날이 지나면(다음 날) 다시 묻는다 — 넘김은 거절(no)이 아니다', async () => {
+    const d = deps();
+    expect(await parentPromptState(d, '2026-11-19')).toBe('ask');
+    await skipParentPromptToday(d, '2026-11-19');
+    expect(await parentPromptState(d, '2026-11-19')).toBe('skip');
+    expect(await parentPromptState(d, '2026-11-20')).toBe('ask');
   });
 
   test('어르신 일일 알림 탭: push_opened{daily} + [P3, 사진 보기]', async () => {
