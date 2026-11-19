@@ -17,6 +17,7 @@ import type {LayoutChangeEvent, ViewStyle} from 'react-native';
  */
 export function useFoldGap(count: number, between: number, from = 0, glue: readonly number[] = []) {
   const [viewH, setViewH] = useState(0);
+  const [pushAt, setPushAt] = useState(0); // 민 요소의 위 끝이 갈 곳(기본 = viewH). 겹쳐 그리는 흐림이 있으면 흐림 아래 끝(창 끝)
   const [blockY, setBlockY] = useState<number | null>(null);
   const [hs, setHs] = useState<Record<number, number>>({});
   const [gap, setGap] = useState<{before: number; h: number} | null>(null);
@@ -37,7 +38,8 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
       }
       if (top + h > viewH && i >= from) {
         const withPrev = i - 1 >= from && glue.includes(i - 1);
-        next = withPrev ? {before: i - 1, h: Math.ceil(viewH - prevTop)} : {before: i, h: Math.ceil(viewH - top)}; // 걸침 → 그 위에 간격(제목이면 함께)
+        const to = Math.max(viewH, pushAt);
+        next = withPrev ? {before: i - 1, h: Math.ceil(to - prevTop)} : {before: i, h: Math.ceil(to - top)}; // 걸침 → 그 위에 간격(제목이면 함께)
         break;
       }
       prevTop = top;
@@ -46,9 +48,13 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
     if ((next?.before ?? -1) !== (gap?.before ?? -1) || Math.abs((next?.h ?? 0) - (gap?.h ?? 0)) > 1) {
       setGap(next);
     }
-  }, [viewH, blockY, hs, gap, count, between, from, glue]);
+  }, [viewH, pushAt, blockY, hs, gap, count, between, from, glue]);
   return {
-    onViewport: (h: number) => setViewH(h),
+    /** h = 접힘 기준(여기서 걸치면 민다), pushTo = 민 요소가 갈 위치(겹쳐 그리는 흐림이 있으면 그 아래 끝, 없으면 생략) */
+    onViewport: (h: number, pushTo?: number) => {
+      setViewH(h);
+      setPushAt(pushTo ?? h);
+    },
     onBlock: (e: LayoutChangeEvent) => setBlockY(e.nativeEvent.layout.y),
     onItem: (i: number) => (e: LayoutChangeEvent) => {
       const h = e.nativeEvent.layout.height;
