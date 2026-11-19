@@ -185,7 +185,6 @@ export function ChildSettings() {
         testID="sheet"
         visible={!!editing}
         onClose={() => setEditing(null)}
-        closeLabel={copy.child.cheer.close}
         title={rel.title}
         sub={rel.hint}
         returnFocusRef={opener}

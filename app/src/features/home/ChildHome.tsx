@@ -148,7 +148,7 @@ export function ChildHome() {
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
       <AudienceProvider value="child">
-        <Sheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
+        <Sheet visible={sheet} onClose={() => setSheet(false)} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
           <Choice
             mode="action"
             testID="cheer"

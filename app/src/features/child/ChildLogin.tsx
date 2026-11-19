@@ -95,7 +95,7 @@ export function ChildLogin() {
     <AudienceProvider value="child">
       <DsScreen
         variant="form"
-        back={{label: t.back, onPress: resetRole}}
+        back={{to: t.back, onPress: resetRole}}
         dock={{
           primary: {
             social: [
@@ -176,7 +176,7 @@ export function ChildLoginEmail() {
       <DsScreen
         variant="form"
         dockReleaseOnKeyboard // R-12 예외: 200% 자판 열림에서 주 버튼이 40%를 넘으면 입력 바로 아래로(디자인 #74)
-        back={{label: t.back_choose, onPress: () => navigation.goBack()}}
+        back={{to: t.back_choose, onPress: () => navigation.goBack()}}
         header={
           <>
             <Heading level={1}>{t.title}</Heading>
@@ -272,7 +272,7 @@ export function ChildLoginCode() {
 
   return (
     <AudienceProvider value="child">
-      <DsScreen variant="form" back={{label: t.back_email, onPress: () => navigation.goBack()}} header={<Heading level={1}>{t.code_title}</Heading>}>
+      <DsScreen variant="form" back={{to: t.back_email, onPress: () => navigation.goBack()}} header={<Heading level={1}>{t.code_title}</Heading>}>
         <Text role="body">{t.sent.split('{이메일}').join(email)}</Text>
         <Field label={t.code_label_short} accessibilityLabel={t.code_label} kind="otp" value={code} onChangeText={onCode} maxLength={6} autoFocus testID="code-field" />
         <StatusLine testID="code-status" text={busy ? t.checking : note ?? t.code_auto_hint} />
