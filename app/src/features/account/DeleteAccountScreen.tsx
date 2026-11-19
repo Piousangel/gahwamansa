@@ -37,16 +37,32 @@ export function DeleteAccountScreen({role}: Props) {
   const [title, setTitle] = useState('부모님');
   useEffect(() => {
     let alive = true;
+    const loadTitle = () => {
+      if (child) {
+        api
+          .fetchChildSummary()
+          .then(x => alive && setTitle(x.parentTitle))
+          .catch(() => {});
+      }
+    };
     api
       .deleteScopePreview()
-      .then(r => alive && setScope(r.scope))
-      .catch(() => alive && setScope('family'));
-    if (child) {
-      api
-        .fetchChildSummary()
-        .then(s => alive && setTitle(s.parentTitle))
-        .catch(() => {});
-    }
+      .then(r => {
+        if (!alive) {
+          return;
+        }
+        setScope(r.scope);
+        // 호칭은 가족이 있을 때만 쓴다(0049 'none' = 가족 연결 전이면 묻지 않는다, PR1 리뷰 M2)
+        if (r.scope !== 'none') {
+          loadTitle();
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setScope('family'); // 범위를 모르면 가장 강한 경고
+          loadTitle();
+        }
+      });
     return () => {
       alive = false;
     };
@@ -104,7 +120,13 @@ export function DeleteAccountScreen({role}: Props) {
         <Text20>{appCopy.loading}</Text20>
       ) : child ? (
         <>
-          {strong ? (
+          {scope === 'none' ? (
+            // 0049: 가족 연결 전 계정 — '{호칭}의 기록은 남아요'는 틀린 안내라 쓰지 않는다
+            <>
+              <Text20 size={24} weight="bold">{copy.child.delete_none.title}</Text20>
+              <Text20 testID="delete-none-body">{copy.child.delete_none.body}</Text20>
+            </>
+          ) : strong ? (
             <View style={styles.box}>
               <Text20 size={24} weight="bold" style={styles.dangerText}>{withTitle(dc.last_title, title)}</Text20>
               <Text20 size={24} weight="bold">{withTitle(dc.last_body, title)}</Text20>

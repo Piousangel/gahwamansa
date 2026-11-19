@@ -1,6 +1,7 @@
 package com.bumojasik.app
 
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import com.bumojasik.app.invite.InviteIntent
 import android.os.Handler
@@ -39,6 +40,8 @@ class MainActivity : ReactActivity() {
     // 카톡 초대 링크(/c 페이지 intent:// 버튼): 엑스트라의 번호를 URL 조각으로 옮긴다(JS Linking 이 읽음)
     InviteIntent.moveCodeExtraToFragment(intent)
     super.onCreate(savedInstanceState)
+    // D-40: 앱이 앞에 있는 동안 볼륨 키는 미디어 볼륨(BGM·도장 소리·읽어 주기가 모두 미디어 스트림). 소리가 나지 않을 때도 같게
+    volumeControlStream = AudioManager.STREAM_MUSIC
   }
 
   override fun onNewIntent(intent: Intent) {

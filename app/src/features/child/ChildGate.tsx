@@ -8,6 +8,7 @@ import {BigButton} from '../../ui/BigButton';
 import {appCopy, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {useBootLoading} from '../../app/splash';
+import {retryChildTerms} from '../../shared/childTerms';
 
 // 자녀 시작 화면 결정: 어르신 폰 -> 막음 / 로그인 안 됨 -> 로그인 / 가족 없음 -> 호칭 / 연결 대기 -> 대기 / 연결됨 -> 앨범.
 export function ChildGate() {
@@ -33,6 +34,7 @@ export function ChildGate() {
         go('Login');
         return;
       }
+      retryChildTerms(api).catch(() => {}); // 지난 로그인의 약관 동의 기록이 실패했으면 한 번 다시(기다리지 않음)
       const s = await api.getChildState();
       go(s.kind === 'no_family' ? 'Relation' : s.linked ? 'Tabs' : 'Wait');
     } catch (e) {

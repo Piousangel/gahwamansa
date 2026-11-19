@@ -1,7 +1,10 @@
 // 네이티브 오디오 라이브러리 연결(DECISIONS 11-17 승인 버전, package.json 정확 고정). 라이브러리 교체 시 이 파일만 바뀐다.
 // - TTS: @mhpdev/react-native-speech 1.4.4(TurboModule). Android 11+ TTS 엔진 조회 <queries> TTS_SERVICE 는 라이브러리 매니페스트가 병합.
-// - 효과음·BGM: react-native-sound 0.13.0. setCategory('Ambient', true): iOS 무음 스위치를 따르고, Android 는 mixWithOthers=true 라
-//   오디오 포커스를 잡지 않음(유튜브·라디오를 끊지 않음).
+// - 효과음·BGM: react-native-sound 0.13.0. 카테고리(D-40, 리드 결정 11-19, S25 1회차):
+//   Android 'Playback' = STREAM_MUSIC(미디어 볼륨·볼륨 키로 조절). 예전 'Ambient' 는 Android 에서 STREAM_NOTIFICATION 이라 알림 볼륨을 따랐다.
+//   iOS 'Ambient' 유지(무음 스위치를 따름). 둘 다 mixWithOthers=true → 오디오 포커스를 잡지 않음(유튜브·라디오를 끊지 않음).
+//   Android 무음·진동은 아래 getRinger(벨소리 모드)로 계속 내지 않는다(audioPolicy).
+// - TTS: 라이브러리가 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림(STREAM_MUSIC). ducking 은 다른 앱 소리를 잠깐 줄이는 포커스 요청만.
 // - 벨소리 모드: react-native-volume-manager 2.2.0 getRingerMode(Android). 읽기에는 방해 금지 권한 불필요.
 // 어느 것이든 불러오기·호출이 실패하면 null/unknown → 소리 없이 계속(화면을 막지 않음).
 import {Image, Platform} from 'react-native';
@@ -15,6 +18,9 @@ import {ringerFromNative, type SfxName, type SoundHandle, type TtsEngine, type U
  */
 export const TTS_RATE = {android: 0.9, ios: 0.45} as const;
 const ttsOptions = () => ({language: 'ko-KR', rate: Platform.OS === 'ios' ? TTS_RATE.ios : TTS_RATE.android, pitch: 1.0, ducking: true});
+
+/** react-native-sound 카테고리: Android 미디어 스트림, iOS 무음 스위치를 따르는 Ambient(D-40) */
+export const soundCategory = (): 'Playback' | 'Ambient' => (Platform.OS === 'android' ? 'Playback' : 'Ambient');
 
 export async function getRinger(): Promise<Ringer> {
   if (Platform.OS === 'ios') {
@@ -97,7 +103,7 @@ export function loadSound(asset: number | string): SoundHandle | null {
     }
     const Sound = require('react-native-sound').default ?? require('react-native-sound');
     if (!categorySet) {
-      Sound.setCategory?.('Ambient', true);
+      Sound.setCategory?.(soundCategory(), true);
       categorySet = true;
     }
     let ok = true;

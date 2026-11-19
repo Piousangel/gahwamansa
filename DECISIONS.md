@@ -469,6 +469,9 @@
 - U13 개정: P4·P5 하단 '오늘 코스로' 삭제, BackLink 하나로 통일(BackLink v4 적용 뒤, 사용자)
 - 70대 관찰 테스트(첫 설치→첫 도장 혼자): 빌드 1 최우선 관문, 사용자가 섭외(부모님 등). 팀이 절차·체크리스트·기록 양식 준비
 
+## 2026-11-19 staging 반영 0051 + 개발 스위치 켬 (사용자 승인 "올리고 스위치 켜")
+- db push 0051(server_flags·dev_reset_today), staging server_flags.dev_reset_enabled=true(QA용, 테스트 가족에만 동작). production은 행 없음=꺼짐, 출시 점검(remote-checks)에서 꺼짐 확인 필수
+
 ## 2026-11-19 기기 TTS 개선 구현(V13a, 오디오 레인)
 - 엔진: Android에서 `com.google.android.tts`가 있으면 그것으로 바꾸고, 바꾼 뒤 한국어 음성이 0개면 원래 기본 엔진으로 되돌림. iOS는 그대로
 - 보이스: 네트워크 보이스(이름에 network)는 Enhanced여도 제외(읽는 문장이 엔진 서버로 감). 로컬 Enhanced → 이름에 local → 엔진 기본 순. 보이스를 넣어 실패하면 보이스 없이 다시 읽음
