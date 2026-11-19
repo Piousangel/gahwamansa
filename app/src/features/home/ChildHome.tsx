@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -8,13 +8,14 @@ import {TopBar} from '../../ui/TopBar';
 import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
-import {BottomSheet} from '../../ui/BottomSheet';
+import {AudienceProvider, Choice, Sheet} from '../../ui/ds';
+import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
 import {useSendCheer} from './useSendCheer';
 import {findTitleDup} from './titleDup';
 import {TitleDupNotice} from './TitleDupNotice';
 import {appCopy, copy, withTitle} from '../../copy/copy';
-import {color, radius, size} from '../../ui/tokens';
+import {color, radius} from '../../ui/tokens';
 import {CHILD_CHEER_KEYS, ChildParent, ChildSummary} from '../types';
 import {useChildSummary} from '../../shared/useChildData';
 import {useBootLoading} from '../../app/splash';
@@ -24,6 +25,9 @@ import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
 import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
+
+/** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
+const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
 
 const c = copy.child;
 const h = c.home;
@@ -42,6 +46,7 @@ export function ChildHome() {
   const {api} = useSession();
   const {info, error, loading, load} = useChildSummary();
   const [sheet, setSheet] = useState(false);
+  const cheerButton = useRef<React.ComponentRef<typeof import('react-native').Pressable>>(null); // 시트가 닫히면 화면 읽기 포커스를 이 버튼으로(PR #93 M1)
   const [making, setMaking] = useState(false);
   const {show} = useToast();
   const {send, sending} = useSendCheer(api, load);
@@ -101,7 +106,7 @@ export function ChildHome() {
     !info ? (
       <BigButton label={c.cheer.button} disabled disabledReason={h.loading_reason} onPress={() => {}} />
     ) : reachable.length ? (
-      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} />
+      <BigButton label={c.cheer.button} loading={sending} onPress={() => setSheet(true)} buttonRef={cheerButton} />
     ) : undefined;
 
   return (
@@ -132,21 +137,20 @@ export function ChildHome() {
           </>
         )}
       </Screen>
-      <BottomSheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} body={c.cheer.hint} testID="sheet">
-        {CHILD_CHEER_KEYS.map(k => (
-          <Pressable
-            key={k}
-            accessibilityRole="button"
-            accessibilityLabel={copy.cheers[k]}
-            onPress={() => {
+      {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
+      <AudienceProvider value="child">
+        <Sheet visible={sheet} onClose={() => setSheet(false)} closeLabel={c.cheer.close} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
+          <Choice
+            mode="action"
+            testID="cheer"
+            items={CHILD_CHEER_KEYS.map(k => ({key: k, label: copy.cheers[k], icon: CHEER_ICON[k]}))}
+            onSelect={k => {
               setSheet(false);
-              send(k, reachable);
+              send(k as (typeof CHILD_CHEER_KEYS)[number], reachable);
             }}
-            style={({pressed}) => [styles.option, pressed ? styles.optionPressed : null]}>
-            <Text20 size={22}>{copy.cheers[k]}</Text20>
-          </Pressable>
-        ))}
-      </BottomSheet>
+          />
+        </Sheet>
+      </AudienceProvider>
     </View>
   );
 }
@@ -200,9 +204,4 @@ const styles = StyleSheet.create({
   choice: {color: color.inkTitle},
   starter: {gap: 4},
   sub: {color: color.inkSub},
-  option: {
-    minHeight: size.touchMin, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: color.card, borderRadius: radius.select, borderWidth: 3, borderColor: color.lineSoft,
-  },
-  optionPressed: {backgroundColor: color.actionSoft, borderColor: color.action},
 });

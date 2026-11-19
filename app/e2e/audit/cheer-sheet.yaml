@@ -1,0 +1,36 @@
+# 응원 시트 v4 실측(시안 child/C4_cheer_sheet_ds4 #40). 연결된 자녀 홈에서 '응원 보내기' → 시트.
+# 전제: fake API 가 '자녀·연결됨·동의'로 시작해야 한다. 개발 중에만 selectApi 의 createFakeApi() 인자를
+#   {who: 'child', childFamily: true, childLinked: true, consented: true, parentTitle: '엄마'} 로 잠깐 바꿔 실행한다(커밋하지 않음).
+# 기대: 시트 높이 88% 이하, 손잡이 막대 없음, 닫기 48 알약, 선택지 4개 1열·두 줄 허용, 200%는 시트 안에서만 스크롤 + 아래 더 있음 띠.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/cheer-sheet.yaml
+appId: com.bumojasik.app.staging
+name: 응원 시트 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '응원 보내기'
+    timeout: 20000
+- tapOn: '응원 보내기'
+- extendedWaitUntil:
+    visible: '어떤 말을 보낼까요\?'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: cheer-sheet
+# 실제로 끝까지 내린다(PR #93 L5: scrollUntilVisible 은 줄 일부가 보이면 움직이지 않음). 시트 안에서 위로 두 번 밀기
+- swipe:
+    start: 50%, 85%
+    end: 50%, 40%
+- swipe:
+    start: 50%, 85%
+    end: 50%, 40%
+- waitForAnimationToEnd
+- assertVisible: '오늘도 편안한 하루 보내세요'
+- takeScreenshot: cheer-sheet-scrolled
