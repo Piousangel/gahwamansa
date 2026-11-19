@@ -33,6 +33,8 @@ export const tokensV4 = {
     accentSun: '#FFE29A',
     accentPeach: '#FFD6C2',
     brandSealDeep: '#C44F2E',
+    brandSeal: '#EE6A44',
+    brandSealGlyph: '#FFFAF3',
     inkBody: '#2E2924',
     inkSubChild: '#6E655C',
     accent: '#8F2F15',

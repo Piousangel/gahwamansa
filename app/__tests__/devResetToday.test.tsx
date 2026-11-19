@@ -96,6 +96,19 @@ describe('메뉴(실제 서버 모드)', () => {
     await waitFor(() => screen.getByTestId('dev-reset-child'));
     expect(screen.getByRole('button', {name: '오늘 코스 다시 하기(테스트 가족만)'}).props.accessibilityState?.disabled).toBe(true);
   });
+  test('PR #85 L1: 닫으면 역할 확인을 비워, 역할이 바뀐 뒤 다시 열 때 이전 역할 안내가 보이지 않는다', async () => {
+    const api = realLikeApi('child');
+    render(<DevMenuHost api={api}>{({appKey}) => <Opener appKey={appKey} />}</DevMenuHost>);
+    await openMenu();
+    await waitFor(() => screen.getByTestId('dev-reset-child'));
+    fireEvent.press(screen.getByRole('button', {name: '닫기'}));
+    let resolveWho: (w: 'parent') => void = () => {};
+    api.whoAmI = () => new Promise(r => (resolveWho = r));
+    await openMenu();
+    expect(screen.queryByTestId('dev-reset-child')).toBeNull(); // 재조회가 끝나기 전에도
+    await act(async () => resolveWho('parent'));
+    expect(screen.queryByTestId('dev-reset-child')).toBeNull();
+  });
   test('PR #70 L2: 연결 전 기기·세션 없음은 원인대로 한 줄(서버를 부르지 않음)', async () => {
     renderHost('none');
     await openMenu();

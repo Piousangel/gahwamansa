@@ -47,6 +47,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
   },
   {
+    name: 'P7 완료(알겠어요)',
+    screen: 'CourseDone',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.done.button, onPress: noop}},
+  },
+  {
     name: 'P4 사진 보기(다 봤어요 하나, 시안 ds4c)',
     screen: 'PhotoStep',
     variant: 'step',

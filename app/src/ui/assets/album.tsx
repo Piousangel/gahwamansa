@@ -1,5 +1,6 @@
 import React from 'react';
 import {SvgXml} from 'react-native-svg';
+import {tokensV4} from '../tokensV4';
 
 // 앨범 장식·도장 SVG(design-system/assets 사본 문자열). 그림을 직접 그리지 않는다. 원본이 바뀌면 문자열만 바꾼다.
 const STAMPS = [
@@ -23,4 +24,16 @@ export function Stitch({width}: {width: number | `${number}%`}) {
 // 마스킹테이프(라벨 뒤 장식, 140x41 원본)
 export function Tape({width = 140, height = 41, testID}: {width?: number; height?: number; testID?: string}) {
   return <SvgXml testID={testID} xml={TAPE} width={width} height={height} accessibilityElementsHidden importantForAccessibility="no" />;
+}
+
+// 큰 인장 '家'(P7 완료, 시안 P7_album_ds4 — 브랜드 심볼 평면판 symbol-flat.svg 의 인장을 떼어 64 칸에 맞춤).
+// 색은 토큰에서(brandSeal 면·brandSealDeep 두께·brandSealGlyph 획) — 크리에이티브 디렉션이 바뀌면 토큰만 바꾼다.
+// 번짐 원은 연출(P7)이 따로 그린다. 장식이라 화면 읽기에서 숨긴다.
+const SEAL_GLYPH = '<path d="M50 5 L53 15"/><path d="M18 19 L15 32"/><path d="M18 20 L82 20 Q85 21 81 31"/><path d="M30 39 L70 39"/><path d="M50 39 Q43 50 24 58"/><path d="M40 52 Q57 55 57 70 Q57 86 49 93 L42 88"/><path d="M50 64 Q40 73 23 79"/><path d="M53 75 Q42 86 22 93"/><path d="M76 54 Q70 61 60 66"/><path d="M58 71 Q70 84 86 93"/>';
+function sealXml(): string {
+  const c = tokensV4.color;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect x="8" y="9" width="48" height="48" rx="15" fill="${c.brandSealDeep}"/><rect x="8" y="7" width="48" height="48" rx="15" fill="${c.brandSeal}"/><g transform="translate(13.3 12.3) scale(0.374)" fill="none" stroke="${c.brandSealGlyph}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">${SEAL_GLYPH}</g></svg>`;
+}
+export function SealStamp({size = 116, testID}: {size?: number; testID?: string}) {
+  return <SvgXml testID={testID} xml={sealXml()} width={size} height={size} accessibilityElementsHidden importantForAccessibility="no" />;
 }
