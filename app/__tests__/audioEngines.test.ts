@@ -1,3 +1,4 @@
+declare const __dirname: string;
 import {Image, Platform} from 'react-native';
 import {createTtsEngine, getRinger, loadSfx, loadSound, subscribeRinger, TTS_RATE} from '../src/audio/engines';
 import {newStampFeedback, setStampFeedbackForTest} from '../src/features/course/stampFeedback';
@@ -67,7 +68,7 @@ test('효과음: require 자산 번호를 문자열 주소로 바꿔 연다(0.13
   const spy = jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({uri: 'src_ui_assets_stamp', width: 0, height: 0, scale: 1});
   const h = loadSfx('stamp');
   expect(h).not.toBeNull();
-  expect(Sound.setCategory).toHaveBeenCalledWith('Ambient', true);
+  expect(Sound.setCategory).toHaveBeenCalledWith('Playback', true); // Android 미디어 스트림(D-40)
   expect(typeof lastSound().asset).toBe('string');
   expect(lastSound().asset).toBe('src_ui_assets_stamp');
   expect(lastSound().basePath).toBeUndefined(); // 두 번째 인자가 함수면 0.13.0 이 경로에 함수 글자를 붙인다
@@ -101,3 +102,26 @@ test('도장 피드백 기본 연결: 벨소리 보통이면 도장 소리, 무�
   expect(Sound.__instances.length - before).toBe(1);
   spy.mockRestore();
 });
+
+test('D-40: 효과음·BGM 은 Android 미디어 스트림(Playback), iOS 는 무음 스위치를 따르는 Ambient — 둘 다 포커스를 잡지 않음', () => {
+  const {soundCategory} = require('../src/audio/engines');
+  const RN = require('react-native');
+  const orig = RN.Platform.OS;
+  try {
+    Object.defineProperty(RN.Platform, 'OS', {value: 'android', configurable: true, writable: true});
+    expect(soundCategory()).toBe('Playback');
+    Object.defineProperty(RN.Platform, 'OS', {value: 'ios', configurable: true, writable: true});
+    expect(soundCategory()).toBe('Ambient');
+  } finally {
+    Object.defineProperty(RN.Platform, 'OS', {value: orig, configurable: true, writable: true});
+  }
+  // 라이브러리(0.13.0) Android 대응: Playback = STREAM_MUSIC, mixWithOthers 면 requestAudioFocus 안 함
+  const fs = require('fs');
+  const path = require('path');
+  const kt: string = fs.readFileSync(path.join(__dirname, '../node_modules/react-native-sound/android/src/main/java/com/zmxv/RNSound/Sound.kt'), 'utf8');
+  expect(kt).toMatch(/"Playback" -> category = AudioManager\.STREAM_MUSIC/);
+  expect(kt).toMatch(/if \(!this\.mixWithOthers\) \{[\s\S]{0,120}requestAudioFocus/);
+  const main: string = fs.readFileSync(path.join(__dirname, '../android/app/src/main/java/com/bumojasik/app/MainActivity.kt'), 'utf8');
+  expect(main).toContain('volumeControlStream = AudioManager.STREAM_MUSIC');
+});
+
