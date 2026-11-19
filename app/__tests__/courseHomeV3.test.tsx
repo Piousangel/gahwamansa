@@ -25,7 +25,7 @@ async function previewHome() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
 }
 
 test('미연결 안내는 띠 전체가 하나의 버튼(터치 48 이상, 어르신 기준 64), 큰 버튼은 아래 하나뿐', async () => {
@@ -42,7 +42,7 @@ test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버
   render(<AppRoot api={api} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
   expect(screen.queryByText('세 가지를 차례로 해요')).toBeNull(); // v4: 인사는 연결된 첫날 카드 1개뿐(미연결 열람엔 없음)
   expect(screen.getByTestId('date-line')).toBeTruthy();
   await new Promise<void>(r => setTimeout(() => r(), 30));
@@ -56,7 +56,7 @@ test('1/3: 진행 문구 없음(시안 ds4b 1/3 보드). 첫날 인사가 보이
   render(<AppRoot api={createFakeApi({linked: true, consented: true, completedSteps: ['photo']})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('step-wait-hangul'));
   expect(screen.queryByText('둘 남았어요')).toBeNull();
-  expect(screen.getByTestId('step-wait-hangul').props.accessibilityLabel).toBe(screen.queryByTestId('first-greeting') ? '자판으로 쓰기' : '자판으로 쓰기, 다음 차례');
+  expect(screen.getByTestId('step-wait-hangul').props.accessibilityLabel).toBe(screen.queryByTestId('first-greeting') ? '낱말 쓰기' : '낱말 쓰기, 다음 차례');
 });
 
 test('도장: 서버의 이번 주 완료 날짜만큼 붙는다(띄엄띄엄, 숫자 없음)', async () => {

@@ -21,7 +21,7 @@ async function previewHome() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
 }
 const texts = (root: ReturnType<typeof screen.getByTestId>) =>
   root.findAll(n => n.type === Text).map(n => [].concat(n.props.children).join(''));

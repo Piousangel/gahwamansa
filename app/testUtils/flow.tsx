@@ -70,7 +70,7 @@ export async function toHome(api: Api, accept = true) {
   await press(accept ? '좋아요' : '싫어요');
   if (!accept) {
     await waitFor(() => screen.getByText('고른 답은 저장되지 않아요'));
-    await press('알겠어요');
+    await press('오늘 코스로');
   }
   await waitFor(courseHomeShown);
 }
@@ -82,10 +82,10 @@ export async function toHomeConsented(api: Api) {
   await waitFor(courseHomeShown);
 }
 
-// 코스 홈이 보이는지: 코스가 있으면 날짜 줄(시안 P3 v4, 제목 없음), 빈·오류 상태면 '오늘의 코스' 제목
+// 코스 홈이 보이는지: 코스가 있으면 날짜 줄(시안 P3 v4, 제목 없음), 빈·오류 상태면 '오늘 코스' 제목
 export function courseHomeShown() {
   if (!screen.queryByTestId('date-line')) {
-    screen.getByText('오늘의 코스');
+    screen.getByText('오늘 코스');
   }
 }
 

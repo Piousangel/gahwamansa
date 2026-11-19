@@ -124,7 +124,7 @@ describe('U10 응원 취소', () => {
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
     expect(within(screen.getByTestId('toast')).getByText('엄마께 보냈어요')).toBeTruthy();
-    await press('취소');
+    await press('되돌리기');
     await waitFor(() => screen.getByText('응원을 보내지 않았어요'));
     await act(async () => {
       jest.advanceTimersByTime(4200);
@@ -147,7 +147,7 @@ describe('U10 응원 취소', () => {
       handlers.forEach(h => h('background'));
     });
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
-    expect(screen.queryByRole('button', {name: '취소'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
+    expect(screen.queryByRole('button', {name: '되돌리기'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
   });
 
   test('리뷰 M2: 토스트가 끝나는 순간 보내고, 그때부터 \'취소\'는 비활성(늦은 취소로 조용히 보내지는 틈 없음)', async () => {
@@ -155,13 +155,13 @@ describe('U10 응원 취소', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const send = jest.spyOn(api, 'sendCheer');
     await pickCheer(api);
-    const undo = screen.getByRole('button', {name: '취소'});
+    const undo = screen.getByRole('button', {name: '되돌리기'});
     expect(undo.props.accessibilityState?.disabled).toBe(false);
     await act(async () => {
       jest.advanceTimersByTime(4050);
     });
     expect(send).toHaveBeenCalledTimes(1);
-    const late = screen.queryByRole('button', {name: '취소'});
+    const late = screen.queryByRole('button', {name: '되돌리기'});
     if (late) {
       expect(late.props.accessibilityState?.disabled).toBe(true); // 사라지는 중에도 누를 수 없음
       fireEvent.press(late);
@@ -360,9 +360,9 @@ describe('AC-01 C6 곧 유료 시트', () => {
   const items = [{answeredDate: '2020-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}];
   async function openPaid(api: ReturnType<typeof createFakeApi>) {
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    await waitFor(() => screen.getByRole('tab', {name: '지난 날'}));
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
     });
     await waitFor(() => screen.getByTestId('child-past-topic'));
     await press('이야기 주제 추천, 곧 유료');
@@ -748,16 +748,16 @@ describe('재검토 R1·R2', () => {
     }
     const {rerender} = render(<Root on />);
     fireEvent.press(screen.getByText('보내기'));
-    expect(screen.getByRole('button', {name: '취소'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '되돌리기'})).toBeTruthy();
     rerender(<Root on={false} />);
     await act(async () => {});
     expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
-    const undo = screen.queryByRole('button', {name: '취소'});
+    const undo = screen.queryByRole('button', {name: '되돌리기'});
     expect(undo === null || undo.props.accessibilityState?.disabled === true).toBe(true);
     await act(async () => {
       await new Promise<void>(r => setTimeout(() => r(), 400));
     });
-    expect(screen.queryByRole('button', {name: '취소'})).toBeNull();
+    expect(screen.queryByRole('button', {name: '되돌리기'})).toBeNull();
   });
 
   test('R2: 로그아웃이 실패해도 이 계정의 기기 기억값은 정리', async () => {
@@ -922,5 +922,36 @@ describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
     await store.setItem('terms_pending_v1:z', '1');
     await clearAccountKeys(store, 'z');
     expect(await store.getItem('terms_pending_v1:z')).toBeNull();
+  });
+});
+
+describe('CG 자녀 시작 결정(v4 공통 상태, 남은 자녀 화면 6번)', () => {
+  test('어르신 폰 막음: 제목 머리글 + 안내 + Dock 알겠어요(자녀 56), BackLink 처음으로 → 역할 선택', async () => {
+    render(<AppRoot api={createFakeApi({linked: true})} />);
+    await act(async () => fireEvent.press(screen.getByText(/자녀 휴대폰이에요/)));
+    await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
+    expect(screen.getByRole('header', {name: '이 폰은 부모님 휴대폰으로 쓰고 있어요'})).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByRole('button', {name: '알겠어요'}).props.style).minHeight).toBe(56);
+    await act(async () => fireEvent.press(screen.getByRole('link', {name: '처음으로'})));
+    await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
+  });
+  test('확인 실패: StateView 오류(머리글·다시 하기), 다시 하면 결정이 이어진다', async () => {
+    const api = createFakeApi({who: 'child'});
+    render(<AppRoot api={api} />);
+    const who = jest.spyOn(api, 'whoAmI').mockRejectedValue(new Error('network down'));
+    await act(async () => fireEvent.press(screen.getByText(/자녀 휴대폰이에요/)));
+    await waitFor(() => screen.getByTestId('child-gate-error'));
+    who.mockRestore();
+    expect(within(screen.getByTestId('child-gate-error')).getByRole('header')).toBeTruthy();
+    await act(async () => fireEvent.press(within(screen.getByTestId('child-gate-error')).getByRole('button')));
+    await waitFor(() => screen.getByTestId('title-group'));
+  });
+  test('PR #98 리뷰 L1: 불러오는 중 StateView 제목은 머리글로 읽히지 않는다(빈·오류는 머리글)', () => {
+    const {StateView} = require('../src/ui/ds');
+    render(<StateView kind="loading" title="잠시만요" />);
+    expect(screen.queryByRole('header')).toBeNull();
+    screen.unmount();
+    render(<StateView kind="error" title="문제가 생겼어요" />);
+    expect(screen.getByRole('header', {name: '문제가 생겼어요'})).toBeTruthy();
   });
 });

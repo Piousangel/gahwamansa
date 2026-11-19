@@ -140,7 +140,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await press('설정');
     await waitFor(() => screen.getByText('도장 소리'));
     send.mockClear();
-    await press('돌아가기');
+    await press('오늘 코스로');
     await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('설정'));
   });
@@ -150,9 +150,9 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await waitFor(() => screen.getByTestId('date-line'));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
     await press('둘 중 고르기, 했어요');
-    await waitFor(() => screen.getByRole('button', {name: '돌아가기'}));
+    await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
     send.mockClear();
-    await press('돌아가기'); // 하단 '돌아가기'(v4: 보이는 글 = 읽기, 목적지는 힌트)
+    await press('오늘 코스로'); // 하단 '돌아가기'(v4: 보이는 글 = 읽기, 목적지는 힌트)
     await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'));
   });
@@ -161,7 +161,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
     await press('설정');
     await waitFor(() => screen.getByText('도장 소리'));
-    await press('돌아가기');
+    await press('오늘 코스로');
     await waitFor(() => screen.getByTestId('date-line'));
     await new Promise<void>(r => setTimeout(() => r(), 1200));
     expect(send.mock.calls.map(labelOf)).not.toContain('설정'); // 앞 테스트의 남은 타이머와 섞이지 않게 이 화면 요소로만 본다

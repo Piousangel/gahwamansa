@@ -15,11 +15,11 @@ tags:
     timeout: 60000
 - tapOn: '자녀 휴대폰이에요.*'
 - extendedWaitUntil:
-    visible: '지난 답'
+    visible: '지난 날'
     timeout: 20000
-- tapOn: '지난 답'
+- tapOn: '지난 날'
 - extendedWaitUntil:
-    visible: '.*지난 답'
+    visible: '.*지난 날'
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: c5-first

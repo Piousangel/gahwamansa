@@ -89,7 +89,7 @@ test('코스 홈 → 번호 쓰기 → 번호 성공 → 동의 → 코스 홈: 
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByTestId(HOME));
-  expect(screen.queryByText('번호를 받으면 그때부터 답이 저장돼요')).toBeNull();
+  expect(screen.queryByText('번호를 받으면 답이 저장돼요')).toBeNull();
   // 리드 결정 11-20(네이버 패널 r1/4): 연결된 어르신에게 P3 는 뿌리 화면 — 뒤로는 앱을 나가고 P1·동의로 가지 않는다
   await back();
   expect(screen.getByTestId(HOME)).toBeTruthy();

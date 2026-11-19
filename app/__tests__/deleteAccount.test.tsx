@@ -36,8 +36,8 @@ test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => 
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openParentDelete(api);
-  await press('그만둘래요');
-  await waitFor(() => screen.getByRole('button', {name: '돌아가기'}));
+  await press('안 지울래요');
+  await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
   expect(del).not.toHaveBeenCalled();
 });
 
@@ -186,7 +186,7 @@ test('감사 H1 회귀: P9 모두 지우기를 한 번 누르면 지우지 않�
   expect(within(box).getByText('되돌릴 수 없어요')).toBeTruthy();
   expect(del).not.toHaveBeenCalled();
   await act(async () => {
-    fireEvent.press(within(box).getByRole('button', {name: '그만둘래요'}));
+    fireEvent.press(within(box).getByRole('button', {name: '안 지울래요'}));
   });
   await waitFor(() => expect(screen.queryByTestId('delete-confirm2')).toBeNull());
   expect(del).not.toHaveBeenCalled();

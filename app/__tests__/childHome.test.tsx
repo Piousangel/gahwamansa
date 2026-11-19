@@ -22,6 +22,9 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
   render(<AppRoot api={api} role="child" />);
   await waitFor(() => screen.getByText('엄마의 최근 답'));
   expect(screen.getByText('가을')).toBeTruthy();
+  // 디자인 #103: 홈 최근 답은 answer(40/52·400·확대 상한 1.3)
+  expect(StyleSheet.flatten(screen.getByText('가을').props.style)).toMatchObject({fontSize: 40, lineHeight: 52, fontWeight: '400'});
+  expect(screen.getByText('가을').props.maxFontSizeMultiplier).toBe(1.3);
   expect(screen.getByText('2020년 11월 16일')).toBeTruthy(); // 오래된 날짜도 그대로
   expect(screen.getByText('이 답으로 이야기를 시작해 봐요')).toBeTruthy(); // 지난 날 답(C4 확정)
   expectNoPressure();
@@ -30,7 +33,7 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
 test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예시 칩·점선, 누르는 것 아님) + 이야기 꺼내기 한 줄', async () => {
   render(<AppRoot api={createFakeApi({consented: true, parentTitle: '아빠', latest: null})} role="child" />);
   await waitFor(() => screen.getByTestId('child-home-empty'));
-  expect(screen.getByText('부모님이 오늘 사진을 보시면 여기에 답이 보여요')).toBeTruthy();
+  expect(screen.getByText('부모님이 오늘 둘 중 하나를 고르시면 여기에 답이 보여요')).toBeTruthy();
   for (const i of [1, 2]) {
     const card = screen.getByTestId(`child-home-example-${i}`);
     expect(card.props.accessibilityLabel).toMatch(/^예시, /); // 실제 답으로 오인하지 않게 '예시'부터 읽는다
@@ -166,4 +169,24 @@ test('fake: 호칭은 닫힌 목록만, 철회하면 저장된 답이 사라진�
   const s = await api.fetchChildSummary();
   expect(s.shared).toBe(false);
   expect(s.latest).toBeNull();
+});
+
+test('#125 리뷰 M1(R-21 answer 는 화면에 1개): 어르신 여러 분이면 카드마다 answerRow(26/36), 한 분이면 answer(40)', async () => {
+  const day = '2020-11-16';
+  const api = createFakeApi({
+    who: 'child',
+    childFamily: true,
+    childLinked: true,
+    consented: true,
+    parents: [
+      {title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '가을', answeredDate: day}},
+      {title: '아빠', latest: {prompt: '산과 바다', choiceLabel: '바다', answeredDate: day}},
+    ],
+  });
+  render(<AppRoot api={api} role="child" />);
+  await waitFor(() => screen.getByText('가을'));
+  for (const w of ['가을', '바다']) {
+    expect(StyleSheet.flatten(screen.getByText(w).props.style)).toMatchObject({fontSize: 26, lineHeight: 36, fontWeight: '400'});
+    expect(screen.getByText(w).props.maxFontSizeMultiplier).toBe(1.5);
+  }
 });

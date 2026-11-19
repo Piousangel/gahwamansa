@@ -53,7 +53,7 @@ const filled = () => [0, 1].filter(i => screen.queryByTestId(`kb-cell-check-${i}
 
 test('처음: 단계 제목·안내·낱말 칸·입력칸·이유 줄, "다 썼어요"는 비활성, 넘어가기는 약한 링크', async () => {
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
+  expect(screen.getByText('낱말 쓰기 · 3 / 3')).toBeTruthy(); // 단계 제목 한 줄(v4 StepHeader)
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('쓸 낱말, 나무, 두 글자')).toBeTruthy();
   expect(screen.getByText('천천히 써 봐요')).toBeTruthy();
@@ -262,7 +262,7 @@ test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고
   await act(async () => {
     fireEvent(input(), 'focus');
   });
-  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
+  expect(screen.queryByText('낱말 쓰기 · 3 / 3')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
   expect(screen.queryByText('천천히 써 봐요')).toBeNull();
   expect(screen.queryByText('한 글자라도 쓰면 눌려요')).toBeNull();
@@ -277,11 +277,11 @@ test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고
 test('글자 150% 이상 + 자판 열림이면 제목·단계도 숨긴다', async () => {
   mockFontScale = 1.5;
   await toKeyboardStep();
-  expect(screen.getByText('자판으로 쓰기 · 3 / 3')).toBeTruthy();
+  expect(screen.getByText('낱말 쓰기 · 3 / 3')).toBeTruthy();
   await act(async () => {
     fireEvent(input(), 'focus');
   });
-  expect(screen.queryByText('자판으로 쓰기 · 3 / 3')).toBeNull();
+  expect(screen.queryByText('낱말 쓰기 · 3 / 3')).toBeNull();
 });
 
 test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면으로', async () => {
@@ -309,12 +309,12 @@ test('화면 읽기(TalkBack)가 켜져 있으면 넘어가기를 처음부터 �
 
 test('읽기 라벨: 제목 줄 한 덩어리, 읽어 주세요는 글자 있는 버튼 하나(AP-03, 빈 버튼 없음)', async () => {
   await toKeyboardStep();
-  expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
+  expect(screen.getByLabelText('낱말 쓰기, 3단계 중 3단계')).toBeTruthy();
   expect(screen.getAllByRole('button', {name: '읽어 주세요'})).toHaveLength(1);
   expect(screen.getByText('읽어 주세요')).toBeTruthy();
 });
 
-test('P3 단계 행·첫 화면 소개는 "자판으로 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {
+test('P3 단계 행·첫 화면 소개는 "낱말 쓰기"·"사진 속 낱말을 자판으로 써요"', async () => {
   render(<AppRoot api={createFakeApi()} />);
   expect(screen.getByText('사진 속 낱말을 자판으로 써요', {includeHiddenElements: true})).toBeTruthy();
 });

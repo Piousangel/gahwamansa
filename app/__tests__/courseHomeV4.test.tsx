@@ -45,12 +45,12 @@ describe('StepRow 리듬', () => {
       <>
         <StepRow title="사진 보기" status="done" statusLabel="했어요" />
         <StepRow title="둘 중 고르기" status="now" statusLabel="지금 할 차례" />
-        <StepRow title="자판으로 쓰기" status="wait" statusLabel="다음 차례" />
+        <StepRow title="낱말 쓰기" status="wait" statusLabel="다음 차례" />
       </>,
     );
     const done = rowStyle('사진 보기, 했어요');
     const now = rowStyle('둘 중 고르기, 지금 할 차례');
-    const wait = rowStyle('자판으로 쓰기, 다음 차례');
+    const wait = rowStyle('낱말 쓰기, 다음 차례');
     expect((done.borderWidth ?? 0) + done.paddingHorizontal).toBe(20);
     expect(now.borderWidth + now.paddingHorizontal).toBe(20);
     expect(wait.borderWidth + wait.paddingHorizontal).toBe(20);
@@ -114,9 +114,9 @@ function spyAll(api: Fake) {
 const counts = (spies: {mock: {calls: unknown[]}}[]) => spies.map(s => s.mock.calls.length);
 
 describe('코스 홈 v4', () => {
-  test('"오늘의 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 위 영역(시안 ds4b — 200%에서도 첫 화면에 남는다), 단계 행 사이 12', async () => {
+  test('"오늘 코스" 제목 없음, 날짜 줄이 화면 제목(머리글)이고 위 영역(시안 ds4b — 200%에서도 첫 화면에 남는다), 단계 행 사이 12', async () => {
     await home({});
-    expect(screen.queryByText('오늘의 코스')).toBeNull();
+    expect(screen.queryByText('오늘 코스')).toBeNull();
     expect(screen.getByTestId('date-line').props.accessibilityRole).toBe('header');
     expect(within(screen.getByTestId('ds-screen-top')).getByTestId('date-line')).toBeTruthy(); // 네이버 패널 r1/4: 돌아와도 날짜·설정이 위로 밀려 사라지지 않게
     expect(within(screen.getByTestId('ds-screen-top')).getByRole('button', {name: '설정'})).toBeTruthy();
@@ -128,7 +128,7 @@ describe('코스 홈 v4', () => {
   test('3/3 완료: 세 행 모두 › 와 하단 "오늘 코스 다시 보기"', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul']});
     expect(screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')).toBeTruthy();
-    for (const n of ['사진 보기', '둘 중 고르기', '자판으로 쓰기']) {
+    for (const n of ['사진 보기', '둘 중 고르기', '낱말 쓰기']) {
       expect(screen.getByRole('button', {name: `${n}, 했어요`})).toBeTruthy();
     }
     expect(screen.getByRole('button', {name: '오늘 코스 다시 보기'})).toBeTruthy();
@@ -144,7 +144,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('사진 보기')).toBeTruthy(); // 보기 전용은 단계 표시 없이 이름만
     expect(screen.queryByText(/1 \/ 3/)).toBeNull();
     expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요'));
     expect(counts(spies)).toEqual(before);
   });
@@ -159,7 +159,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('가을')).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull(); // 누를 수 없음
     expect(screen.queryByRole('button', {name: '정했어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });
@@ -175,13 +175,13 @@ describe('코스 홈 v4', () => {
     const api = await home({completedSteps: ['photo', 'question', 'hangul']});
     const spies = spyAll(api);
     const before = counts(spies);
-    await press('자판으로 쓰기, 했어요');
-    await waitFor(() => screen.getByLabelText('자판으로 쓰기, 다시 보는 중'));
+    await press('낱말 쓰기, 했어요');
+    await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     expect(screen.getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy(); // 보이는 글, 읽기는 아래 한 덩어리
     expect(screen.getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
     expect(screen.queryByLabelText('낱말 쓰는 칸')).toBeNull();
     expect(screen.queryByRole('button', {name: '다 썼어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });
@@ -191,7 +191,7 @@ describe('코스 홈 v4', () => {
     await press('사진 보기, 했어요');
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
     // v4 BackLink '오늘 코스로'(보이는 글 = 읽기). 하단 '돌아가기'는 힌트로 목적지를 읽는다(copy 11-1 #3)
-    expect(screen.getByRole('button', {name: '돌아가기'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
+    expect(screen.getByRole('button', {name: '오늘 코스로'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
     fireEvent.press(screen.getByRole('link', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
   });
@@ -201,7 +201,7 @@ describe('코스 홈 v4', () => {
     const row = screen.getByRole('button', {name: '사진 보기, 했어요'});
     expect(row.props.accessibilityHint).toBe('다시 보기');
     expect(screen.getByRole('button', {name: '둘 중 고르기, 지금 할 차례'})).toBeTruthy();
-    expect(screen.queryByRole('button', {name: /자판으로 쓰기/})).toBeNull();
+    expect(screen.queryByRole('button', {name: /낱말 쓰기/})).toBeNull();
     expect(screen.queryByRole('button', {name: '오늘 코스 다시 보기'})).toBeNull();
     await act(async () => fireEvent.press(row));
     await waitFor(() => screen.getByRole('button', {name: '돌아가기'})); // 보기 전용 P4
@@ -230,7 +230,7 @@ describe('미연결', () => {
     await preview();
     const strip = screen.getByTestId('course-strip');
     expect(strip.props.accessibilityRole).toBe('button');
-    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 그때부터 답이 저장돼요, 번호 쓰기'); // R-14: 보이는 글 그대로
+    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 답이 저장돼요, 번호 쓰기'); // R-14: 보이는 글 그대로
     const st = StyleSheet.flatten(typeof strip.props.style === 'function' ? strip.props.style({pressed: false}) : strip.props.style);
     expect(st.borderWidth).toBe(1.5);
     expect(st.minHeight).toBeGreaterThanOrEqual(64);
@@ -309,11 +309,11 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     for (const [row, label] of [
       ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
       ['둘 중 고르기, 했어요', '둘 중 고르기, 다시 보는 중'],
-      ['자판으로 쓰기, 했어요', '자판으로 쓰기, 다시 보는 중'],
+      ['낱말 쓰기, 했어요', '낱말 쓰기, 다시 보는 중'],
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
-      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /돌아가기/});
+      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /^오늘 코스로$/});
       expect(StyleSheet.flatten(dockButton.props.style).minHeight).toBe(72); // 주 버튼 높이
       fireEvent.press(dockButton);
       await waitFor(() => screen.getByTestId('date-line'));
@@ -331,8 +331,8 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
 
   test('N2: P6 보기 전용 — 그림·캡션·제목·칸이 한 흰 카드 안, 칸 사이 10, 좁으면 줄어드는 칸', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], realImage: true});
-    await press('자판으로 쓰기, 했어요');
-    await waitFor(() => screen.getByLabelText('자판으로 쓰기, 다시 보는 중'));
+    await press('낱말 쓰기, 했어요');
+    await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     const card = screen.getByTestId('kb-review-card');
     expect(within(card).getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy();
     expect(within(card).getByLabelText('오늘의 낱말, 나무')).toBeTruthy();

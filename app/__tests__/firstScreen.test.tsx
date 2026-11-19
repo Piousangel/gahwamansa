@@ -73,11 +73,11 @@ test('코스 단계(P4)의 이전은 v4 BackLink "오늘 코스로"(보이는 �
   expect(screen.getByTestId('back-link-arrow', {includeHiddenElements: true})).toBeTruthy();
 });
 
-test('부모님 폰에서 자녀를 고르면 확정 안내(알겠어요 -> 첫 화면)', async () => {
+test('부모님 폰에서 자녀를 고르면 확정 안내(처음으로 -> 첫 화면)', async () => {
   render(<AppRoot api={createFakeApi({linked: true})} />);
   await press(/자녀 휴대폰이에요/);
   await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
   expect(screen.getByText('자녀 로그인은 자녀 휴대폰에서 해 주세요')).toBeTruthy();
-  await press('알겠어요');
+  await press('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
