@@ -40,6 +40,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
+    name: 'C2 재연결 번호(번호 보내기 + 돌아가기)',
+    screen: 'CodeShow',
+    variant: 'form',
+    audience: 'child',
+    dock: {primary: {label: copy.code.send, onPress: noop}, secondary: {label: copy.code.wait, onPress: noop}},
+  },
+  {
     name: 'P9·C8 계정 지우기(안 지울래요 + 위험 외곽선, 어르신)',
     screen: 'DeleteAccountScreen',
     variant: 'form',

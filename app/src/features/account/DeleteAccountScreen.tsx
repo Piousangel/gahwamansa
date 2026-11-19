@@ -4,9 +4,10 @@ import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {BackBar} from '../../app/BackBar';
 import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
+import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
-import type {DeleteScope} from '../types';
+import {isServerError, type DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
@@ -72,18 +73,39 @@ export function DeleteAccountScreen({role}: Props) {
   }, [api, child]);
   const strong = child && scope === 'family';
 
+  // #141 리뷰 L3: 서버에서는 지워졌는데 응답만 실패했으면(끊김 등) 다시 하기 때 세션이 이미 없어 delete_my_account 가
+  // 'no_profile'(auth.uid() 없음, 0049)을 던진다. 이미 지운 계정이므로 성공(지운 뒤 화면)으로 본다 — 한 번 실패한 뒤의 다시 하기에서만.
+  // (세션이 살아 있으면 0049 가 '인증 행이 이미 없어도' {scope:'none'} 성공을 돌려주므로 따로 처리할 것이 없다)
+  const attempted = useRef(false);
+  const scrollRef = useRef<ScreenScroll>(null);
+  // L4: 실패 상자는 본문 맨 위라, 나타나면 본문을 맨 위로(아래로 스크롤한 채 '다시 하기'를 눌러도 보이게)
+  useEffect(() => {
+    if (failed) {
+      scrollRef.current?.showRange(0, 1);
+    }
+  }, [failed]);
+  const done = (s: DeleteScope) => {
+    clear();
+    prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
+    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title}}]}));
+  };
+
   const run = async () => {
     if (!beginBusy()) {
       return;
     }
+    const retry = attempted.current;
+    attempted.current = true;
     setFailed(null);
     const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
     try {
       const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
-      clear();
-      prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
-      navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}));
+      done(r.scope);
     } catch (e) {
+      if (retry && isServerError(e, 'no_profile')) {
+        done(scope ?? 'none'); // 범위는 미리 조회한 값(모르면 'none')
+        return;
+      }
       setFailed(errorMessage(e));
     } finally {
       endBusy();
@@ -94,7 +116,7 @@ export function DeleteAccountScreen({role}: Props) {
 
   // 위험 보조 버튼: 어르신은 이 화면이 1단계라 누르면 2단계 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
   const danger = failed
-    ? {label: failed.button, onPress: run, loading: busy}
+    ? {label: failed.button, onPress: run, loading: busy, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
     : !child
       ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, buttonRef: yesRef}
       : stage === 1
@@ -114,6 +136,7 @@ export function DeleteAccountScreen({role}: Props) {
   return (
     <DsScreen
       variant="form"
+      scrollRef={scrollRef}
       header={
         <>
           <BackBar />

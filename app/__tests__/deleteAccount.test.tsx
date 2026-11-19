@@ -215,3 +215,28 @@ describe('v4 계정 지우기(ui/ds, 리드 결정 11-20)', () => {
     expect(within(dockButtons()[1]).getByText('다시 하기')).toBeTruthy();
   });
 });
+
+describe('#141 리뷰 낮음', () => {
+  test("L3: 서버에서는 지워졌는데 응답만 실패 → 다시 하기에서 'no_profile'(세션 없음)이면 지운 뒤 화면", async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({consented: true});
+    jest
+      .spyOn(api, 'deleteMyAccount')
+      .mockRejectedValueOnce(new OfflineError('응답 끊김'))
+      .mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test("L3: 처음 시도의 'no_profile'은 성공으로 보지 않는다(실패 상자)", async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({consented: true});
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+  });
+});
