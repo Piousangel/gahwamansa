@@ -114,12 +114,12 @@
   },
   "child": {
     "tab_album": "앨범",
-    "tab_past": "지난 답",
+    "tab_past": "지난 날",
     "title_suffix": "의 최근 답",
     "talk": " 이야기를 해 볼까요?",
     "no_answer": "고른 답이 생기면 여기에 보여요",
     "not_shared": "답을 나누지 않는 중이에요",
-    "past_title": "지난 답",
+    "past_title": "지난 날",
     "delete_link": "내 계정 지우기",
     "delete_none": {
       "title": "내 계정 지우기",
@@ -213,8 +213,8 @@
     },
     "past": {
       "_src": "copy-v3 6·10절 C5, 시안 C5_history v4",
-      "title": "{호칭}의 지난 답",
-      "title_many": "지난 답",
+      "title": "{호칭}의 지난 날",
+      "title_many": "지난 날",
       "sub": "최근 한 달 동안 고른 답이에요",
       "topic": "이야기 주제 추천",
       "topic_badge": "곧 유료",
@@ -337,13 +337,13 @@
     }
   },
   "course": {
-    "title": "오늘의 코스",
+    "title": "오늘 코스",
     "greeting": "세 가지를 차례로 해요",
     "stamps_label": "이번 주 도장",
     "step": {
       "photo": "사진 보기",
       "question": "둘 중 고르기",
-      "hangul": "자판으로 쓰기"
+      "hangul": "낱말 쓰기"
     },
     "status": {
       "done": "했어요",
