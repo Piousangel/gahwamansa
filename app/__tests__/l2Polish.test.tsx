@@ -107,7 +107,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     send.mockClear();
     await press('오늘 코스로 돌아가기');
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('사진 보기'), {timeout: 3000});
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('사진 보기'));
     expect(send.mock.calls.map(labelOf).at(-1)).toBe('사진 보기');
   });
   test('단계를 마치고 돌아오면 같은 자리 주 버튼(다음 단계 이름)으로', async () => {
@@ -119,7 +119,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     send.mockClear();
     await press('다 봤어요');
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'), {timeout: 3000});
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'));
   });
   test('화면 읽기 켜짐 + 단계 완료 복귀: 체크 모션과 주 버튼 포커스가 둘 다 실행된다(리뷰 l2 M1)', async () => {
     readerOn();
@@ -129,8 +129,8 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
     await press('다 봤어요');
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}), {timeout: 3000});
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'), {timeout: 3000});
+    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}));
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기'));
   });
   test('설정에서 돌아오면 설정 링크로 포커스', async () => {
     readerOn();
@@ -141,7 +141,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     send.mockClear();
     await press('돌아가기');
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('설정'), {timeout: 3000});
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('설정'));
   });
   test('보기 전용 행에서 돌아오면 그 행으로', async () => {
     readerOn();
@@ -153,7 +153,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     send.mockClear();
     await pressLast('오늘 코스로 돌아가기'); // 하단 '돌아가기'(읽기 라벨 같음)
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'), {timeout: 3000});
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'));
   });
   test("화면 읽기가 꺼져 있으면 포커스를 옮기지 않는다", async () => {
     await home();
@@ -172,7 +172,7 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await new Promise<void>(r => setTimeout(() => r(), 400));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
     await press('다시 정하기');
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('오늘부터 고른 답이 가족에게 보여요'), {timeout: 3000});
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('오늘부터 고른 답이 가족에게 보여요'));
     await new Promise<void>(r => setTimeout(() => r(), 300));
     expect(send.mock.calls.map(labelOf).at(-1)).toBe('오늘부터 고른 답이 가족에게 보여요');
   });

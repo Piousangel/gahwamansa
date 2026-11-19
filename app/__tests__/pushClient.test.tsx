@@ -237,7 +237,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const en = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByLabelText(copy.push.permission.title), {timeout: 8000});
+    await waitFor(() => screen.getByLabelText(copy.push.permission.title));
     expect(screen.getByLabelText(copy.push.permission.preview_a11y)).toBeTruthy();
     expect(screen.getByLabelText(copy.push.permission.optional)).toBeTruthy();
     await press(copy.push.permission.yes);
@@ -250,7 +250,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({linked: true, consented: false, pushEnabled: false});
     const my = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('screen-dock'));
     await act(async () => {});
     expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull();
     expect(my).not.toHaveBeenCalled();
@@ -262,12 +262,12 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({linked: true, consented: true});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('screen-dock'));
     await act(async () => {
       src.emitOpen({kind: 'daily'});
     });
     await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'daily'}));
-    await waitFor(() => screen.getByTestId('photo-polaroid'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('photo-polaroid'));
   });
 
   test('꺼진 앱을 알림으로 열면(초기 알림) 코스 홈을 거쳐 그 단계로', async () => {
@@ -276,7 +276,7 @@ describe('앱 조립(PushHost)', () => {
     setTokenSourceForTest(src);
     const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo']});
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('choice-group'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('choice-group'));
   });
 
   test('자녀 연결 알림 탭: handleChildPushOpen 경로(push_opened + 앨범)', async () => {
@@ -285,7 +285,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await act(async () => {
       src.emitOpen({kind: 'parent_connected'});
     });
@@ -305,7 +305,7 @@ describe('앱 조립(PushHost)', () => {
     const en = jest.spyOn(api, 'setPushEnabled');
     const reg = jest.spyOn(api, 'registerPushToken');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByRole('button', {name: '알림 켜기'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '알림 켜기'}));
     expect(en).not.toHaveBeenCalled(); // 묻기 전에는 동의 아님
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: '알림 켜기'}));
@@ -320,7 +320,7 @@ describe('앱 조립(PushHost)', () => {
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const settings = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
     render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE})} role="parent" restore />);
-    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
     await press(copy.push.permission.yes);
     await waitFor(() => screen.getByTestId('n1-system-off'));
     await press(copy.push.system_off.open_parent);
@@ -337,7 +337,7 @@ describe('앱 조립(PushHost)', () => {
     const en = jest.spyOn(api, 'setPushEnabled');
     const reg = jest.spyOn(api, 'registerPushToken');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN), {timeout: 8000});
+    await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
     expect(en).not.toHaveBeenCalled();
   });
 
@@ -348,7 +348,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi();
     const reg = jest.spyOn(api, 'registerPushToken');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => expect(reg).toHaveBeenCalled(), {timeout: 8000});
+    await waitFor(() => expect(reg).toHaveBeenCalled());
     expect(await readPushToken()).toBeNull();
   });
 
@@ -358,7 +358,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
     await act(async () => {
       src.emitOpen({kind: 'daily'});
     });
@@ -366,7 +366,7 @@ describe('앱 조립(PushHost)', () => {
     expect(log).not.toHaveBeenCalledWith('push_opened', expect.anything());
     await press(copy.push.permission.no);
     await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'daily'}));
-    await waitFor(() => screen.getByTestId('date-line'), {timeout: 8000}); // 오늘 코스를 다 마쳤으니 일일 알림은 [P3](U1)
+    await waitFor(() => screen.getByTestId('date-line')); // 오늘 코스를 다 마쳤으니 일일 알림은 [P3](U1)
   });
 
   test('리뷰 L5·L7: 자녀 — 계정이 바뀌면 처리 못 한 탭을 버리고, 어르신 종류는 버린다', async () => {
@@ -377,7 +377,7 @@ describe('앱 조립(PushHost)', () => {
     jest.spyOn(api, 'accountTag').mockImplementation(async () => tag);
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await act(async () => {
       src.emitOpen({kind: 'daily'});
     });
@@ -400,7 +400,7 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi();
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} />);
-    await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'), {timeout: 8000});
+    await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
     await act(async () => {
       src.emitOpen({kind: 'daily'});
     });
