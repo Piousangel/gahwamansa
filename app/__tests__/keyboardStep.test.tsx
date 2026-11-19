@@ -292,9 +292,9 @@ test('기록 실패: 오류 패널과 다시 하기, 다시 하면 완료 화면
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
 });
 
-test('이전(‹ 오늘 코스)은 기록 없이 코스 홈으로', async () => {
+test('뒤로(‹ 오늘 코스로)는 기록 없이 코스 홈으로', async () => {
   const {calls} = await toKeyboardStep();
-  await act(async () => fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로 돌아가기'})[0])); // 상단 바(하단 링크도 같은 읽기, U13)
+  await act(async () => fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로'})[0])); // 상단 바(하단 링크도 같은 읽기, U13)
   await waitFor(() => screen.getByTestId('date-line'));
   expect(calls.some(c => c.name === 'recordSessionStep')).toBe(false);
 });

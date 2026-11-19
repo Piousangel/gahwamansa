@@ -247,7 +247,7 @@ describe('C3 연결 대기', () => {
         jest.advanceTimersByTime(15000 * 3);
       });
       expect(get.mock.calls.length).toBe(n); // 가려진 동안 확인 없음
-      await press('이전 화면으로 가기');
+      await press('기다리는 화면으로');
       await waitFor(() => screen.getByText('연결 기다리는 중'));
       expect(get.mock.calls.length).toBe(n + 1); // 다시 보일 때 한 번
       await act(async () => {

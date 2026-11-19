@@ -117,7 +117,7 @@ test('M1 회귀: 연결 중 이전(하드웨어 뒤로 포함)은 막고, 결과
   await typeCode('123456');
   await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
   await press('이 번호로 연결하기');
-  await press('이전 화면으로 가기');
+  await press('번호 쓰기로');
   expect(screen.queryByLabelText('연결 번호 6자리 쓰는 칸')).toBeNull(); // 빈 번호 쓰기로 가지 않음
   await act(async () => release());
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));

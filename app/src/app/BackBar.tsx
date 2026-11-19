@@ -3,6 +3,7 @@ import {BackHandler, Pressable, StyleSheet, Text} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {color, FONT_SCALE_MAX, size} from '../ui/tokens';
 import {copy} from '../copy/copy';
+import {backDestination} from './backDestination';
 
 // 하드웨어 뒤로가기를 화면이 정한 동작으로 바꾼다(화면이 보일 때만). onBack 이 없으면 기본 동작(스택 뒤로).
 export function useBackAction(onBack?: () => void) {
@@ -20,24 +21,26 @@ export function useBackAction(onBack?: () => void) {
   );
 }
 
-// 상단 "‹ 이전" 바(터치 64 이상, 화면 읽기 "이전 화면으로 가기"). 코스 단계는 "‹ 오늘 코스"(코스 홈으로). 하드웨어 뒤로가기와 같은 동작.
-// onBack 을 주지 않으면 스택에서 뒤로 갈 수 있을 때만 보인다(첫 화면에는 없음).
-export function BackBar({onBack, course}: {onBack?: () => void; course?: boolean}) {
+// 상단 뒤로 바(터치 64 이상). 보이는 글 = 목적지('‹ 설정으로'), 화면 읽기는 화살표 없이 같은 말(전문가 리뷰 W-09·R-14, '‹ 이전' 없앰).
+// 목적지: to(onBack 이 스택 밖으로 갈 때 화면이 준다) → course(코스 홈) → 스택 바로 아래 화면(backDestination). 하드웨어 뒤로가기와 같은 동작.
+// onBack 을 주지 않으면 스택에서 뒤로 갈 수 있을 때만 보인다(첫 화면에는 없음). 목적지를 모르면 숨는다('이전'으로 돌아가지 않음).
+export function BackBar({onBack, course, to}: {onBack?: () => void; course?: boolean; to?: string}) {
   const navigation = useNavigation();
   useBackAction(onBack);
   const action = onBack ?? (navigation.canGoBack() ? () => navigation.goBack() : undefined);
-  if (!action) {
+  const dest = to ?? (course ? copy.nav.to.CourseHome : backDestination(navigation.getState() as never));
+  if (!action || !dest) {
     return null;
   }
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={course ? copy.nav.back_course_a11y : copy.nav.back_a11y}
+      accessibilityLabel={dest}
       onPress={action}
       hitSlop={8}
       style={({pressed}) => [styles.bar, pressed ? styles.pressed : null]}>
       <Text maxFontSizeMultiplier={FONT_SCALE_MAX} style={styles.text}>
-        {course ? copy.nav.back_course : copy.nav.back}
+        {`‹ ${dest}`}
       </Text>
     </Pressable>
   );

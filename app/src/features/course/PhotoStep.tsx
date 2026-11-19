@@ -111,7 +111,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   return (
     <DsScreen
       variant="step"
-      back={{label: copy.course.to_home, onPress: toCourseHome}}
+      back={{to: copy.course.to_home, onPress: toCourseHome}}
       stepInfo={stepA11y(copy.course.step.photo, 1, review)}
       scrollRef={errorTop}
       onViewport={setViewport}

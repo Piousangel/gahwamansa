@@ -66,7 +66,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     }
   };
 
-  const back = {label: copy.course.to_home, onPress: toCourseHome};
+  const back = {to: copy.course.to_home, onPress: toCourseHome};
   const header = <StepHeader name={copy.course.step.question} n={2} review={review} />;
   const title = q.prompt ?? appCopy.question_title;
 
