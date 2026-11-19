@@ -21,7 +21,7 @@ async function previewHome() {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
 }
 const texts = (root: ReturnType<typeof screen.getByTestId>) =>
   root.findAll(n => n.type === Text).map(n => [].concat(n.props.children).join(''));
@@ -30,7 +30,7 @@ test('B2: 코스 홈 배너 "번호 쓰기" → 번호 화면 → 이전은 코�
   await previewHome();
   await press('번호 쓰기');
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
-  await press('이전 화면으로 가기');
+  await press('오늘 코스로');
   await waitFor(() => screen.getByTestId('date-line'));
   expect(screen.queryByText('이 휴대폰은 누구 거예요?')).toBeNull();
 });

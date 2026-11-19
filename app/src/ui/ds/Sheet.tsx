@@ -10,6 +10,7 @@ import {AudienceProvider, useAudience} from './audience';
 import {Heading, Text} from './Text';
 import {MoreBand} from './MoreBand';
 import {ds} from './roles';
+import {dismissLabel} from './dismiss';
 
 const c = ds.color;
 /** 시트 높이 상한(화면 높이 비율, 시안 C4_cheer_sheet_ds4) */
@@ -24,8 +25,6 @@ export type SheetProps = {
   sub?: string;
   /** X·밖 누르기·안드로이드 뒤로 */
   onClose: () => void;
-  /** X 읽는 이름(ui 는 문구를 모른다 — 호출부가 copy 에서) */
-  closeLabel: string;
   /** 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼, R12). 필수 — 공용 부품이라 쓰는 곳마다 빠뜨리지 않게(PR #93 M1) */
   returnFocusRef: RefObject<unknown>;
   children?: React.ReactNode;
@@ -52,7 +51,7 @@ export function Sheet(props: SheetProps) {
   );
 }
 
-function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, children, footer, testID = 'ds-sheet'}: SheetProps) {
+function SheetInner({visible, title, sub, onClose, returnFocusRef, children, footer, testID = 'ds-sheet'}: SheetProps) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   useToastModalGuard(visible); // 열려 있는 동안 토스트를 띄우지 않는다(UX U2)
@@ -100,7 +99,7 @@ function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, c
               <Pressable
                 testID="sheet-close"
                 accessibilityRole="button"
-                accessibilityLabel={closeLabel}
+                accessibilityLabel={dismissLabel('close')} // X 는 상태를 바꾸지 않는 닫기뿐(A5·W-09, 호출부가 고르지 않는다)
                 onPress={onClose}
                 style={({pressed}) => [styles.close, pressed ? styles.closePressed : null]}>
                 <Svg width={24} height={24} viewBox="0 0 24 24" accessibilityElementsHidden importantForAccessibility="no">

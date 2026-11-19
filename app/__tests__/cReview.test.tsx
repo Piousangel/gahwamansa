@@ -39,7 +39,7 @@ test('대기 <-> 번호 다시 보기 왕복해도 대기 화면은 하나, 폴�
   for (let i = 0; i < 2; i++) {
     await press('설정'); // 대기 화면 위로 쌓였다 돌아오기
     await waitFor(() => screen.getByText('부르는 이름'));
-    await press('이전 화면으로 가기');
+    await press('기다리는 화면으로');
     await waitFor(() => screen.getByText('연결 기다리는 중'));
   }
   expect(screen.queryAllByText('연결 기다리는 중', {includeHiddenElements: true})).toHaveLength(1);
@@ -163,7 +163,7 @@ test('이미 어르신으로 연결된 폰은 자녀 로그인을 막는다', as
   await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
   expect(screen.queryByLabelText('이메일 주소')).toBeNull();
   expect(send).not.toHaveBeenCalled();
-  await press('알겠어요');
+  await press('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 

@@ -6,7 +6,7 @@ import {tokensV4 as t, type Audience, type ColorV4} from '../tokensV4';
 export type {Audience};
 
 /** 화면이 고를 수 있는 글자 역할(Text role). button·link·backLink 는 각 컴포넌트 안에서만 쓴다 */
-export type TextRole = 'display' | 'title' | 'heading' | 'bodyLg' | 'body' | 'sub' | 'label' | 'numeral' | 'hand';
+export type TextRole = 'display' | 'title' | 'heading' | 'bodyLg' | 'body' | 'sub' | 'label' | 'numeral' | 'hand' | 'answer' | 'answerRow';
 type InnerRole = TextRole | 'link' | 'backLink' | 'buttonPrimary' | 'buttonSecondary' | 'fieldInput';
 
 /** 글자 tone(뜻). default 는 역할의 기본색, muted 는 보조(어르신 inkSub / 자녀 inkSubChild) */
@@ -34,7 +34,9 @@ function spec(role: InnerRole, a: Audience): {s: Spec; weight: number; cap: numb
     return {s: b[a][k] as Spec, weight: b.weight, cap: b.maxFontScale};
   }
   const r = t.type[role];
-  return {s: r[a] as Spec, weight: r.weight, cap: r.maxFontScale};
+  // answer·answerRow 는 자녀 전용(디자인 #103 R-21). 어르신 값이 없으니 자녀 값을 쓴다(어르신 화면에서 쓰지 않음 — 테스트가 지킨다)
+  const s = (a in r ? (r as Record<Audience, Spec>)[a] : (r as {child: Spec}).child) as Spec;
+  return {s, weight: r.weight, cap: r.maxFontScale};
 }
 
 export function toneColor(role: InnerRole, tone: Tone, a: Audience): string {

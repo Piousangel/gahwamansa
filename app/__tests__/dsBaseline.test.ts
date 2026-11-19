@@ -5,6 +5,7 @@
 // 늘면 실패: 새 화면 코드는 ui/ds(Text role·Button·Field·Dock)를 쓴다. 줄면 실패: 아래 숫자를 내려 기준선을 갱신한다(화면을 v4 로 옮긴 PR 에서).
 // 규칙은 .eslintrc.js DS_SYNTAX·DS_IMPORT_PATHS(features/·app/·push/ 화면, ui/ 제외). 메시지 앞머리 [DS:종류] 로 센다.
 declare const __dirname: string;
+declare const process: {pid: number};
 type LintMessage = {ruleId: string | null; message: string};
 type LintResult = {filePath: string; messages: LintMessage[]};
 const {ESLint}: {
@@ -25,17 +26,17 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 // L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
 const BASELINE: Record<string, number> = {
-  fontSize: 7,
+  fontSize: 6,
   fontWeight: 6,
   lineHeight: 2,
   color: 0,
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 14,
+  fontScale: 13,
   placeholder: 0,
-  text20Size: 79,
-  rnImport: 23,
+  text20Size: 69,
+  rnImport: 22,
   ellipsis: 0,
   v3Color: 28,
 };
@@ -63,6 +64,69 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
   expect(counts).toEqual(BASELINE);
   // ui/ 는 컴포넌트를 만드는 곳이라 규칙 밖(예외는 컴포넌트 안에서 주석·테스트로 명시)
   expect(inUi).toEqual([]);
+});
+
+// D-14(전문가 리뷰 r2, 2026-11-20): 단일화 완료 판정. 위 lint 기준선은 ui/ 안과 v3 토큰 참조를 세지 않아 '이행 끝'을 판정하지 못한다.
+// src/ 전체(ui/ 포함)에서 v3 토큰(ui/tokens)과 옛 컴포넌트 5종을 import·re-export 하는 문장 수를 센다. **완료 = 모두 0.**
+// 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
+const LEGACY_BASELINE: Record<string, number> = {
+  v3Tokens: 57, // ui/tokens (11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
+  Screen: 17, // ui/Screen
+  BigButton: 14, // ui/BigButton
+  ChoiceGrid: 0, // ui/ChoiceGrid
+  BottomSheet: 2, // ui/BottomSheet
+  Text20: 37, // ui/Text20
+};
+const LEGACY_MODULE: Record<string, string> = {v3Tokens: 'ui/tokens', Screen: 'ui/Screen', BigButton: 'ui/BigButton', ChoiceGrid: 'ui/ChoiceGrid', BottomSheet: 'ui/BottomSheet', Text20: 'ui/Text20'};
+
+const fsx: {readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]; readFileSync(p: string, e: string): string} = require('fs');
+const pathx: {join(...p: string[]): string; dirname(p: string): string; resolve(...p: string[]): string; relative(a: string, b: string): string} = require('path');
+
+/** src 아래 .ts/.tsx 에서 모듈별 import·export-from 수와 쓰는 파일 */
+export function countLegacyImports(srcDir: string): {counts: Record<string, number>; files: Record<string, string[]>} {
+  const counts: Record<string, number> = Object.fromEntries(Object.keys(LEGACY_MODULE).map(k => [k, 0]));
+  const files: Record<string, string[]> = Object.fromEntries(Object.keys(LEGACY_MODULE).map(k => [k, [] as string[]]));
+  const walk = (dir: string): string[] =>
+    fsx.readdirSync(dir, {withFileTypes: true}).flatMap(e => (e.isDirectory() ? walk(pathx.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [pathx.join(dir, e.name)] : []));
+  const re = /(?:import|export)[^'"]*?from\s+['"](\.[^'"]+)['"]/g;
+  for (const file of walk(srcDir)) {
+    const self = pathx.relative(srcDir, file).replace(/\.tsx?$/, '');
+    for (const m of fsx.readFileSync(file, 'utf8').matchAll(re)) {
+      const target = pathx.relative(srcDir, pathx.resolve(pathx.dirname(file), m[1]));
+      for (const [k, mod] of Object.entries(LEGACY_MODULE)) {
+        if (target === mod && self !== mod) {
+          counts[k] += 1;
+          files[k].push(self);
+        }
+      }
+    }
+  }
+  return {counts, files};
+}
+
+test('D-14 단일화 기준선: v3 토큰·옛 컴포넌트 import 수(완료 = 모두 0)', () => {
+  const {counts, files} = countLegacyImports(pathx.join(__dirname, '../src'));
+  if (JSON.stringify(counts) !== JSON.stringify(LEGACY_BASELINE)) {
+    // 어긋날 때 어느 파일인지 보이게
+    console.log(JSON.stringify(files, null, 1));
+  }
+  expect(counts).toEqual(LEGACY_BASELINE);
+});
+
+test('D-14 세는 방식: 상대 경로·re-export 를 세고, 모듈 자신과 다른 이름은 세지 않는다', () => {
+  const tmp: string = require('os').tmpdir();
+  const root = pathx.join(tmp, `legacy-${process.pid}-${Date.now()}`);
+  const fsw: {mkdirSync(p: string, o: object): void; writeFileSync(p: string, d: string): void; rmSync(p: string, o: object): void} = require('fs');
+  fsw.mkdirSync(pathx.join(root, 'ui/ds'), {recursive: true});
+  fsw.mkdirSync(pathx.join(root, 'features/a'), {recursive: true});
+  fsw.writeFileSync(pathx.join(root, 'ui/Screen.tsx'), "import {color} from './tokens';\n");
+  fsw.writeFileSync(pathx.join(root, 'ui/ds/Screen.tsx'), "import {Screen} from '../Screen';\nexport {Text20} from '../Text20';\n");
+  fsw.writeFileSync(pathx.join(root, 'features/a/X.tsx'), "import {BigButton} from '../../ui/BigButton';\nimport {tokensV4} from '../../ui/tokensV4';\nimport {Text20,\n  other} from '../../ui/Text20';\n");
+  try {
+    expect(countLegacyImports(root).counts).toEqual({v3Tokens: 1, Screen: 1, BigButton: 1, ChoiceGrid: 0, BottomSheet: 0, Text20: 2});
+  } finally {
+    fsw.rmSync(root, {recursive: true, force: true});
+  }
 });
 
 const KINDS_OF = (r: LintResult[]) => r.flatMap(x => x.messages.map(m => /\[DS:(\w+)\]/.exec(m.message)?.[1]).filter(Boolean));

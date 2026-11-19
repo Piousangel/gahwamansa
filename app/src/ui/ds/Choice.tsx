@@ -79,10 +79,14 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
   const a = useAudience();
   const answer = look === 'answer';
   const {width: winW, fontScale} = useWindowDimensions();
-  // 목록 폭: 재기 전에는 창 폭 − 본문 좌우 여백으로 어림
+  // #115 리뷰 L1: 첫 판정은 1열. 목록 폭을 잰 뒤에만 2열로 바꾼다(1열↔2열이 한 번 바뀌는 프레임을 만들지 않게 — 1열에서 2열로 한 번만)
   const [listW, setListW] = useState(0);
+  // L2: 어림(estimateLines)으로 2열을 골랐는데 실제로 칸에서 글이 꺾이면(onTextLayout 줄 수 > 1) 1열로 내리고 다시 올리지 않는다(한 방향)
+  const [wrapped, setWrapped] = useState(false);
   const width = listW || winW - layout.bodyPadding.x * 2;
-  const two = columns === 2 && !answer && fitsTwoColumns(items, width, roleText('bodyLg', a).style.fontSize as number, fontScale, roleText('sub', a).style.fontSize as number);
+  const two =
+    columns === 2 && !answer && listW > 0 && !wrapped && fitsTwoColumns(items, listW, roleText('bodyLg', a).style.fontSize as number, fontScale, roleText('sub', a).style.fontSize as number);
+  const onLines = two ? (n: number) => n > 1 && setWrapped(true) : undefined;
   const cellW = two ? (width - COL_GAP) / 2 : undefined;
   const per = two ? 2 : 1;
   const hs = useRef<number[]>([]);
@@ -134,10 +138,12 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
             ]}>
             {item.icon ? <Icon name={item.icon} size={a === 'elder' ? 32 : 28} color={c.action} /> : null}
             <View style={answer ? styles.answerBody : styles.body}>
-              <Text role={answer ? 'title' : 'bodyLg'}>{item.label}</Text>
+              <Text role={answer ? 'title' : 'bodyLg'} onLines={onLines}>
+                {item.label}
+              </Text>
               {item.hint ? (
                 // 옅은 면(actionSoft) 위에는 보조색을 쓰지 않는다(허용 목록) → 고른 상태는 본문색
-                <Text role={selected ? 'body' : 'sub'} tone={selected ? 'default' : 'muted'}>
+                <Text role={selected ? 'body' : 'sub'} tone={selected ? 'default' : 'muted'} onLines={onLines}>
                   {item.hint}
                 </Text>
               ) : null}

@@ -108,7 +108,7 @@ test('미연결 열람 중 포그라운드 재조회는 화면에서 한 단계�
   }) as never);
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');

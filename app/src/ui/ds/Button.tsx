@@ -6,6 +6,8 @@ import {ds, minTouch, roleText, type Tone} from './roles';
 import {pickLayout, useAudience, type LayoutOnlyStyle} from './audience';
 
 export type ButtonKind = 'primary' | 'secondary' | 'text' | 'danger';
+/** buttonRef 가 가리키는 것(화면이 RN Pressable 을 import 하지 않고 포커스 되돌림 ref 를 만들 때) */
+export type ButtonHandle = React.ComponentRef<typeof Pressable>;
 export type ButtonProps = {
   kind?: ButtonKind;
   /** dock: 가로를 채움(Dock·본문 끝 행동). inline: 글자만큼(카드·행 안) */

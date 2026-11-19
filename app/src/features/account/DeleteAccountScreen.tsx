@@ -1,12 +1,10 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, TextInput, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
 import {BackBar} from '../../app/BackBar';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
-import {color, FONT_SCALE_MAX_BODY, radius} from '../../ui/tokens';
+import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
 import type {DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
@@ -18,7 +16,12 @@ import {Dialog} from '../../ui/Dialog';
 
 type Props = {role: 'parent' | 'child'};
 
-// 단계별 경고. "그만둘래요"가 주 버튼. 어르신: P9 화면(1단계) → 확인 상자 '정말 모두 지울까요? / 되돌릴 수 없어요'(2단계, DECISIONS 153·감사 H1). 자녀: 계정 지우기 -> (마지막 자녀면 '지우기' 입력) -> 계정 지우기.
+// 계정 지우기(어르신 P9·자녀 C8 공용). v4(시안 없음, 토큰 효과만): 배치는 그대로, 부품만 ui/ds.
+// 단계: 어르신 = 이 화면(1단계) → 확인 상자 '정말 모두 지울까요? / 되돌릴 수 없어요'(2단계, DECISIONS 153·감사 H1, 상자는 ui/Dialog 그대로 — ds 에 Dialog 없음).
+//       자녀 = 계정 지우기 → (마지막 자녀면 '지우기' 입력) → 계정 지우기.
+// Dock: 주 = 안전한 '안 지울래요'(#134 닫기 말 — 질문의 거절), 보조 = 위험 외곽선(ds Button danger). 실패하면 본문 맨 위에 위험 상자 + 보조가 '다시 하기'.
+// 측정: account_deleted 는 서버(삭제 RPC)가 기록한다 — 이 화면은 api.deleteMyAccount 만 부른다(바꾸지 않음).
+// audience: 자녀는 자녀 스택 루트, 어르신은 기본(elder).
 export function DeleteAccountScreen({role}: Props) {
   const navigation = useNavigation();
   const {api, clear} = useSession();
@@ -27,7 +30,7 @@ export function DeleteAccountScreen({role}: Props) {
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<Message | null>(null);
   const [confirm2, setConfirm2] = useState(false); // 어르신 2단계 확인 상자
-  const yesRef = useRef<React.ComponentRef<typeof View>>(null);
+  const yesRef = useRef<ButtonHandle>(null);
   const child = role === 'child';
   const dp = copy.delete.parent;
   const dc = copy.delete.child;
@@ -79,9 +82,7 @@ export function DeleteAccountScreen({role}: Props) {
       const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
       clear();
       prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
-      navigation.dispatch(
-        CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}),
-      );
+      navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: r.scope, role, title}}]}));
     } catch (e) {
       setFailed(errorMessage(e));
     } finally {
@@ -91,73 +92,74 @@ export function DeleteAccountScreen({role}: Props) {
 
   const confirmEnabled = !busy && (!strong || typed.trim() === dc.type_word);
 
-  // 표준 화면 틀: 경고 내용은 본문(스크롤), 안전한 "그만둘래요"(주)와 위험 외곽선 버튼은 하단 고정.
-  // 실패하면 하단에 오류 패널 + "다시 하기"(위험 외곽선, 같은 지우기를 다시 시도)를 둔다.
-  const dangerButton = !child ? (
-    // 어르신: 이 화면이 1단계, 누르면 2단계 확인 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
-    <BigButton variant="danger" label={dp.yes} loading={busy} buttonRef={yesRef} onPress={() => setConfirm2(true)} />
-  ) : stage === 1 ? (
-    <BigButton variant="danger" label={dc.danger} disabled={scope === null} onPress={() => setStage(2)} />
-  ) : (
-    <BigButton variant="danger" label={dc.danger} disabled={!confirmEnabled} loading={busy} onPress={run} />
-  );
-  const dock = (
-    <>
-      {failed ? (
-        <View style={styles.fail} accessibilityLiveRegion="polite">
-          <Text20 size={24} weight="bold" style={styles.failTitle}>{child ? dc.fail : dp.fail_title}</Text20>
-          {child ? null : <Text20>{dp.fail_body}</Text20>}
-        </View>
-      ) : null}
-      <BigButton label={child ? dc.cancel : dp.cancel} onPress={() => navigation.goBack()} />
-      {failed ? <BigButton variant="danger" label={failed.button} loading={busy} onPress={run} /> : dangerButton}
-    </>
-  );
+  // 위험 보조 버튼: 어르신은 이 화면이 1단계라 누르면 2단계 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
+  const danger = failed
+    ? {label: failed.button, onPress: run, loading: busy}
+    : !child
+      ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, buttonRef: yesRef}
+      : stage === 1
+        ? {label: dc.danger, onPress: () => setStage(2), disabled: scope === null}
+        : {label: dc.danger, onPress: run, disabled: !confirmEnabled, loading: busy};
+
+  const heading = !child
+    ? dp.title
+    : scope === null
+      ? null
+      : scope === 'none'
+        ? copy.child.delete_none.title // 0049: 가족 연결 전 계정 — '{호칭}의 기록은 남아요'는 틀린 안내라 쓰지 않는다
+        : strong
+          ? null // 마지막 자녀: 제목 대신 위험 상자가 머리글
+          : dc.keep_title;
 
   return (
-    <Screen top={<BackBar />} bottom={dock}>
-      {child && scope === null ? (
-        <Text20>{appCopy.loading}</Text20>
-      ) : child ? (
+    <DsScreen
+      variant="form"
+      header={
         <>
-          {scope === 'none' ? (
-            // 0049: 가족 연결 전 계정 — '{호칭}의 기록은 남아요'는 틀린 안내라 쓰지 않는다
-            <>
-              <Text20 size={24} weight="bold">{copy.child.delete_none.title}</Text20>
-              <Text20 testID="delete-none-body">{copy.child.delete_none.body}</Text20>
-            </>
-          ) : strong ? (
-            <View style={styles.box}>
-              <Text20 size={24} weight="bold" style={styles.dangerText}>{withTitle(dc.last_title, title)}</Text20>
-              <Text20 size={24} weight="bold">{withTitle(dc.last_body, title)}</Text20>
-            </View>
-          ) : (
-            <>
-              <Text20 size={24} weight="bold">{dc.keep_title}</Text20>
-              <Text20>{withTitle(dc.keep_body, title)}</Text20>
-            </>
-          )}
-          <Text20 weight="bold">{dc.warn_label}</Text20>
+          <BackBar />
+          {heading ? <Heading level={1}>{heading}</Heading> : null}
         </>
+      }
+      dock={{
+        primary: {label: child ? dc.cancel : dp.cancel, onPress: () => navigation.goBack()},
+        secondary: {kind: 'danger', ...danger},
+      }}>
+      {failed ? (
+        // 실패 상자: 색만이 아니라 굵은 외곽선 + 머리글 문구로 구분(명세 §8 danger). 나타날 때 한 번 읽는다
+        <View style={styles.box} accessibilityLiveRegion="polite" testID="delete-fail">
+          <Text role="heading" tone="danger">
+            {child ? dc.fail : dp.fail_title}
+          </Text>
+          {child ? null : <Text role="body">{dp.fail_body}</Text>}
+        </View>
+      ) : null}
+      {!child ? (
+        <Text role="bodyLg">{dp.step1_body}</Text>
+      ) : scope === null ? (
+        <StateView kind="loading" title={appCopy.loading} />
       ) : (
         <>
-          <Text20 size={28} weight="bold" accessibilityRole="header">{dp.title}</Text20>
-          <Text20 size={24}>{dp.step1_body}</Text20>
+          {scope === 'none' ? (
+            <Text role="bodyLg" testID="delete-none-body">
+              {copy.child.delete_none.body}
+            </Text>
+          ) : strong ? (
+            <View style={styles.box}>
+              <Text role="heading" tone="danger" accessibilityRole="header">
+                {withTitle(dc.last_title, title)}
+              </Text>
+              <Text role="bodyLg">{withTitle(dc.last_body, title)}</Text>
+            </View>
+          ) : (
+            <Text role="bodyLg">{withTitle(dc.keep_body, title)}</Text>
+          )}
+          <Text role="heading" tone="danger">
+            {dc.warn_label}
+          </Text>
         </>
       )}
 
-      {stage === 2 && strong ? (
-        <>
-          <Text20>{dc.type_hint}</Text20>
-          <TextInput
-            accessibilityLabel="확인 글자 입력"
-            value={typed}
-            onChangeText={setTyped}
-            maxFontSizeMultiplier={FONT_SCALE_MAX_BODY}
-            style={styles.input}
-          />
-        </>
-      ) : null}
+      {stage === 2 && strong ? <Field label={dc.type_hint} value={typed} onChangeText={setTyped} testID="delete-type" /> : null}
       {child ? null : (
         <Dialog
           visible={confirm2}
@@ -179,15 +181,11 @@ export function DeleteAccountScreen({role}: Props) {
           testID="delete-confirm2"
         />
       )}
-    </Screen>
+    </DsScreen>
   );
 }
 
-// 위험 박스(명세 §8 danger): 색만이 아니라 굵은 외곽선 + 굵은 제목 문구로 구분
 const styles = StyleSheet.create({
-  box: {borderWidth: 4, borderColor: color.dangerInk, backgroundColor: color.dangerSoft, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 8},
-  dangerText: {color: color.dangerInk},
-  fail: {borderWidth: 3, borderColor: color.dangerInk, backgroundColor: color.dangerSoft, borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
-  failTitle: {color: color.dangerInk},
-  input: {minHeight: 64, fontSize: 24, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, paddingHorizontal: 16, color: color.inkBody},
+  // 위험 상자: dangerSoft 면 + dangerInk 굵은 외곽선(색만으로 알리지 않음 — 머리글 문구와 함께)
+  box: {borderWidth: 3, borderColor: ds.color.dangerInk, backgroundColor: ds.color.dangerSoft, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 8, alignSelf: 'stretch'},
 });

@@ -36,9 +36,9 @@ tags:
     # 다음 화면 전환 중 계속 움직이는 요소가 있으면 Maestro 가 안정 대기로 수 분을 쓴다 → 짧게
     waitToSettleTimeoutMs: 1000
 - extendedWaitUntil:
-    visible: '자판으로 쓰기.*'
+    visible: '낱말 쓰기.*'
     timeout: 10000
-- tapOn: '자판으로 쓰기.*'
+- tapOn: '낱말 쓰기.*'
 # 넘어가기 경로(F1 은 쓰기 경로)
 - extendedWaitUntil:
     visible: '오늘은 넘어갈게요'

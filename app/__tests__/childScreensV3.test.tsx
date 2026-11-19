@@ -5,7 +5,11 @@ import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import * as clipboard from '../src/ui/clipboard';
+import {warmAppRoot} from '../testUtils/warm';
 import {press} from '../testUtils/flow';
+
+// 콜드 스타트 예열(#125 리뷰): 첫 AppRoot 테스트(C3 만료)만 부하에 시간 초과하던 것
+beforeAll(warmAppRoot);
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const waitApi = (o: Parameters<typeof createFakeApi>[0] = {}) => createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', ...o});
@@ -243,7 +247,7 @@ describe('C3 연결 대기', () => {
         jest.advanceTimersByTime(15000 * 3);
       });
       expect(get.mock.calls.length).toBe(n); // 가려진 동안 확인 없음
-      await press('이전 화면으로 가기');
+      await press('기다리는 화면으로');
       await waitFor(() => screen.getByText('연결 기다리는 중'));
       expect(get.mock.calls.length).toBe(n + 1); // 다시 보일 때 한 번
       await act(async () => {
@@ -298,7 +302,7 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByText('가을 이야기를 해 볼까요?'));
     expect(screen.getByText('우리 집 앨범')).toBeTruthy();
     expect(screen.getByRole('tab', {name: '앨범', selected: true})).toBeTruthy();
-    expect(screen.getByRole('tab', {name: '지난 답'})).toBeTruthy();
+    expect(screen.getByRole('tab', {name: '지난 날'})).toBeTruthy();
     unmount();
     render(<AppRoot api={createFakeApi({consented: true, latest: {prompt: null, choiceLabel: '봄', answeredDate: '2020-01-02'}})} role="child" />);
     await waitFor(() => screen.getByText('이 답으로 이야기를 시작해 봐요'));
@@ -435,8 +439,8 @@ describe('C5 지난 답', () => {
 
   test('어르신 1명: 제목에 호칭, 최근 한 달 안내, 날짜·짧은 질문·고른 답 행, 이야기 주제 추천', async () => {
     render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', history: items})} role="child" />);
-    await openTab('지난 답');
-    await waitFor(() => screen.getByText('엄마의 지난 답'));
+    await openTab('지난 날');
+    await waitFor(() => screen.getByText('엄마의 지난 날'));
     expect(screen.getByText('최근 한 달 동안 고른 답이에요')).toBeTruthy();
     const rows = screen.getAllByTestId('child-past-item');
     expect(rows).toHaveLength(2);
@@ -459,16 +463,16 @@ describe('C5 지난 답', () => {
         role="child"
       />,
     );
-    await openTab('지난 답');
+    await openTab('지난 날');
     await waitFor(() => screen.getByRole('header', {name: '엄마'}));
     expect(screen.getByRole('header', {name: '아빠'})).toBeTruthy();
-    expect(screen.getByRole('header', {name: '지난 답'})).toBeTruthy();
+    expect(screen.getByRole('header', {name: '지난 날'})).toBeTruthy();
     expect(screen.getByText('답을 나누지 않는 중이에요')).toBeTruthy();
   });
 
   test('나누지 않는 중이면 그 안내만(이야기 주제 행 없음)', async () => {
     render(<AppRoot api={createFakeApi({consented: false})} role="child" />);
-    await openTab('지난 답');
+    await openTab('지난 날');
     await waitFor(() => screen.getByText('답을 나누지 않는 중이에요'));
     expect(screen.queryByTestId('child-past-topic')).toBeNull();
     expect(within(screen.getByTestId('child-past-empty')).getByTestId('brand-symbol', {includeHiddenElements: true})).toBeTruthy(); // C4 와 같은 심볼(장식)
@@ -476,7 +480,7 @@ describe('C5 지난 답', () => {
 
   test('서버 오류: "목록이 열리지 않아요…" + 다시 하기로 다시 불러온다', async () => {
     render(<AppRoot api={createFakeApi({consented: true, history: items, failHistoryServer: 1})} role="child" />);
-    await openTab('지난 답');
+    await openTab('지난 날');
     await waitFor(() => screen.getByText('목록이 열리지 않아요. 잠시 뒤에 다시 해 볼까요?'));
     await press('다시 하기');
     await waitFor(() => expect(screen.getAllByTestId('child-past-item')).toHaveLength(2));
@@ -566,7 +570,7 @@ describe('C7 설정 v2', () => {
     const dialog = screen.getByTestId('dialog');
     expect(within(dialog).getByText('로그아웃할까요?')).toBeTruthy();
     expect(within(dialog).getByText('같은 방법(카카오)으로 다시 로그인하면 지금 가족과 그대로 이어져요')).toBeTruthy();
-    await press('그만둘래요');
+    await press('닫기');
     expect(screen.queryByTestId('dialog')).toBeNull();
     await press('로그아웃');
     fireEvent.press(within(screen.getByTestId('dialog')).getByRole('button', {name: '로그아웃'}));

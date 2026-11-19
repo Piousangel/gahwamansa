@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, screen, waitFor, within} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import type {HistoryDay} from '../src/api/contract/history';
@@ -65,7 +65,7 @@ test('한 날: 날짜 제목·사진(캡션·AI가 만든 그림)·"봄과 가�
   expect(screen.getByText('AI가 만든 그림')).toBeTruthy();
   expect(screen.getByLabelText('봄과 가을 중 고른 답, 가을')).toBeTruthy();
   expect(screen.getByLabelText('낱말, 감나무')).toBeTruthy();
-  await press('이전 화면으로 가기');
+  await press('지난 날로');
   await waitFor(() => screen.getByText('최근 한 달 동안 본 사진이에요'));
 });
 
@@ -105,10 +105,10 @@ test('미연결 기기는 서버 기록이 없으므로 진입을 숨기고 부�
   expect(get).not.toHaveBeenCalled();
 });
 
-test('목록에서 이전(‹ 오늘 코스)은 코스 홈으로', async () => {
+test('목록에서 뒤로(‹ 오늘 코스로)는 코스 홈으로', async () => {
   await home({parentDays: [d1]});
   await press('지난 날 보기');
   await waitFor(() => screen.getByTestId('history-item-2026-11-19'));
-  await press('오늘 코스로 돌아가기');
+  await act(async () => fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로'})[0]));
   await waitFor(() => screen.getByTestId('date-line'));
 });

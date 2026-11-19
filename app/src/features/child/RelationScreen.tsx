@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
-import { useSession } from '../../app/session';
-import { AudienceProvider, Choice, DsScreen, Heading, Text } from '../../ui/ds';
-import { copy, offlineMessage } from '../../copy/copy';
-import { isOffline, isServerError, PARENT_TITLES } from '../types';
-import { useBusyLatch } from '../../ui/useBusyLatch';
-import { track } from '../track';
-import { useFoldGap } from '../../ui/ds/useFoldGap';
-import { ds } from '../../ui/ds/roles';
+import React, {useState} from 'react';
+import {View} from 'react-native';
+import {CommonActions, useNavigation} from '@react-navigation/native';
+import {useSession} from '../../app/session';
+import {AudienceProvider, Choice, DsScreen, Heading, Text} from '../../ui/ds';
+import {copy, offlineMessage} from '../../copy/copy';
+import {isOffline, isServerError, PARENT_TITLES} from '../types';
+import {useBusyLatch} from '../../ui/useBusyLatch';
+import {track} from '../track';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
+import {ds} from '../../ui/ds/roles';
 
 const t = copy.relation;
 
@@ -18,9 +18,9 @@ const t = copy.relation;
 // - 위 BackLink '처음으로'(로그아웃 확인 없이 역할 선택으로, 감사 M10), Dock = '다음'
 export function RelationScreen() {
   const navigation = useNavigation();
-  const { api, resetRole } = useSession();
+  const {api, resetRole} = useSession();
   const [title, setTitle] = useState<string>('부모님');
-  const { busy, begin: beginBusy, end: endBusy } = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<string | null>(null);
   // R-15: 1열(200%)로 넘치면 첫 화면 끝에 걸친 줄을 통째로 아래로(+ DsScreen '더 있음' 띠). 2열이면 두 칸 한 줄 단위
   const fold = useFoldGap(PARENT_TITLES.length, ds.touch.elder.gap);
@@ -53,11 +53,11 @@ export function RelationScreen() {
       const reuse = s.kind === 'family' && s.code ? s.code.code : null;
       if (!reuse) {
         await api.issueInviteCode();
-        track(api, 'invite_code_issued', { purpose: 'parent_code' }); // AC-05: 새로 받은 때만(다시 쓰는 번호는 세지 않음)
+        track(api, 'invite_code_issued', {purpose: 'parent_code'}); // AC-05: 새로 받은 때만(다시 쓰는 번호는 세지 않음)
       }
       // C3 로 바로(스택에 C1 이 남지 않게). 번호 보내기·복사(invite_share_tapped)는 C3 가 잰다
       navigation.dispatch(
-        CommonActions.reset({ index: 0, routes: [{ name: 'Wait' }] }),
+        CommonActions.reset({index: 0, routes: [{name: 'Wait'}]}),
       );
     } catch (e) {
       setFailed(isOffline(e) ? offlineMessage.title : t.failed);
@@ -70,7 +70,7 @@ export function RelationScreen() {
     <AudienceProvider value="child">
       <DsScreen
         variant="form"
-        back={{ label: copy.login.back, onPress: resetRole }}
+        back={{to: copy.login.back, onPress: resetRole}}
         header={
           <>
             <Heading level={1}>{t.title}</Heading>
@@ -78,7 +78,7 @@ export function RelationScreen() {
           </>
         }
         onViewport={fold.onViewport}
-        dock={{ primary: { label: t.next, onPress: next, loading: busy } }}
+        dock={{primary: {label: t.next, onPress: next, loading: busy}}}
       >
         <View onLayout={fold.onBlock}>
           <Choice
@@ -86,7 +86,7 @@ export function RelationScreen() {
             columns={2}
             testID="title-group"
             accessibilityLabel={t.title}
-            items={PARENT_TITLES.map(p => ({ key: p, label: p }))}
+            items={PARENT_TITLES.map(p => ({key: p, label: p}))}
             value={title}
             onSelect={setTitle}
             onItemHeights={fold.onHeights}

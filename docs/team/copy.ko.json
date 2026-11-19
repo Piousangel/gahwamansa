@@ -33,7 +33,7 @@
     "declined_detail": "고른 답은 저장되지 않아요",
     "declined_reassure": "마음이 바뀌면 설정에서 다시 골라요",
     "save_failed": "저장이 안 됐어요. 다시 눌러 주세요",
-    "declined_button": "알겠어요"
+    "declined_button": "오늘 코스로"
   },
   "errors": {
     "invalid": {
@@ -44,17 +44,17 @@
     "used": {
       "title": "이미 쓴 번호예요",
       "body": "가족에게 새 번호를 받아 주세요",
-      "button": "알겠어요"
+      "button": "다른 번호 쓰기"
     },
     "expired": {
       "title": "번호 기간이 지났어요",
       "body": "가족에게 새 번호를 받아 주세요",
-      "button": "알겠어요"
+      "button": "다른 번호 쓰기"
     },
     "rate_limited": {
       "title": "잠깐 쉬었다 해요",
       "body": "조금 뒤에 다시 써 볼까요?",
-      "button": "알겠어요"
+      "button": "번호 쓰기로"
     },
     "busy": {
       "title": "지금 사람이 많아요",
@@ -114,12 +114,12 @@
   },
   "child": {
     "tab_album": "앨범",
-    "tab_past": "지난 답",
+    "tab_past": "지난 날",
     "title_suffix": "의 최근 답",
     "talk": " 이야기를 해 볼까요?",
     "no_answer": "고른 답이 생기면 여기에 보여요",
     "not_shared": "답을 나누지 않는 중이에요",
-    "past_title": "지난 답",
+    "past_title": "지난 날",
     "delete_link": "내 계정 지우기",
     "delete_none": {
       "title": "내 계정 지우기",
@@ -142,8 +142,8 @@
       },
       "starter_label": "이야기 꺼내기",
       "empty": {
-        "_status": "C4 첫날 빈 상태 안 B 시안(#42·#59) 문구. line·starter·예시 줄은 라이터 확인 전(PR #42 리뷰 3), starter_label·chip 은 기존 확정문과 같음. 예시 날짜는 ○월 ○일(디자인 #89: 실제 답 기록처럼 읽히지 않게), 읽기 이름은 날짜 없이 spoken(PR #87 재확인 L7), 첫 카드 제목 '이렇게 보여요'(디자인 #94, 실제 카드 '…의 최근 답'과 다르게, 라이터 확인 대상). 첫 예시 질문 '봄과 가을 중'(토스 패널 r1: '산과 바다 중 가을'은 보기에 없는 답 — 답·첫마디 '가을'과 맞춤, 라이터 확인 대상)",
-        "line": "부모님이 오늘 사진을 보시면 여기에 답이 보여요",
+        "_src": "C4 첫날 빈 상태 안 B 시안(#42·#59). 라이터 11-20 확정: line(W-05, 답은 사진을 볼 때가 아니라 고를 때 생김)·예시 줄(보기 안의 답)·starter. 예시 날짜 ○월 ○일(디자인 #89), 읽기 이름은 날짜 없이 spoken(PR #87 L7), 첫 카드 제목 '이렇게 보여요'(실제 카드 '…의 최근 답'과 구분)",
+        "line": "부모님이 오늘 둘 중 하나를 고르시면 여기에 답이 보여요",
         "chip": "예시",
         "examples": [
           {"title": "이렇게 보여요", "line": "○월 ○일 · 봄과 가을 중", "spoken": "봄과 가을 중", "choice": "가을"},
@@ -163,11 +163,12 @@
         "taken": "이미 쓰는 이름",
         "taken_a11y": "{이름}, 이미 쓰는 이름, 사용할 수 없음",
         "save": "이 이름으로 바꾸기",
-        "later": "나중에 할게요",
+        "later": "다음에",
         "close": "닫기"
       }
     },
     "cheer": {
+      "_status_w03": "라이터 초안(11-20, 미확정 — 미리 생성 음성 재합성 O-9와 함께 확정, 전문가 리뷰 A14 ①②④). 이름 '응원'→'한마디': child.cheer.button '한마디 보내기', child.cheer.title '어떤 한마디를 보낼까요?', cheer.title(P8) '가족이 보낸 한마디예요', push.channel.cheer '한마디', push.channel.cheer_desc '가족이 한마디를 보내면 알려 드려요', push.cheer.title '가족이 한마디를 보냈어요', tts.read.cheer '가족이 보낸 한마디예요. {응원}'. 문장 4개(cheers.*): 답에 묶은 둘 '{답} 고르신 거 봤어요'·'{답} 이야기 듣고 싶어요'(답 후보 60개 미리 생성 가능할 때만, 아니면 고정 문장으로 대체), 가족 말 둘 '사랑해요'·'보고 싶어요'. 보낸 사람은 A6 고정 목록(큰딸·작은딸·막내…, 기본 '가족')이 들어오면 '가족' 자리를 바꾼다. 표: docs/team/copy/2026-11-20-ai-tells-w03.md",
       "button": "응원 보내기",
       "title": "어떤 말을 보낼까요?",
       "hint": "하나를 누르면 바로 보내요",
@@ -176,7 +177,7 @@
       "partial": "{호칭}께 보냈어요. 나머지 분께는 잠시 뒤에 다시 보내 주세요",
       "daily_limit": "오늘 보낼 수 있는 응원은 다 보냈어요. 내일 다시 보낼 수 있어요",
       "disconnected": "{호칭} 폰의 연결이 풀려서 응원이 가지 않았어요",
-      "undo": "취소",
+      "undo": "되돌리기",
       "undone": "응원을 보내지 않았어요"
     },
     "wait": {
@@ -213,8 +214,8 @@
     },
     "past": {
       "_src": "copy-v3 6·10절 C5, 시안 C5_history v4",
-      "title": "{호칭}의 지난 답",
-      "title_many": "지난 답",
+      "title": "{호칭}의 지난 날",
+      "title_many": "지난 날",
       "sub": "최근 한 달 동안 고른 답이에요",
       "topic": "이야기 주제 추천",
       "topic_badge": "곧 유료",
@@ -246,7 +247,7 @@
       "logout": "로그아웃",
       "logout_title": "로그아웃할까요?",
       "logout_body": "같은 방법({수단})으로 다시 로그인하면 지금 가족과 그대로 이어져요",
-      "logout_cancel": "그만둘래요",
+      "logout_cancel": "닫기",
       "app": "앱",
       "app_info": "앱 정보",
       "version": "버전 {버전}",
@@ -276,14 +277,14 @@
     "stop": "그만 보여 주기",
     "stop_title": "가족에게 그만 보여 줄까요?",
     "stop_body": "지난 답은 지워져요. 앱은 계속 쓸 수 있어요",
-    "keep": "그대로 둘래요",
+    "keep": "닫기",
     "stopped": "이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요",
     "resume": "다시 보여 주기",
     "resume_confirm": "오늘부터 고른 답이 가족에게 보여요",
     "resume_yes": "좋아요",
     "delete_row": "모두 지우기",
     "delete_hint": "고른 답과 도장이 지워지고 연결도 끊겨요",
-    "back": "돌아가기",
+    "back": "오늘 코스로",
     "app_info": "앱 정보",
     "ai_notice": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
     "family_row": "연결된 가족",
@@ -309,7 +310,7 @@
     "parent": {
       "title": "모두 지울까요?",
       "body": "고른 답과 도장이 모두 지워져요. 가족과 연결도 끊겨요. 되돌릴 수 없어요",
-      "cancel": "그만둘래요",
+      "cancel": "안 지울래요",
       "yes": "모두 지우기",
       "step1_body": "고른 답과 도장이 모두 지워져요. 가족과 연결도 끊겨요",
       "step2_title": "정말 모두 지울까요?",
@@ -325,7 +326,7 @@
       "last_title": "{호칭}의 기록도 함께 지워져요",
       "last_body": "마지막 자녀라서 {호칭}의 고른 답과 기록이 모두 지워져요. 되돌릴 수 없어요",
       "warn_label": "되돌릴 수 없어요",
-      "cancel": "그만둘래요",
+      "cancel": "안 지울래요",
       "danger": "계정 지우기",
       "type_hint": "아래 칸에 지우기 두 글자를 써 주세요",
       "type_word": "지우기",
@@ -337,13 +338,13 @@
     }
   },
   "course": {
-    "title": "오늘의 코스",
+    "title": "오늘 코스",
     "greeting": "세 가지를 차례로 해요",
     "stamps_label": "이번 주 도장",
     "step": {
       "photo": "사진 보기",
       "question": "둘 중 고르기",
-      "hangul": "자판으로 쓰기"
+      "hangul": "낱말 쓰기"
     },
     "status": {
       "done": "했어요",
@@ -355,7 +356,7 @@
       "question": "정했어요",
       "hangul": "다 썼어요"
     },
-    "disconnected_banner": "번호를 받으면 그때부터 답이 저장돼요",
+    "disconnected_banner": "번호를 받으면 답이 저장돼요",
     "write_code": "번호 쓰기",
     "left_two": "둘 남았어요",
     "left_one": "하나 남았어요",
@@ -474,7 +475,7 @@
     "blocked_parent_device": {
       "title": "이 폰은 부모님 휴대폰으로 쓰고 있어요",
       "body": "자녀 로그인은 자녀 휴대폰에서 해 주세요",
-      "button": "알겠어요"
+      "button": "처음으로"
     },
     "choose_title": "로그인하고 시작해요",
     "kakao": "카카오 로그인",
@@ -538,10 +539,40 @@
     ],
     "button": "앨범으로"
   },
+  "dismiss": {
+    "close": "닫기",
+    "later": "다음에"
+  },
   "nav": {
-    "back": "‹ 이전",
-    "back_a11y": "이전 화면으로 가기",
-    "back_course": "‹ 오늘 코스",
+    "to": {
+      "Connect": "번호 쓰기로",
+      "Consent": "답 나누기로",
+      "CourseHome": "오늘 코스로",
+      "PhotoStep": "사진 보기로",
+      "QuestionStep": "둘 중 고르기로",
+      "KeyboardStep": "낱말 쓰기로",
+      "CourseDone": "오늘 도장으로",
+      "History": "지난 날로",
+      "HistoryDay": "그날 기록으로",
+      "Settings": "설정으로",
+      "Family": "연결된 가족으로",
+      "DeleteAccount": "모두 지우기로",
+      "DeleteDone": "처음으로",
+      "PushPermission": "알림 안내로",
+      "Web": "약관·방침으로",
+      "Oss": "오픈소스 목록으로",
+      "FamilyPreview": "가족 미리 보기로",
+      "Gate": "처음으로",
+      "Login": "로그인으로",
+      "LoginEmail": "이메일 주소로",
+      "LoginCode": "인증번호로",
+      "Relation": "호칭 고르기로",
+      "Code": "번호로",
+      "Wait": "기다리는 화면으로",
+      "AppInfo": "앱 정보로",
+      "Album": "앨범으로",
+      "Past": "지난 날로"
+    },
     "back_course_a11y": "오늘 코스로 돌아가기"
   },
   "first": {
@@ -563,8 +594,8 @@
   "connect_confirm": {
     "title": "가족이 보낸 번호예요",
     "title_typed": "이 번호가 맞나요?",
-    "from": "{호칭} 폰으로 보낸 번호예요",
-    "from_typed": "{호칭} 폰으로 만든 번호예요",
+    "from": "가족이 보낸 링크에 들어 있던 번호예요",
+    "from_typed": "가족이 이 폰에 쓰라고 만든 번호예요",
     "yes": "이 번호로 연결하기",
     "other": "다른 번호 쓰기",
     "busy": "연결하고 있어요"
@@ -587,13 +618,13 @@
     "stop_row": "그만두기",
     "stop_sub": "답 보여 주기만 그만두거나, 모두 지울 수 있어요",
     "stop_sheet": {
-      "title": "무엇을 그만할까요?",
+      "title": "무엇을 할까요?",
       "hint": "둘 중 하나를 골라 주세요",
       "share": "그만 보여 주기",
       "share_sub": "지난 답은 지워져요. 연결은 그대로예요",
       "delete": "모두 지우기",
       "delete_sub": "고른 답과 도장이 지워지고 연결도 끊겨요",
-      "cancel": "그만둘래요",
+      "cancel": "닫기",
       "close": "닫기",
       "hint_one": "지금은 가족에게 답을 보여 주지 않는 중이에요"
     },
@@ -602,7 +633,7 @@
     "empty_button": "번호 쓰기"
   },
   "review": {
-    "back": "돌아가기",
+    "back": "오늘 코스로",
     "chosen": "고른 답",
     "chosen_a11y": "고른 답, {값}",
     "word": "오늘의 낱말이에요",
@@ -692,7 +723,7 @@
     "offer_body": "오늘 코스 화면과 마친 화면에서만 조용히 나와요. 설정에서 언제든 끌 수 있어요",
     "offer_source": "AI(Google Lyria)가 만든 연주곡이에요",
     "offer_yes": "들어 볼게요",
-    "offer_no": "괜찮아요",
+    "offer_no": "안 들을게요",
     "preview_title": "이 음악 어떠세요?",
     "preview_now": "지금 나오는 음악이에요",
     "keep": "켜 둘게요",

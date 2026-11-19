@@ -119,7 +119,7 @@ describe('SocialButton(브랜드 예외)', () => {
 describe('BackLink', () => {
   test('어르신: 링크 역할, 보이는 글 = 라벨, 64×120 이상, 흰 알약 + line 테두리, 화살표', () => {
     const onPress = jest.fn();
-    render(<BackLink label="오늘 코스로" onPress={onPress} />);
+    render(<BackLink to="오늘 코스로" onPress={onPress} />);
     const el = screen.getByTestId('back-link');
     expect(el.props.accessibilityRole).toBe('link');
     expect(el.props.accessibilityLabel).toBe('오늘 코스로');
@@ -133,7 +133,7 @@ describe('BackLink', () => {
     expect(onPress).toHaveBeenCalled();
   });
   test('자녀 높이 56, 접힌 위 영역의 단계 정보는 힌트로', () => {
-    render(child(<BackLink label="이전" onPress={noop} context="3단계 중 2단계" />));
+    render(child(<BackLink to="설정으로" onPress={noop} context="3단계 중 2단계" />));
     expect(pressStyle('back-link').minHeight).toBe(56);
     expect(screen.getByTestId('back-link').props.accessibilityHint).toBe('3단계 중 2단계');
   });
@@ -242,7 +242,11 @@ describe('Choice columns(디자인 결정 a)', () => {
   const names = ['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님'].map(label => ({label}));
   test('360(목록 312)·100%면 호칭 7개가 2열, 150% 이상이면 1열', () => {
     expect(fitsTwoColumns(names, 312, 18, 1)).toBe(true);
-    expect(fitsTwoColumns(names, 312, 18, 1.3)).toBe(false); // 130%: '할아버지'가 칸에서 꺾여 1열(150% 전이라도)
+    // 130%: 360(목록 312)에서는 '할아버지'가 칸에서 꺾여 1열 — 150% 는 꺾임 조건과 별개의 기준(디자인 확인 11-20, #115 L4). 412(목록 364)에서는 150% 직전까지 2열
+    expect(fitsTwoColumns(names, 312, 18, 1.3)).toBe(false);
+    expect(fitsTwoColumns(names, 364, 18, 1.3)).toBe(true);
+    expect(fitsTwoColumns(names, 364, 18, 1.49)).toBe(true);
+    expect(fitsTwoColumns(names, 364, 18, 1.5)).toBe(false);
     expect(fitsTwoColumns(names, 312, 18, 1.5)).toBe(false);
     expect(fitsTwoColumns(names, 312, 18, 2)).toBe(false);
   });
@@ -258,6 +262,7 @@ describe('Choice columns(디자인 결정 a)', () => {
         <Choice mode="radio" columns={2} items={[{key: 'a', label: '엄마'}, {key: 'b', label: '아빠', disabled: true, a11yLabel: '아빠, 이미 쓰는 이름'}]} value="a" onSelect={() => {}} />
       </AudienceProvider>,
     );
+    fireEvent(screen.getByTestId('choice'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     expect(StyleSheet.flatten(screen.getByTestId('choice').props.style)).toMatchObject({flexDirection: 'row', flexWrap: 'wrap'});
     const [a, b] = screen.getAllByRole('radio');
     const st = StyleSheet.flatten(typeof a.props.style === 'function' ? a.props.style({pressed: false}) : a.props.style);
@@ -265,6 +270,53 @@ describe('Choice columns(디자인 결정 a)', () => {
     expect(st.borderWidth).toBe(4);
     expect(b.props.accessibilityState).toMatchObject({disabled: true});
     expect(b.props.accessibilityLabel).toBe('아빠, 이미 쓰는 이름');
+    jest.restoreAllMocks();
+  });
+});
+
+describe('어르신 답 역할(디자인 #103 R-21, 자녀 전용)', () => {
+  const {roleText} = require('../src/ui/ds/roles');
+  test('answer = 대표 1개 40/52·400·상한 1.3, answerRow = 목록 행 26/36·400·상한 1.5 — 굵기 700 이 아니라 2역할 집계에서 빠진다', () => {
+    const a = roleText('answer', 'child');
+    expect(a.style).toMatchObject({fontSize: 40, lineHeight: 52, fontWeight: '400'});
+    expect(a.maxFontSizeMultiplier).toBe(1.3);
+    const r = roleText('answerRow', 'child');
+    expect(r.style).toMatchObject({fontSize: 26, lineHeight: 36, fontWeight: '400'});
+    expect(r.maxFontSizeMultiplier).toBe(1.5);
+  });
+  test('어르신 값이 없어도 깨지지 않고 자녀 값(어르신 화면에서는 쓰지 않음)', () => {
+    expect(roleText('answer', 'elder').style.fontSize).toBe(40);
+  });
+});
+
+describe('Choice columns 판정 순서(#115 리뷰 L1·L2)', () => {
+  const two = () => StyleSheet.flatten(screen.getByTestId('choice').props.style).flexDirection === 'row';
+  const items = [{key: 'a', label: '엄마'}, {key: 'b', label: '아빠'}];
+  test('L1: 첫 그림은 1열, 폭을 잰 뒤에만 2열(한 방향)', () => {
+    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
+    render(
+      <AudienceProvider value="child">
+        <Choice mode="radio" columns={2} items={items} value="a" onSelect={() => {}} />
+      </AudienceProvider>,
+    );
+    expect(two()).toBe(false);
+    fireEvent(screen.getByTestId('choice'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
+    expect(two()).toBe(true);
+    jest.restoreAllMocks();
+  });
+  test('L2: 어림으로 2열을 골랐어도 실제 줄 수가 2 이상이면 1열로 내리고 다시 올리지 않는다', () => {
+    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
+    render(
+      <AudienceProvider value="child">
+        <Choice mode="radio" columns={2} items={items} value="a" onSelect={() => {}} />
+      </AudienceProvider>,
+    );
+    fireEvent(screen.getByTestId('choice'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
+    expect(two()).toBe(true);
+    fireEvent(screen.getByText('아빠'), 'textLayout', {nativeEvent: {lines: [{}, {}]}});
+    expect(two()).toBe(false);
+    fireEvent(screen.getByTestId('choice'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
+    expect(two()).toBe(false);
     jest.restoreAllMocks();
   });
 });

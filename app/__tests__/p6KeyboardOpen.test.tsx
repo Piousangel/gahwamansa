@@ -42,11 +42,11 @@ for (const scale of [1, 1.3, 2]) {
   test(`자판 열림(글자 ${scale * 100}%): 단계 제목 숨김(배율 무관), 카드 납작(사진·읽어 주기 없음·칸 44), 안내 글 접음 → 닫으면 원래대로`, async () => {
     mockFontScale = scale;
     const input = await toP6();
-    expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
+    expect(screen.getByLabelText('낱말 쓰기, 3단계 중 3단계')).toBeTruthy();
     await act(async () => {
       fireEvent(input, 'focus');
     });
-    expect(screen.queryByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeNull();
+    expect(screen.queryByLabelText('낱말 쓰기, 3단계 중 3단계')).toBeNull();
     expect(screen.queryByRole('button', {name: '읽어 주세요'})).toBeNull();
     expect(screen.queryByTestId('kb-hint', {includeHiddenElements: true})).toBeNull();
     expect(StyleSheet.flatten(screen.getByTestId('kb-card').props.style).padding).toBe(8);
@@ -54,16 +54,16 @@ for (const scale of [1, 1.3, 2]) {
     await act(async () => {
       fireEvent(input, 'blur');
     });
-    expect(screen.getByLabelText('자판으로 쓰기, 3단계 중 3단계')).toBeTruthy();
+    expect(screen.getByLabelText('낱말 쓰기, 3단계 중 3단계')).toBeTruthy();
     expect(screen.getAllByRole('button', {name: '읽어 주세요'})).toHaveLength(1);
   });
 }
 
 test('‹ 오늘 코스 뒤로 링크: 누름 영역 64 이상(높이·폭), 글자 24(고친 값)', async () => {
   await toP6();
-  const back = screen.getByRole('button', {name: '오늘 코스로 돌아가기'});
+  const back = screen.getAllByRole('button', {name: '오늘 코스로'})[0];
   const st = StyleSheet.flatten(typeof back.props.style === 'function' ? back.props.style({pressed: false}) : back.props.style);
   expect(st.minHeight).toBeGreaterThanOrEqual(64);
   expect(st.minWidth).toBeGreaterThanOrEqual(64);
-  expect(StyleSheet.flatten(screen.getByText('‹ 오늘 코스').props.style).fontSize).toBeGreaterThanOrEqual(24);
+  expect(StyleSheet.flatten(screen.getByText('‹ 오늘 코스로').props.style).fontSize).toBeGreaterThanOrEqual(24);
 });
