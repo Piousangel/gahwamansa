@@ -17,3 +17,5 @@ export {MoreBand, MORE_BAND_H} from './MoreBand';
 export {SWITCH_COLORS} from './switchColors';
 export {Sheet, SHEET_MAX_RATIO, type SheetProps} from './Sheet';
 export {dismissLabel, DECLINE_FORM, DISMISS_TEXT, type Dismiss} from './dismiss';
+export {Dialog, type DialogProps, type DialogAction} from './Dialog';
+export {useCover, configureCoverQueue, createCoverQueue, coverQueue, type CoverStore} from './coverQueue';
