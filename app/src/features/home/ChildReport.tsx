@@ -137,10 +137,10 @@ function Row({item}: {item: HistoryItem}) {
         </Text>
         <Text role="body">{`· ${q}`}</Text>
       </View>
-      {/* 고른 답: 리드 결정 (a, PR #98 리뷰) — title 크기(자녀 26)만, 머리글 역할은 주지 않는다(호칭 머리글 heading 과 위계가 섞이지 않게).
-          굵은 역할은 title(답)·heading(호칭 머리글) 둘 — 한 화면 2역할 규칙 안. 말줄임 없음, 절반까지 */}
+      {/* 고른 답: answerRow(디자인 #103 — 목록·여러 분 행의 어르신 답, 자녀 26/36·400·확대 상한 1.5). 머리글 역할 없음.
+          400 이라 한 화면 700 굵기 2역할 집계에서 빠진다(호칭 머리글 heading 은 그대로). 말줄임 없음, 절반까지 */}
       <View style={styles.answer}>
-        <Text role="title" style={styles.answerText}>
+        <Text role="answerRow" style={styles.answerText}>
           {item.choiceLabel}
         </Text>
       </View>

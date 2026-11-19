@@ -165,7 +165,7 @@ export function ChildHome() {
 }
 
 // 최근 답 카드(폴라로이드형 테이프 1곳 + 스티치 1줄). 어르신이 여럿이면 빈·나누지 않음 상태에도 호칭 머리를 단다.
-// v4(V4-INDEX '시안 없음, 토큰 효과만'): 배치는 v3 그대로, 글자는 ds 역할(호칭 sub·답 display·날짜 body·이야기 bodyLg), 면·선은 v4 토큰
+// v4(V4-INDEX '시안 없음, 토큰 효과만'): 배치는 v3 그대로, 글자는 ds 역할(호칭 sub·답 answer(#103)·날짜 body·이야기 bodyLg), 면·선은 v4 토큰
 function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: boolean}) {
   const head = `${p.title}${c.title_suffix}`;
   if (!p.shared || !p.latest) {
@@ -196,7 +196,8 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
       <Text role="sub" tone="muted">
         {head}
       </Text>
-      <Text role="display">{p.latest.choiceLabel}</Text>
+      {/* R-21: answer 는 화면에 1개 — 어르신 한 분일 때만. 여러 분(withHeader)이면 행마다 answerRow(#125 리뷰 M1) */}
+      <Text role={withHeader ? 'answerRow' : 'answer'}>{p.latest.choiceLabel}</Text>
       <Text role="body">{formatAnswerDate(p.latest.answeredDate)}</Text>
       <View style={styles.stitch} />
       {p.starter ? (
