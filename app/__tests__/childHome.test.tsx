@@ -30,7 +30,7 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
 test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예시 칩·점선, 누르는 것 아님) + 이야기 꺼내기 한 줄', async () => {
   render(<AppRoot api={createFakeApi({consented: true, parentTitle: '아빠', latest: null})} role="child" />);
   await waitFor(() => screen.getByTestId('child-home-empty'));
-  expect(screen.getByText('부모님이 오늘 사진을 보시면 여기에 답이 보여요')).toBeTruthy();
+  expect(screen.getByText('부모님이 오늘 둘 중 하나를 고르시면 여기에 답이 보여요')).toBeTruthy();
   for (const i of [1, 2]) {
     const card = screen.getByTestId(`child-home-example-${i}`);
     expect(card.props.accessibilityLabel).toMatch(/^예시, /); // 실제 답으로 오인하지 않게 '예시'부터 읽는다

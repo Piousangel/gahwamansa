@@ -223,7 +223,7 @@ describe('미연결', () => {
     await preview();
     const strip = screen.getByTestId('course-strip');
     expect(strip.props.accessibilityRole).toBe('button');
-    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 그때부터 답이 저장돼요');
+    expect(strip.props.accessibilityLabel).toBe('번호를 받으면 답이 저장돼요');
     const st = StyleSheet.flatten(strip.props.style);
     expect(st.borderWidth).toBe(3);
     expect(st.flexWrap).toBe('wrap');

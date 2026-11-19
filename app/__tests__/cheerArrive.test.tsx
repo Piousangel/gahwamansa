@@ -87,7 +87,7 @@ test('미연결 열람에서는 응원을 묻지 않는다', async () => {
   const get = jest.spyOn(api, 'getMyCheers');
   render(<AppRoot api={api} role="parent" />);
   await press('코스 보기');
-  await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
+  await waitFor(() => screen.getByText('번호를 받으면 답이 저장돼요'));
   expect(get).not.toHaveBeenCalled();
 });
 

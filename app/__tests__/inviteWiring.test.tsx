@@ -29,7 +29,7 @@ test('링크로 들어온 번호: 첫 화면 띠 → 부모님 → 바로 P1c(�
   await waitFor(() => screen.getByText('가족이 보낸 번호가 있어요'));
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy(); // 질문은 건너뛰지 않음
   await press(/부모님 휴대폰이에요/);
-  await waitFor(() => screen.getByText('엄마 폰으로 보낸 번호예요'));
+  await waitFor(() => screen.getByText('가족이 보낸 링크에 들어 있던 번호예요'));
   expect(screen.getByLabelText('연결 번호 1 2 3, 4 5 6')).toBeTruthy();
   expect(redeem).not.toHaveBeenCalled();
   expect(log).toHaveBeenCalledWith('link_opened', {source: 'app_link'});
