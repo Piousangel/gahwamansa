@@ -216,27 +216,34 @@ describe('v4 계정 지우기(ui/ds, 리드 결정 11-20)', () => {
   });
 });
 
-describe('#141 리뷰 낮음', () => {
-  test("L3: 서버에서는 지워졌는데 응답만 실패 → 다시 하기에서 'no_profile'(세션 없음)이면 지운 뒤 화면", async () => {
-    const {ServerError} = require('../src/features/types');
+describe('#146 리뷰 H1: no_profile 은 지우지 못한 것(로그인 정보 없음, 0049)', () => {
+  test('끊김(응답만 실패) → 다시 하기 → 서버가 {scope:none} 성공 → 지운 뒤 화면은 서버 scope 문구', async () => {
     const api = createFakeApi({consented: true});
+    const real = api.deleteMyAccount.bind(api);
     jest
       .spyOn(api, 'deleteMyAccount')
       .mockRejectedValueOnce(new OfflineError('응답 끊김'))
-      .mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+      .mockImplementationOnce(async () => {
+        await real().catch(() => {});
+        return {scope: 'none'};
+      });
     await openParentDelete(api);
     await confirmDeleteAll();
     await waitFor(() => screen.getByTestId('delete-fail'));
     await press('다시 하기');
     await waitFor(() => screen.getByText('모두 지웠어요'));
   });
-  test("L3: 처음 시도의 'no_profile'은 성공으로 보지 않는다(실패 상자)", async () => {
+  test('no_profile → 다시 해도 no_profile: 지웠다고 하지 않고 "로그인이 풀려 지워지지 않았어요" + 다시 로그인하기(번호 입력으로)', async () => {
     const {ServerError} = require('../src/features/types');
     const api = createFakeApi({consented: true});
-    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
     await openParentDelete(api);
     await confirmDeleteAll();
-    await waitFor(() => screen.getByTestId('delete-fail'));
+    await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));
+    expect(screen.getByText('다시 로그인한 뒤 해 주세요')).toBeTruthy();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    await press('다시 로그인하기');
+    await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
     expect(screen.queryByText('모두 지웠어요')).toBeNull();
   });
 });
