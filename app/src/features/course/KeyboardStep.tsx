@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   figure: {alignItems: 'center', gap: 2},
   thumb: {width: 96, backgroundColor: color.card, paddingTop: 5, paddingHorizontal: 5, paddingBottom: 12, boxShadow: shadow.soft, transform: [{rotate: '-2deg'}]},
   thumbImg: {width: 86, height: 75, backgroundColor: color.paperSoft},
-  figcaption: {color: color.ink, fontSize: 20},
+  figcaption: {color: color.inkBody, fontSize: 20},
   cells: {flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center'},
   cell: {borderRadius: 14, borderWidth: 3, borderStyle: 'dashed', borderColor: color.line, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
   cellPlain: {borderStyle: 'solid', borderColor: color.action},
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   // 입력칸(오목): 종이색 면 + 아래 밑줄, 높이 72 이상, 글자 34
   input: {minHeight: 72, paddingHorizontal: 18, paddingVertical: 8, backgroundColor: color.paperSoft, borderTopLeftRadius: radius.input, borderTopRightRadius: radius.input, borderBottomWidth: 3, borderBottomColor: color.line, fontSize: 34, color: color.inkTitle, fontWeight: 'bold'},
   inputFocused: {borderBottomWidth: 4, borderBottomColor: color.action},
-  sub: {color: color.ink},
+  sub: {color: color.inkBody},
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},
   matchedIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: color.doneSoft, alignItems: 'center', justifyContent: 'center'},
 });

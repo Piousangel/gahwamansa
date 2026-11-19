@@ -1,6 +1,6 @@
 // v3 → v4 대응표(SUMMARY Q11: v3 이름은 한 릴리스 별칭). 손으로 관리, 대상 이름은 __tests__/tokensV4.test.ts 가 tokensV4 에 있는지 검사한다.
-// 이행 원칙: tokens.ts(v3)는 값·이름 그대로 둬서 지금 화면이 깨지지 않는다. 화면은 시안 v4 뒤 각 레인이 ui/ds 컴포넌트로 옮기며 v3 참조를 지운다.
-// 값이 바뀐 이름(inkSub #85592F → #544B43)은 v3 쪽 값을 바꾸지 않는다 — 화면이 v4 로 옮겨질 때 새 값이 적용된다.
+// 이행 원칙: tokens.ts(v3)의 이름은 그대로 두고 값은 tokensV4 에서 파생한다(원본 하나). 화면은 시안 v4 뒤 각 레인이 ui/ds 컴포넌트로 옮기며 v3 참조를 지운다.
+// 값이 바뀐 이름(inkSub #85592F → #544B43)은 2026-11-20 부터 v3 쪽에도 새 값(어르신 7:1, 접근성 패널 r1). 화면 이행을 기다리지 않는다.
 import type {ColorV4, TypeRoleV4} from './tokensV4';
 
 type ColorMove = {v4: readonly ColorV4[]; note: string};

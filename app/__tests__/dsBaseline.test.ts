@@ -14,7 +14,7 @@ const {ESLint}: {
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
 // 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
-// 계정 지우기·지운 뒤(어르신·자녀 공용 ui/ds, 11-20): text20Size −8·rnImport −1·fontScale −1·fontSize −1
+// v3Color 새 종류(디자인 시스템 패널 r1, 11-20): color.ink·color.inkSub 참조 28(features·app·push). 값은 v4 로 옮겼고(inkSub 7.70) 이름은 화면 이행 때 tone 으로
 // C1 호칭(ds Choice 2열·C2 건너뜀) + C4 호칭 겹침 안내(ds Sheet·Choice), 11-20: text20Size −1
 // P7 완료 앨범(ui/ds, 11-20): 165 → 162 (text20Size −2·rnImport −1)
 // C4 홈 나머지(부품 ui/ds, 11-20): 164 → 159 (text20Size −5)
@@ -38,6 +38,7 @@ const BASELINE: Record<string, number> = {
   text20Size: 69,
   rnImport: 22,
   ellipsis: 0,
+  v3Color: 28,
 };
 
 jest.setTimeout(180000);

@@ -30,6 +30,14 @@ export type ButtonProps = {
 
 const c = ds.color;
 
+/** 눌림 모양(tokens-v4 states.pressed). 면 색과 글자 tone — dsComponents 테스트가 어르신 7:1 을 계산한다(디자인 시스템 패널 r1) */
+export const PRESSED_LOOK: Record<ButtonKind, {bg: string; ink: Tone}> = {
+  primary: {bg: c.actionPressed, ink: 'onAction'},
+  secondary: {bg: c.actionSoft, ink: 'actionPressed'}, // action 이면 6.03 → actionPressed 8.15
+  text: {bg: c.actionSoft, ink: 'actionPressed'},
+  danger: {bg: c.card, ink: 'danger'}, // dangerSoft 면이면 6.80 → card 8.31, 대신 테두리를 굵게
+};
+
 // v4 Button(SUMMARY 3절): 높이·글자는 kind 와 audience 로만 정해진다(숫자 prop 없음). minHeight 만, 고정 height 없음.
 // 갈색(action)은 누를 것 전용 — 면(주)·테두리(보조)·밑줄(text) 중 하나를 반드시 함께 쓴다.
 export function Button({kind = 'primary', size = 'dock', label, onPress, icon, disabled, loading, loadingLabel, disabledReason, accessibilityHint, style, testID, buttonRef}: ButtonProps) {
@@ -40,6 +48,9 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
   const text = roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a);
   const minHeight = minTouch(primary ? 'primary' : kind === 'text' ? 'link' : 'secondary', a);
   const ink: Tone = disabled ? 'disabled' : primary ? 'onAction' : kind === 'danger' ? 'danger' : 'action';
+  // 눌림 글자(tokens-v4 states.pressed, 디자인 시스템 패널 r1): 보조·text 는 actionSoft 면 위 action 이 6.03 이라 actionPressed(8.15).
+  // 위험은 dangerSoft 면 위 dangerInk 가 6.80 이라 면을 card 로 두고(8.31) 테두리를 굵게 한다(안쪽 여백을 같이 줄여 크기는 그대로)
+  const pressedInk = (pressed: boolean): Tone => (pressed && !disabled ? PRESSED_LOOK[kind].ink : ink);
   return (
     <View style={[size === 'dock' ? styles.stretch : styles.inline, pickLayout(style)]} testID={testID ? `${testID}-wrap` : undefined}>
       {disabled && disabledReason ? (
@@ -68,15 +79,17 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
           kind === 'text' && pressed ? styles.secondaryPressed : null,
           disabled ? styles.disabled : null,
         ]}>
-        <View style={styles.inner}>
-          {icon ? <Icon name={icon} size={text.icon ?? 32} color={roleText('link', a, ink).style.color as string} /> : null}
-          <RNText
-            {...koreanTextProps}
-            maxFontSizeMultiplier={text.maxFontSizeMultiplier}
-            style={[roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a, ink).style, styles.label, kind === 'text' && !disabled ? styles.underline : null]}>
-            {keepAllChildren(shown)}
-          </RNText>
-        </View>
+        {({pressed}) => (
+          <View style={styles.inner}>
+            {icon ? <Icon name={icon} size={text.icon ?? 32} color={roleText('link', a, pressedInk(pressed)).style.color as string} /> : null}
+            <RNText
+              {...koreanTextProps}
+              maxFontSizeMultiplier={text.maxFontSizeMultiplier}
+              style={[roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a, pressedInk(pressed)).style, styles.label, kind === 'text' && !disabled ? styles.underline : null]}>
+              {keepAllChildren(shown)}
+            </RNText>
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -87,11 +100,11 @@ const styles = StyleSheet.create({
   inline: {alignSelf: 'flex-start'},
   base: {borderRadius: ds.radius.button, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 8},
   primary: {backgroundColor: c.action},
-  primaryPressed: {backgroundColor: c.actionPressed},
+  primaryPressed: {backgroundColor: PRESSED_LOOK.primary.bg},
   secondary: {backgroundColor: c.card, borderWidth: 3, borderColor: c.action},
-  secondaryPressed: {backgroundColor: c.actionSoft},
+  secondaryPressed: {backgroundColor: PRESSED_LOOK.secondary.bg},
   danger: {backgroundColor: c.card, borderWidth: 3, borderColor: c.dangerInk},
-  dangerPressed: {backgroundColor: c.dangerSoft},
+  dangerPressed: {backgroundColor: PRESSED_LOOK.danger.bg, borderWidth: 5, paddingHorizontal: 18, paddingVertical: 6}, // 테두리 +2 만큼 안쪽 여백 −2(크기 그대로)
   text: {backgroundColor: 'transparent', paddingHorizontal: 8},
   // 비활성 면은 바탕 대비 1.10이라 녹는다 → line 테두리 1.5(3:1)를 둔다(tokens-v4 colorRules)
   disabled: {backgroundColor: c.disabledBg, borderWidth: 1.5, borderColor: c.line},

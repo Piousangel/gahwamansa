@@ -315,7 +315,7 @@ function Header({label, big, nodeRef, testID}: {label: string; big?: boolean; no
 
 const styles = StyleSheet.create({
   title: {color: color.inkTitle},
-  sub: {color: color.ink},
+  sub: {color: color.inkBody},
   header: {flexShrink: 1},
   headGroup: {gap: 24},
   // 링크 줄은 날짜 줄에 붙는다(시안: 위 −16·아래 −8 마진)
