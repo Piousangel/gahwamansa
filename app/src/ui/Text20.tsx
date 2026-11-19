@@ -31,4 +31,5 @@ export function Text20({size = MIN_BODY_FONT, weight, oneLine, style, children, 
     </Text>
   );
 }
-const styles = StyleSheet.create({base: {color: color.ink, letterSpacing: 0}});
+// 기본 글자색 = 읽는 글 inkBody(차콜). 갈색(ink/action)은 누를 수 있는 것에만(colorRules ①, 디자인 시스템 패널 r1)
+const styles = StyleSheet.create({base: {color: color.inkBody, letterSpacing: 0}});

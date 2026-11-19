@@ -80,6 +80,11 @@ const DS_SYNTAX = [
     selector: "ImportDeclaration[source.value='react-native'] > ImportNamespaceSpecifier",
     message: '[DS:rnImport] import * as … from react-native 금지 — 필요한 이름만 가져온다(Text·Pressable 우회 차단).',
   },
+  // 디자인 시스템 패널 r1(2026-11-20): 헥스만 잡아 v3 토큰 참조는 0 으로 셌다. 뜻이 v4 와 갈린 v3 이름(ink = 읽는 글·누름 겸용, inkSub)을 센다
+  {
+    selector: "MemberExpression[object.name='color'][property.name=/^(ink|inkSub)$/]",
+    message: '[DS:v3Color] v3 색 이름(color.ink·color.inkSub) 금지 — ui/ds Text tone(읽는 글 default=inkBody, 보조 muted=inkSub)·Button(누름 action)으로.',
+  },
   // 리뷰 L4: JSX 속성 색 리터럴(<Icon color="#…">, Svg stroke·fill)
   {
     selector: "JSXAttribute[name.name=/^(color|stroke|fill)$/][value.type='Literal'][value.value=/^(#|rgb)/]",

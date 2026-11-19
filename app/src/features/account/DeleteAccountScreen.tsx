@@ -189,5 +189,5 @@ const styles = StyleSheet.create({
   dangerText: {color: color.dangerInk},
   fail: {borderWidth: 3, borderColor: color.dangerInk, backgroundColor: color.dangerSoft, borderRadius: radius.card, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
   failTitle: {color: color.dangerInk},
-  input: {minHeight: 64, fontSize: 24, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, paddingHorizontal: 16, color: color.ink},
+  input: {minHeight: 64, fontSize: 24, borderWidth: 3, borderColor: color.line, borderRadius: radius.input, backgroundColor: color.card, paddingHorizontal: 16, color: color.inkBody},
 });

@@ -189,9 +189,10 @@ describe('터치·Dock·BackLink 최소값', () => {
 });
 
 describe('v3 별칭·대응표(한 릴리스 병행, Q11)', () => {
-  test('tokens.ts 의 v3 색 이름·값은 그대로다(지금 화면이 깨지지 않음)', () => {
+  test('tokens.ts 의 v3 색 이름은 그대로, 값은 v4 와 같다(inkSub 만 v3 와 달라짐 — 접근성 패널 r1, 2026-11-20)', () => {
     for (const [name, def] of Object.entries(v3.color)) {
-      expect([name, (v3color as Record<string, string>)[name]]).toEqual([name, def.value]);
+      const want = name === 'inkSub' ? colors.inkSub : def.value;
+      expect([name, (v3color as Record<string, string>)[name]]).toEqual([name, want]);
     }
   });
   test('대응표의 v4 이름은 모두 생성물에 있다', () => {
