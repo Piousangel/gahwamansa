@@ -5,7 +5,7 @@ import {clearAll, deleteOne, inputDigit} from '../../ui/codeInputLogic';
 import {hapticKeyTap} from '../../ui/haptic';
 
 // 6자리 번호 쓰기(역할에 묶이지 않음, 큰 키패드). 제출 버튼은 화면의 하단 고정 영역에 둔다.
-export function CodeEntry({value, onChange, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout}: {value: string; onChange: (next: string) => void; keyHeight?: number; groupLabel?: string; belowCells?: React.ReactNode; groupRef?: RefObject<React.ComponentRef<typeof View> | null>; foldGap?: {before: number; h: number}; onRowLayout?: (row: number, y: number, h: number) => void}) {
+export function CodeEntry({value, onChange, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout, keysGap}: {value: string; onChange: (next: string) => void; keyHeight?: number; groupLabel?: string; belowCells?: React.ReactNode; groupRef?: RefObject<React.ComponentRef<typeof View> | null>; foldGap?: {before: number; h: number}; onRowLayout?: (row: number, y: number, h: number) => void; keysGap?: number}) {
   return (
     <CodeInput
       value={value}
@@ -27,6 +27,7 @@ export function CodeEntry({value, onChange, keyHeight, groupLabel, belowCells, g
       belowCells={belowCells}
       groupRef={groupRef}
       foldGap={foldGap}
+      keysGap={keysGap}
       onRowLayout={onRowLayout}
     />
   );

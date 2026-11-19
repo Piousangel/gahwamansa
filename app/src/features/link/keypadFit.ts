@@ -4,6 +4,8 @@
 export const KEY_MAX = 68;
 export const KEY_MIN = 64; // 어르신 터치 최소
 export const CELL_H = 68;
+/** 남는 높이를 칸과 키 사이 여백에 먼저 주는 상한(디자인 결정 11-19). 나머지는 키패드 위·아래 반씩 */
+export const KEYS_GAP_MAX = 24;
 export const KEYPAD_FIXED = CELL_H + 12 + 4 * 6;
 
 // 들어가면 키 높이(64~68), 64로도 안 들어가면 null(보조 문구·제목 크기를 줄여 공간을 더 만든다).

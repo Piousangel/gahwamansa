@@ -56,7 +56,13 @@ for desc, y1, y2 in keys:
     if y2 > nav_top:
         bad.append(f'{desc}: 아래 끝 {y2} > 내비 바 위 끝 {nav_top}')
 rows = sorted({y1 for _, y1, _ in keys})
+# 디자인 결정(11-19): 모든 줄 높이가 같다(마지막 줄만 늘리기 금지). 통째로 보이는 줄끼리 비교
+row_h = {y1: max(y2 - y1 for _, a, y2 in keys if a == y1) for y1 in rows}
+whole = [h for y1, h in row_h.items() if all(y2 < scroll_bottom - 1 for _, a, y2 in keys if a == y1)]
+if whole and max(whole) - min(whole) > 2:
+    bad.append(f'줄 높이가 달라요: {row_h}')
+print(f'fold-check: 줄 높이 {row_h}')
 print(f'fold-check: 내비 모드 {mode}, 내비 바 위 끝 {nav_top}px, 스크롤 창 아래 끝 {scroll_bottom}px, 키 {len(keys)}개(줄 위 끝 {rows}), 키 높이 {full}px')
 if bad:
     sys.exit('fold-check: 실패\n  ' + '\n  '.join(bad))
-print('fold-check: 통과(보이는 키는 모두 통째로, 내비 바 위)')
+print('fold-check: 통과(보이는 키는 모두 통째로·같은 줄 높이, 내비 바 위)')
