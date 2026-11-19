@@ -1,5 +1,5 @@
 import {StyleSheet} from 'react-native';
-import {fireEvent, screen, waitFor} from '@testing-library/react-native';
+import {fireEvent, screen, waitFor, within} from '@testing-library/react-native';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, toHome, pressCourseNext} from '../testUtils/flow';
 
@@ -93,12 +93,13 @@ test('콘텐츠 없음 화면에서 다시 보기를 누르면 다시 불러온�
   expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
-test('실제 사진이면 사진 아래에 "AI가 만든 그림"을 보여 주고 자리표시면 보이지 않는다', async () => {
+test('실제 사진이면 사진 안 칩 "AI가 만든 그림"(글자 20, 배율 고정 — 시안 ds4c), 자리표시면 없다', async () => {
   await toHome(createFakeApi({realImage: true}));
   await pressCourseNext();
-  await waitFor(() => screen.getByText('AI가 만든 그림 · 실제 장소가 아니에요'));
-  const s = StyleSheet.flatten(screen.getByText('AI가 만든 그림 · 실제 장소가 아니에요').props.style);
-  expect(s.fontSize).toBeGreaterThanOrEqual(20);
+  const chip = await waitFor(() => screen.getByTestId('photo-ai-chip', {includeHiddenElements: true}));
+  const text = within(chip).getByText('AI가 만든 그림', {includeHiddenElements: true});
+  expect(StyleSheet.flatten(text.props.style).fontSize).toBeGreaterThanOrEqual(20);
+  expect(text.props.allowFontScaling).toBe(false);
 });
 
 test('자리표시 사진에는 AI 표기가 없다', async () => {

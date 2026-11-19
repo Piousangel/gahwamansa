@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 import {Icon, type IconName} from '../assets/icons';
 import {Text} from './Text';
@@ -24,6 +24,9 @@ export type ChoiceProps = {
   selectedLabel?: string;
   /** 저장 중 등 누르기 막음 */
   disabled?: boolean;
+  /** R-15 접힘 경계 맞춤(화면의 FoldStack split): 칸별 높이 알림 + 이 칸 앞에 넣을 여백 */
+  onItemHeights?: (heights: number[]) => void;
+  push?: {index: number; space: number} | null;
 };
 
 const c = ds.color;
@@ -32,16 +35,27 @@ const ANSWER_MIN_H = 96;
 
 // 선택지(SUMMARY 2-6 C4·Q5): 1열, 같은 면(흰 카드), 테두리 line(3:1), 사물 아이콘만 다르게, 글은 두 줄까지 줄바꿈(말줄임 없음).
 // 고른 것은 면 actionSoft + 굵은 테두리 + 체크 아이콘(색만으로 구분하지 않음).
-export function Choice({items, mode, value, onSelect, accessibilityLabel, testID = 'choice', look = 'list', selectedLabel, disabled}: ChoiceProps) {
+export function Choice({items, mode, value, onSelect, accessibilityLabel, testID = 'choice', look = 'list', selectedLabel, disabled, onItemHeights, push}: ChoiceProps) {
   const a = useAudience();
   const answer = look === 'answer';
+  const hs = useRef<number[]>([]);
+  const onItem = (i: number, h: number) => {
+    if (!onItemHeights || hs.current[i] === h) {
+      return;
+    }
+    hs.current[i] = h;
+    if (items.every((_, j) => hs.current[j] !== undefined)) {
+      onItemHeights(items.map((_, j) => hs.current[j]));
+    }
+  };
   return (
     <View testID={testID} accessibilityRole={mode === 'radio' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} style={styles.list}>
-      {items.map(item => {
+      {items.map((item, i) => {
         const selected = mode === 'radio' && value === item.key;
         return (
           <Pressable
             key={item.key}
+            onLayout={onItemHeights ? e => onItem(i, Math.round(e.nativeEvent.layout.height)) : undefined}
             testID={`${testID}-${item.key}`}
             accessibilityRole={mode === 'radio' ? 'radio' : 'button'}
             accessibilityLabel={item.label}
@@ -55,6 +69,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
               answer ? styles.answer : null,
               pressed ? styles.pressed : null,
               selected ? (answer ? styles.answerSelected : styles.selected) : null,
+              push && push.index === i ? {marginTop: push.space} : null,
             ]}>
             {item.icon ? <Icon name={item.icon} size={a === 'elder' ? 32 : 28} color={c.action} /> : null}
             <View style={answer ? styles.answerBody : styles.body}>
@@ -92,7 +107,7 @@ const styles = StyleSheet.create({
   body: {flex: 1, gap: 2},
   answerBody: {flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 2},
   // 테두리가 1.5 → 5 로 굵어져도 내용 자리가 움직이지 않게 안쪽 여백을 그만큼 줄인다(가로·세로). 좁으면 '✓ 골랐어요'가 다음 줄로
-  answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14, flexWrap: 'wrap'},
+  answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14, flexWrap: 'wrap', alignContent: 'center'},
   answerSelected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 5, paddingHorizontal: 16.5, paddingVertical: 10.5},
   selectedTag: {flexDirection: 'row', alignItems: 'center', gap: 8},
 });

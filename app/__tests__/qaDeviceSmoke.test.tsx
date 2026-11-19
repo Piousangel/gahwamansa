@@ -78,16 +78,15 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('B4: 사진 단계는 사진 높이를 화면 높이의 28% 이하로 줄여 회상 질문이 더 많이 보이게 한다', async () => {
+test('B4·ds4c: 사진 높이는 128(100%)·100(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
-  const w = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).maxWidth;
-  const winH = require('react-native').Dimensions.get('window').height;
-  expect(((w - 28) * 236) / 272).toBeLessThanOrEqual(winH * 0.28 + 0.5); // 사진 폭 = 틀 - 안쪽 14x2, 비율 272:236
+  const {fontScale} = require('react-native').Dimensions.get('window');
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? 100 : 128);
 });
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {

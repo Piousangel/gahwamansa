@@ -10,6 +10,7 @@ import {Choice, DsScreen, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {appCopy, copy} from '../../copy/copy';
+import {FoldStack, foldPush} from '../../ui/FoldStack';
 import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
@@ -26,7 +27,12 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const errorTop = useErrorTop(error);
   useStepStarted('question', review); // AC-05
   const [saving, setSaving] = useState(false);
-  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글 왼쪽 하늘색 막대
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글에 옅은 하늘 면
+  const [viewport, setViewport] = useState(0); // R-15 FoldStack
+  // 선택지 2장은 카드마다 접힘 경계에 맞춘다(첫 장이 보이면 첫 장은 첫 화면, 걸치는 장만 아래로)
+  const [choiceTop, setChoiceTop] = useState<number | null>(null);
+  const [choiceHeights, setChoiceHeights] = useState<number[] | null>(null);
+  const choicePush = choiceTop != null && choiceHeights ? foldPush(viewport, choiceTop, choiceHeights, ds.touch.elder.gap, true) : null;
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
   const q = content?.question;
   if (!q) {
@@ -79,40 +85,47 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     );
   }
 
-  // 시안 P5(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제), 단계 제목 한 줄 → 질문(제목) → '정답은 없어요…'(늘 한 줄, 가장 중요한 안내)
-  // → 선택지 2개(고른 것 테두리 5 + 면 + ✓ + '골랐어요') → Dock '정했어요'. 읽어 주기는 선택지 아래(R16: 화면 읽기 켜짐이면 없음)
+  // 시안 P5(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제). 본문(간격 20): 단계 제목 한 줄 → 질문(제목) → '정답은 없어요…'(늘 한 줄,
+  // 가장 중요한 안내) → 선택지 2개(고른 것 테두리 5 + 면 + ✓ + '골랐어요') → 읽어 주기(R16: 화면 읽기 켜짐이면 없음). Dock '정했어요'.
+  // R-15: 접힘에 걸치는 요소는 통째로 아래로(FoldStack)
   return (
     <DsScreen
       variant="step"
       back={back}
-      header={header}
       stepInfo={stepA11y(copy.course.step.question, 2)}
       scrollRef={errorTop}
+      onViewport={setViewport}
       dock={
         error
           ? stepErrorDock(error, confirm)
           : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
       }>
-      {error ? <StepErrorBanner error={error} /> : null}
-      <View testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
-        <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
-        <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
-      </View>
-      <Choice
-        testID="choice-group"
-        mode="radio"
-        look="answer"
-        items={[
-          {key: 'A', label: q.option_a},
-          {key: 'B', label: q.option_b},
-        ]}
-        value={choice ?? undefined}
-        selectedLabel={copy.question.chosen}
-        disabled={saving}
-        onSelect={k => setChoice(k as 'A' | 'B')}
-      />
-      {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
-      {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
+      <FoldStack viewport={viewport} gap={20} testID="p5-body" split="choice" onTop={setChoiceTop}>
+        {error ? <StepErrorBanner error={error} /> : null}
+        {header}
+        <View testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
+          <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
+          <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
+        </View>
+        <Choice
+          key="choice"
+          onItemHeights={setChoiceHeights}
+          push={choicePush}
+          testID="choice-group"
+          mode="radio"
+          look="answer"
+          items={[
+            {key: 'A', label: q.option_a},
+            {key: 'B', label: q.option_b},
+          ]}
+          value={choice ?? undefined}
+          selectedLabel={copy.question.chosen}
+          disabled={saving}
+          onSelect={k => setChoice(k as 'A' | 'B')}
+        />
+        {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
+        {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
+      </FoldStack>
     </DsScreen>
   );
 }
@@ -137,9 +150,9 @@ function ReviewChoice({label, chosen}: {label: string; chosen: boolean}) {
 
 const styles = StyleSheet.create({
   // 읽어 주는 중: 읽는 글 왼쪽에 하늘색 막대
-  // 읽어 주는 중 표시: 왼쪽 막대. 자리는 늘 두고 색만 바꿔 글 폭·줄바꿈이 움직이지 않게(리뷰)
-  readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
-  reading: {borderLeftColor: ds.color.info},
+  // 읽어 주는 중 표시: 옅은 하늘 면(글 폭·줄바꿈이 움직이지 않게 면만, 리뷰). 글자 inkTitle·inkSub 는 infoSoft 위 허용 짝
+  readBar: {borderRadius: 8},
+  reading: {backgroundColor: ds.color.infoSoft},
   card: {minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: ds.radius.select, borderWidth: 1.5, borderColor: ds.color.line, backgroundColor: ds.color.card, paddingVertical: 14, paddingHorizontal: 20},
   chosen: {borderWidth: 5, borderColor: ds.color.action, backgroundColor: ds.color.actionSoft, paddingHorizontal: 16.5, paddingVertical: 10.5},
   grow: {flex: 1},

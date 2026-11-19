@@ -5,6 +5,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {Button, DsScreen, Text, type DockProps} from '../../ui/ds';
 import {PhotoChip} from '../../ui/PhotoChip';
+import {FoldStack} from '../../ui/FoldStack';
 import {shadow} from '../../ui/tokens';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
@@ -33,7 +34,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const [imageFailed, setImageFailed] = useState(false);
   const [loaded, setLoaded] = useState(false); // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음)
   const [zoom, setZoom] = useState(false);
-  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글 왼쪽 하늘색 막대
+  const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글에 옅은 하늘 면
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
   const {api, content} = useSession();
@@ -56,6 +57,20 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const {fontScale} = useWindowDimensions();
   const large = fontScale >= 1.5;
   const photoH = large ? PHOTO_H.large : PHOTO_H.base;
+  const [viewport, setViewport] = useState(0); // R-15: 접힘에 걸치는 요소는 통째로 아래로(FoldStack)
+  // 100%라도 질문이 길어 '읽어 주세요'가 첫 화면에 못 들면 설명 줄을 읽어 주세요 아래로(200% 순서, 시안 '질문·읽어 주세요가 첫 화면')
+  // 정한 순서는 그 화면 크기·배율에서만 유지(창이 바뀌면 다시 잰다)
+  const fit = `${viewport}|${large}`;
+  const [lateFor, setLateFor] = useState<string | null>(null);
+  const onFold = useCallback(
+    (key: string | null) => {
+      if (key === 'read' || /^q\d+$/.test(key ?? '')) {
+        setLateFor(fit);
+      }
+    },
+    [fit],
+  );
+  const late = large || lateFor === fit;
   const photo = content?.photo;
   const read = useReadAloudAction(photo ? ttsText.photo(photo.recall_questions) : '', setReading);
   if (!photo) {
@@ -89,15 +104,16 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     : error
       ? stepErrorDock(error, go)
       : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}};
-  const caption = photo.caption ? <Text testID="photo-caption" role="label">{photo.caption}</Text> : null;
+  const caption = photo.caption ? <Text key="caption" testID="photo-caption" role="label">{photo.caption}</Text> : null;
   return (
     <DsScreen
       variant="step"
       back={{label: copy.course.to_home, onPress: toCourseHome}}
       stepInfo={stepA11y(copy.course.step.photo, 1, review)}
       scrollRef={errorTop}
+      onViewport={setViewport}
       dock={dock}>
-      <View style={[styles.body, large ? styles.bodyLarge : null]}>
+      <FoldStack viewport={viewport} gap={large ? 6 : 14} testID="p4-body" onFold={onFold}>
         {!review && error ? <StepErrorBanner error={error} /> : null}
         <StepHeader name={copy.course.step.photo} n={1} review={review} />
         {/* B1: 사진 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
@@ -115,7 +131,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
             // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
             <View style={styles.pending}>
               <Icon name="icon-photo" size={large ? 28 : 36} color={ds.color.inkSub} />
-              <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>
+              {/* 큰 글자(사진 100)에서는 안내 글이 사진 칸을 넘으므로 칸 아래 한 줄로 */}
+              {large ? null : <Text role="sub" tone="muted" style={styles.center}>{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>}
             </View>
           ) : (
             <Image
@@ -133,24 +150,24 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         </Pressable>
         {canZoom && hint ? <Text testID="zoom-hint" role="body">{copy.photo.zoom_hint}</Text> : null}
         {canZoom ? <PhotoZoom visible={zoom} uri={photo.image_url} caption={photo.caption} onClose={closeZoom} /> : null}
-        {large ? null : caption}
-        {photo.recall_questions.length > 0 ? (
-          <View testID="recall-questions" style={[styles.readBar, reading ? styles.reading : null]}>
-            {photo.recall_questions.map(q => (
-              <Text key={q} role="bodyLg">{q}</Text>
-            ))}
+        {late ? null : caption}
+        {/* 회상 질문은 문장마다 한 덩어리(R-15: 접힘에 걸치면 그 문장만 아래로 — 200%에서도 첫 문장이 첫 화면에) */}
+        {photo.recall_questions.map((q, i) => (
+          <View key={`q${i}`} testID={i === 0 ? 'recall-questions' : undefined} style={[styles.readBar, reading ? styles.reading : null]}>
+            <Text role="bodyLg">{q}</Text>
           </View>
-        ) : null}
+        ))}
         {/* AP-03 읽어 주기: 질문 바로 아래 본문 보조 버튼(가로 채움). 화면 읽기 켜짐이면 없음(R16) */}
         {readable ? (
-          <View testID="read-aloud" style={styles.read}>
+          <View key="read" testID="read-aloud" style={styles.read}>
             <Button kind="secondary" label={read.label} loading={read.busy} onPress={read.onPress} />
             <ReadAloudNotice notice={read.notice} />
           </View>
         ) : null}
-        {large ? caption : null}
+        {late ? caption : null}
+        {large && !showImage ? <Text key="pending" role="sub" tone="muted">{imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text> : null}
         <Text role="sub" tone="muted">{appCopy.photo_look}</Text>
-      </View>
+      </FoldStack>
     </DsScreen>
   );
 }
@@ -158,13 +175,11 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
 /** 사진 높이(시안 ds4c: 100% 128, 200% 100). 장식 그림이 아니라 사진 틀이라 높이를 정한다(글자 상자 아님) */
 const PHOTO_H = {base: 128, large: 100} as const;
 
-// 사진(시안 ds4c): 둘레 카드·테두리 없이 반경 22 + 그림자, 칩은 왼쪽 아래. 본문 간격 14(100%) / 6(200%)
+// 사진(시안 ds4c): 둘레 카드·테두리 없이 반경 22 + 그림자, 칩은 왼쪽 아래. 본문 간격 14(100%) / 6(200%) — FoldStack gap
 const styles = StyleSheet.create({
-  body: {gap: 14},
-  bodyLarge: {gap: 6},
-  // 읽어 주는 중 표시: 왼쪽 막대. 자리는 늘 두고 색만 바꿔 글 폭·줄바꿈이 움직이지 않게(리뷰)
-  readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
-  reading: {borderLeftColor: ds.color.info},
+  // 읽어 주는 중 표시: 옅은 하늘 면(글 폭·줄바꿈이 움직이지 않게 여백 없이 면만, 리뷰). 글자 inkBody 는 infoSoft 위 허용 짝
+  readBar: {borderRadius: 8},
+  reading: {backgroundColor: ds.color.infoSoft},
   photo: {alignSelf: 'stretch', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
   image: {flex: 1, alignSelf: 'stretch'},
   read: {gap: 8},

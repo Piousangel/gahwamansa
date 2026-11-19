@@ -40,6 +40,8 @@ export type DsScreenProps = {
   /** 본문 맨 끝(Dock 에서 넘친 슬롯 뒤). 예: C0 '부모님이시면 처음으로' 출구는 넘친 이메일 링크보다 아래(시안 C0 v4 200%) */
   tail?: React.ReactNode;
   scrollRef?: React.Ref<ScreenScroll>;
+  /** 본문 스크롤 영역 높이(접힘 경계 맞춤 FoldStack 이 쓴다, R-15) */
+  onViewport?: (h: number) => void;
 };
 
 /** 자판 높이(dp, 닫혀 있으면 0). 열림 여부는 > 0 */
@@ -63,7 +65,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef}: DsScreenProps) {
+export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, onViewport}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -127,6 +129,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
       // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
+      onViewport={onViewport}
       moreBand={<MoreBand />}
       bottom={dock && !undock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
       {children}
