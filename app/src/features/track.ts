@@ -18,21 +18,33 @@ export function track(api: Api, name: EventName, props?: EventProps): void {
     .catch(() => {});
 }
 
-// 이 기기에서 한 번만 보내는 이벤트(AC-05: app_first_open·child_first_answer_viewed).
+// 한 번만 보내는 이벤트(AC-05). app_first_open 은 기기 기준(역할을 고르기 전이라 계정이 없다),
+// child_first_answer_viewed 는 계정(accountTag) 기준 — 같은 기기에서 다른 자녀 계정이 들어와도 그 계정의 첫 답은 센다(PR #61 리뷰 L2).
+// 계정 가명값을 모르면(로그인 전·실패) 보내지 않는다. 가명값은 기기 저장 키에만 쓰고 이벤트에는 싣지 않는다.
 // 표시를 먼저 남기고 보낸다: 같은 틱 두 번 불려도, 전송이 실패해도 다시 보내지 않는다(분모가 부풀지 않게).
-const inflight = new Set<OnceEvent>();
+const PER_ACCOUNT: readonly OnceEvent[] = ['child_first_answer_viewed'];
+const inflight = new Set<string>();
 export async function trackOnce(api: Api, name: OnceEvent, props?: EventProps): Promise<void> {
-  if (inflight.has(name)) {
-    return;
-  }
-  inflight.add(name);
-  try {
-    if (await prefs().eventOnceSent(name)) {
+  let scope: string | undefined;
+  if (PER_ACCOUNT.includes(name)) {
+    const tag = await api.accountTag().catch(() => null);
+    if (!tag) {
       return;
     }
-    await prefs().markEventOnceSent(name);
+    scope = tag;
+  }
+  const key = `${name}:${scope ?? ''}`;
+  if (inflight.has(key)) {
+    return;
+  }
+  inflight.add(key);
+  try {
+    if (await prefs().eventOnceSent(name, scope)) {
+      return;
+    }
+    await prefs().markEventOnceSent(name, scope);
     track(api, name, props);
   } finally {
-    inflight.delete(name);
+    inflight.delete(key);
   }
 }

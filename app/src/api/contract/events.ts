@@ -19,7 +19,7 @@ export const EVENT_NAMES = [
 export type EventName = (typeof EVENT_NAMES)[number];
 
 /** 0033 push_copy.kind = 0034 push_kind. 알림 종류. */
-export const PUSH_KINDS = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected'] as const;
+export const PUSH_KINDS = ['daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected', 'parent_first_answer'] as const; // 0052 parent_first_answer(자녀 첫 답 알림)
 export type PushKind = (typeof PUSH_KINDS)[number];
 
 /** 문자열 속성: 키별 허용 값(서버 event_prop_ok 의 '^(a|b)$' 목록과 같음). */
@@ -35,7 +35,7 @@ export const EVENT_PROP_VALUES = {
   message_key: ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'],
   source: ['app_link', 'referrer', 'manual'], // 0029 번호가 들어온 경로
   plan: ['monthly', 'yearly', 'gift'], // 0034 C6 가격 3안(관심 표시만)
-  push_kind: PUSH_KINDS, // 0034
+  push_kind: PUSH_KINDS, // 0034 + 0055(parent_first_answer)
 } as const;
 /** 형식만 검사하는 문자열 속성(서버 정규식): v2 · 1.0.0(-12) · 영문 시작 소문자 */
 export const EVENT_FORMAT_PROPS = ['consent_version', 'app_version', 'install_source'] as const;
