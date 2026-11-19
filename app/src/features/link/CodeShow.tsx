@@ -2,6 +2,7 @@ import React from 'react';
 import {Share, StyleSheet, View} from 'react-native';
 import {Card, DsScreen, Heading, Text} from '../../ui/ds';
 import {copy} from '../../copy/copy';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {formatCode} from '../../ui/codeInputLogic';
 
 // 번호 보여 주기(역할에 묶이지 않음): 큰 숫자 3자리씩 + 보내기(시스템 공유: 카톡·문자 등).
@@ -22,6 +23,8 @@ type Props = {
 
 export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary, top, onShare}: Props) {
   const shown = formatCode(code);
+  // R-15(#146 리뷰): 200%에서 첫 화면 끝이 번호 카드·안내 줄을 반쯤 가르지 않게, 걸친 요소를 통째로 아래로(+ '더 있음' 띠)
+  const fold = useFoldGap(1 + lines.length, BLOCK_GAP);
   const send = () => {
     onShare?.();
     Share.share({message: shareMessage.split('{번호}').join(shown)}).catch(() => {});
@@ -36,21 +39,29 @@ export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLa
           <Heading level={1}>{title}</Heading>
         </>
       }
+      onViewport={fold.onViewport}
       dock={{primary: {label: sendLabel, onPress: send}, secondary: {label: primaryLabel, onPress: onPrimary}}}>
+      <View style={styles.block} onLayout={fold.onBlock} testID="code-show-block">
+      <View onLayout={fold.onItem(0)} style={fold.gapStyle(0)} testID="code-show-card">
       <Card tone="outlined" testID="code-show">
         <View accessible accessibilityLabel={a11y} style={styles.center}>
           <Text role="display">{shown}</Text>
         </View>
       </Card>
-      {lines.map(l => (
-        <Text key={l} role="bodyLg">
-          {l}
-        </Text>
+      </View>
+      {lines.map((l, i) => (
+        <View key={l} onLayout={fold.onItem(i + 1)} style={fold.gapStyle(i + 1)} testID={`code-show-line-${i + 1}`}>
+          <Text role="bodyLg">{l}</Text>
+        </View>
       ))}
+      </View>
     </DsScreen>
   );
 }
 
+const BLOCK_GAP = 16;
+
 const styles = StyleSheet.create({
+  block: {gap: BLOCK_GAP, alignSelf: 'stretch'},
   center: {alignItems: 'center', alignSelf: 'stretch'},
 });
