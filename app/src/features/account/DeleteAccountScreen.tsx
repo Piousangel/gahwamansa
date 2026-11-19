@@ -35,6 +35,7 @@ export function DeleteAccountScreen({role}: Props) {
   const child = role === 'child';
   const dp = copy.delete.parent;
   const dc = copy.delete.child;
+  const so = copy.delete.signed_out;
 
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
   const [scope, setScope] = useState<DeleteScope | null>(null);
@@ -73,10 +74,10 @@ export function DeleteAccountScreen({role}: Props) {
   }, [api, child]);
   const strong = child && scope === 'family';
 
-  // #141 리뷰 L3: 서버에서는 지워졌는데 응답만 실패했으면(끊김 등) 다시 하기 때 세션이 이미 없어 delete_my_account 가
-  // 'no_profile'(auth.uid() 없음, 0049)을 던진다. 이미 지운 계정이므로 성공(지운 뒤 화면)으로 본다 — 한 번 실패한 뒤의 다시 하기에서만.
-  // (세션이 살아 있으면 0049 가 '인증 행이 이미 없어도' {scope:'none'} 성공을 돌려주므로 따로 처리할 것이 없다)
-  const attempted = useRef(false);
+  // 서버에서 지워졌는데 응답만 끊긴 경우는 세션이 남아 있어, 다시 하기에 0049 가 {scope:'none'} 성공을 준다(따로 처리할 것 없음).
+  // 'no_profile'(0049: auth.uid() 없음 = 로그인 정보가 없음)은 지우지 못한 것 — '지웠어요'로 보이면 거짓 안내(#146 리뷰 H1).
+  // 그래서 언제든 별도 안내('로그인이 풀려 지워지지 않았어요') + 다시 로그인 경로. 지운 뒤 화면 문구는 서버가 돌려준 scope 만 쓴다.
+  const [signedOut, setSignedOut] = useState(false);
   const scrollRef = useRef<ScreenScroll>(null);
   // L4: 실패 상자는 본문 맨 위라, 나타나면 본문을 맨 위로(아래로 스크롤한 채 '다시 하기'를 눌러도 보이게)
   useEffect(() => {
@@ -94,16 +95,16 @@ export function DeleteAccountScreen({role}: Props) {
     if (!beginBusy()) {
       return;
     }
-    const retry = attempted.current;
-    attempted.current = true;
     setFailed(null);
+    setSignedOut(false);
     const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
     try {
       const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
       done(r.scope);
     } catch (e) {
-      if (retry && isServerError(e, 'no_profile')) {
-        done(scope ?? 'none'); // 범위는 미리 조회한 값(모르면 'none')
+      if (isServerError(e, 'no_profile')) {
+        setSignedOut(true);
+        setFailed({title: so.title, body: so.body, button: so.button});
         return;
       }
       setFailed(errorMessage(e));
@@ -115,7 +116,14 @@ export function DeleteAccountScreen({role}: Props) {
   const confirmEnabled = !busy && (!strong || typed.trim() === dc.type_word);
 
   // 위험 보조 버튼: 어르신은 이 화면이 1단계라 누르면 2단계 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
-  const danger = failed
+  // 로그인이 풀렸으면 다시 하기가 아니라 다시 로그인(자녀 = 로그인, 어르신 = 번호 입력). 이 기기 세션 정리 후 이동
+  const relogin = () => {
+    clear();
+    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: child ? 'Login' : 'Connect'}]}));
+  };
+  const danger = signedOut && failed
+    ? {label: failed.button, onPress: relogin}
+    : failed
     ? {label: failed.button, onPress: run, loading: busy, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
     : !child
       ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, buttonRef: yesRef}
@@ -151,9 +159,9 @@ export function DeleteAccountScreen({role}: Props) {
         // 실패 상자: 색만이 아니라 굵은 외곽선 + 머리글 문구로 구분(명세 §8 danger). 나타날 때 한 번 읽는다
         <View style={styles.box} accessibilityLiveRegion="polite" testID="delete-fail">
           <Text role="heading" tone="danger">
-            {child ? dc.fail : dp.fail_title}
+            {signedOut ? so.title : child ? dc.fail : dp.fail_title}
           </Text>
-          {child ? null : <Text role="body">{dp.fail_body}</Text>}
+          {signedOut ? <Text role="body">{so.body}</Text> : child ? null : <Text role="body">{dp.fail_body}</Text>}
         </View>
       ) : null}
       {!child ? (

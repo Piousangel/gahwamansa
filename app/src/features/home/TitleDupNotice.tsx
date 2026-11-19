@@ -81,7 +81,6 @@ export function TitleDupNotice({api, dup, parents, onChanged}: {api: Api; dup: T
         visible={open}
         title={t.title}
         sub={hint}
-        closeLabel={t.close}
         onClose={() => setOpen(false)}
         returnFocusRef={opener}
         footer={

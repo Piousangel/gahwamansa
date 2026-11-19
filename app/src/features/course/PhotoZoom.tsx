@@ -77,5 +77,5 @@ const styles = StyleSheet.create({
   photoWrap: {flex: 1, justifyContent: 'center', gap: space.sm},
   photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft},
   caption: {textAlign: 'center', color: color.inkTitle},
-  ai: {textAlign: 'center', color: color.ink},
+  ai: {textAlign: 'center', color: color.inkBody},
 });

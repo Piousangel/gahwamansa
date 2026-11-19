@@ -201,7 +201,7 @@ const AREA_MIN = 8;
 const styles = StyleSheet.create({
   seatHidden: {opacity: 0},
   head: {gap: 10},
-  question: {color: color.ink, marginBottom: 10},
+  question: {color: color.inkBody, marginBottom: 10},
   band: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
     borderRadius: 16, backgroundColor: color.card, borderWidth: 2, borderColor: color.action,

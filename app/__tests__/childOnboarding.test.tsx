@@ -5,7 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {ServerError} from '../src/features/types';
-import {press} from '../testUtils/flow';
+import {press, pressLast} from '../testUtils/flow';
 
 const EMAIL_CODE = '246810'; // fake 의 올바른 메일 인증번호
 
@@ -132,7 +132,7 @@ test('어르신 번호 화면에서 not_parent_device 면 처음으로 -> 역할
   await press(/부모님 휴대폰이에요/);
   await typeDigits('555555'); // 6자리면 저절로 확인("다음" 없음)
   await waitFor(() => screen.getByText('이 폰에서는 번호를 쓸 수 없어요'));
-  await press('처음으로');
+  await pressLast('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 

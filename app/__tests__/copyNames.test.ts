@@ -47,7 +47,7 @@ describe('이름 사전: 링크·버튼 문구 = 도착 화면 제목', () => {
     ['course.history_link → history.title', copy.course.history_link, `${NAMES.past} 보기`, copy.history.title],
     ['course.to_home → course.title', copy.course.to_home, `${NAMES.course}로`, copy.course.title],
     ['course.review_link → course.title', copy.course.review_link, `${NAMES.course} 다시 보기`, copy.course.title],
-    ['nav.back_course → course.title', copy.nav.back_course, `‹ ${NAMES.course}`, copy.course.title],
+    ['nav.to.CourseHome → course.title', copy.nav.to.CourseHome, `${NAMES.course}로`, copy.course.title],
     ['nav.back_course_a11y → course.title', copy.nav.back_course_a11y, `${NAMES.course}로 돌아가기`, copy.course.title],
   ])('%s', (_name, link, expected, title) => {
     expect(link).toBe(expected);
@@ -69,7 +69,7 @@ describe('이름 사전: 링크·버튼 문구 = 도착 화면 제목', () => {
   test("'처음으로'는 첫 화면으로 가는 버튼에만(목적지 하나)", () => {
     // 모두 첫 화면(FS)으로 간다: resetRole 또는 삭제 뒤 처음부터. 새 키를 넣으면 목적지를 확인하고 여기에 더한다.
     // login.blocked_parent_device.button 은 A5 PR(#134)에서 '알겠어요' → '처음으로'(ChildGate resetRole)
-    const ALLOWED = ['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back', 'login.blocked_parent_device.button'];
+    const ALLOWED = ['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back', 'login.blocked_parent_device.button', 'nav.to.DeleteDone', 'nav.to.Gate'];
     const firstKeys = all.filter(([, s]) => s === NAMES.firstScreen).map(([p]) => p);
     expect(firstKeys.filter(p => !ALLOWED.includes(p))).toEqual([]);
     expect(firstKeys).toEqual(expect.arrayContaining(['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back']));

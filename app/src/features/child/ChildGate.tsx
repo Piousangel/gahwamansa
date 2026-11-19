@@ -51,7 +51,7 @@ export function ChildGate() {
     return (
       <DsScreen
         variant="form"
-        back={{label: copy.login.back, onPress: resetRole}}
+        back={{to: copy.login.back, onPress: resetRole}}
         header={<Heading level={1}>{blocked.title}</Heading>}
         dock={{primary: {label: blocked.button, onPress: resetRole}}}>
         <Text role="bodyLg">{blocked.body}</Text>

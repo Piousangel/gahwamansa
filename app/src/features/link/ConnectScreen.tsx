@@ -66,6 +66,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   // 코스 홈·설정에서 "번호 쓰기"로 왔으면 이전은 그 화면으로, 처음 화면에서 왔으면 역할 선택으로(QA B2)
   const fromCourse = route.params?.from === 'course';
   const back = fromCourse ? () => navigation.goBack() : resetRole;
+  // 뒤로 바 목적지(W-09): 코스 홈에서 왔으면 코스 홈, 아니면 역할 고르기(첫 화면)
+  const backTo = fromCourse ? copy.nav.to.CourseHome : copy.login.back;
   // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
   const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
   // 밖에서 들어온 번호: 처음엔 경로 값, 화면이 떠 있는 동안 새 링크가 오면 그 번호(AP-09, 리뷰 H1).
@@ -266,7 +268,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       }
     };
     return (
-      <Screen key="failed" top={<BackBar onBack={state.step === 'redeem' ? other : back} />} bottom={<BigButton variant="secondary" label={m.button} onPress={onFailButton} />}>
+      <Screen key="failed" top={<BackBar onBack={state.step === 'redeem' ? other : back} to={state.step === 'redeem' ? copy.nav.to.Connect : backTo} />} bottom={<BigButton variant="secondary" label={m.button} onPress={onFailButton} />}>
         <View testID="connect-failed" accessibilityLiveRegion="polite" style={styles.failed}>
           <Text20 size={28} weight="bold" accessibilityRole="header" style={styles.title}>{m.title}</Text20>
           <Text20>{m.body}</Text20>
@@ -307,7 +309,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       dense={overflow}
       onViewport={onViewport}
       scrollRef={scrollRef}
-      top={<BackBar onBack={back} />}
+      top={<BackBar onBack={back} to={backTo} />}
       bottom={
         noDock ? undefined : (
           <>
@@ -362,7 +364,7 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
   const a11y = copy.code.show_a11y.split('{앞}').join(state.code.slice(0, 3).split('').join(' ')).split('{뒤}').join(state.code.slice(3).split('').join(' '));
   return (
     <Screen
-      top={<BackBar onBack={busy ? noop : onOther} />}
+      top={<BackBar onBack={busy ? noop : onOther} to={copy.nav.to.Connect} />}
       bottom={
         <>
           <BigButton label={c.yes} loading={busy} loadingLabel={c.busy} onPress={onYes} />
@@ -404,7 +406,7 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   sub: {color: color.inkSub},
   invalid: {color: color.dangerInk},
-  legal: {textAlign: 'center', color: color.ink, marginBottom: 4},
+  legal: {textAlign: 'center', color: color.inkBody, marginBottom: 4},
   belowRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   flex: {flex: 1},
   failed: {gap: 8},

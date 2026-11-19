@@ -335,6 +335,12 @@
       "done_last": "계정과 {호칭}의 기록이 모두 지워졌어요",
       "thanks": "함께해 주셔서 고마워요",
       "back": "처음으로"
+    },
+    "signed_out": {
+      "_status": "PR #146 리뷰 H1(리드 결정 ②, 11-20): delete_my_account 가 no_profile(로그인 정보 없음, 0049)이면 지우지 못한 것 — '지웠어요'로 보이면 안 됨. 라이터 확인 대상(초안)",
+      "title": "로그인이 풀려 지워지지 않았어요",
+      "body": "다시 로그인한 뒤 해 주세요",
+      "button": "다시 로그인하기"
     }
   },
   "course": {
@@ -539,10 +545,40 @@
     ],
     "button": "앨범으로"
   },
+  "dismiss": {
+    "close": "닫기",
+    "later": "다음에"
+  },
   "nav": {
-    "back": "‹ 이전",
-    "back_a11y": "이전 화면으로 가기",
-    "back_course": "‹ 오늘 코스",
+    "to": {
+      "Connect": "번호 쓰기로",
+      "Consent": "답 나누기로",
+      "CourseHome": "오늘 코스로",
+      "PhotoStep": "사진 보기로",
+      "QuestionStep": "둘 중 고르기로",
+      "KeyboardStep": "낱말 쓰기로",
+      "CourseDone": "오늘 도장으로",
+      "History": "지난 날로",
+      "HistoryDay": "그날 기록으로",
+      "Settings": "설정으로",
+      "Family": "연결된 가족으로",
+      "DeleteAccount": "모두 지우기로",
+      "DeleteDone": "처음으로",
+      "PushPermission": "알림 안내로",
+      "Web": "약관·방침으로",
+      "Oss": "오픈소스 목록으로",
+      "FamilyPreview": "가족 미리 보기로",
+      "Gate": "처음으로",
+      "Login": "로그인으로",
+      "LoginEmail": "이메일 주소로",
+      "LoginCode": "인증번호로",
+      "Relation": "호칭 고르기로",
+      "Code": "번호로",
+      "Wait": "기다리는 화면으로",
+      "AppInfo": "앱 정보로",
+      "Album": "앨범으로",
+      "Past": "지난 날로"
+    },
     "back_course_a11y": "오늘 코스로 돌아가기"
   },
   "first": {

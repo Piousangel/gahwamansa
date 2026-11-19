@@ -53,5 +53,5 @@ const styles = StyleSheet.create({
   pressed: {borderBottomWidth: 3, transform: [{translateY: 4}]},
   row: {flexDirection: 'row', alignItems: 'center', gap: 6},
   title: {flex: 1, minWidth: 0, fontSize: 26, lineHeight: 33, fontWeight: 'bold', color: color.inkTitle},
-  sub: {fontSize: 20, lineHeight: 27, marginTop: 2, color: color.ink},
+  sub: {fontSize: 20, lineHeight: 27, marginTop: 2, color: color.inkBody},
 });

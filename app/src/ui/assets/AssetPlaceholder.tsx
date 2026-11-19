@@ -22,5 +22,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.placeholder, borderWidth: 2, borderColor: color.action,
     borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', padding: 8,
   },
-  text: {fontSize: 20, color: color.ink},
+  text: {fontSize: 20, color: color.inkBody},
 });

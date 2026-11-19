@@ -43,7 +43,7 @@ function walk(n: Node | Node[] | null, visit: (n: Node) => void) {
 function Everything({audience}: {audience: 'elder' | 'child'}) {
   return (
     <AudienceProvider value={audience}>
-      <BackLink label="오늘 코스로" onPress={noop} />
+      <BackLink to="오늘 코스로" onPress={noop} />
       <Heading level={1}>아주 긴 화면 제목이 두 줄 세 줄로 넘어가도 괜찮아요</Heading>
       <Section title="섹션 제목">
         <Card>
@@ -106,7 +106,7 @@ describe('DsScreen', () => {
       return {remove: noop};
     }) as never);
     render(
-      <DsScreen variant="step" back={{label: '오늘 코스로', onPress: noop}} header={<Heading level={1}>이름 쓰기</Heading>} stepInfo="3단계 중 2단계, 이름 쓰기">
+      <DsScreen variant="step" back={{to: '오늘 코스로', onPress: noop}} header={<Heading level={1}>이름 쓰기</Heading>} stepInfo="3단계 중 2단계, 이름 쓰기">
         <Field label="이름" value="" onChangeText={noop} />
       </DsScreen>,
     );
