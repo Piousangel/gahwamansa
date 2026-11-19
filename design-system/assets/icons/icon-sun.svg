@@ -1,4 +1,4 @@
-<!-- icon-sun / 응원 문장: 사랑해요, 오늘도 좋은 하루예요(응원 시트) / a 아이콘만(곁에 글자가 있음) -->
+<!-- icon-sun / 응원 문장: 사랑해요, 오늘도 좋은 하루예요(응원 시트) / b 아이콘+글자 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="해">
   <title>해</title>
   <circle cx="12" cy="12" r="4"/>
