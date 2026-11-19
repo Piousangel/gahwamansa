@@ -9,6 +9,10 @@ import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {enterCode, press, pressCourseNext} from '../testUtils/flow';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 let mockDims = {width: 411, height: 914, scale: 3, fontScale: 1};
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({

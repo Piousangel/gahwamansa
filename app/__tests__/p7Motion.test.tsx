@@ -10,6 +10,10 @@ import {createStampFeedback, setStampFeedbackForTest} from '../src/features/cour
 import {P7_T} from '../src/features/course/CourseDone';
 import {kstWeekdayIndex} from '../src/features/course/stamps';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 // P7 완료 앨범(시안 P7_album_ds4 + 디자인 #95): 0~300ms 사진·테이프 페이드 → 300ms 도장 1.3→1(180ms) → 480ms 촉각·소리 1회·눌림 70ms
 // → 520ms 번짐 원 .10→0(420ms) → 700ms 본문 둘째 줄 300ms 페이드. 제목·'알겠어요'는 첫 프레임부터. 동작 줄이기·화면 읽기면 모두 즉시.

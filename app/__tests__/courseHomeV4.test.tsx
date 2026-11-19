@@ -9,6 +9,10 @@ import {Text20} from '../src/ui/Text20';
 import {fontSize, labelLineHeight, lineHeightFor} from '../src/ui/tokens';
 import {press, toHomeConsented, confirmDeleteAll, pressCourseNext} from '../testUtils/flow';
 import {createLocalStamps, localStamps, memoryStore, setLocalStampsForTest} from '../src/lib/localStamps';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 // P3 코스 홈 v4(동결 시안 P3_course_home_v4): 리듬 규칙(D)·완료 상태 다시 보기(B)·제목 없음·미연결 띠.
 

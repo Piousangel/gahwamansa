@@ -11,6 +11,10 @@ import {P7_MOUNT} from '../src/features/course/AlbumMount';
 import {WeekStampStrip, setWeekStripForTest} from '../src/features/course/WeekStampStrip';
 import {SealStamp} from '../src/ui/assets/album';
 import {tokensV4} from '../src/ui/tokensV4';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -117,4 +121,12 @@ test('리뷰 L1: 들어오면 화면 읽기 포커스는 제목(캡션보다 먼
   await waitFor(() => expect(spy.mock.calls.some(([node, ev]) => ev === 'focus' && (node as unknown as {props?: {testID?: string}})?.props?.testID === 'p7-title')).toBe(true), {timeout: 2000});
   expect(title.props.accessibilityRole).toBe('header');
   expect(title.props.accessibilityLabel).toBe('오늘 코스를 마쳤어요');
+});
+
+test('오너 결정 O-6: 기본값은 도장 줄 꺼짐(P7·P3 모두 없음), 컴포넌트는 남는다', async () => {
+  setWeekStripForO6(null);
+  await toDone();
+  expect(screen.queryByTestId('p7-week')).toBeNull();
+  expect(screen.queryByTestId('course-week', {includeHiddenElements: true})).toBeNull();
+  expect(typeof WeekStampStrip).toBe('function');
 });

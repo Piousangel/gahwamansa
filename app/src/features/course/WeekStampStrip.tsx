@@ -12,7 +12,7 @@ const c = copy.course;
  * 오너가 '7칸 도장 줄 삭제'를 검토 중이라 이 컴포넌트 하나 + 아래 플래그 하나로 P3·P7 에서 함께 빠지게 둔다.
  */
 /** 이번 주 도장 줄(P3·P7)을 보일지. 오너가 빼기로 하면 SHOW_WEEK_STRIP 기본값 한 곳만 false. 테스트는 setWeekStripForTest 로 끈다(PR #108 리뷰 L3) */
-const SHOW_WEEK_STRIP = true;
+const SHOW_WEEK_STRIP = false; // 오너 결정 O-6(DECISIONS 11-20): 이번 주 도장 7칸을 뺀다. 컴포넌트는 남기고 끈다
 let weekStripOverride: boolean | null = null;
 export const showWeekStrip = () => weekStripOverride ?? SHOW_WEEK_STRIP;
 export function setWeekStripForTest(v: boolean | null) {

@@ -11,6 +11,10 @@ import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
 import {press, pressBackLink, pressCourseNext} from '../testUtils/flow';
 import {P4_LAYOUT} from '../src/features/course/PhotoStep';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 afterEach(() => {
   jest.useRealTimers();
