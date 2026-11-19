@@ -120,7 +120,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByTestId('date-line').props.accessibilityRole).toBe('header');
     expect(within(screen.getByTestId('screen-body')).getByTestId('date-line')).toBeTruthy(); // 리뷰 H3
     expect(StyleSheet.flatten(screen.getByTestId('course-steps').props.style).gap).toBe(8);
-    expect(screen.getByText('오늘 코스예요')).toBeTruthy(); // 0/3 인사 한 줄
+    expect(screen.getByText('세 가지를 차례로 해요')).toBeTruthy(); // 0/3 인사 한 줄
   });
 
   test('3/3 완료: 세 행 모두 › 와 하단 "오늘 코스 다시 보기"', async () => {
