@@ -3,7 +3,7 @@
 --             자녀가 알림을 껐거나 받기 동의가 없으면 보내지 않고 그 첫 답은 지나감, 어르신이 동의를 철회했으면 보내지 않음(기록도 안 남김),
 --             나중에 연결된 형제 자녀는 다음 새 답 때 1회, 다른 가족 무영향, 같은 날 답 고치기는 새 답이 아님, 5분 cron이 첫 답 큐를 할 일로 셈.
 begin;
-select plan(17);
+select plan(18);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 delete from public.notification_queue; delete from public.cheers; delete from public.push_copy; delete from public.push_runs;
@@ -40,8 +40,8 @@ insert into public.device_tokens (user_id, token) values
 insert into public.content_questions (id, day_index, option_a, option_b, prompt) values
   ('70520000-0000-0000-0000-00000000d0d1', 1, '가을', '봄', 'q1'), ('70520000-0000-0000-0000-00000000d0d2', 2, '바다', '산', 'q2'),
   ('70520000-0000-0000-0000-00000000d0d3', 3, '국수', '밥', 'q3');
--- 테스트용 문구(실제 원본은 라이터 copy.ko.json push.first_answer → load-push-copy)
-insert into public.push_copy (kind, title, body) values ('parent_first_answer', '{호칭}께서 첫 답을 고르셨어요', '앱에서 함께 볼 수 있어요');
+-- 라이터 확정 문구(11-19, copy.ko.json push.first_answer → load-push-copy로 적재). 길이·금지어 제약을 통과해야 들어간다.
+insert into public.push_copy (kind, title, body) values ('parent_first_answer', '{호칭}께서 첫 답을 고르셨어요', '앨범에서 보고 이야기해 볼까요?');
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -56,6 +56,8 @@ create function pg_temp.first_targets() returns jsonb language sql as $$
    where t ->> 'kind' = 'parent_first_answer'
 $$;
 
+select ok(public.push_text_clean('{호칭}께서 첫 답을 고르셨어요') and public.push_text_clean('앨범에서 보고 이야기해 볼까요?'),
+          '확정 문구는 금지어 검사를 통과한다');
 -- 첫 답 → 큐 1줄(답 내용·시각 없음)
 select pg_temp.act_as('70520000-0000-0000-0000-0000000000a1', true);
 select public.save_answer('70520000-0000-0000-0000-00000000d0d1', 'A');
@@ -70,7 +72,7 @@ select is((select count(*)::int from public.push_events_kick(((public.kst_today(
 create temp table r1 as select pg_temp.first_targets() as v;
 select is((select v from r1), jsonb_build_array(jsonb_build_object(
   'profile_id', '70520000-0000-0000-0000-00000000c001', 'token', 'fa52_c1_00000000000001', 'platform', 'android',
-  'kind', 'parent_first_answer', 'channel', 'family', 'title', '엄마께서 첫 답을 고르셨어요', 'body', '앱에서 함께 볼 수 있어요')),
+  'kind', 'parent_first_answer', 'channel', 'family', 'title', '엄마께서 첫 답을 고르셨어요', 'body', '앨범에서 보고 이야기해 볼까요?')),
   '알림 켬·받기 동의 자녀 한 명에게만, 호칭만 채운 문구');
 select is((select jsonb_object_agg(child_id, status) from public.first_answer_notices where family_id = '70520000-0000-0000-0000-0000000000f1'),
           jsonb_build_object('70520000-0000-0000-0000-00000000c001', 'sent', '70520000-0000-0000-0000-00000000c002', 'skipped',
