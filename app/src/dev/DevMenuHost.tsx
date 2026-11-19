@@ -12,6 +12,7 @@ import {color, radius} from '../ui/tokens';
 import {DevMenuContext, isDevMenuAllowed, registerDevSessionCleaner} from './devGate';
 import {ALL_DEV_KEYS, createSessionSlots, type DevRole} from './sessionSlots';
 import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily';
+import {DEV_RESET_REASON_TEXT, devResetToday} from './devResetToday';
 import type {FakeDevHooks} from '../features/fakeApi';
 import {bgmPreview, setBgmPreview} from '../lib/bgmAsset';
 
@@ -29,7 +30,8 @@ const T = {
   course: '오늘 코스',
   reset: '오늘 코스 초기화',
   nextDay: '하루 넘기기',
-  serverOnly: '서버 기록·날짜는 앱에서 바꿀 수 없어요. 로컬 DB면 SQL 로(supabase/README)',
+  serverReset: '오늘 코스 다시 하기(테스트 가족만)',
+  serverResetHint: '어르신 본인의 오늘 기록만 지워요. 날짜 넘기기는 앱에서 못 해요(로컬 DB면 SQL, supabase/README)',
   stamps: '이 기기 도장(미연결) 지우기',
   bgmOn: '배경 음악 미리 듣기 켜기(이 실행 동안)',
   bgmOff: '배경 음악 미리 듣기 끄기',
@@ -133,6 +135,18 @@ export function DevMenuHost({api, children}: Props) {
       restart(undefined);
     });
 
+  // S25: 실제 서버 오늘 코스 다시 하기(dev_reset_today 0051). 거절은 사유 한 줄, 성공하면 앱을 처음부터(코스 홈이 start_today 를 다시 부름)
+  const resetServerToday = () =>
+    run(async () => {
+      const {getSupabase} = require('../lib/supabase');
+      const r = await devResetToday(name => getSupabase().rpc(name));
+      if (!r.ok) {
+        setMsg(DEV_RESET_REASON_TEXT[r.reason]);
+        return;
+      }
+      restart(role);
+    });
+
   // M2: 보관 세션은 로그아웃·계정 지우기·처음으로 때 지운다(AppRoot → devGate.clearDevSessions). fake 는 보관하지 않는다
   useEffect(() => {
     if (!allowed || fake) {
@@ -199,7 +213,10 @@ export function DevMenuHost({api, children}: Props) {
                     }} />
                   </>
                 ) : (
-                  <Text20>{T.serverOnly}</Text20>
+                  <>
+                    <Text20>{T.serverResetHint}</Text20>
+                    <BigButton variant="secondary" label={T.serverReset} disabled={busy} onPress={resetServerToday} />
+                  </>
                 )}
                 <BigButton variant="secondary" label={T.stamps} onPress={() => run(async () => {
                   await localStamps().clear();
