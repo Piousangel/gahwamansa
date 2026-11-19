@@ -122,7 +122,9 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const hasText = normalizeWord(text).length > 0;
   const skipStrong = reader || attempts >= 2 || lateSkip;
   const open = kbOpen && phase === 'writing';
-  const hideTitle = open && fontScale >= 1.5; // 리드 결정: 150% 이상 + 자판 열림일 때만
+  // PR #14 리뷰 M2(v4 2-5 '위 영역 접기' 방향): 자판이 열려 있으면 글자 배율과 상관없이 단계 제목을 숨기고 위 영역은 뒤로 한 줄만.
+  // 단계 정보는 입력 칸 읽기 라벨·뒤로 라벨로 충분(닫으면 다시 보인다)
+  const hideTitle = open;
   const showPhoto = !open && !photo.image_url.startsWith('pending://') && !imageFailed;
 
   const matched = () => {
@@ -219,21 +221,18 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       </View>
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
       <View style={phase === 'matched' ? styles.hidden : styles.inputWrap}>
-        {/* 보이는 이름표는 입력칸 라벨과 같아 두 번 읽지 않게 숨김 */}
+        {/* PR #14 리뷰 M1·v4 2-8(placeholder 금지): 안내는 입력 칸 안이 아니라 칸 위 한 줄 글(여러 줄 가능). 입력 칸은 비워 둔다.
+            읽기는 입력 칸의 힌트로 한 번(이 글은 두 번 읽지 않게 숨김). 자판이 열린 뒤에는 이미 한 일이라 접는다(공간 확보) */}
         {open ? null : (
-          <Text20 size={20} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
-            {k.input_label}
+          <Text20 testID="kb-hint" size={20} weight="bold" style={styles.title} accessibilityElementsHidden importantForAccessibility="no">
+            {k.placeholder}
           </Text20>
         )}
         <TextInput
           ref={inputRef}
           testID="kb-input"
           accessibilityLabel={k.input_label}
-          // 안내는 말줄임 없이 줄바꿈(multiline, 높이는 최소만). 자판이 열린 뒤에는 이미 한 일이라 비운다(공간 확보, S25 11-19)
-          placeholder={open ? undefined : k.placeholder}
-          multiline
-          textAlignVertical="center"
-          placeholderTextColor={color.inkSub}
+          accessibilityHint={k.placeholder}
           onChangeText={onChangeText}
           onFocus={() => setKbOpen(true)}
           onBlur={() => setKbOpen(false)}
