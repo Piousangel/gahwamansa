@@ -298,12 +298,14 @@ describe('build.gradle·매니페스트·안내 페이지 규칙(리뷰 M1·M3·
     expect(g).toMatch(/appLinkHostDebug/);
     expect(g).toMatch(/buildTypes[\s\S]*debug[\s\S]*manifestPlaceholders/);
   });
+  // 검사·생성은 공통 스크립트(scripts/appEnv.js, iOS 준비 N2)
+  const envScript = fs.readFileSync(`${root}/scripts/appEnv.js`, 'utf8');
   test('production 에 테스트 도메인이면 빌드 실패, staging·production 같은 도메인 금지', () => {
-    expect(g).toMatch(/TEST_HOST_RE/);
-    expect(g).toMatch(/APP_LINK_HOST 가 staging 과 production 에서 같아요/);
+    expect(envScript).toMatch(/TEST_HOST_RE/);
+    expect(envScript).toMatch(/APP_LINK_HOST 가 staging 과 production 에서 같아요/);
   });
   test('APP_LINK_HOST 를 env.generated.ts 로 JS 에 넘긴다', () => {
-    expect(g).toMatch(/APP_LINK_HOST: /);
+    expect(envScript).toMatch(/APP_LINK_HOST: linkHost/);
   });
 
   const page = fs.readFileSync(`${root}/../site/c/index.html`, 'utf8');

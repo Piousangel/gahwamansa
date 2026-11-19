@@ -1,5 +1,6 @@
 # P1 번호 화면 공간 실측(리뷰 2026-11-19 H1, 디자인 9절 H3). 스크롤하지 않은 첫 화면에 무엇이 보이는지만 본다.
-# 기대: 360×640 → 키 12개 전부(0·지움 줄 포함), 320×640 → 칸 + 키 1~9. 약관·링크는 첫 화면 밖이어도 된다.
+# 첫 화면 끝의 좌표 검사(줄을 반쯤 가르지 않음·시스템 내비 바 위)는 audit/p1-fold.yaml + FOLD_CHECK=1(L28).
+# 기대: 첫 화면에 칸 + 키 1~9(글자 150%까지), 첫 화면 끝은 줄 경계(0·지움 줄을 반쯤 가르지 않음), 스크롤하면 모든 키. 약관·링크는 첫 화면 밖이어도 된다.
 # 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=360x640 app/e2e/run.sh -e FULL_KEYPAD=true audit/p1-fit.yaml
 # 주의: 이 에뮬레이터들은 adb reverse 대신 10.0.2.2:8081 로 Metro 를 받는다(감사 문서 8절). 다른 레인이 8081 을 쓰는 중이면
 #   앱 데이터를 지운 뒤 debug_http_host 를 10.0.2.2:<METRO_PORT> 로 적어 두고(run-as … shared_prefs) 실행한다. 그래서 clearState 를 쓰지 않는다.
@@ -23,9 +24,10 @@ tags:
 - assertVisible: '.*돈이나 통장 번호.*'
 - assertVisible: '숫자 1'
 - assertVisible: '숫자 9'
-- runFlow:
-    when:
-      true: ${FULL_KEYPAD == 'true'}
-    commands:
-      - assertVisible: '숫자 0'
-      - assertVisible: '한 칸 지우기'
+# 첫 화면 끝은 줄 경계(RULES-V4 R-15, 리드 결정 L25): 0·지움 줄은 첫 화면에 다 보이거나 스크롤 아래에 통째로. 어느 쪽이든 스크롤로 누를 수 있다
+- scrollUntilVisible:
+    element: '숫자 0'
+    direction: DOWN
+- assertVisible: '숫자 0'
+- assertVisible: '한 칸 지우기'
+- takeScreenshot: p1-fit-scrolled

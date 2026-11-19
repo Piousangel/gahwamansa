@@ -71,6 +71,7 @@
 | (v2.4) 삭제 안내 2절 카카오 가입자: "카카오 닉네임" → "가입 날짜, 부모님 호칭과 연결 날짜" | 리뷰 L8: 앱 표에 닉네임 없음(0047), Q5 동의항목 제거 예정. 호칭·연결 날짜는 profiles·families에 있음. 팀 제안(P11과 함께 사용자 확인) |
 | (v2.4) 내부 문서: 데이터 안전 #2 "큐 표를 직접 못 읽고 해제 함수로만 회원번호를 받음"(M3), #8 연결 전 계정 빈 곳, #18 근거 번호·방침 표기, 머리 기준 0001~0045(L7). 내부관리계획 v0.4: §6 약관 게시 절차 5단계(두 번 대조·같은 날·잘못 등록 시 L1 보정, M5), 서버 거부 범위와 규칙 범위 분리(M2), 옮겨진 문장 2곳 복원(L1), 용어 병기(L4), §2 detail에 약관 종류·버전(L5), RPC 목록 "모든 admin_*"(L6), §7 빈 곳(M1). P19 위치 정리·P20 추가(L9). official-consult-checklist L-4~L-6 | 리뷰 M1~M5·L1~L10 |
 | (11-19) 같이 고친 내부 문서: internal-management-plan v0.3(§2 확인 기록·감사 작업 종류, §4 profiles 열·카카오 큐, §6 모든 admin_* 사유 규칙·약관 게시 절차, §7 cascade 파기), data-safety-form #1·2·3·8·12·18·§3·§5, consent-exposure-map §1 2행·§3 푸시 금지어 | 위와 같음 |
+| (11-19) AC-05(PR #61, 0053): 2절 이용 기록 예시에 "단계를 시작함", 비고에 "낱말 쓰기는 마쳤는지·넘겼는지만, 맞았는지는 남기지 않음" | 사실: 0053 `course_step_started`{step, day_index}, `result` finished·skipped(P6). data-safety-form #12·#21·이벤트 목록 25종, app-privacy-label #12 |
 | 개발자 메뉴: 방침에 넣지 않음 | 사실: staging 전용(DECISIONS 11-18), production 번들 제외는 release-gates A8로 확인 |
 
 ### 약관 terms-v1.html → terms.html (v1.1)

@@ -32,6 +32,11 @@ type Props = {
   scrollRef?: React.Ref<ScreenScroll>;
   /** 본문 보이는 높이(스크롤 창, dp)를 알린다 — 첫 화면 안에 꼭 들어가야 할 묶음 높이를 정할 때(감사 H3 P1) */
   onViewport?: (h: number) => void;
+  /**
+   * '더 있음' 표시(R-19, v4 DsScreen 이 넘긴다): 주면 글자 위에 겹치는 페이드 대신 스크롤 영역 밖(아래)에 이 띠를 둔다.
+   * 본문과 Dock 각각 넘치고 아직 끝까지 내리지 않았을 때만 보인다. 없으면 예전 페이드(기존 화면 그대로).
+   */
+  moreBand?: React.ReactNode;
 };
 
 export type ScreenScroll = {
@@ -41,7 +46,7 @@ export type ScreenScroll = {
 
 // 표준 화면 틀(design-system/components/README.md §15): TopSafe → Top(고정) → Body(스크롤, flex 1) → Dock(고정).
 // 글자를 크게 하면 Body 만 스크롤되고 Dock 은 그대로 화면 안에 남는다. top·bottom 없이 쓰면 예전처럼 한 겹 스크롤.
-export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport}: Props) {
+export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRatio, fill, dense, fillScrollable, initialFocusRef, scrollRef, onViewport, moreBand}: Props) {
   const insets = useSafeAreaInsets();
   const {height} = useWindowDimensions();
   // TopSafe 52 이상(§15). 상태바 바로 아래에 붙지 않게 상태바 높이 + 12(QA B6)
@@ -57,6 +62,13 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
     const b = (box.current = {...box.current, ...next});
     const m = b.view > 0 && b.content - b.view - b.y > 4;
     setMore(prev => (prev === m ? prev : m));
+  };
+  const dockBox = useRef({view: 0, content: 0, y: 0});
+  const [dockMore, setDockMore] = useState(false);
+  const measureDock = (next: Partial<typeof dockBox.current>) => {
+    const b = (dockBox.current = {...dockBox.current, ...next});
+    const m = b.view > 0 && b.content - b.view - b.y > 4;
+    setDockMore(prev => (prev === m ? prev : m));
   };
   const bodyScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   useImperativeHandle(
@@ -147,8 +159,10 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             contentContainerStyle={[styles.bodyPad, dense ? styles.dense : null, fill ? styles.fill : null, bottom ? null : {paddingBottom: space.bottom + insets.bottom}]}>
             {children}
           </ScrollView>
-          {/* 재확인 5 L22: fill 이어도 안전망(fillScrollable)으로 넘치면 '더 있음' 흐림을 보인다 */}
-          {more && (!fill || fillScrollable) ? (
+          {/* 재확인 5 L22: fill 이어도 안전망(fillScrollable)으로 넘치면 '더 있음'을 보인다. moreBand(v4 DsScreen)면 스크롤 밖 띠(R-19), 아니면 예전 흐림 */}
+          {more && (!fill || fillScrollable) && moreBand ? (
+            <View testID="screen-more-band">{moreBand}</View>
+          ) : more && (!fill || fillScrollable) ? (
             <View testID="screen-more" pointerEvents="none" style={styles.more} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Svg width="100%" height={FADE_H}>
                 <Defs>
@@ -170,10 +184,16 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
             style={[styles.dock, {maxHeight: Math.floor(height * (dockMaxRatio ?? layout.dock.maxHeightRatio))}]}>
             <ScrollView
               bounces={false}
+              testID="screen-dock-scroll"
+              scrollEventThrottle={64}
+              onLayout={moreBand ? e => measureDock({view: e.nativeEvent.layout.height}) : undefined}
+              onContentSizeChange={moreBand ? (_w, h) => measureDock({content: h}) : undefined}
+              onScroll={moreBand ? e => measureDock({y: e.nativeEvent.contentOffset.y}) : undefined}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={[styles.dockPad, {paddingBottom: Math.max(layout.dock.paddingBottomMin, 16 + insets.bottom)}]}>
               {bottom}
             </ScrollView>
+            {moreBand && dockMore ? <View testID="screen-dock-more-band">{moreBand}</View> : null}
           </View>
         ) : null}
       </KeyboardAvoidingView>

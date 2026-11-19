@@ -19,6 +19,7 @@ import {useBusyLatch} from '../../ui/useBusyLatch';
 import {NotifyRows} from './NotifyRows';
 import {AppInfoRows} from './AppInfoRows';
 import {bgmAsset} from '../../lib/bgmAsset';
+import {track} from '../track';
 
 const t = copy.settings;
 type Confirm = 'none' | 'stop' | 'resume';
@@ -60,6 +61,11 @@ export function ParentSettings() {
       endBusy();
     }
   };
+  // 답 나누기 멈추기: 서버가 철회를 인정한 뒤에만 consent_revoked(AC-05)
+  const stopSharing = async () => {
+    await api.withdrawConsent();
+    track(api, 'consent_revoked');
+  };
 
   // 표준 화면 틀: 설정 내용은 본문(스크롤), "돌아가기"만 하단 고정.
   return (
@@ -92,7 +98,7 @@ export function ParentSettings() {
               <Text20 size={26} weight="bold">{t.stop_title}</Text20>
               <Text20>{t.stop_body}</Text20>
               <BigButton label={t.keep} onPress={() => setConfirm('none')} />
-              <BigButton variant="secondary" label={t.stop} loading={busy} onPress={() => run(() => api.withdrawConsent(), false, t.stopped)} />
+              <BigButton variant="secondary" label={t.stop} loading={busy} onPress={() => run(stopSharing, false, t.stopped)} />
             </View>
           ) : confirm === 'resume' ? (
             <View testID="settings-confirm" style={styles.confirm} onLayout={showPanel}>

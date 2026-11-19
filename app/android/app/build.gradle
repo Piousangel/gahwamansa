@@ -110,114 +110,62 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
  * 설계: docs/plans/09-environments.md(2안, 새 의존성 없음), 사용법: docs/team/RELEASE.md
  * production.env 가 없으면 production.env.example 로 빌드하고 경고한다(-PrequireRealEnv 면 실패).
  */
-def appEnvDir = file("../../env")
 def generatedEnvTs = file("../../src/lib/env.generated.ts")
-def requiredEnvKeys = ["APP_ENV", "API_MODE", "SUPABASE_PROJECT_REF", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "KAKAO_NATIVE_APP_KEY", "GOOGLE_WEB_CLIENT_ID"]
-
-def readEnvFile = { File f ->
-    def m = [:]
-    f.eachLine("UTF-8") { line ->
-        def t = line.trim()
-        if (!t || t.startsWith("#")) return
-        def i = t.indexOf("=")
-        if (i <= 0) throw new GradleException("${f}: '키=값' 형식이 아닌 줄: ${t}")
-        m[t.substring(0, i).trim()] = t.substring(i + 1).trim()
+// 검사·생성은 공통 스크립트 한 곳(iOS 준비 N2): Gradle 은 부르기만 한다. iOS Xcode Build Phase 도 같은 스크립트(RELEASE.md)
+def appEnvScript = file("../../scripts/appEnv.js")
+// node 찾기(PR #50 리뷰 M1): Dock 에서 연 Android Studio 처럼 셸 PATH 가 없는 실행에서도 찾게.
+// 순서: NODE_BINARY(-PNODE_BINARY 또는 환경변수, RN 의 .xcode.env 와 같은 이름) → ~/.nvm 의 가장 높은 판 → /opt/homebrew/bin → /usr/local/bin → PATH 의 node
+def nodeBinary = {
+    def explicit = (project.findProperty("NODE_BINARY") ?: System.getenv("NODE_BINARY"))?.toString()
+    if (explicit) return explicit
+    def nvm = new File(System.getProperty("user.home"), ".nvm/versions/node")
+    def fromNvm = nvm.isDirectory() ? nvm.listFiles()?.findAll { new File(it, "bin/node").canExecute() }?.sort { a, b ->
+        def va = a.name.replace("v", "").tokenize(".").collect { it.isInteger() ? it.toInteger() : 0 }
+        def vb = b.name.replace("v", "").tokenize(".").collect { it.isInteger() ? it.toInteger() : 0 }
+        [va, vb].transpose().findResult { x, y -> x <=> y ?: null } ?: 0
+    } : null
+    if (fromNvm) return new File(fromNvm.last(), "bin/node").absolutePath
+    def fixed = ["/opt/homebrew/bin/node", "/usr/local/bin/node"].find { new File(it).canExecute() }
+    return fixed ?: "node"
+}()
+def startNode = { List<String> args ->
+    try {
+        return ([nodeBinary] + args).execute(null, file("../.."))
+    } catch (IOException e) {
+        throw new GradleException("빌드에 node 가 필요해요(찾은 경로: ${nodeBinary}). nvm·Homebrew 로 설치하거나 NODE_BINARY(환경변수 또는 ~/.gradle/gradle.properties)에 node 경로를 적어 주세요. Android Studio 는 터미널에서 열면 셸 PATH 를 씁니다. docs/team/RELEASE.md '설정이 앱에 들어가는 방식'")
     }
-    return m
 }
-
-def loadAppEnv = { String flavor ->
-    def f = new File(appEnvDir, "${flavor}.env")
-    def placeholder = false
-    if (!f.exists()) {
-        def example = new File(appEnvDir, "${flavor}.env.example")
-        if (project.hasProperty("requireRealEnv") || !example.exists()) {
-            throw new GradleException("app/env/${flavor}.env 가 없어요. ${flavor}.env.example 을 복사해 실제 공개 값을 채워 주세요(docs/team/RELEASE.md).")
-        }
-        f = example
-        placeholder = true
+def runAppEnv = { List<String> args ->
+    def proc = startNode([appEnvScript.absolutePath] + args)
+    def out = new StringBuilder()
+    def err = new StringBuilder()
+    proc.waitForProcessOutput(out, err)
+    def lines = err.toString().readLines().findAll { it.trim() }
+    if (proc.exitValue() != 0) {
+        lines.findAll { it.startsWith("경고:") }.each { logger.warn(it) }
+        throw new GradleException(lines.findAll { !it.startsWith("경고:") }.join("\n") ?: "scripts/appEnv.js 실패(${args[0]})")
     }
-    def m = readEnvFile(f)
-    requiredEnvKeys.each { k ->
-        if (!m[k]) throw new GradleException("${f.name}: ${k} 값이 비어 있어요")
-    }
-    // 비밀값 차단: 이 파일들은 APK 안에 그대로 들어간다
-    m.each { k, v ->
-        if (k ==~ /(?i).*(secret|service_role|password).*/ || v.startsWith("sb_secret_")) {
-            throw new GradleException("${f.name}: 비밀값으로 보이는 ${k} 가 있어요. env 파일에는 공개 값만 둡니다.")
-        }
-    }
-    if (m.APP_ENV != flavor) throw new GradleException("${f.name}: APP_ENV=${m.APP_ENV} 가 flavor(${flavor})와 달라요")
-    if (!(m.API_MODE in ["fake", "real"])) throw new GradleException("${f.name}: API_MODE 는 fake 또는 real")
-    // production 은 실제 서버만(fake API·개발 훅이 출시 앱에서 쓰이지 않게, 보안 리뷰 2026-11-18 L2)
-    if (flavor == "production" && m.API_MODE != "real") throw new GradleException("${f.name}: production 은 API_MODE=real 만 허용")
-    if (!(m.KAKAO_NATIVE_APP_KEY ==~ /[0-9a-f]{32}/)) throw new GradleException("${f.name}: KAKAO_NATIVE_APP_KEY 형식(32자리 16진수)이 아니에요")
-    // 값 형식 허용 목록(리뷰 L1): APK 로 나가는 Supabase 키 칸은 publishable 키만(레거시 JWT·service_role 차단), URL 은 ref 와 일치
-    if (!(m.SUPABASE_PROJECT_REF ==~ /[a-z0-9-]+/)) throw new GradleException("${f.name}: SUPABASE_PROJECT_REF 형식이 아니에요")
-    if (!(m.SUPABASE_PUBLISHABLE_KEY ==~ /sb_publishable_[A-Za-z0-9_-]+/)) {
-        throw new GradleException("${f.name}: SUPABASE_PUBLISHABLE_KEY 는 sb_publishable_ 로 시작하는 키만 넣어요(anon·service_role JWT 금지)")
-    }
-    if (m.SUPABASE_URL != "https://${m.SUPABASE_PROJECT_REF}.supabase.co".toString()) {
-        throw new GradleException("${f.name}: SUPABASE_URL 이 https://${m.SUPABASE_PROJECT_REF}.supabase.co 와 달라요")
-    }
-    m.SOURCE = f.name
-    m.PLACEHOLDER = placeholder
-    return m
+    lines.each { logger.warn(it) }
+    return out.toString()
 }
-def appEnvs = [staging: loadAppEnv("staging"), production: loadAppEnv("production")]
+// -P 플래그 → 스크립트 플래그(뜻은 같다)
+def appEnvFlags = []
+if (project.hasProperty("requireRealEnv")) appEnvFlags << "--require-real-env"
+if (project.hasProperty("allowPlaceholderEnv")) appEnvFlags << "--allow-placeholder"
+if (project.hasProperty("allowMissingAppInfo")) appEnvFlags << "--allow-missing-app-info"
+// 두 flavor 값(검사 끝난 공개 값): 설정 단계에서 resValue·BuildConfig·매니페스트에 쓴다
+def appEnvs = new groovy.json.JsonSlurper().parseText(runAppEnv(["load-json"] + (project.hasProperty("requireRealEnv") ? ["--require-real-env"] : [])))
 
 /**
- * 카톡 초대 링크 App Links 도메인(APP_LINK_HOST, 선택). 스파이크: docs/team/spikes/2026-11-17-install-referrer-applinks.md
- * - 원본: app/env/<flavor>.env 한 곳. staging 은 별도 서브도메인(같은 도메인을 두 패키지가 검증하면 선택 창)
- * - production 에 테스트 도메인(.test·.invalid·example.*·localhost 등)이면 빌드 실패
- * - 로컬 확인용 -PappLinkHostDebug=<도메인>: debug 빌드 타입에만 적용(release·출시 빌드에는 절대 안 들어감)
+ * 카톡 초대 링크 App Links 도메인(APP_LINK_HOST). 검사는 scripts/appEnv.js. 로컬 확인용 -PappLinkHostDebug=<도메인>: debug 빌드 타입에만
  */
 def HOST_RE = /[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+/
-def TEST_HOST_RE = /(?i)(.*\.)?(example\.(com|net|org)|localhost|.*\.(test|invalid|example|localhost|local))/
-def checkLinkHost = { String where, String h ->
-    if (h && !(h ==~ HOST_RE)) throw new GradleException("${where}: APP_LINK_HOST 는 소문자 도메인만(스킴·경로 없이): ${h}")
-    return h ?: ""
-}
-appEnvs.each { name, e -> e.APP_LINK_HOST = checkLinkHost("${name}.env", (e.APP_LINK_HOST ?: "").toString().trim()) }
-if (appEnvs.production.APP_LINK_HOST ==~ TEST_HOST_RE && !appEnvs.production.PLACEHOLDER) {
-    throw new GradleException("production.env: APP_LINK_HOST 에 테스트 도메인(${appEnvs.production.APP_LINK_HOST})은 쓸 수 없어요")
-}
-if (appEnvs.staging.APP_LINK_HOST && appEnvs.staging.APP_LINK_HOST == appEnvs.production.APP_LINK_HOST) {
-    throw new GradleException("APP_LINK_HOST 가 staging 과 production 에서 같아요. staging 은 별도 서브도메인을 써 주세요")
-}
-def appLinkHostDebug = checkLinkHost("-PappLinkHostDebug", (project.findProperty("appLinkHostDebug") ?: "").toString().trim())
+def appLinkHostDebug = (project.findProperty("appLinkHostDebug") ?: "").toString().trim()
+if (appLinkHostDebug && !(appLinkHostDebug ==~ HOST_RE)) throw new GradleException("-PappLinkHostDebug: APP_LINK_HOST 는 소문자 도메인만(스킴·경로 없이): ${appLinkHostDebug}")
 if (appLinkHostDebug) {
     logger.warn("경고: -PappLinkHostDebug=${appLinkHostDebug} → debug 빌드에만 App Links host 를 덮어씁니다(release 는 env 파일 값)")
 }
 def appLinkPlaceholders = { String h -> [appLinkHost: h ?: "applinks.invalid", appLinksEnabled: h ? "true" : "false"] }
-
-/**
- * 앱 정보 값(AU-07, 선택·공개 값): 이용약관·방침 URL, 문의 메일, 사업자 정보. 원본 app/env/<flavor>.env, 앱은 src/lib/appInfo.ts.
- * - 형식이 틀리면 빌드 실패(https URL만, 메일, 사업자등록번호 000-00-00000, 글자는 80자 안·따옴표/꺾쇠/줄바꿈 없음)
- * - 빠지면 화면에서 그 행이 값 없는 행(개발·staging '[설정 필요]')으로 보이고 빌드 경고. production release 는 실패(G-INT "값이 빈 앱 정보 행 0")
- *   — 확인용 빌드만 -PallowMissingAppInfo
- */
-def APP_INFO_RULES = [
-    TERMS_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
-    PRIVACY_URL: /https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?/,
-    CONTACT_EMAIL: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
-    BIZ_NAME: /[^\n"<>]{1,80}/,
-    BIZ_CEO: /[^\n"<>]{1,80}/,
-    BIZ_REG_NO: /\d{3}-\d{2}-\d{5}/,
-    BIZ_ADDRESS: /[^\n"<>]{1,80}/,
-]
-appEnvs.each { name, e ->
-    APP_INFO_RULES.each { k, re ->
-        def v = (e[k] ?: "").toString().trim()
-        if (v && !(v ==~ re)) throw new GradleException("${name}.env: ${k} 형식이 아니에요: ${v}")
-        e[k] = v
-    }
-}
-def missingAppInfo = { Map e -> APP_INFO_RULES.keySet().findAll { !e[it] } }
-// 리뷰 M2: 같은 카카오 키면 두 앱이 같은 kakao{키}://oauth 를 받아 한 폰에 같이 설치 시 웹 로그인 복귀가 엉킨다
-if (appEnvs.staging.KAKAO_NATIVE_APP_KEY == appEnvs.production.KAKAO_NATIVE_APP_KEY) {
-    logger.warn("경고: staging·production 카카오 네이티브 키가 같아요. 두 앱을 한 폰에 같이 설치하면 카카오 웹 로그인 복귀가 엉킬 수 있어요. staging 키 발급·등록은 docs/team/RELEASE.md '외부 콘솔 등록'.")
-}
 
 /**
  * 버전 규칙(docs/team/RELEASE.md):
@@ -248,49 +196,10 @@ if (project.hasProperty("versionCode")) {
 }
 def appGitSha = gitOutput(["git", "rev-parse", "--short", "HEAD"])
 
-// 번들 직전에 flavor 에 맞는 TS 설정을 쓴다(공개 값만). 파일은 gitignore
-// release 번들 검사: Hermes 바이트코드도 ASCII 문자열은 그대로 담긴다. 표식이 있으면 실패한다.
-//  - 모든 release: config.local 테스트 계정(devTestChild)·테스트 도메인 이메일(@*.test, @example.*)·config.local 의 문자열 값
-//  - production: 개발자 메뉴 구현·세션 보관·테스트 가족 표식
-def RELEASE_EMAIL_ALLOW = ["name@example.com"] // 이메일 입력 칸 예시 문구(copy login.email_placeholder)
+// release 번들 검사(개발 전용 코드·테스트 계정 표식)는 scripts/appEnv.js verify-bundle
 def verifyReleaseBundle = { Task t, String flavor ->
-    def bundles = t.outputs.files.asFileTree.matching { include "**/*.bundle" }.files
-    if (bundles.isEmpty()) throw new GradleException("${t.name}: 검사할 번들을 찾지 못했어요")
-    def markers = ["devTestChild"]
-    if (flavor == "production") markers += ["bumojasik-dev-menu-impl", "dev_menu_session_", "createTestFamily"]
-    bundles.each { File b ->
-        def text = new String(b.bytes, "ISO-8859-1")
-        def hit = markers.findAll { text.contains(it) }
-        def emails = (text =~ /[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)*(?:example\.(?:test|com|org)|[A-Za-z0-9-]+\.test)/).collect { it instanceof List ? it[0] : it }.unique().findAll { !(it in RELEASE_EMAIL_ALLOW) }
-        def localFile = file("../../src/lib/config.local.ts")
-        def localValues = localFile.exists() ? (localFile.text =~ /['"]([^'"]{6,})['"]/).collect { it[1] }.findAll { !(it in ["fake", "real"]) } : []
-        hit += localValues.findAll { text.contains(it) }.collect { "config.local 값(${it.length()}자)" }
-        if (hit || emails) {
-            throw new GradleException("${b.name}(${flavor} release)에 개발 전용 코드·계정 표식이 있어요: ${hit + emails.collect { it.replaceAll(/^[^@]+/, '***') }}")
-        }
-    }
-    logger.lifecycle("release 번들 검사 통과(${flavor}): 개발 전용 표식 없음")
-}
-
-// BUILD_TYPE: Metro 가 release 번들에서 config.local·개발자 메뉴를 빼는 근거(metroDevMenu.js). 이 파일 하나만 믿는다
-def writeEnvTs = { Map e, String versionName, int versionCode, String linkHost, boolean release ->
-    def values = [
-        APP_ENV: e.APP_ENV,
-        API_MODE: e.API_MODE,
-        SUPABASE_PROJECT_REF: e.SUPABASE_PROJECT_REF,
-        SUPABASE_URL: e.SUPABASE_URL,
-        SUPABASE_KEY: e.SUPABASE_PUBLISHABLE_KEY,
-        KAKAO_NATIVE_APP_KEY: e.KAKAO_NATIVE_APP_KEY,
-        GOOGLE_WEB_CLIENT_ID: e.GOOGLE_WEB_CLIENT_ID,
-        APP_LINK_HOST: linkHost,
-        VERSION_NAME: versionName,
-        VERSION_CODE: versionCode,
-        GIT_SHA: appGitSha,
-        BUILD_TYPE: release ? "release" : "debug",
-    ] + APP_INFO_RULES.keySet().collectEntries { [(it): e[it] ?: ""] }
-    def body = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values))
-    generatedEnvTs.setText("// 자동 생성(Gradle, app/env/${e.SOURCE}). 직접 고치지 않는다. gitignore.\n" +
-            "export default ${body};\n", "UTF-8")
+    def bundles = t.outputs.files.asFileTree.matching { include "**/*.bundle" }.files.collect { it.absolutePath }
+    logger.lifecycle(runAppEnv(["verify-bundle", "--flavor", flavor] + bundles).trim())
 }
 
 /**
@@ -413,44 +322,26 @@ android.applicationVariants.configureEach { variant ->
     def isRelease = !variant.buildType.debuggable
     // 매니페스트와 같은 host 를 JS 에도(리뷰 M3: allowedHost 강제). debug 덮어쓰기는 debug 변형에만
     def linkHost = isRelease ? e.APP_LINK_HOST : (appLinkHostDebug ?: e.APP_LINK_HOST)
-    def checkPlaceholder = {
-        if (e.PLACEHOLDER) {
-            // 리뷰 L2: 예시 값으로 출시 빌드가 조용히 성공하지 않게. 로컬 확인용은 -PallowPlaceholderEnv
-            if (isRelease && !project.hasProperty("allowPlaceholderEnv")) {
-                throw new GradleException("app/env/${variant.flavorName}.env 가 없어 ${variant.name} 을 만들 수 없어요(예시 값 금지). 확인용이면 -PallowPlaceholderEnv")
-            }
-            logger.warn("경고: app/env/${variant.flavorName}.env 가 없어 ${e.SOURCE}(예시 값)로 빌드합니다. 이 앱은 서버에 붙지 못해요.")
-        }
-    }
-    // AU-07: 빠진 앱 정보 값은 경고, production release 는 실패(G-INT)
-    def checkAppInfo = {
-        def missing = missingAppInfo(e)
-        if (!missing) return
-        // 리뷰 L4: 출시 경로(build-production.sh 가 늘 주는 -PrequireRealEnv)에서는 -PallowMissingAppInfo 를 무시한다
-        def allowMissing = project.hasProperty("allowMissingAppInfo") && !project.hasProperty("requireRealEnv")
-        if (variant.flavorName == "production" && isRelease && !e.PLACEHOLDER && !allowMissing) {
-            throw new GradleException("production.env: 앱 정보 값이 없어요(설정 화면에서 값 없는 행): ${missing.join(', ')}. G-INT 전 필수(US-03·US-04). 확인용 빌드만 -PallowMissingAppInfo(출시 경로 -PrequireRealEnv 에서는 무시)")
-        }
-        logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 '[설정 필요]'로 보이는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
-    }
+    def buildType = isRelease ? "release" : "debug"
+    // 빌드 전 검사(예시 값 release 금지·production release 앱 정보 빈 값 금지·경고) — scripts/appEnv.js
+    def checkEnv = { runAppEnv(["check", "--flavor", variant.flavorName, "--build-type", buildType] + appEnvFlags) }
     // 요청한 작업 이름에 변형 이름이 있으면(예: assembleStagingRelease) 그 변형만 요청된 것. 이름이 없으면(assembleDebug 등) 모두.
-    // 2026-11-19: 네이티브 CMake 설정 작업(configureCMakeDebug·configureCMakeRelWithDebInfo)은 flavor 가 같은 설정을 함께 써서
-    // 다른 flavor 의 preBuild(preProductionDebugBuild·preProductionReleaseBuild)에 의존한다(init 스크립트로 확인) →
-    // ① 디버그: 나중 쪽이 env.generated.ts 를 덮어씀(PR #7) ② release: staging 만 만들어도 production 검사(예시 값 금지)가 돌아 실패(S25 INF-1).
+    // 네이티브 CMake 설정 작업은 flavor 가 같은 설정을 함께 써서 다른 flavor 의 preBuild 에 의존한다(PR #7·#44, S25 INF-1)
     def requested = gradle.startParameter.taskNames.join(" ").toLowerCase()
     def named = ["stagingdebug", "stagingrelease", "productiondebug", "productionrelease"].any { requested.contains(it) }
     def variantRequested = !named || requested.contains(variant.name.toLowerCase())
     def generate = {
-        checkPlaceholder()
-        checkAppInfo()
-        writeEnvTs(e, vName, vCode, linkHost, isRelease)
+        def args = ["write", "--flavor", variant.flavorName, "--build-type", buildType,
+                    "--version-name", vName.toString(), "--version-code", vCode.toString(), "--git-sha", appGitSha]
+        if (!isRelease && linkHost) args += ["--link-host", linkHost]
+        runAppEnv(args + appEnvFlags)
     }
-    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패).
-    // 요청하지 않은 변형의 preBuild(위 CMake 의존으로 끌려 온 것)는 아무것도 하지 않는다. release 번들 직전 generate 는 언제나(리뷰 M-R1)
+    // preBuild: 디버그는 생성 파일을 쓰고, release 는 검사만(네이티브 컴파일 전에 일찍 실패).
+    // 요청하지 않은 변형의 preBuild 는 아무것도 하지 않는다. release 번들 직전 generate 는 언제나(리뷰 M-R1)
     variant.preBuildProvider.configure {
         doFirst {
             if (!variantRequested) return
-            isRelease ? { checkPlaceholder(); checkAppInfo() }() : generate()
+            isRelease ? checkEnv() : generate()
         }
     }
     def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
@@ -555,7 +446,7 @@ tasks.register("verifyOssLicenses") {
         if (cur != next) {
             throw new GradleException("오픈소스 라이선스 목록(Android)이 낡았어요(${ossDiff(cur, next) ?: '내용 차이'}). app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
         }
-        def proc = ["node", file("../../scripts/ossLicenses.js").absolutePath, "--check"].execute(null, file("../.."))
+        def proc = startNode([file("../../scripts/ossLicenses.js").absolutePath, "--check"])
         proc.waitForProcessOutput(System.out, System.err)
         if (proc.exitValue() != 0) throw new GradleException("오픈소스 라이선스 목록(JS)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
     }

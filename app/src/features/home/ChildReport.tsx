@@ -1,6 +1,6 @@
-import React, {useRef, useState} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {TopBar} from '../../ui/TopBar';
@@ -14,6 +14,7 @@ import {formatAnswerDate} from './formatDate';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {useAnswerHistory, useApi} from '../../shared/useChildData';
 import {PaidSheet} from './PaidSheet';
+import {track} from '../track';
 
 const c = copy.child;
 const p = c.past;
@@ -30,6 +31,15 @@ export function ChildReport() {
   const api = useApi();
   const [paidOpen, setPaidOpen] = useState(false);
   const topicRef = useRef<React.ComponentRef<typeof View>>(null);
+  // AC-05: 지난 답을 받아 보여 준 때, 화면에 들어올 때마다 한 번(child_report_viewed, 속성 없음)
+  const loaded = !!info;
+  useFocusEffect(
+    useCallback(() => {
+      if (loaded) {
+        track(api, 'child_report_viewed');
+      }
+    }, [loaded, api]),
+  );
 
   let body: React.ReactNode;
   if (error && !info) {
