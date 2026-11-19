@@ -162,6 +162,18 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 앱 할 일(앱 줄 몫): P9 삭제 확인 화면이 `none`을 받으면 "가족 기록은 없고, 로그인 정보와 약관 동의 기록만 지워져요" 같은 안내를 보여 준다(문구는 라이터). 삭제 뒤 기기 정리는 기존과 같다. 지금 앱 `deleteMyAccount`는 반환값을 쓰지 않아 깨지지 않는다. `deleteScopePreview`의 `scope` 타입에 `'none'`을 추가해야 한다.
 - 연결 직후 경쟁(삭제 확인과 같은 순간 번호 연결): 서버가 인증 사용자 행을 잠근 뒤 프로필을 다시 보고, 그 사이 연결됐으면 프로필 기준 삭제(child·parent·family)로 처리한다.
 
+### dev_reset_today() → jsonb  (0051, staging QA S25 — 오늘 코스 다시 하기)
+```ts
+// sb.rpc('dev_reset_today')
+//   → { ok: true; session_date: 'YYYY-MM-DD'; sessions: number; answers: number }
+//   | { ok: false; reason: 'disabled' | 'not_test_family' }
+// 어르신(parent) 본인만 — 자녀·연결 전 기기는 예외 parent_required, anon은 실행 불가
+```
+- 서버 스위치 `server_flags.dev_reset_enabled`가 켜진 DB(로컬 시드·staging 운영자)에서, **테스터 가족(`families.is_test`, §15)** 의 어르신만 동작한다. production은 스위치가 꺼져 있어 항상 `disabled`.
+- 본인의 **오늘(KST)** `daily_sessions`·`answers`만 지운다. 어제 이전 기록, 같은 가족의 다른 어르신, 콘텐츠 커서, 응원, 이벤트는 그대로. 커서가 그대로이므로 다시 `start_today`를 부르면 **같은 날 콘텐츠**로 처음부터 시작한다(`advanced=false`).
+- 감사 행(`admin_audit` action `dev_reset_today`, 처리자 `self`, 대상 프로필·가족, 지운 개수). 1년 보관 규칙은 다른 감사 행과 같다.
+- 앱(개발자 메뉴 등 staging 빌드에서만 노출) 할 일: 성공하면 오늘 코스 화면 상태를 비우고 `start_today`를 다시 부른다. `disabled`·`not_test_family`는 토스트로 이유만.
+
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
 - 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result, link_opened, referrer_found, code_prefilled`(마지막 3개 0029), `paid_sheet_opened, paid_interest_tapped, photo_zoom_opened, child_first_answer_viewed, push_opened`(0034).
@@ -266,6 +278,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
 | record_session_step · start_today · get_today_content · my_day_index · save_answer · my_week_stamps · parent_history | 어르신 | parent 역할·본인 행만, save_answer는 동의 확인 |
 | parent_preview_child_view | 어르신 | parent 역할·본인 항목만(자녀 화면과 같은 내부 함수, 0050) |
+| dev_reset_today | 어르신 | parent 역할·본인 오늘 기록만, 스위치·테스터 가족일 때만(0051) |
 | give_consent · withdraw_consent | 어르신 | parent 역할·본인, 이력 기록 |
 | get_my_cheers · mark_cheers_read | 어르신 | 받는 본인 것만 |
 | parent_family_list | 어르신 | 본인 가족, 개인정보 없음 |
@@ -366,6 +379,16 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 앱·서비스 역할 모두 `families`를 직접 UPDATE할 수 없다(0045, 쓰기는 definer 함수만). 가족 없는 설치 이벤트(app_first_open)는 테스터 구분이 안 된다.
 - 0045에 재검토 Q-L1 포함: 사진 주소 변경 감사의 처리자 = 실제 호출 역할(`service_role`, Studio는 `postgres`).
 
+### 개발 스위치(server_flags, 0051)
+- 표 `server_flags(name, enabled, updated_at)` — 지금 이름은 `dev_reset_enabled` 하나. 마이그레이션은 행을 넣지 않는다(= 모든 환경 기본 꺼짐). 앱·anon·서비스 역할은 읽기·쓰기 불가.
+- 로컬: `supabase/seed_dev_flags.sql`(db reset 때만)로 켜짐.
+- staging: QA 기간에 운영자가 SQL Editor(postgres)에서 켜고, 끝나면 끈다. 값은 비밀이 아니다.
+  ```sql
+  insert into public.server_flags (name, enabled) values ('dev_reset_enabled', true) on conflict (name) do update set enabled = excluded.enabled, updated_at = now();
+  update public.server_flags set enabled = false, updated_at = now() where name = 'dev_reset_enabled';  -- 끄기
+  ```
+- production: 켜지 않는다. remote-checks "개발 스위치 꺼짐" 줄이 production에서는 반드시 true(staging은 QA 중 false 허용). RLS가 켜져 있어 읽기 전용 역할로 돌리면 행이 안 보여 "꺼짐"으로 나올 수 있으니 SQL Editor(postgres)에서 확인한다.
+
 ## 16. 마이그레이션 대장(서버 기준, SV-17) — 계획 문서 대장(docs/plans/10 §2)은 리드가 이 표로 갱신
 | 번호 | 내용 | main | staging |
 |---|---|---|---|
@@ -389,7 +412,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0047 | 키 위생(E1·E7: display_name 제거·pii_in_args·카카오 포기 뷰) | 병합 | 미반영 |
 | 0048 | 약관 게시 버전·재동의 판단 | 병합 | 미반영 |
 | 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 병합 | 미반영 |
-| 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 브랜치 server-parent-preview | 미반영 |
+| 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 병합 | 미반영 |
+| 0051 | 개발 스위치 server_flags + dev_reset_today(테스터 가족 오늘 코스 다시) | 브랜치 server-dev-reset-today | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
