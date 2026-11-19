@@ -4,7 +4,7 @@ import React from 'react';
 import {StyleSheet} from 'react-native';
 import {fireEvent, render, screen} from '@testing-library/react-native';
 import {AudienceProvider, BackLink, Banner, Button, Card, Choice, Field, Heading, Section, SocialButton, StateView, Text} from '../src/ui/ds';
-import {BANNER_LOOK} from '../src/ui/ds/Banner';
+import {BANNER_ACTION, BANNER_LOOK} from '../src/ui/ds/Banner';
 import {CARD_SURFACE} from '../src/ui/ds/Card';
 import {tokensV4 as t, type Audience} from '../src/ui/tokensV4';
 
@@ -216,10 +216,16 @@ describe('Card·Section·Banner·StateView', () => {
       expect([tone, allowedText(look.text, look.surface), allowedNonText(look.icon, look.surface), allowedNonText(look.border, look.surface)]).toEqual([tone, true, true, true]);
     }
   });
-  test('Banner: 아이콘 + 글(색만으로 알리지 않음), 행동은 글자 링크', () => {
+  test('Banner 행동(리뷰 M2): 흰 알약 위 action 글자 — 어르신 허용 목록 안, 옅은 띠 면 위 글자 링크가 아님', () => {
+    const elderOk = (fg: string, bg: string) => t.textOnSurface.some(p => p.fg === fg && p.bg === bg && (p.audience as readonly string[]).includes('elder'));
+    expect(elderOk(BANNER_ACTION.text, BANNER_ACTION.surface)).toBe(true);
     render(<Banner tone="offline" text="인터넷이 끊겼어요" action={{label: '다시 하기', onPress: noop}} />);
     expect(screen.getByTestId('icon-wifi-off', {includeHiddenElements: true})).toBeTruthy();
-    expect(screen.getByText('다시 하기')).toBeTruthy();
+    const label = flat(screen.getByText('다시 하기').props.style);
+    expect(label.color).toBe(c[BANNER_ACTION.text]);
+    expect(label.textDecorationLine).toBeUndefined();
+    const btn = screen.getByRole('button', {name: '다시 하기'});
+    expect(flat(btn.props.style).backgroundColor).toBe(c[BANNER_ACTION.surface]);
   });
   test('StateView: 로딩은 busy·스피너 없음, 오류는 아이콘 + 할 일 1개', () => {
     const {rerender} = render(<StateView kind="loading" title="불러오고 있어요" />);

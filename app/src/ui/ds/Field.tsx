@@ -1,4 +1,5 @@
-import React, {useId} from 'react';
+import React, {useEffect, useId} from 'react';
+import {announce} from '../a11y';
 import {StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps} from 'react-native';
 import {Text} from './Text';
 import {ds, minTouch, roleText} from './roles';
@@ -37,6 +38,12 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
   // 입력 글자는 fieldInput 역할(상한 1.5, 자판 열림과 상관없이). label·hint 는 각 역할 상한(2.0)
   const r = roleText('fieldInput', a);
   const id = useId();
+  // 오류가 나타나거나 바뀌면 한 번 읽어 준다(R11, 리뷰 L9). 힌트에도 붙어 다음 포커스 때 다시 읽힌다
+  useEffect(() => {
+    if (error) {
+      announce(error);
+    }
+  }, [error]);
   return (
     <View style={styles.wrap}>
       <Text role="label" nativeID={`${id}-label`}>

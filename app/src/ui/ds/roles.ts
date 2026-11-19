@@ -11,6 +11,8 @@ type InnerRole = TextRole | 'link' | 'backLink' | 'buttonPrimary' | 'buttonSecon
 
 /** 글자 tone(뜻). default 는 역할의 기본색, muted 는 보조(어르신 inkSub / 자녀 inkSubChild) */
 export type Tone = 'default' | 'muted' | 'accent' | 'info' | 'done' | 'danger' | 'onAction' | 'action' | 'disabled';
+/** 화면이 Text 에 고를 수 있는 tone(PR #29 리뷰 M1). 나머지는 컴포넌트 내부 전용 */
+export type TextTone = Extract<Tone, 'default' | 'muted' | 'accent' | 'done' | 'danger'>;
 
 const TONE_COLOR: Record<Exclude<Tone, 'default' | 'muted'>, ColorV4> = {
   accent: 'accent',

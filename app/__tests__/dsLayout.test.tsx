@@ -5,7 +5,7 @@ import React from 'react';
 import {Keyboard, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, within} from '@testing-library/react-native';
 import {AudienceProvider, BackLink, Banner, Button, Card, Choice, DsScreen, Field, Heading, Section, SocialButton, StateView, Text, type DockProps} from '../src/ui/ds';
-import {INTRO_DOCK_RATIO} from '../src/ui/ds/Screen';
+import {INTRO_DOCK_RATIO, dockRatioFor} from '../src/ui/ds/Screen';
 import {dockCap, estimateLines, nextSpill, planDock} from '../src/ui/ds/dockLayout';
 import {MORE_BAND_H} from '../src/ui/ds/MoreBand';
 
@@ -152,6 +152,41 @@ describe('DsScreen', () => {
     expect(within(screen.getByTestId('ds-dock')).queryByText('다시 쓰기')).toBeNull();
     // 주 버튼은 언제나 Dock 에 남는다(한 화면 한 목적)
     expect(within(screen.getByTestId('ds-dock')).getByText('다 썼어요')).toBeTruthy();
+  });
+
+  test('자판이 열리면 상한은 보이는 창(창 - 자판) 기준(R-15, 리뷰 M3)', () => {
+    const handlers: Record<string, ((e?: unknown) => void)[]> = {};
+    jest.spyOn(Keyboard, 'addListener').mockImplementation(((ev: string, fn: (e?: unknown) => void) => {
+      (handlers[ev] ??= []).push(fn);
+      return {remove: noop};
+    }) as never);
+    render(
+      <DsScreen variant="form" dock={dock}>
+        <Text role="body">본문</Text>
+      </DsScreen>,
+    );
+    const layout = (h: number) => act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: h}}}));
+    layout(150); // 자판 닫힘: 150 + 여백 34 < 256 → 그대로
+    expect(screen.queryByTestId('dock-spill')).toBeNull();
+    act(() => (handlers.keyboardDidShow ?? []).forEach(f => f({endCoordinates: {height: 280}})));
+    // 보이는 창 360 × 0.4 = 144 → 같은 Dock 이 넘친다 → note 를 본문으로
+    layout(150);
+    expect(within(screen.getByTestId('dock-spill')).getByTestId('dock-note')).toBeTruthy();
+    expect(flat(screen.getByTestId('screen-dock').props.style).maxHeight).toBe(dockCap(H - 280));
+    act(() => (handlers.keyboardDidHide ?? []).forEach(f => f()));
+    expect(screen.queryByTestId('dock-spill')).toBeNull(); // 닫히면 다시 Dock 에 다 넣고 잰다
+  });
+
+  test('SocialGroup 이 든 Dock 은 intro 라도 0.4(R-12, 리뷰 M4)', () => {
+    const social: DockProps = {primary: {social: [{provider: 'kakao', label: '카카오 로그인', onPress: noop}]}};
+    expect(dockRatioFor('intro', social)).toBe(0.4);
+    expect(dockRatioFor('intro', {primary: {label: '시작하기', onPress: noop}})).toBe(INTRO_DOCK_RATIO);
+    render(
+      <DsScreen variant="intro" dock={social}>
+        <Text role="body">소개</Text>
+      </DsScreen>,
+    );
+    expect(flat(screen.getByTestId('screen-dock').props.style).maxHeight).toBe(dockCap(H));
   });
 
   test('상한 안이면 Dock 그대로(본문으로 보내지 않음)', () => {

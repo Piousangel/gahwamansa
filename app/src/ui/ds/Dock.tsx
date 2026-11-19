@@ -22,9 +22,12 @@ export type DockAction = {
   social?: never;
 };
 
-type Social = Omit<SocialButtonProps, 'testID'>;
-/** 소셜 로그인 묶음(PR #20 리뷰 M5): SocialButton 1~3개만. 그 밖의 묶음은 타입 에러 */
-export type SocialGroup = {social: readonly [Social] | readonly [Social, Social] | readonly [Social, Social, Social]};
+type Social<P extends SocialButtonProps['provider']> = Omit<SocialButtonProps, 'testID' | 'provider'> & {provider: P};
+/**
+ * 소셜 로그인 묶음(PR #20 리뷰 M5, R-12): 자리마다 provider 가 정해져 순서(카카오 → 구글)·중복을 타입이 막는다(리뷰 L4).
+ * 상한은 원본 dock.socialGroup.maxItems(3) — apple 자산이 들어오면 세 번째 자리를 연다(N5).
+ */
+export type SocialGroup = {social: readonly [Social<'kakao'>] | readonly [Social<'kakao'>, Social<'google'>] | readonly [Social<'google'>]};
 export const SOCIAL_GROUP_MAX = ds.dock.socialGroupMax;
 
 export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger'}) | SocialGroup;
@@ -45,7 +48,7 @@ export const isSocialGroup = (p: DockPrimary): p is SocialGroup => 'social' in p
 
 function Primary({p}: {p: DockPrimary}) {
   if (isSocialGroup(p)) {
-    // 높이 상한: 묶음은 3개까지(타입), 각 버튼은 minHeight 60·글자 확대 1.3(브랜드 예외)이라 200%에서도 커지는 폭이 작다
+    // 묶음은 자리별 provider(타입). 각 버튼은 minHeight 60, 글자는 자녀 button 역할(상한 1.5)·굵기 500(브랜드 예외)
     return (
       <View style={styles.group} testID="dock-social">
         {p.social.map(s => (

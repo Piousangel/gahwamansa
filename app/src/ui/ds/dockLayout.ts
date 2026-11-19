@@ -4,6 +4,10 @@ import {ds, minTouch, roleText, type Audience} from './roles';
 import {isSocialGroup, type DockProps, type DockSpillLevel} from './Dock';
 import {SOCIAL_MIN_HEIGHT} from './SocialButton';
 
+/** 옛 ui/Screen Dock 안쪽 여백: 위 12-6, 아래 max(28, 16 + insets.bottom). 런타임 판단과 추정이 같은 값을 쓴다(리뷰 L3) */
+export const DOCK_PAD_TOP = 6;
+export const dockBottomPad = (insetBottom: number) => Math.max(ds.dock.padding.bottomMin, 16 + insetBottom);
+
 /** Dock 상한(dp). variant intro 는 예외 비율을 쓴다(Screen) */
 export const dockCap = (windowHeight: number, ratio: number = ds.dock.maxHeightRatio) => Math.floor(windowHeight * ratio);
 
@@ -48,7 +52,7 @@ export function estimateLines(text: string, fontPx: number, width: number): numb
   return lines;
 }
 
-type Env = {width: number; fontScale: number; audience: Audience};
+type Env = {width: number; fontScale: number; audience: Audience; insetBottom?: number};
 
 function textBlock(role: Parameters<typeof roleText>[0], text: string, width: number, env: Env) {
   const r = roleText(role, env.audience);
@@ -83,7 +87,7 @@ export function estimateDock(props: DockProps, env: Env, spill: DockSpillLevel =
     );
   }
   const content = parts.reduce((a, b) => a + b, 0) + gap * (parts.length - 1);
-  return {content, total: content + ds.dock.padding.top + ds.dock.padding.bottomMin, parts};
+  return {content, total: content + DOCK_PAD_TOP + dockBottomPad(env.insetBottom ?? 0), parts};
 }
 
 /** 상한 안에 들어갈 때까지 note → 보조를 본문으로 보낸 결과. fits=false 면 최후 수단(페이드)까지 간 것 = 테스트 실패 대상 */

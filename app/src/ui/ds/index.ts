@@ -12,5 +12,5 @@ export {Card, Section} from './Card';
 export {Banner, type BannerTone} from './Banner';
 export {StateView, type StateViewProps, type StateKind} from './StateView';
 export {DsScreen, type DsScreenProps, type ScreenVariant} from './Screen';
-export type {TextRole, Tone, Audience} from './roles';
+export type {TextRole, TextTone, Audience} from './roles';
 export {MoreBand, MORE_BAND_H} from './MoreBand';

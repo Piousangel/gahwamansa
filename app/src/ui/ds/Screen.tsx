@@ -3,15 +3,16 @@ import {Keyboard, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Screen as BaseScreen, type ScreenScroll} from '../Screen';
 import {BackLink, type BackLinkProps} from './BackLink';
-import {Dock, DockSpill, type DockProps, type DockSpillLevel} from './Dock';
-import {dockCap, nextSpill} from './dockLayout';
+import {Dock, DockSpill, isSocialGroup, type DockProps, type DockSpillLevel} from './Dock';
+import {DOCK_PAD_TOP, dockBottomPad, dockCap, nextSpill} from './dockLayout';
 import {ds} from './roles';
 import {MoreBand} from './MoreBand';
 
 /** 빌드 1 구현 틀(SUMMARY Q8): step·form·intro. list·done·state 는 빌드 1 끝에(60h 안이면) */
 export type ScreenVariant = 'step' | 'form' | 'intro';
 
-/** 첫 화면(intro)은 버튼이 주인공이라 40% 예외(지금 첫 화면 RoleSelect 와 같은 0.6). 화면 파일은 비율을 고르지 못한다 */
+/** 첫 화면(intro)은 버튼이 주인공이라 40% 예외(지금 첫 화면 RoleSelect 와 같은 0.6). 화면 파일은 비율을 고르지 못한다.
+ *  단 SocialGroup 이 든 Dock 은 variant 와 상관없이 0.4(R-12 단서, PR #29 리뷰 M4) — dockRatioFor */
 export const INTRO_DOCK_RATIO = 0.6;
 /** variant 별 정책 한 곳(SUMMARY 2-6 'variant 가 정하는 것') */
 export const VARIANT = {
@@ -20,8 +21,10 @@ export const VARIANT = {
   intro: {dockRatio: INTRO_DOCK_RATIO, collapseOnKeyboard: false, fill: true},
 } as const;
 
-// 옛 Screen 의 Dock 안쪽 위아래 여백(위 12-6, 아래 max(28, 16 + insets.bottom)) — 넘침 판단에 더한다
-const DOCK_PAD_TOP = 6;
+/** Dock 상한 비율: SocialGroup 이면 0.4, 아니면 variant 값 */
+export function dockRatioFor(variant: ScreenVariant, dock?: DockProps): number {
+  return dock && isSocialGroup(dock.primary) ? ds.dock.maxHeightRatio : VARIANT[variant].dockRatio;
+}
 
 export type DsScreenProps = {
   variant: ScreenVariant;
@@ -36,20 +39,21 @@ export type DsScreenProps = {
   scrollRef?: React.Ref<ScreenScroll>;
 };
 
-function useKeyboardOpen(enabled: boolean) {
-  const [open, setOpen] = useState(false);
+/** 자판 높이(dp, 닫혀 있으면 0). 열림 여부는 > 0 */
+function useKeyboardHeight(enabled: boolean) {
+  const [h, setH] = useState(0);
   useEffect(() => {
     if (!enabled) {
       return;
     }
-    const show = Keyboard.addListener('keyboardDidShow', () => setOpen(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setOpen(false));
+    const show = Keyboard.addListener('keyboardDidShow', e => setH(Math.max(1, Math.round(e?.endCoordinates?.height ?? 1))));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setH(0));
     return () => {
       show.remove();
       hide.remove();
     };
   }, [enabled]);
-  return enabled && open;
+  return enabled ? h : 0;
 }
 
 /**
@@ -60,18 +64,25 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, scrol
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const collapsed = useKeyboardOpen(v.collapseOnKeyboard);
+  const kb = useKeyboardHeight(v.collapseOnKeyboard);
+  const collapsed = kb > 0;
   const [spill, setSpill] = useState<DockSpillLevel>(0);
+  const ratio = dockRatioFor(variant, dock);
+  // R-15(PR #29 리뷰 M3): 자판이 열리면 상한은 실제로 보이는 창(창 높이 - 자판) 기준
+  const visible = Math.max(0, height - kb);
+  const cap = dockCap(visible, ratio);
 
-  // 창 크기·글자 배율이 바뀌면 다시 Dock 에 다 넣고 재본다
-  useEffect(() => setSpill(0), [width, height, fontScale]);
+  // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1)
+  const dockKey = dock
+    ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}`, dock.secondary?.label ?? '', dock.note?.text ?? ''].join('/')
+    : '';
+  useEffect(() => setSpill(0), [width, height, fontScale, kb, dockKey]);
 
-  const cap = dockCap(height, v.dockRatio);
   const onDockHeight = (content: number) => {
     if (!dock) {
       return;
     }
-    const total = content + DOCK_PAD_TOP + Math.max(ds.dock.padding.bottomMin, 16 + insets.bottom);
+    const total = content + DOCK_PAD_TOP + dockBottomPad(insets.bottom);
     setSpill(level => {
       const next = nextSpill(level, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
       if (next === level && total > cap && __DEV__) {
@@ -93,7 +104,8 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, scrol
     <BaseScreen
       top={top}
       fill={v.fill}
-      dockMaxRatio={v.dockRatio}
+      // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
+      dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
       moreBand={<MoreBand />}
       bottom={dock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
