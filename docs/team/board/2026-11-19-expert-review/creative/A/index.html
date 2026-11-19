@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>디렉터 A 세 안</title>
+<style>
+  :root{--bg:#F2F2EF;--fg:#1F1E1C;--sub:#55524C}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,'Apple SD Gothic Neo',sans-serif;padding:16px}
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:18px;margin:28px 0 4px} p{margin:0 0 8px;color:var(--sub);max-width:70ch}
+  .row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+  figure{margin:0} figure img{width:100%;border:1px solid #ccc;display:block} figcaption{font-size:13px;color:var(--sub);padding-top:2px}
+  a{color:#1F3C88}
+</style></head><body>
+<h1>디렉터 A: 집 안의 생활 매체 세 가지</h1>
+<p>문서: <a href="directions.md">directions.md</a>. 화면마다 360×640 100%, 360×640 200% 첫 화면, 200% 펼침 순서. HTML을 열어 <code>?s=2</code>(200%), <code>&amp;full=1</code>(펼침)로 볼 수 있습니다. 사진은 모두 AI가 만든 그림(content/photos/day-04.jpg)입니다.</p>
+<script>
+  const D=[['a1','a1-ilryeok','A1 일력 한 장'],['a2','a2-pyeonji','A2 안부 편지'],['a3','a3-jogakbo','A3 조각보']];
+  const S=[['p3','P3 오늘 코스 홈'],['p4','P4 사진 보기'],['p7','P7 완료'],['c4','C4 자녀 첫 답']];
+  for(const [t,dir,name] of D){
+    document.write(`<h2>${name}</h2><div class="row">`);
+    for(const [s,sn] of S) for(const [v,vn] of [['100','100%'],['200','200% 첫 화면'],['200-full','200% 펼침']])
+      document.write(`<figure><a href="${dir}/${s}.html"><img src="img/${t}-${s}-${v}.png" alt="${name} ${sn} ${vn}" loading="lazy"></a><figcaption>${sn} · ${vn}</figcaption></figure>`);
+    document.write('</div>');
+  }
+</script>
+</body></html>

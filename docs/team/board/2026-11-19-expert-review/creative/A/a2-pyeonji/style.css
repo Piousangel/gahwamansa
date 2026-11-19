@@ -1,0 +1,47 @@
+/* A2 안부 편지. 팔레트: tools/contrast.py PAL.A2 */
+:root{--air:#E6EDF3;--letter:#FFFFFF;--ink:#1B2840;--mark:#3A465A;--pen:#22427A;--red:#9E2A2B;--rule:#B9C8DA;--white:#FFFFFF}
+body{background:var(--air);color:var(--ink);font-family:'Gowun Dodum',sans-serif}
+.t-title,.t-heading,.t-btn,.t-btn2,.serif{font-family:'Gowun Batang',serif}
+.phone{background:var(--air)}
+.scroll{padding:0 12px;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 12px 0}
+.sub{color:var(--mark)}
+.link{color:var(--pen);min-height:64px;display:inline-flex;align-items:center;gap:6px;text-decoration:underline;text-underline-offset:4px}
+/* 편지지: 흰 종이, 왼쪽 여백선 없이 괘선만. 반경은 편지지 4 · 우표 0(톱니) · 버튼 28 */
+.letter{background:var(--letter);border-radius:4px;padding:16px 16px 8px;flex:1 0 auto;box-shadow:0 1px 0 var(--rule)}
+html.full .letter{flex:0 0 auto}
+.head{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:start}
+.rows{display:flex;flex-direction:column;margin-top:8px}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 12px;min-height:64px;border-bottom:1.5px solid var(--rule);padding:0 2px}
+.row .state{display:inline-flex;align-items:center;gap:6px;color:var(--mark);margin-left:auto}
+.row.now{min-height:72px;color:var(--pen)}
+.row.now .label{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+.row.now .state{color:var(--pen)}
+/* 우표: 흰 바탕에 구멍(항공지 색)을 뚫어 톱니를 만든다 */
+.stamp{position:relative;padding:9px;background:radial-gradient(circle,var(--air) 3px,transparent 3.6px) -5px -5px/10px 10px,var(--white);display:inline-block}
+.stamp::before{content:"";position:absolute;inset:5px;background:var(--white)}
+.stamp img{position:relative;display:block;object-fit:cover}
+.stamp.sm img{width:112px;height:90px}
+.stamp.lg{display:block}
+.stamp.lg img{width:100%;height:auto;aspect-ratio:1152/928}
+.stampcap{display:block;text-align:right}
+.dock{padding:12px 16px 20px}
+.btn{display:flex;align-items:center;justify-content:center;min-height:72px;border-radius:28px;background:var(--pen);color:var(--white);text-align:center;padding:12px 16px}
+.btn.child{min-height:56px;border-radius:20px}
+.more svg path{stroke:var(--mark)}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:64px;min-width:120px;padding:0 18px 0 10px;border:1.5px solid var(--mark);border-radius:32px;background:var(--white);color:var(--pen)}
+/* 봉투와 소인(P7·C4) */
+.env{position:relative;background:var(--white);border-radius:4px;padding:16px;min-height:200px;overflow:hidden}
+.env .flap{position:absolute;left:0;right:0;top:0;height:110px;pointer-events:none}
+.postmark{position:absolute;width:118px;height:118px;border-radius:59px;border:3px solid var(--red);color:var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-8deg);background:rgba(255,255,255,.0);font-family:'Gowun Batang',serif;line-height:1}
+.postmark .d{font-size:20px;line-height:1.1}
+.postmark .g{font:700 40px/1 'Noto Serif KR',serif;margin:4px 0}
+.cancel{position:absolute;height:40px;width:120px;pointer-events:none}
+@keyframes markIn{0%{opacity:0;transform:rotate(-8deg) scale(1.12)}100%{opacity:1;transform:rotate(-8deg) scale(1)}}
+.postmark.anim{animation:markIn 300ms cubic-bezier(.4,0,.2,1) 200ms 1 both}
+.airmail{height:10px;margin:-16px -16px 14px;background:repeating-linear-gradient(-45deg,var(--red) 0 12px,var(--white) 12px 18px,var(--ink) 18px 30px,var(--white) 30px 36px)}
+.big{font-weight:700}
+
+/* 200%: 머리 두 칸을 한 칸으로(우표가 제목 아래로). 반쪽 빈 칸이 생기지 않게 */
+html.fs2 .head{grid-template-columns:1fr}
+html.fs2 .stampcap{text-align:left}
