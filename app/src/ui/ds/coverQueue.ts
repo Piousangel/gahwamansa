@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 /**
  * 덮개(cover) 큐 — 하루 하나(전문가 리뷰 A8 7/8, P-07).
@@ -17,6 +17,8 @@ export function createCoverQueue(opts: {store?: CoverStore; now?: () => Date} = 
   const now = opts.now ?? (() => new Date());
   let shownDay: string | null | undefined; // undefined = 아직 읽지 않음
   let active: string | null = null;
+  // 요청을 한 줄로 세운다(PR #148 리뷰 M1): 첫 읽기(load) 전에 둘이 동시에 오면 둘 다 null 을 보고 둘 다 허락되던 경합
+  let tail: Promise<unknown> = Promise.resolve();
 
   const day = async () => {
     if (shownDay === undefined) {
@@ -27,18 +29,25 @@ export function createCoverQueue(opts: {store?: CoverStore; now?: () => Date} = 
 
   return {
     /** 덮개 id 를 지금 보여도 되면 true(오늘 몫을 쓴다). 이미 보인 날이거나 다른 덮개가 떠 있으면 false */
-    async request(id: string): Promise<boolean> {
-      if (active === id) {
+    request(id: string): Promise<boolean> {
+      const run = async () => {
+        if (active === id) {
+          return true;
+        }
+        const today = kstDay(now());
+        if (active !== null || (await day()) === today) {
+          return false;
+        }
+        active = id;
+        shownDay = today;
+        // 저장 실패(리뷰 L2): 이 실행 동안은 메모리(shownDay)로 하루 하나를 지킨다. 저장소가 계속 고장이면 앱을 켤 때마다 하나가 뜰 수 있다 —
+        // 덮개(알림 안내 등)를 영영 막는 쪽보다 낫다고 보고 보임 쪽(fail-open)으로 둔다
+        await store?.save(today).catch(() => {});
         return true;
-      }
-      const today = kstDay(now());
-      if (active !== null || (await day()) === today) {
-        return false;
-      }
-      active = id;
-      shownDay = today;
-      await store?.save(today).catch(() => {});
-      return true;
+      };
+      const p = tail.then(run, run);
+      tail = p.catch(() => {});
+      return p;
     },
     /** 덮개가 닫혔다(오늘 몫은 그대로 쓴 것으로 남는다) */
     release(id: string) {
@@ -68,12 +77,11 @@ export const configureCoverQueue = (s: CoverStore) => coverQueue.configure(s);
  */
 export function useCover(id: string, want: boolean, queue = coverQueue) {
   const [visible, setVisible] = useState(false);
-  const asked = useRef(false);
   useEffect(() => {
-    if (!want || asked.current) {
+    if (!want) {
       return;
     }
-    asked.current = true;
+    // 리뷰 L3: 다시 실행돼도(StrictMode 이중 effect 등) 다시 청한다 — 같은 id 가 이미 떠 있으면 큐가 그대로 허락한다
     let alive = true;
     queue.request(id).then(ok => alive && ok && setVisible(true));
     return () => {
