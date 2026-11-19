@@ -67,8 +67,12 @@ describe('이름 사전: 링크·버튼 문구 = 도착 화면 제목', () => {
   });
 
   test("'처음으로'는 첫 화면으로 가는 버튼에만(목적지 하나)", () => {
-    const firstKeys = all.filter(([, s]) => s === NAMES.firstScreen).map(([p]) => p).sort();
-    expect(firstKeys).toEqual(['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back'].sort());
+    // 모두 첫 화면(FS)으로 간다: resetRole 또는 삭제 뒤 처음부터. 새 키를 넣으면 목적지를 확인하고 여기에 더한다.
+    // login.blocked_parent_device.button 은 A5 PR(#134)에서 '알겠어요' → '처음으로'(ChildGate resetRole)
+    const ALLOWED = ['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back', 'login.blocked_parent_device.button'];
+    const firstKeys = all.filter(([, s]) => s === NAMES.firstScreen).map(([p]) => p);
+    expect(firstKeys.filter(p => !ALLOWED.includes(p))).toEqual([]);
+    expect(firstKeys).toEqual(expect.arrayContaining(['delete.child.back', 'delete.parent.back', 'errors.not_parent_device.button', 'login.back']));
   });
 });
 
