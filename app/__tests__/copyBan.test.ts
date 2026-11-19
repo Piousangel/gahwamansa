@@ -39,6 +39,14 @@ test('확정 키: 탭 이름, 지우기 확인 단어, AI 표기, 서비스 이�
   expect(copy.connect.greeting).toBe('안녕하세요, 해님이에요');
 });
 
+test('계정 지우기 로그인 풀림: 어르신용은 로그인 대신 문의하기로(익명 계정은 다시 들어오면 새 계정)', () => {
+  const p = copy.delete.signed_out_parent;
+  expect([p.title, p.body, p.button].some(s => /로그인/.test(s))).toBe(false);
+  expect(p.button).toBe(copy.app_info.contact); // 버튼 이름 = 도착(앱 정보 '문의하기')
+  expect(`${p.title}${p.body}`).not.toMatch(/@|https?:/); // 메일 주소·URL 은 앱 정보 상수(CONTACT_EMAIL)에서, 문구에 쓰지 않는다
+  expect(copy.delete.signed_out.button).toBe('다시 로그인하기'); // 자녀용은 그대로
+});
+
 test('호칭은 조사 없이 의/께/뒤 띄어쓰기로만 쓴다', () => {
   const bad = all.filter(([, s]) => /\{호칭\}(은|는|이|가|을|를|과|와)(?![가-힣])/.test(s));
   expect(bad).toEqual([]);
