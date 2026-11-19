@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000050', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000051', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장
@@ -38,9 +38,9 @@ with checks(check_name, ok, detail) as (
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')) = 0, null
   union all
-  select '앱 실행 가능 definer 37개(허용 목록과 같은 수, 0050 기준)',
+  select '앱 실행 가능 definer 38개(허용 목록과 같은 수, 0051 기준)',
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 37,
+           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 38,
          (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute'))
   union all
@@ -111,6 +111,16 @@ with checks(check_name, ok, detail) as (
                             unnest(array['service_role', 'authenticated', 'anon']) r(role), unnest(array['insert', 'update', 'delete', 'truncate']) pr(priv)
                       where n.nspname = 'public' and c.relkind in ('v', 'm') and has_table_privilege(r.role, c.oid, pr.priv)),
          'false면 kakao_unlink_gave_up 등으로 감사 없이 큐를 고치거나 지울 수 있음'
+  union all
+  -- server_flags는 RLS(정책 없음)라 RLS를 우회하지 못하는 역할로는 행이 안 보여 '꺼짐'으로 잘못(위험한 쪽으로) 나온다 → 그런 역할이면 판정 보류(null)(PR #37 L2)
+  select '개발 스위치 꺼짐(dev_reset_enabled, 0051) — production은 반드시 true',
+         case when (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then not coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false) end,
+         case when not (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then '이 역할(' || current_user || ')은 RLS를 우회하지 못해 판정 불가 — SQL Editor(postgres)에서 다시 실행'
+              when coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false)
+              then '켜짐 — staging QA 중이면 정상(false 허용), production이면 바로 끄기: update server_flags set enabled = false where name = ''dev_reset_enabled'''
+              else '꺼짐' end
   union all
   select '프로필 없는 계정 삭제 경로(0049 P20)',
          has_function_privilege('service_role', 'public.admin_delete_user(uuid,text,text)', 'execute')
