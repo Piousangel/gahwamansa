@@ -86,7 +86,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
   const visible = Math.max(0, height - kb);
   const cap = dockCap(visible, ratio);
 
-  // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1)
+  // 창 크기·글자 배율·자판·Dock 문구가 바뀌면 다시 Dock 에 다 넣고 재본다(리뷰 L1).
   const dockKey = dock
     ? [isSocialGroup(dock.primary) ? dock.primary.social.map(x => x.label).join('|') : `${dock.primary.label}|${dock.primary.disabled ? dock.primary.disabledReason ?? '' : ''}|${dock.primary.loading ? 'L' : ''}|${dock.primary.kind ?? ''}|${dock.primary.icon ?? ''}`, `${dock.secondary?.label ?? ''}|${dock.secondary?.kind ?? ''}|${dock.secondary?.icon ?? ''}`, dock.note?.text ?? ''].join('/') // PR #83 리뷰 L3: Dock 높이를 바꾸는 kind·icon 도
     : '';

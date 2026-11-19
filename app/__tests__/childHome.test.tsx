@@ -72,13 +72,13 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
     lay('child-home-example-2', 0, 120); // 280~400 → 300 에 걸림
     lay('child-home-empty-starter', 0, 90);
   });
-  expect(mt('child-home-example-2')).toBe(328 - 280); // 흐림 위(300)에 걸치면 민다, 민 카드는 흐림 밑 창 끝(328)으로
+  expect(mt('child-home-example-2')).toBe(328 - 280 + 1); // foldPush 공용 +1(PR 91 L1) // 흐림 위(300)에 걸치면 민다, 민 카드는 흐림 밑 창 끝(328)으로
   expect(mt('child-home-example-1')).toBeUndefined();
   // 재확인 L6: 위 끝이 흐림 구간(300~328) 안에서 시작하는 요소도 민다(흐림 속에 테두리가 비치지 않게)
   await act(async () => {
     lay('child-home-example-1', 0, 140); // 146~286 → 카드 2 는 300~420: 위 끝이 흐림 구간(300~328) 안
   });
-  expect(mt('child-home-example-2')).toBe(328 - 300);
+  expect(mt('child-home-example-2')).toBe(328 - 300 + 1);
   // 창이 커져 다 들어가면 간격 없음
   await act(async () => {
     lay('screen-body', 0, 700);

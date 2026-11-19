@@ -4,7 +4,6 @@ import {act, fireEvent, render, renderHook, screen, waitFor, within} from '@test
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {StampRow} from '../src/features/course/StampRow';
-import {ToCourseHomeLink} from '../src/features/course/ToCourseHomeLink';
 import {useAfterTransition} from '../src/features/course/useAfterTransition';
 import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
@@ -175,26 +174,26 @@ describe('U9 키패드 촉각', () => {
   });
 });
 
-describe('U13 단계 화면 하단 "오늘 코스로" 보조 링크(100%만)', () => {
-  test('사진 보기 주 버튼 아래 링크, 누르면 기록 없이 코스 홈', async () => {
+describe('U-8(사용자 결정 11-19): P4·P5 하단 "오늘 코스로" 링크 삭제, 위 BackLink 가 대신', () => {
+  test('사진 보기: 하단에 링크 없음, 위 BackLink 오늘 코스로(보이는 글 = 읽기) → 기록 없이 코스 홈', async () => {
     const api = createFakeApi({linked: true, consented: true});
     const rec = jest.spyOn(api, 'recordSessionStep');
     await toHomeConsented(api);
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
-    const dock = screen.getByTestId('screen-dock');
-    const link = within(dock).getByTestId('to-course-home');
-    expect(within(link).getByText('오늘 코스로')).toBeTruthy();
-    fireEvent.press(link);
+    expect(screen.queryByTestId('to-course-home')).toBeNull();
+    const back = screen.getByRole('link', {name: '오늘 코스로'});
+    expect(within(screen.getByTestId('ds-screen-top')).getByTestId('back-link')).toBe(back);
+    fireEvent.press(back);
     await waitFor(() => screen.getByTestId('date-line'));
     expect(rec).not.toHaveBeenCalled();
   });
-  test('글자 150% 이상이면 넣지 않는다(하단 밀림 방지)', async () => {
+  test('글자 150%에서도 BackLink 는 숨지 않는다(R-14)', async () => {
     mockFontScale = 1.5;
     await toHomeConsented(createFakeApi({linked: true, consented: true}));
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
-    expect(screen.queryByTestId('to-course-home')).toBeNull();
+    expect(screen.getByRole('link', {name: '오늘 코스로'})).toBeTruthy();
   });
 });
 
@@ -229,22 +228,6 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
 });
 
 describe('리뷰 낮음 반영', () => {
-  test("U13 '오늘 코스로'는 화면 읽기가 켜져 있으면 그리지 않는다(라이터 11-9 추가)", async () => {
-    (AccessibilityInfo.isScreenReaderEnabled as unknown as jest.Mock).mockImplementation(() => Promise.resolve(true));
-    render(<ToCourseHomeLink onPress={jest.fn()} />);
-    await waitFor(() => expect(screen.queryByTestId('to-course-home')).toBeNull());
-  });
-  test("U13 '오늘 코스로': 읽기 '오늘 코스로 돌아가기'(라이터 11-9), 저장 중에는 누를 수 없음, 100%만(115%면 숨김)", () => {
-    const onPress = jest.fn();
-    const {rerender} = render(<ToCourseHomeLink onPress={onPress} disabled />);
-    const link = screen.getByRole('button', {name: '오늘 코스로 돌아가기'});
-    expect(link.props.accessibilityState?.disabled).toBe(true);
-    fireEvent.press(link);
-    expect(onPress).not.toHaveBeenCalled();
-    mockFontScale = 1.15;
-    rerender(<ToCourseHomeLink onPress={onPress} />);
-    expect(screen.queryByTestId('to-course-home')).toBeNull();
-  });
   test("W0 ③: 거부 상태 P3 띠 '다시 정하기' → 설정이 '다시 보여 주기' 확인을 펼친 채, 제목에 포커스, 좋아요 한 번이면 끝", async () => {
     // 첫 포커스는 Screen 이 화면 읽기가 켜져 있을 때만 옮긴다(AP-11: 시간 차 대신 Screen initialFocusRef 로 순서 보장)
     (AccessibilityInfo.isScreenReaderEnabled as unknown as jest.Mock).mockImplementation(() => Promise.resolve(true));

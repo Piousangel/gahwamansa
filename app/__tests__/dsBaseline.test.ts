@@ -19,6 +19,7 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // 응원 시트 v4(ds Sheet + Choice, 11-19): 170 → 168 (text20Size −1·rnImport −1)
 // C3 v4(연결 기다리는 중, 11-19): 177 → 170 (fixedBox −1·text20Size −6)
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
+// L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
 const BASELINE: Record<string, number> = {
   fontSize: 7,
   fontWeight: 6,
@@ -27,10 +28,10 @@ const BASELINE: Record<string, number> = {
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 15,
+  fontScale: 14,
   placeholder: 0,
-  text20Size: 98,
-  rnImport: 26,
+  text20Size: 87,
+  rnImport: 24,
   ellipsis: 0,
 };
 

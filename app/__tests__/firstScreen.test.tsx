@@ -66,11 +66,11 @@ test('자동 확인이 틀리면 칸을 비우고 오류', async () => {
   expect(screen.getByLabelText('인증번호 6자리').props.value).toBe('');
 });
 
-test('이전 바 라벨, 코스 중에는 "오늘 코스로 돌아가기"', async () => {
+test('코스 단계(P4)의 이전은 v4 BackLink "오늘 코스로"(보이는 글 = 읽기, R-14)', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
   await pressCourseNext();
-  await waitFor(() => screen.getAllByLabelText('오늘 코스로 돌아가기')[0]); // 상단 바(첫째)·하단 '오늘 코스로'(U13)
-  expect(screen.getByText('‹ 오늘 코스')).toBeTruthy();
+  await waitFor(() => screen.getByRole('link', {name: '오늘 코스로'}));
+  expect(screen.getByTestId('back-link-arrow', {includeHiddenElements: true})).toBeTruthy();
 });
 
 test('부모님 폰에서 자녀를 고르면 확정 안내(알겠어요 -> 첫 화면)', async () => {
