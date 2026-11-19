@@ -1,6 +1,6 @@
 import React from 'react';
 import {BackHandler, StyleSheet} from 'react-native';
-import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import * as SafeArea from 'react-native-safe-area-context';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
@@ -45,7 +45,7 @@ test('하단 고정 영역은 안드로이드 내비게이션 바(하단 inset) 
   const insets = SafeArea.useSafeAreaInsets as jest.Mock;
   const orig = insets.getMockImplementation();
   insets.mockImplementation(() => ({top: 24, bottom: 48, left: 0, right: 0}));
-  await toOtp();
+  await toEmail(); // C0-b: Dock = 인증번호 받기
   const dock = screen.getByTestId('screen-dock');
   const pad = StyleSheet.flatten(
     (dock.children[0] as unknown as {props: {contentContainerStyle: unknown}}).props.contentContainerStyle as never,
@@ -55,12 +55,12 @@ test('하단 고정 영역은 안드로이드 내비게이션 바(하단 inset) 
   insets.mockImplementation(orig);
 });
 
-test('인증번호 화면: 자동 확인이라 확인 버튼 없이 다시 받기·다른 이메일이 하단 고정 영역에', async () => {
+test('인증번호 화면(C0-c v4): 자동 확인이라 확인 버튼·Dock 없이 다시 받기·다른 이메일은 본문', async () => {
   await toOtp();
-  const dock = within(screen.getByTestId('screen-dock'));
   expect(screen.queryByRole('button', {name: '확인하기'})).toBeNull();
-  expect(dock.getByRole('button', {name: '인증번호 다시 받기'})).toBeTruthy();
-  expect(dock.getByRole('button', {name: '다른 이메일 쓰기'})).toBeTruthy();
+  expect(screen.queryByTestId('screen-dock')).toBeNull();
+  expect(screen.getByRole('button', {name: '인증번호 다시 받기'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: '다른 이메일 쓰기'})).toBeTruthy();
 });
 
 test('인증번호는 기본 숫자 키보드(일회용 번호 자동 채우기), 큰 키패드는 없다', async () => {
@@ -91,13 +91,14 @@ test('번호 칸: 지금 쓸 칸이 강조되고, 키는 볼록(흰 면+테두�
   expect(ks.backgroundColor).not.toBe(cell(3).backgroundColor);
 });
 
-test('이전 바: 64 이상, 라벨 "이전 화면으로", 첫 화면에는 없다', async () => {
+test('C0 v4 BackLink: \'처음으로\'(자녀 48 이상), 첫 화면에는 없다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
-  expect(screen.queryByLabelText('이전 화면으로 가기')).toBeNull();
+  expect(screen.queryByTestId('back-link')).toBeNull();
   await press(/자녀 휴대폰이에요/); // 자녀 로그인 첫 화면(소셜 버튼)
-  const back = await waitFor(() => screen.getByLabelText('이전 화면으로 가기'));
-  expect(StyleSheet.flatten(back.props.style).minHeight).toBeGreaterThanOrEqual(64);
+  const back = await waitFor(() => screen.getByRole('link', {name: '처음으로'}));
+  const st = back.props.style;
+  expect(StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight).toBeGreaterThanOrEqual(48);
   await act(async () => fireEvent.press(back));
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
@@ -113,7 +114,7 @@ test('하드웨어 뒤로가기도 이전 바와 같다(자녀 이메일 -> 로�
 
 test('인증번호 단계의 이전은 이메일 단계로', async () => {
   await toOtp();
-  await act(async () => fireEvent.press(screen.getByLabelText('이전 화면으로 가기')));
+  await act(async () => fireEvent.press(screen.getByRole('link', {name: '이메일 주소로'})));
   await waitFor(() => screen.getByText('이메일로 시작해요'));
 });
 

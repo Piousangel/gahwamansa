@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   readBar: {borderLeftWidth: 4, borderLeftColor: 'transparent', paddingLeft: 10},
   reading: {borderLeftColor: ds.color.info},
   photo: {alignSelf: 'stretch', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
-  image: {width: '100%', height: '100%'},
+  image: {flex: 1, alignSelf: 'stretch'},
   read: {gap: 8},
   center: {textAlign: 'center'},
   pending: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 8},

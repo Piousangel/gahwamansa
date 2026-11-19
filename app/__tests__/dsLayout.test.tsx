@@ -133,6 +133,18 @@ describe('DsScreen', () => {
     expect(screen.getByText('가화만사성')).toBeTruthy();
   });
 
+  test('tail 은 Dock 에서 넘친 슬롯보다 아래, 본문 맨 끝(C0 v4 출구)', () => {
+    render(
+      <DsScreen variant="form" dock={dock} tail={<Text role="sub" testID="tail">출구</Text>}>
+        <Text role="body">본문</Text>
+      </DsScreen>,
+    );
+    act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}}));
+    // 문서 순서(앞에서부터 찾은 차례)로 비교
+    const order = screen.root.findAll(n => typeof n.type === 'string' && (n.props.testID === 'dock-spill' || n.props.testID === 'tail')).map(n => n.props.testID);
+    expect(order).toEqual(['dock-spill', 'tail']);
+  });
+
   test('Dock 이 상한(640×40%=256)을 넘으면 note → 보조 순으로 본문 끝으로 보낸다', () => {
     render(
       <DsScreen variant="form" dock={dock}>
@@ -175,6 +187,31 @@ describe('DsScreen', () => {
     expect(flat(screen.getByTestId('screen-dock').props.style).maxHeight).toBe(dockCap(H - 280));
     act(() => (handlers.keyboardDidHide ?? []).forEach(f => f()));
     expect(screen.queryByTestId('dock-spill')).toBeNull(); // 닫히면 다시 Dock 에 다 넣고 잰다
+  });
+
+  test('R-12 예외(PR #74): 자판이 열린 채 주 버튼만으로도 상한을 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞)에, 닫히면 다시 Dock', () => {
+    const handlers: Record<string, ((e?: unknown) => void)[]> = {};
+    jest.spyOn(Keyboard, 'addListener').mockImplementation(((ev: string, fn: (e?: unknown) => void) => {
+      (handlers[ev] ??= []).push(fn);
+      return {remove: noop};
+    }) as never);
+    const press = jest.fn();
+    render(
+      <DsScreen variant="form" dock={{primary: {label: '인증번호 받기', onPress: press}}} tail={<Text role="sub" testID="tail">약관</Text>}>
+        <Text role="body" testID="field">칸</Text>
+      </DsScreen>,
+    );
+    const layout = (h: number) => act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: h}}}));
+    act(() => (handlers.keyboardDidShow ?? []).forEach(f => f({endCoordinates: {height: 260}})));
+    layout(180); // 보이는 창 380 × 0.4 = 152 < 180 + 여백 → 보낼 슬롯이 없다
+    expect(screen.queryByTestId('screen-dock')).toBeNull();
+    const order = screen.root.findAll(n => typeof n.type === 'string' && ['field', 'dock-undocked', 'tail'].includes(n.props.testID)).map(n => n.props.testID);
+    expect(order).toEqual(['field', 'dock-undocked', 'tail']);
+    fireEvent.press(within(screen.getByTestId('dock-undocked')).getByRole('button', {name: '인증번호 받기'}));
+    expect(press).toHaveBeenCalled();
+    act(() => (handlers.keyboardDidHide ?? []).forEach(f => f()));
+    expect(screen.getByTestId('screen-dock')).toBeTruthy();
+    expect(screen.queryByTestId('dock-undocked')).toBeNull();
   });
 
   test('SocialGroup 이 든 Dock 은 intro 라도 0.4(R-12, 리뷰 M4)', () => {

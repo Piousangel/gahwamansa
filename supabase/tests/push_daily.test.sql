@@ -57,15 +57,15 @@ end $$;
 grant execute on function pg_temp.act_as(uuid, boolean) to public;
 
 -- ---- 대상 선정 ----
-select is(pg_temp.mine(public.push_daily_targets(pg_temp.at_kst('09:00'))), array['7033b000-0000-0000-0000-0000000000a1'],
-          '대상은 연결·동의·알림 켬·심사 아님·오늘 안 마침·토큰 있는 어르신만');
+select is(pg_temp.mine(public.push_daily_targets(pg_temp.at_kst('09:00'))), array['7033b000-0000-0000-0000-0000000000a1', '7033b000-0000-0000-0000-0000000000a2'],
+          '대상은 연결·알림 받기 동의·알림 켬·심사 아님·오늘 안 마침·토큰 있는 어르신(0056: 답 공유 미동의 a2도 포함)');
 select is((select count(*)::int from jsonb_array_elements(public.push_daily_targets(pg_temp.at_kst('09:00')) -> 'targets') t
             where t ->> 'profile_id' = '7033b000-0000-0000-0000-0000000000a1'), 2, '어르신의 토큰마다 한 줄');
 select is(public.push_daily_targets(pg_temp.at_kst('09:00')) ->> 'window_open', 'true', '09:00 KST는 발송 창 안');
 select is(public.push_daily_targets(pg_temp.at_kst('07:59')) -> 'targets', '[]'::jsonb, '08:00 전에는 대상 없음');
 select is(public.push_daily_targets(pg_temp.at_kst('21:00')) -> 'targets', '[]'::jsonb, '21:00부터는 대상 없음');
 select is(public.push_daily_targets(pg_temp.at_kst('20:59')) ->> 'window_open', 'true', '20:59까지는 창 안');
-select ok((public.push_daily_targets(pg_temp.at_kst('09:00')) ->> 'excluded')::int >= 5, '제외 수(미동의·알림 끔·끊김·마침·토큰 없음)를 센다');
+select ok((public.push_daily_targets(pg_temp.at_kst('09:00')) ->> 'excluded')::int >= 4, '제외 수(알림 끔·끊김·마침·토큰 없음)를 센다(0056: 답 공유 미동의는 제외 아님)');
 select is(public.push_daily_targets(pg_temp.at_kst('09:00')) -> 'copy', 'null'::jsonb, '확정 문구가 없으면 copy=null(보내지 않음)');
 insert into public.push_copy (kind, title, body) values ('daily', '가화만사성', '오늘의 사진이 왔어요');
 select is(public.push_daily_targets(pg_temp.at_kst('09:00')) -> 'copy' ->> 'body', '오늘의 사진이 왔어요', '문구가 있으면 함께 준다');
@@ -79,7 +79,7 @@ select is(public.push_record('daily', jsonb_build_array(
 select is((select count(*)::int from public.device_tokens where token = 'tok_a1_00000000000002'), 0, '무효 토큰은 지워진다');
 select is((select count(*)::int from public.device_tokens where token = 'tok_a1_00000000000001'), 1, '성공한 토큰은 그대로');
 select is((select sent || '/' || invalid || '/' || excluded from public.push_runs order by id desc limit 1), '1/1/5', '실행 요약(보냄/무효/제외)이 남는다');
-select is(pg_temp.mine(public.push_daily_targets(pg_temp.at_kst('15:00'))), '{}'::text[], '오늘 이미 보낸 어르신은 다시 대상이 아니다(하루 1회)');
+select is(pg_temp.mine(public.push_daily_targets(pg_temp.at_kst('15:00'))), array['7033b000-0000-0000-0000-0000000000a2'], '오늘 이미 보낸 어르신(a1)은 다시 대상이 아니다(하루 1회, 아직 안 보낸 a2만 남음)');
 select throws_like($$ select public.push_record('daily', '[{"profile_id": "7033b000-0000-0000-0000-0000000000a1", "token": "x", "status": "maybe"}]', 0) $$,
   '%invalid_status%', '알 수 없는 결과 상태는 거부');
 

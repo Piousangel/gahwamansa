@@ -146,7 +146,7 @@ describe('도장 쾅(가짜 시계)', () => {
 
 test('첫 1회 안내는 하단 독(버튼 아래)에, 끝나도 자리는 남고 글자만 투명(본문이 움직이지 않음)', async () => {
   await finish();
-  const hint = await waitFor(() => screen.getByTestId('p7-skip-hint'), {timeout: 3000});
+  const hint = await waitFor(() => screen.getByTestId('p7-skip-hint'));
   expect(within(screen.getByTestId('screen-dock')).getByTestId('p7-skip-hint')).toBeTruthy();
   expect(hint).toHaveTextContent('화면을 누르면 바로 넘어가요');
   fireEvent.press(screen.getByTestId('p7-stage'));
@@ -170,7 +170,7 @@ test('제목은 첫 프레임부터 보이고(감사 M9, 페이드 묶음 밖), 
   expect(StyleSheet.flatten(group().props.style).opacity).toBe(0);
   expect(vibrate).not.toHaveBeenCalled(); // 동작 줄이기 판정 전: 아무 연출도 시작하지 않음
   await go();
-  await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1), {timeout: 3000});
+  await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1));
 });
 
 test('동작 줄이기: 120 도장이 제자리에서 200ms 페이드(이동·인주 없음), 오늘 칸은 이미 찍힘, 촉각은 유지', async () => {

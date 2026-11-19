@@ -492,3 +492,13 @@
 - db push 0052(자녀 '답 알림' 연결 뒤 1회, 기존 답 가족 백필 skipped). 실제 발송은 FCM_WIRED=false·발송 함수·Vault 미설정이라 아직 없음
 - 디자인 시스템 v4 토큰(#21)·공통 컴포넌트 ui/ds(#29)·lint 강제(#31·#62) main 반영. 다음: 시안 색인(docs/design/V4-INDEX.md) 기준 화면 적용
 - C4 첫날 빈 상태 안 B(예시 카드 2장+이야기 꺼내기) 채택(리뷰어 권고, 해님은 자녀 화면 제외 원칙)
+
+## 2026-11-19 staging 반영 0053~0055 (사용자 승인 "올려")
+- 측정 이벤트 허용 확장(0053), 계정 삭제 이벤트 서버 기록(0054, 식별자 없음·측정 실패 시에도 삭제 진행·시 단위 시각), 답 알림 눌림 측정 push_kind(0055)
+- 리드 결정: 알림 받기 동의와 답 보여 주기 동의는 별개 — 일일 알림 대상에서 consented_at 조건 제거(0056 예정, 법률 체크리스트 #10 ④는 push_consented_at으로 충족)
+
+## 2026-11-19 디자인 도구 채택(사용자 승인) — 조사 docs/team/research/2026-11-19-design-tools.md
+- mobile-mcp v1.0.17 고정, 이 프로젝트 local 범위, MOBILEMCP_DISABLE_TELEMETRY=1. 용도: 에뮬레이터·staging 기기 접근성 트리·캡처로 라벨·누름 영역·200% 잘림 1차 확인. 운영 계정 기기 연결 금지, 앱 삭제·데이터 지우기 도구는 사용 전 리드 확인. 되돌리기: claude mcp remove mobile-mcp -s local
+- frontend-design 스킬(anthropics/skills@41bbe19, Apache-2.0): 전문 검토 후 .claude/skills/frontend-design(로컬, gitignore)에 복사, "RULES-V4 우선" 머리말. 시안 HTML 기본값 점검용
+- 기각·참고: UI UX Pro Max(팔레트 194개 중 7:1 충족 2개뿐 — 데이터만 참고), DESIGN.md(대체 안 함, 필요 시 파생 생성), Astryx(웹 전용 — label 필수·disabledReason 등 API 규약만 차용)
+- 참고 발견: 종이색 #F6F3EE + 갈색 강조가 'AI 생성 기본값'(크림+테라코타)에 가깝다는 지적 → 바탕 교체가 아니라 단조로움 원인 후보로 디자인 레인이 검토

@@ -20,3 +20,32 @@ tags:
 - takeScreenshot: c0-fit
 - assertVisible: '.*카카오.*'
 - assertVisible: '.*Google.*'
+# 출구(PR #73 리뷰 M1·디자인 #74): 640 에서는 본문이 넘쳐 첫 화면 밖 → 실제로 스크롤해서 보이는지 확인(모든 배율)
+- scrollUntilVisible:
+    element: '부모님이시면 처음으로'
+    direction: DOWN
+- assertVisible: '부모님이시면 처음으로'
+- assertVisible: '부모님은 로그인 없이.*'
+- takeScreenshot: c0a-exit
+# C0 v4: 로그인 고르기(C0-a) → 이메일(C0-b) → 인증번호(C0-c). 200%에서는 이메일 링크가 본문 끝(출구 위)이라 위로 스크롤해 찾는다(fake API 기준)
+- scrollUntilVisible:
+    element: '이메일로 시작하기'
+    direction: UP
+- takeScreenshot: c0a-scrolled
+- tapOn: '이메일로 시작하기'
+- extendedWaitUntil:
+    visible: '이메일로 시작해요'
+    timeout: 10000
+- takeScreenshot: c0b
+- tapOn:
+    id: 'email-field'
+- inputText: 'kid@example.test'
+- takeScreenshot: c0b-keyboard
+- hideKeyboard
+- tapOn: '인증번호 받기'
+- extendedWaitUntil:
+    visible: '이메일 주소로' # 자판이 열리면 제목은 접힌다(BackLink 만 남음)
+    timeout: 10000
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: c0c

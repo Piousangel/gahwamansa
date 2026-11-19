@@ -10,6 +10,8 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+const pressLink = async (name: string) => act(async () => fireEvent.press(screen.getByRole('link', {name})));
+
 test('real 시작: 오프라인이라 whoAmI 가 실패하면 멈추지 않고 다시 하기를 보여 준다', async () => {
   const api = createFakeApi();
   const who = jest.spyOn(api, 'whoAmI').mockRejectedValueOnce(new OfflineError('x'));
@@ -145,9 +147,9 @@ test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   await press(/자녀 휴대폰이에요/);
   await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
-  await press('이전 화면으로 가기'); // 이메일 단계의 이전 = 로그인 방법(소셜) 화면
+  await pressLink('로그인으로'); // C0-b BackLink = 로그인 고르기(소셜) 화면
   await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
-  await press('이전 화면으로 가기'); // 그 이전 = 역할 선택
+  await pressLink('처음으로'); // C0-a BackLink = 역할 선택
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 

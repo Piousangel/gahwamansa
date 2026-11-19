@@ -149,7 +149,7 @@ test('포커스: 열면 사진 라벨로, 닫으면 폴라로이드로. 읽기 �
   const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
   const focusedIds = () => send.mock.calls.map(c => (c[0] as unknown as {props?: {testID?: string}})?.props?.testID);
   await press(OPEN);
-  await waitFor(() => expect(focusedIds()).toContain('zoom-photo'), {timeout: 2000});
+  await waitFor(() => expect(focusedIds()).toContain('zoom-photo'));
   // 사진이 닫기보다 앞(트리 순서 = 읽기 순서)
   const view = screen.getByTestId('zoom-view');
   const order: string[] = [];
@@ -162,5 +162,5 @@ test('포커스: 열면 사진 라벨로, 닫으면 폴라로이드로. 읽기 �
   expect(order.filter((x, i) => x !== order[i - 1])).toEqual(['photo', 'close']);
   send.mockClear();
   await press('닫기');
-  await waitFor(() => expect(focusedIds()).toContain('photo-polaroid'), {timeout: 2000});
+  await waitFor(() => expect(focusedIds()).toContain('photo-polaroid'));
 });

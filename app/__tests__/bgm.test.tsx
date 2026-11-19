@@ -76,7 +76,7 @@ test('P7 완료 1회 권유(첫날 다음부터, 출처 줄 포함) → 들어 �
   setBgmAssetForTest('bgm_test');
   await prefs.noteFirstDoneDay('2026-01-01'); // 이미 다른 날 코스를 마친 기기
   await finishCourse();
-  const ask = await waitFor(() => screen.getByTestId('bgm-offer'), {timeout: 4000});
+  const ask = await waitFor(() => screen.getByTestId('bgm-offer'));
   expect(within(ask).getByText(/AI\(Google Lyria\)가 만든 연주곡이에요/)).toBeTruthy();
   await act(async () => {
     fireEvent.press(within(ask).getByRole('button', {name: '들어 볼게요'}));

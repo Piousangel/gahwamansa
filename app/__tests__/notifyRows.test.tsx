@@ -119,7 +119,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     // N1 기억은 계정별(기기 저장소가 테스트 사이에 남으므로 계정 가명값을 새로)
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE, accountTag: `acc-m1-${++n}`});
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByLabelText(copy.push.permission.title), {timeout: 8000});
+    await waitFor(() => screen.getByLabelText(copy.push.permission.title));
     await press(copy.push.permission.no);
     await waitFor(() => screen.getByTestId('date-line'));
     await press('설정');

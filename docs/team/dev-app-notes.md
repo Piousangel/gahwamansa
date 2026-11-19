@@ -554,6 +554,12 @@
 - 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
 - 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.
 
+### 경로별 CI(GitHub Actions) · 2026-11-19
+- `.github/workflows/app.yml`: `app/**`·문구 원본·`supabase/migrations/**`(계약 테스트가 읽음)·`design-system/**` 가 바뀐 PR·main 푸시에서만. Node 22.11(engines 최솟값), `npm ci` → 문구 사본 동일 → OSS(JS) 최신 → tsc → lint → jest(`--maxWorkers=2 --ci`, 통합 제외). 비밀값·Android 빌드 없음.
+- `.github/workflows/server.yml`: `supabase/**`·`scripts/photos/**`·루트 package 가 바뀐 경우만. ① 단위: Node 24 로 `supabase/functions/_shared/*.test.mts`·`supabase/ops/*.test.mjs`·`scripts/photos/*.test.mjs`(로컬 Node 26 에서 28/28·12/12). ② pgTAP: 루트 devDependency supabase CLI 3.1.0 으로 러너 안 도커에 로컬 스택(스튜디오·메일·엣지 등 제외) → `db reset`(처음부터 재생 + 시드) → `test db`. 원격 DB·secrets 안 씀.
+- 액션은 커밋 SHA 고정(checkout v4.2.2, setup-node v4.4.0 — `git ls-remote` 로 확인). `permissions: contents: read`, 같은 브랜치 실행은 앞 것을 취소.
+- 로컬에서 Actions 자체는 돌리지 못함(act 없음). pgTAP 단계는 공유 로컬 DB(54322)와 포트가 겹쳐 이 맥에서는 `supabase/ops/replay-check.sh` 가 같은 일을 한다. 첫 실행 결과를 PR 에서 확인할 것.
+
 ### AC-05 이벤트 후속(PR #61 리뷰 L1~L4) · 2026-11-19
 - 세션 전 보관(realApi `waiting`): `app_first_open` 1개만 보관한다(다른 이벤트는 세션이 있어야 생기는 행동이라 세션이 없으면 버린다). 로그아웃(`signOut`)·계정 삭제(`deleteMyAccount`) 때 비운다 — 앞 사람의 역할 고르기가 다음 계정 세션으로 나가지 않게.
 - `child_first_answer_viewed` 1회 표시는 **계정 기준**(`prefs` 키 + `:accountTag`)이다. 같은 기기에서 다른 자녀 계정이 들어와도 그 계정의 첫 답을 센다. 가명값을 모르면 보내지 않는다. 가명값은 기기 저장 키에만 쓰고 이벤트에는 넣지 않는다. `app_first_open`은 역할을 고르기 전이라 기기 기준이다.
@@ -583,3 +589,15 @@
 | 제스처 | 360×640 1.0·2.0 | — | 통과 |
 
   - 별건(디자인 확인): 3단계(fill) 360×700·740 에서 0·지움 줄 키가 다른 줄보다 높다(221px vs 176px, 키패드가 남는 높이를 마지막 줄로 채움). 잘림·겹침은 아님.
+
+### C0 v4 후속(PR #73 리뷰·디자인 #74) · 11-19
+- DsScreen R-12 예외: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞, 입력 바로 아래)에 둔다. 자판이 닫히면 다시 Dock. 자판이 열려 있으면 재는 높이에서 아래 inset 을 뺀다(자판이 덮음).
+- 실측: 320×640 200% C0-b 자판 열림은 inset 을 빼면 Dock 이 상한 안이라 풀리지 않는다(캡처). 앞서 보고한 '210 > 152' 경고는 C0-b 밑에 남은 C0-a(소셜 묶음)가 자판에 반응한 것 → 소셜 묶음은 자판이 열려 있으면 풀지도 경고하지도 않게 함.
+- C0-b 약관·연령은 tail(풀린 주 버튼 뒤).
+- c0-fit.yaml: 모든 배율에서 실제로 스크롤해 출구 링크 assertVisible. 이메일 경로 child_signup_completed{email} 테스트 추가.
+### P1 키패드 남는 높이(디자인 결정 11-19)
+- 원인: 3단계 360×700·740 에서 마지막 줄만 높았던 것(80dp)은 남는 높이가 아니라 '모두 지움'(26)이 '모두 / 지움' 두 줄로 꺾이며 기본 줄높이로 키(64)를 넘은 것. 같은 줄 키가 함께 늘었다.
+- 고침: 글자 키는 줄높이 = 글자 + 2, 확대 상한 = min(1.5, (키 − 테두리 4) / (2 × 줄높이)) → 두 줄이 키 안. 글자 크기 26 그대로.
+- 남는 높이: 키는 늘리지 않는다(64~68). 칸(과 칸 아래 줄)·키 사이 여백에 최대 24(`KEYS_GAP_MAX`) → 나머지는 키패드 영역 가운데 정렬로 위·아래 반씩. 내용 높이는 여백을 뺀 값으로 기록(넘침 판정 불변). 4단계는 여백 없음.
+- fold-check.py 에 '통째로 보이는 줄끼리 높이 같음' 검사 추가.
+- 실측(emulator-5556 제스처, p1-fold + fold-check, px @2.75): 360×700 1.0 네 줄 모두 182(66dp) · 360×740 1.0 네 줄 187(68) · 411×914 1.0·1.3 네 줄 187 · 360×640 1.0 보이는 세 줄 176(64). 모두 통과.

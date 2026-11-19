@@ -247,7 +247,7 @@ describe('U12 C3 공유 뒤', () => {
   test('공유 창에서 돌아오면 칩은 그대로, 안내 한 줄 + 주 버튼이 보조 "다시 보내기"로', async () => {
     jest.spyOn(Share, 'share').mockResolvedValue({action: Share.sharedAction} as never);
     render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-    await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}));
     await press('번호 보내기');
     await waitFor(() => screen.getByTestId('wait-after-share'));
     expect(screen.getByText('번호를 보냈다면 다시 보내지 않아도 돼요')).toBeTruthy();
@@ -258,7 +258,7 @@ describe('U12 C3 공유 뒤', () => {
 
   test('번호 기간이 지났으면 새 번호 만들기 근처에 "새 번호를 만들면 보낸 번호는 쓸 수 없어요"', async () => {
     render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, childCodeExpired: true})} restore />);
-    await waitFor(() => screen.getByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요'), {timeout: 8000});
+    await waitFor(() => screen.getByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요'));
   });
 });
 
@@ -346,7 +346,7 @@ describe('호칭 고르기(가족 기본 호칭) D-L1', () => {
     const api = createFakeApi({who: 'child'});
     jest.spyOn(api, 'setParentTitle').mockResolvedValue({ok: false, reason: 'duplicate_title'});
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByLabelText('엄마'), {timeout: 8000});
+    await waitFor(() => screen.getByLabelText('엄마'));
     fireEvent.press(screen.getByLabelText('엄마'));
     await press('번호 만들기');
     await waitFor(() => screen.getByText('같은 이름이 이미 있어요. 다른 이름을 골라 주세요'));
@@ -503,7 +503,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
   test('C3: 꺼져 있으면 "연결되면 알려 드릴게요 · 알림 켜기" 줄', async () => {
     android(34, false);
     render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-    await waitFor(() => screen.getByTestId('wait-notify'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('wait-notify'));
     expect(screen.getByLabelText('연결되면 알려 드릴게요')).toBeTruthy(); // Android 렌더는 글자 대신 읽기 라벨로 찾는다
     expect(screen.getByRole('button', {name: '알림 켜기'})).toBeTruthy();
   });
@@ -522,7 +522,7 @@ describe('리뷰 M1: 플래그를 끄면 알림 꺼짐 안내를 숨긴다(AU-04
     try {
       expect(await readNotifyState()).toBe('unknown');
       render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-      await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}), {timeout: 8000});
+      await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}));
       await act(async () => {});
       expect(screen.queryByTestId('wait-notify')).toBeNull();
     } finally {
@@ -601,6 +601,7 @@ describe('리뷰 M4: 기기 기억값은 계정별, 로그아웃 때 정리', ()
 describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
   const RN = require('react-native');
   const {color} = require('../src/ui/tokens');
+  const {toneColor} = require('../src/ui/ds/roles');
   const inDock = (id: string) => {
     const dock = screen.queryByTestId('screen-dock');
     return !!dock && within(dock).queryByTestId(id) !== null;
@@ -615,12 +616,13 @@ describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
     render(<AppRoot api={createFakeApi()} />);
     await press(/자녀 휴대폰이에요/);
     await waitFor(() => screen.getByTestId('age-notice'));
-    expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(color.inkSub);
+    expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(toneColor('sub', 'muted', 'child')); // v4 sub 보조색
     expect(inDock('age-notice')).toBe(false);
     await toEmailStage();
     expect(screen.getByTestId('legal-child')).toBeTruthy();
     expect(screen.getByTestId('age-notice')).toBeTruthy();
-    expect(inDock('legal-child')).toBe(true);
+    expect(inDock('legal-child')).toBe(false); // C0 v4: 약관·연령은 본문 끝(Dock 은 인증번호 받기만)
+    expect(inDock('age-notice')).toBe(false);
   });
 
   test('C0: 글자 150% 이상이면 약관·연령 줄을 함께 본문 끝으로', async () => {
@@ -707,7 +709,7 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
       for (const v of [33, 32]) {
         setPlatform('android', v);
         render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-        await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+        await waitFor(() => screen.getByRole('button', {name: '복사하기'}));
         await press('복사하기');
         expect(screen.queryByTestId('toast')).toBeNull();
         const band = screen.getByTestId('wait-copied');
@@ -772,7 +774,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const {CHOICE_H} = require('../src/ui/ChoiceGrid');
     expect(CHOICE_H).toBe(56);
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
-    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('title-group'));
     const group = screen.getByTestId('title-group');
     expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row');
     expect(within(group).getAllByRole('radio')).toHaveLength(7);
@@ -782,7 +784,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
 
   test('M10: C2 \'‹ 이전\'은 C1 으로, 연결 기다리기는 대기 화면 하나만 남긴다', async () => {
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
-    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('title-group'));
     await press('번호 만들기');
     await waitFor(() => screen.getByRole('button', {name: '이전 화면으로 가기'}));
     await press('이전 화면으로 가기');
