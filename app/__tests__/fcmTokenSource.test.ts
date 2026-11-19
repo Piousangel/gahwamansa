@@ -20,7 +20,7 @@ function fakeModule(over: Record<string, unknown> = {}) {
   return {mod, opened};
 }
 
-test('모듈이 설치되지 않았으면 null(앱은 토큰 없음으로)', () => {
+test('모듈이 없거나 Firebase 앱이 없으면 null(앱은 토큰 없음으로)', () => {
   expect(createFcmTokenSource()).toBeNull();
   expect(createFcmTokenSourceFrom(null)).toBeNull();
 });

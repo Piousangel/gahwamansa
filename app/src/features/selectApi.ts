@@ -9,7 +9,9 @@ export function createApi(mode: ApiMode = 'fake'): Api {
   if (mode === 'real') {
     const {createRealApi} = require('./realApi');
     const {getSupabase} = require('../lib/supabase');
-    return createRealApi(getSupabase());
+    const {Platform} = require('react-native');
+    const {pushPlatformOf} = require('../api/contract/push');
+    return createRealApi(getSupabase(), undefined, pushPlatformOf(Platform.OS));
   }
   return createFakeApi();
 }

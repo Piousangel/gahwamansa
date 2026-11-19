@@ -13,6 +13,10 @@ import {OtpField} from './OtpField';
 import {SocialButton} from './SocialButton';
 import {TextLink} from '../link/TextLink';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {LegalText} from '../../ui/LegalText';
+import {Banner} from '../../ui/Banner';
+import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
+import {recordChildTerms} from '../../shared/childTerms';
 
 const t = copy.login;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -23,6 +27,7 @@ const CODE_VALID_MS = 10 * 60 * 1000; // 메일 템플릿 기준 유효 10분
 // 주 버튼은 하단 고정 영역(내비게이션 바 위), 보조는 그 안. 이전: 이메일 단계는 역할 선택, 번호 단계는 이메일 단계.
 export function ChildLogin() {
   const navigation = useNavigation();
+  const legal = useLegalOpen(); // 약관 줄 링크는 앱 안 웹 화면(재확인 3 M5), 안 닿으면 Banner(재확인 4 M7)
   const {api, resetRole} = useSession();
   const large = useWindowDimensions().fontScale >= 1.5; // 150% 이상이면 약관·연령 줄을 본문 끝으로(하단 고정을 지킨다)
   const [email, setEmail] = useState('');
@@ -98,6 +103,7 @@ export function ChildLogin() {
     setNote(null);
     try {
       await api.verifyEmailCode(email.trim(), value);
+      recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
       navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
     } catch (e) {
       // 서버는 틀림과 만료를 같은 코드로 알려 준다. 보낸 지 10분이 지났으면 만료로 안내한다.
@@ -127,6 +133,7 @@ export function ChildLogin() {
     try {
       const r = await api.signInWithSocial(provider);
       if (r === 'ok') {
+        recordChildTerms(api).catch(() => {}); // 약관 줄을 본 로그인 = 동의(기다리지 않음, PR1 리뷰 M1)
         navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Gate'}]}));
       }
     } catch (e) {
@@ -143,13 +150,17 @@ export function ChildLogin() {
   // 약관 줄 + 연령 줄(디자인 판정 ②: 연령은 안내라 inkSub). 선택·이메일 두 화면에 같게
   const legalLines = (
     <View>
-      <Text20 testID="legal-child" style={styles.legal}>{copy.legal.agree_child}</Text20>
+      <LegalText testID="legal-child" style={styles.legal} text={copy.legal.agree_child} links={legalLinks()} onOpen={legal.open} />
+      {legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
       <Text20 testID="age-notice" style={[styles.legal, styles.age]}>{copy.legal.age_notice}</Text20>
     </View>
   );
 
   if (stage === 'choose') {
-    // 시안 C0 "카카오로 시작해요": 카카오(주) → 구글 → 이메일로 받기(보조 링크). 이전은 역할 선택
+    // 시안 C0 "카카오로 시작해요": 카카오 → 구글(하단 고정) · 약관·연령 줄 · 이메일로 받기(본문 끝). 이전은 역할 선택
+    // 실기기 S25 버그(11-19, 리드 결정 v4 Q1): 하단 고정에 약관 두 줄·연령·이메일까지 두면(≈ 368dp) 상한 40%(891 → 356)를 넘어
+    // 하단 고정 안에서 스크롤되며 카카오 버튼이 얇은 띠로 잘렸다. 하단 고정에는 타사 로그인 버튼 둘만 둔다(상한 40% 그대로,
+    // iOS Apple 버튼이 더해져도 72dp × 3 이라 넘지 않음). 약관·연령·이메일은 본문 끝(스크롤)으로
     return (
       <Screen
         top={<BackBar onBack={resetRole} />}
@@ -157,9 +168,6 @@ export function ChildLogin() {
           <>
             <SocialButton kind="kakao" label={busy ? t.signing_in : t.kakao} disabled={busy} onPress={() => social('kakao')} />
             <SocialButton kind="google" label={t.google} disabled={busy} onPress={() => social('google')} />
-            {/* 시안 C0: 소셜 버튼 → 약관 줄 → 연령 줄(디자인 판정 11-18 ②) → 이메일 링크. 150% 이상이면 두 줄은 본문 끝으로 */}
-            {large ? null : legalLines}
-            <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
           </>
         }>
         <Text20 size={28} weight="bold">{t.choose_title}</Text20>
@@ -171,7 +179,8 @@ export function ChildLogin() {
             {note === t.failed.title ? <Text20>{t.failed.body}</Text20> : null}
           </>
         ) : null}
-        {large ? legalLines : null}
+        {legalLines}
+        <TextLink label={t.email_link} disabled={busy} onPress={toEmail} />
       </Screen>
     );
   }

@@ -651,18 +651,60 @@
       "iconChild": 24
     },
     "label": {
-      "note": "입력칸 label·칩·작은 라벨. 어르신 20/30 이상, 자녀 16/24. 굵기 400",
+      "elder": {
+        "size": 20,
+        "lineHeight": 30
+      },
+      "child": {
+        "size": 16,
+        "lineHeight": 24
+      },
       "weight": 400,
-      "tone": "inkBody"
+      "tone": "inkBody",
+      "maxFontScale": 2.0,
+      "note": "입력칸 label·칩·작은 라벨. 본문(body)과 같은 크기, 굵기 400(한 화면 700 역할 한도에 안 넣음). 어르신 20 미만·자녀 16 미만 금지"
     },
     "numeral": {
-      "note": "번호 칸·큰 숫자. 어르신 34(번호 칸 68), 확대 상한 1.5",
+      "elder": {
+        "size": 34,
+        "lineHeight": 46
+      },
+      "child": {
+        "size": 30,
+        "lineHeight": 40
+      },
       "weight": 700,
-      "tone": "inkTitle"
+      "tone": "inkTitle",
+      "maxFontScale": 1.5,
+      "note": "번호 칸 안 숫자(인증번호·연결 번호 입력 칸). 어르신 34(번호 칸 68, 줄높이 34+12), 자녀 30(C0-c 인증번호 칸 시안 값, 칸 56, 줄높이 30+10). 큰 번호 카드(C3 연결 번호)는 numeral이 아니라 display(자녀 40/52)를 쓴다"
     },
     "hand": {
-      "note": "손글씨(Nanum Pen Script). 어르신 32, 30 미만 금지",
-      "tone": "inkTitle"
+      "elder": {
+        "size": 32,
+        "lineHeight": 44
+      },
+      "child": {
+        "size": 32,
+        "lineHeight": 44
+      },
+      "weight": 400,
+      "tone": "inkTitle",
+      "maxFontScale": 1.5,
+      "note": "손글씨(Nanum Pen Script) 따라 쓰기. 30 미만 금지. 자녀 화면에서는 쓰지 않는다(값은 생성기가 읽도록 어르신과 같게 둠)"
+    },
+    "fieldInput": {
+      "elder": {
+        "size": 34,
+        "lineHeight": 44
+      },
+      "child": {
+        "size": 18,
+        "lineHeight": 26
+      },
+      "weight": 400,
+      "tone": "inkBody",
+      "maxFontScale": 1.5,
+      "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 Jua 입력, 손글씨 아님"
     }
   },
   "typeRules": [
@@ -722,6 +764,14 @@
       "top": 12,
       "bottom": "max(28, insets.bottom)",
       "x": 24
+    },
+    "socialGroup": {
+      "slot": "주 슬롯 안의 SocialGroup",
+      "maxItems": 3,
+      "order": "kakao → google → apple(iOS만)",
+      "equalSize": "같은 높이·같은 폭·같은 반경(grid 같은 행)",
+      "note": "브랜드 가이드 값. 글자 child button 18, 확대 1.5, 줄바꿈 허용, 글자 굵기 500(브랜드 예외)",
+      "heightLimit": "Dock ≤ 40%. 넘치면 보조 링크 → 본문 끝"
     }
   },
   "backLink": {
@@ -849,6 +899,16 @@
         "child",
         "bodyLg",
         "body"
+      ],
+      [
+        "child",
+        "link",
+        "sub"
+      ],
+      [
+        "elder",
+        "link",
+        "sub"
       ]
     ],
     "generated": "tokens-v4.json과 생성물 일치",

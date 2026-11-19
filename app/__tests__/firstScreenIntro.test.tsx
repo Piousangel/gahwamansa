@@ -47,12 +47,12 @@ test('글자 130%: 사진을 먼저 숨기고 소개 3줄은 유지', async () =
   }
 });
 
-test('글자 150%: 소개(제목·항목)를 숨기고 질문·버튼은 남긴다', async () => {
+test('글자 150%(감사 M4): 기능 3줄은 숨기고 소개 한 줄은 남긴다, 질문·버튼도 남는다', async () => {
   mockFontScale = 1.5;
   render(<AppRoot api={createFakeApi()} />);
   await measure(328, 400);
   expect(screen.queryByText(INTRO[0], {includeHiddenElements: true})).toBeNull();
-  expect(screen.queryByText('하루 한 장, 우리 집 앨범', {includeHiddenElements: true})).toBeNull();
+  expect(screen.getByText('하루 한 장, 우리 집 앨범')).toBeTruthy();
   expect(screen.getByText('이 휴대폰은 누구 거예요?')).toBeTruthy();
 });
 

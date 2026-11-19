@@ -1,0 +1,22 @@
+# C0 자녀 로그인 첫 화면 실측(PR #16, S25 카카오 버튼 잘림). 카카오·구글 버튼이 온전히 보이는지 캡처로 본다.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=411x891 app/e2e/run.sh audit/c0-fit.yaml
+# 주의: 다른 레인이 8081 을 쓰는 중이면 앱 데이터를 지운 뒤 debug_http_host 를 10.0.2.2:<METRO_PORT> 로 적어 두고 실행(p1-fit.yaml 머리 주석). 그래서 clearState 를 쓰지 않는다.
+appId: com.bumojasik.app.staging
+name: C0 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '.*Google.*'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c0-fit
+- assertVisible: '.*카카오.*'
+- assertVisible: '.*Google.*'

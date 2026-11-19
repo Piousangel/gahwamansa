@@ -9,7 +9,7 @@ import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
 import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
-import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled} from '../api/contract/push';
+import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
 import {parseDeleteScope} from '../api/contract/deleteScope';
 import type {
@@ -31,6 +31,45 @@ const looksOffline = (e: SbError) =>
 // 서버가 raise 한 예외 이름과 정확히 같은지(P0001 + 메시지 일치)
 const isRaised = (e: SbError, reason: string) => e.code === 'P0001' && e.message === reason;
 
+// 자녀 C4 child_summary 모양 → ChildSummary(어르신 미리보기 0050 summary 도 같은 모양이라 같이 쓴다).
+// parent_id·title·connected 는 0019·0021(dev-server-notes §1). 옛 서버(필드 없음)면 id 는 ''(보낼 대상 아님, 리뷰 L3)·가족 호칭·연결됨
+// shared:false 면 서버가 무엇을 보내도 답을 쓰지 않는다(리뷰 L2)
+function parseChildSummary(data: Record<string, any>): ChildSummary {
+  const family: string = data.parent_title ?? '부모님';
+  const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>) => ({
+    parentId: p.parent_id ?? '',
+    title: p.title ?? family,
+    shared: !!p.shared,
+    connected: p.connected ?? true,
+    latest: p.shared && p.latest
+      ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
+      : null,
+    starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
+    connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // 0041(처음 연결된 날). 옛 서버면 null
+  }));
+  const first = parents[0];
+  return {
+    parentTitle: family,
+    shared: first ? first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
+    latest: first?.latest ?? null,
+    parents,
+  };
+}
+
+// 자녀 C5 child_answer_history 모양 → ParentHistory[](어르신 미리보기 0050 history 도 같은 모양). 짧은 질문은 서버 prompt_short 우선
+function parseChildHistory(data: Record<string, any>): ParentHistory[] {
+  return (data?.parents ?? []).map((p: Record<string, any>) => ({
+    parentId: p.parent_id,
+    title: p.title ?? '부모님',
+    shared: !!p.shared,
+    items: (p.shared ? (p.answers ?? []) : []).map((a: Record<string, any>) => ({
+      answeredDate: a.session_date,
+      promptShort: a.prompt_short ?? pairShort(a.option_a, a.option_b),
+      choiceLabel: a.choice_label,
+    })),
+  }));
+}
+
 function fail(what: string, error: SbError): never {
   throw looksOffline(error)
     ? new OfflineError(`${what}: ${error.message}`)
@@ -39,7 +78,8 @@ function fail(what: string, error: SbError): never {
 
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 // social: 네이티브 소셜 로그인 모듈(테스트에서 바꿔 끼움). 기본값은 필요할 때 불러온다(통합 테스트(node)는 네이티브 모듈 없이 돈다).
-export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi {
+// platform: 이 기기 OS(selectApi 가 Platform.OS 로 넘김, iOS 준비 N3). 통합 테스트(node)는 기본 android
+export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform: PushPlatform | null = 'android'): RealApi {
   const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
   // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
   // 못 읽었으면(오프라인) 새 익명 사용자를 만들지 않는다.
@@ -311,27 +351,14 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async fetchChildSummary(): Promise<ChildSummary> {
       const {data, error} = await sb.rpc('child_summary');
       if (error) fail('child_summary', error);
-      const family: string = data.parent_title ?? '부모님';
-      // parent_id·title·connected 는 0019·0021(dev-server-notes §1). 옛 서버(필드 없음)면 id 는 ''(보낼 대상 아님, 리뷰 L3)·가족 호칭·연결됨
-      // shared:false 면 서버가 무엇을 보내도 답을 쓰지 않는다(리뷰 L2)
-      const parents: ChildParent[] = (data.parents ?? []).map((p: Record<string, any>) => ({
-        parentId: p.parent_id ?? '',
-        title: p.title ?? family,
-        shared: !!p.shared,
-        connected: p.connected ?? true,
-        latest: p.shared && p.latest
-          ? {prompt: p.latest.prompt ?? null, choiceLabel: p.latest.choice_label, answeredDate: p.latest.answered_date}
-          : null,
-        starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
-        connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // 0041(처음 연결된 날). 옛 서버면 null
-      }));
-      const first = parents[0];
-      return {
-        parentTitle: family,
-        shared: first ? first.shared : true, // 어르신이 아직 없으면 "나누지 않는 중"이라 하지 않는다
-        latest: first?.latest ?? null,
-        parents,
-      };
+      return parseChildSummary(data);
+    },
+    // 어르신 P13 '가족에게 이렇게 보여요'(0050): 자녀 child_summary·child_answer_history 와 같은 내부 함수로 계산한 본인 항목 1개.
+    // 자녀 화면과 같은 파서(parseChildSummary·parseChildHistory)를 그대로 쓴다(PR #11 리뷰 M1)
+    async parentPreviewChildView() {
+      const {data, error} = await sb.rpc('parent_preview_child_view');
+      if (error) fail('parent_preview_child_view', error);
+      return {summary: parseChildSummary(data?.summary ?? {}), history: parseChildHistory(data?.history ?? {})};
     },
     async setParentTitle(title) {
       const {data, error} = await sb.rpc('set_parent_title', {p_title: title});
@@ -348,16 +375,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     async fetchAnswerHistory(): Promise<ParentHistory[]> {
       const {data, error} = await sb.rpc('child_answer_history');
       if (error) fail('child_answer_history', error);
-      return (data?.parents ?? []).map((p: Record<string, any>) => ({
-        parentId: p.parent_id,
-        title: p.title ?? '부모님',
-        shared: !!p.shared,
-        items: (p.shared ? (p.answers ?? []) : []).map((a: Record<string, any>) => ({
-          answeredDate: a.session_date,
-          promptShort: a.prompt_short ?? pairShort(a.option_a, a.option_b),
-          choiceLabel: a.choice_label,
-        })),
-      }));
+      return parseChildHistory(data);
     },
     async sendCheer(parentId, key): Promise<SendCheerResult> {
       const {data, error} = await sb.rpc('send_cheer', {p_parent: parentId, p_key: key});
@@ -432,7 +450,10 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth): RealApi 
     },
     // 0032·0036·0037 푸시(계약 api/contract/push.ts)
     async registerPushToken(token) {
-      const {data, error} = await sb.rpc('register_push_token', {p_token: token, p_platform: 'android'});
+      if (!platform) {
+        return {ok: false, reason: 'invalid_platform'}; // 서버가 받지 않는 OS(web 등)는 부르지 않는다
+      }
+      const {data, error} = await sb.rpc('register_push_token', {p_token: token, p_platform: platform});
       if (error) fail('register_push_token', error);
       const r = parseRegisterPushToken(data);
       if (!r) throw new ServerError('register_push_token', 'contract_mismatch');
