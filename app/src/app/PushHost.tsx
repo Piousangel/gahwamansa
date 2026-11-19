@@ -19,7 +19,7 @@ const TAB_ROUTES = ['Album', 'Past']; // 자녀 탭 안 화면(getCurrentRoute �
 const PARENT_BUSY_ROUTES = ['Connect', 'Consent', 'PushPermission', 'DeleteAccount', 'DeleteDone'];
 const PENDING_TTL_MS = 10 * 60 * 1000;
 type Pending = {data: PushData; kind: PushKind | null; stage: 'open' | 'step'; at: number; tag: string | null | undefined};
-const isChildKind = (k: PushKind) => k === 'parent_connected' || k === 'parent_reconnected';
+const isChildKind = (k: PushKind) => k === 'parent_connected' || k === 'parent_reconnected' || k === 'parent_first_answer';
 const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().catch(() => null);
 
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.

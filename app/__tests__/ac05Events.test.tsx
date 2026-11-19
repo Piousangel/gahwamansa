@@ -250,6 +250,75 @@ describe('자녀 퍼널', () => {
   });
 });
 
+describe('PR #61 리뷰 후속', () => {
+  function sbWith(session: object | null) {
+    let s = session;
+    const rpc = jest.fn(async (name: string, _args?: unknown) => (name === 'log_event' ? {data: {ok: true}, error: null} : {data: null, error: null}));
+    const sb = {
+      auth: {
+        getSession: jest.fn(async () => ({data: {session: s}, error: null})),
+        signInAnonymously: jest.fn(async () => ({error: null})),
+        signOut: jest.fn(async () => ({error: null})),
+      },
+      rpc,
+    };
+    return {sb, rpc, login: () => (s = {user: {id: 'u', app_metadata: {}}})};
+  }
+  const sentNames = (rpc: jest.Mock) => rpc.mock.calls.filter(c => c[0] === 'log_event').map(c => (c[1] as {p_name: string}).p_name);
+
+  test('L1: 세션 전 보관은 app_first_open 만(다른 이벤트는 버림)', async () => {
+    const {sb, rpc, login} = sbWith(null);
+    const api = createRealApi(sb as never, undefined, 'android');
+    await api.logEvent('consent_shown');
+    await api.logEvent('app_first_open', {role_guess: 'child'});
+    login();
+    await api.logEvent('child_signup_completed', {login_method: 'kakao'});
+    expect(sentNames(rpc)).toEqual(['app_first_open', 'child_signup_completed']);
+  });
+
+  test('L1: 로그아웃하면 보관한 app_first_open 을 비운다(다음 계정 세션으로 나가지 않음)', async () => {
+    const {sb, rpc, login} = sbWith(null);
+    const api = createRealApi(sb as never, {signOut: async () => {}, unlinkKakao: async () => {}} as never, 'android');
+    await api.logEvent('app_first_open', {role_guess: 'child'});
+    await api.signOut().catch(() => {});
+    login();
+    await api.logEvent('child_signup_completed', {login_method: 'kakao'});
+    expect(sentNames(rpc)).toEqual(['child_signup_completed']);
+  });
+
+  test('L2: child_first_answer_viewed 는 계정마다 한 번(같은 기기, 다른 계정이면 다시)', async () => {
+    const api = createFakeApi();
+    let tag = 'acc-a';
+    jest.spyOn(api, 'accountTag').mockImplementation(async () => tag);
+    const log = jest.spyOn(api, 'logEvent');
+    await trackOnce(api, 'child_first_answer_viewed', {days_since_connect: 1});
+    await trackOnce(api, 'child_first_answer_viewed', {days_since_connect: 1});
+    tag = 'acc-b';
+    await trackOnce(api, 'child_first_answer_viewed', {days_since_connect: 2});
+    expect(callsOf(log, 'child_first_answer_viewed')).toEqual([{days_since_connect: 1}, {days_since_connect: 2}]);
+    expect(JSON.stringify(log.mock.calls)).not.toContain('acc-'); // 가명값은 이벤트에 싣지 않는다
+  });
+
+  test('L2: 계정 가명값을 모르면 보내지 않는다', async () => {
+    const api = createFakeApi({accountTag: null});
+    const log = jest.spyOn(api, 'logEvent');
+    await trackOnce(api, 'child_first_answer_viewed', {days_since_connect: 1});
+    expect(events(log)).not.toContain('child_first_answer_viewed');
+  });
+
+  test('L4: 자녀 첫 답 알림(parent_first_answer) 탭 → push_opened 기록 + 앨범, N3 배너 건너뛰기는 없음', () => {
+    const {handleChildPushOpen, takeSkipBanner} = require('../src/features/home/pushOpen');
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    const toAlbum = jest.fn();
+    expect(handleChildPushOpen(api, {kind: 'parent_first_answer'}, toAlbum)).toBe('parent_first_answer');
+    expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'parent_first_answer'});
+    expect(toAlbum).toHaveBeenCalledTimes(1);
+    expect(takeSkipBanner()).toBe(false);
+    expect(EVENT_PROP_VALUES.push_kind).toContain('parent_first_answer');
+  });
+});
+
 describe('daysSinceYmd(KST)', () => {
   const now = new Date('2026-11-19T15:30:00Z'); // KST 11-20 00:30
   test('같은 날 0, 사흘 전 3, 형식 오류·미래는 null', () => {

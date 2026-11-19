@@ -553,3 +553,9 @@
 - 변경: `audio/engines.soundCategory()` Android `'Playback'`(STREAM_MUSIC), iOS `'Ambient'` 유지(무음 스위치). `mixWithOthers=true` 그대로 → 오디오 포커스 요청 없음(라이브러리: `if (!mixWithOthers) requestAudioFocus`). 무음·진동은 기존대로 `getRinger`(벨소리 모드)로 내지 않음. `MainActivity` 에 `volumeControlStream = STREAM_MUSIC` → 앱이 앞에 있을 때 볼륨 키가 미디어 볼륨.
 - 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
 - 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.
+
+### AC-05 이벤트 후속(PR #61 리뷰 L1~L4) · 2026-11-19
+- 세션 전 보관(realApi `waiting`): `app_first_open` 1개만 보관한다(다른 이벤트는 세션이 있어야 생기는 행동이라 세션이 없으면 버린다). 로그아웃(`signOut`)·계정 삭제(`deleteMyAccount`) 때 비운다 — 앞 사람의 역할 고르기가 다음 계정 세션으로 나가지 않게.
+- `child_first_answer_viewed` 1회 표시는 **계정 기준**(`prefs` 키 + `:accountTag`)이다. 같은 기기에서 다른 자녀 계정이 들어와도 그 계정의 첫 답을 센다. 가명값을 모르면 보내지 않는다. 가명값은 기기 저장 키에만 쓰고 이벤트에는 넣지 않는다. `app_first_open`은 역할을 고르기 전이라 기기 기준이다.
+- 지표 SQL(L3): `course_step_started`·`course_step_completed`는 같은 단계를 다시 열거나 다시 시도하면 여러 번 기록될 수 있다. 단계별 시작 대비 완료는 **(사람, 날, 단계)로 중복을 제거한 뒤** 센다. 사람 = `profile_id`(연결된 어르신만 보내므로 항상 있음), 날 = KST `ts::date`, 단계 = `props->>'step'`. 이벤트 수를 그대로 나누지 않는다.
+- `push_kind`에 `parent_first_answer`(0052)를 추가했다. 서버 0055 `event_prop_ok`, 앱 `PUSH_KINDS`도 같다. 자녀가 이 알림을 누르면 `push_opened{push_kind:'parent_first_answer'}`를 기록하고 앨범 탭으로 간다. 연결 알림이 아니므로 N3 배너를 건너뛰는 표시는 하지 않는다.

@@ -51,8 +51,9 @@ export function createPrefs(store: KeyValueStore) {
       }
     },
     /** AC-05 한 번만 보내는 이벤트(이 기기 기준): app_first_open·child_first_answer_viewed. 보낸 뒤 표시 */
-    eventOnceSent: (name: OnceEvent) => getBool(`${ONCE_PREFIX}${name}`, false),
-    markEventOnceSent: (name: OnceEvent) => setBool(`${ONCE_PREFIX}${name}`, true),
+    // scope: 계정 가명값(accountTag)을 주면 그 계정 기준 1회(PR #61 리뷰 L2). 없으면 기기 기준 1회
+    eventOnceSent: (name: OnceEvent, scope?: string) => getBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, false),
+    markEventOnceSent: (name: OnceEvent, scope?: string) => setBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, true),
     zoomOpened: () => getBool(ZOOM_OPENED, false),
     markZoomOpened: () => setBool(ZOOM_OPENED, true),
     photoVisits: async (): Promise<number> => {
