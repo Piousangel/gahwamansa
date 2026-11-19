@@ -9,6 +9,7 @@ import {Screen} from '../../ui/Screen';
 import {Text20} from '../../ui/Text20';
 import {BigButton} from '../../ui/BigButton';
 import {AudienceProvider, Choice, Sheet} from '../../ui/ds';
+import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
 import {useSendCheer} from './useSendCheer';
 import {findTitleDup} from './titleDup';
@@ -23,6 +24,9 @@ import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
+
+/** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
+const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
 
 const c = copy.child;
 const h = c.home;
@@ -130,7 +134,7 @@ export function ChildHome() {
           <Choice
             mode="action"
             testID="cheer"
-            items={CHILD_CHEER_KEYS.map(k => ({key: k, label: copy.cheers[k]}))}
+            items={CHILD_CHEER_KEYS.map(k => ({key: k, label: copy.cheers[k], icon: CHEER_ICON[k]}))}
             onSelect={k => {
               setSheet(false);
               send(k as (typeof CHILD_CHEER_KEYS)[number], reachable);

@@ -43,6 +43,10 @@ test('선택지: 확정 문구 4개 1열 Choice(action, 버튼), 글자는 bodyL
   const list = within(screen.getByTestId('cheer'));
   const items = list.getAllByRole('button');
   expect(items.map(b => b.props.accessibilityLabel)).toEqual(['사랑해요, 오늘도 좋은 하루예요', '덕분에 하루가 따뜻해요', '늘 고마워요', '오늘도 편안한 하루 보내세요']);
+  // 사물 아이콘 4종(해·찻잔·새싹·쪽지, 디자인 #92) — 하트·이모지 없음(Q5), 장식이라 읽지 않음
+  ['icon-sun', 'icon-teacup', 'icon-sprout', 'icon-note'].forEach((name, i) => {
+    expect(within(items[i]).getByTestId(name, {includeHiddenElements: true})).toBeTruthy();
+  });
   const label = within(items[0]).UNSAFE_getByType(RNText);
   expect(label.props.maxFontSizeMultiplier).toBe(roleText('bodyLg', 'child').maxFontSizeMultiplier);
   expect(label.props.maxFontSizeMultiplier).toBeGreaterThan(1.5);
