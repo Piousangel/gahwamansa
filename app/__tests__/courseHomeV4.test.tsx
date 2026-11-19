@@ -142,7 +142,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('사진 보기')).toBeTruthy(); // 보기 전용은 단계 표시 없이 이름만
     expect(screen.queryByText(/1 \/ 3/)).toBeNull();
     expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요'));
     expect(counts(spies)).toEqual(before);
   });
@@ -157,7 +157,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('가을')).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull(); // 누를 수 없음
     expect(screen.queryByRole('button', {name: '정했어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });
@@ -179,7 +179,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
     expect(screen.queryByLabelText('낱말 쓰는 칸')).toBeNull();
     expect(screen.queryByRole('button', {name: '다 썼어요'})).toBeNull();
-    fireEvent.press(screen.getByText('돌아가기'));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });
@@ -189,7 +189,7 @@ describe('코스 홈 v4', () => {
     await press('사진 보기, 했어요');
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
     // v4 BackLink '오늘 코스로'(보이는 글 = 읽기). 하단 '돌아가기'는 힌트로 목적지를 읽는다(copy 11-1 #3)
-    expect(screen.getByRole('button', {name: '돌아가기'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
+    expect(screen.getByRole('button', {name: '오늘 코스로'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
     fireEvent.press(screen.getByRole('link', {name: '오늘 코스로'}));
     await waitFor(() => screen.getByTestId('date-line'));
   });
@@ -312,7 +312,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
-      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /돌아가기/});
+      const dockButton = within(screen.getByTestId('screen-dock')).getByRole('button', {name: /^오늘 코스로$/});
       expect(StyleSheet.flatten(dockButton.props.style).minHeight).toBe(72); // 주 버튼 높이
       fireEvent.press(dockButton);
       await waitFor(() => screen.getByTestId('date-line'));

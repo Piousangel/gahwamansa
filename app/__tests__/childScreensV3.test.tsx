@@ -566,7 +566,7 @@ describe('C7 설정 v2', () => {
     const dialog = screen.getByTestId('dialog');
     expect(within(dialog).getByText('로그아웃할까요?')).toBeTruthy();
     expect(within(dialog).getByText('같은 방법(카카오)으로 다시 로그인하면 지금 가족과 그대로 이어져요')).toBeTruthy();
-    await press('그만둘래요');
+    await press('닫기');
     expect(screen.queryByTestId('dialog')).toBeNull();
     await press('로그아웃');
     fireEvent.press(within(screen.getByTestId('dialog')).getByRole('button', {name: '로그아웃'}));
