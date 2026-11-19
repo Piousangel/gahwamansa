@@ -10,6 +10,7 @@ import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
 import {press, pressBackLink} from '../testUtils/flow';
+import {P4_LAYOUT} from '../src/features/course/PhotoStep';
 
 afterEach(() => {
   jest.useRealTimers();
@@ -78,7 +79,7 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('B4·ds4c: 사진 높이는 128(100%)·100(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
+test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 날)·80(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
@@ -86,14 +87,15 @@ test('B4·ds4c: 사진 높이는 128(100%)·100(글자 150% 이상)으로 정해
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
   const {fontScale} = require('react-native').Dimensions.get('window');
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? 100 : 128);
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? P4_LAYOUT.photo.large : P4_LAYOUT.photo.withCaption); // fake 콘텐츠는 설명 있음
 });
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
   await previewHome();
   await press('사진 보기');
   await waitFor(() => screen.getByTestId('step-header'));
-  expect(screen.getByText('사진 보기 · 1 / 3')).toBeTruthy(); // v4 단계 제목 한 줄
+  const {fontScale} = require('react-native').Dimensions.get('window');
+  expect(screen.getByText(fontScale >= 1.5 ? '1 / 3' : '사진 보기 · 1 / 3')).toBeTruthy(); // v4 단계 제목 한 줄(큰 글자는 '1 / 3'만, #95)
   expect(screen.getByRole('header', {name: '사진 보기, 3단계 중 1단계'})).toBeTruthy();
   await pressBackLink();
   await waitFor(() => screen.getByTestId('date-line'));

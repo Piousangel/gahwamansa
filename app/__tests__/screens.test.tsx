@@ -1,5 +1,5 @@
 import {StyleSheet} from 'react-native';
-import {fireEvent, screen, waitFor, within} from '@testing-library/react-native';
+import {fireEvent, screen, waitFor} from '@testing-library/react-native';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, toHome, pressCourseNext} from '../testUtils/flow';
 

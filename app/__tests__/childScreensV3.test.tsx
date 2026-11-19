@@ -111,22 +111,22 @@ describe('C3 연결 대기', () => {
       lay('wait-step-2', 0, 48); // 384~432
       lay('wait-step-3', 0, 48); // 444~492 → 480 에 걸림
     });
-    expect(mt('wait-step-3')).toBe(480 - 444);
+    expect(mt('wait-step-3')).toBe(480 - 444 + 1); // foldPush 공용 계산(PR 91 L1)은 접힘 바로 아래로 1 더
     expect(mt('wait-step-2')).toBeUndefined();
     // 간격이 들어간 뒤 같은 높이로 다시 와도 흔들리지 않는다(높이만으로 계산)
     await act(async () => {
       lay('wait-step-3', 36, 48);
     });
-    expect(mt('wait-step-3')).toBe(36);
+    expect(mt('wait-step-3')).toBe(37);
     // 재확인 H1: 맨 아래로 내려 띠가 사라져 스크롤 창이 커져도(504) 다시 나와도(480) 접힘 기준(본문 영역 − 띠)은 그대로
     await act(async () => {
       lay('screen-body', 0, 504);
     });
-    expect(mt('wait-step-3')).toBe(36);
+    expect(mt('wait-step-3')).toBe(37);
     await act(async () => {
       lay('screen-body', 0, 480);
     });
-    expect(mt('wait-step-3')).toBe(36);
+    expect(mt('wait-step-3')).toBe(37);
     // 본문 영역 자체가 커져 다 들어가면 간격 없음
     await act(async () => {
       lay('screen-body-area', 0, 624);
@@ -147,7 +147,7 @@ describe('C3 연결 대기', () => {
       lay('wait-step-2', 0, 48);
       lay('wait-step-3', 0, 48);
     });
-    expect(mt('wait-steps-title')).toBe(380 - 300); // 제목째 접힘 밖
+    expect(mt('wait-steps-title')).toBe(380 - 300 + 1); // 제목째 접힘 밖(foldPush +1)
     expect(mt('wait-step-1')).toBeUndefined();
   });
 
