@@ -433,22 +433,26 @@ android.applicationVariants.configureEach { variant ->
         }
         logger.warn("경고: ${e.SOURCE} 에 앱 정보 값이 없어 설정 화면에서 '[설정 필요]'로 보이는 행: ${missing.join(', ')} (AU-07, G-INT 전 필수)")
     }
+    // 요청한 작업 이름에 변형 이름이 있으면(예: assembleStagingRelease) 그 변형만 요청된 것. 이름이 없으면(assembleDebug 등) 모두.
+    // 2026-11-19: 네이티브 CMake 설정 작업(configureCMakeDebug·configureCMakeRelWithDebInfo)은 flavor 가 같은 설정을 함께 써서
+    // 다른 flavor 의 preBuild(preProductionDebugBuild·preProductionReleaseBuild)에 의존한다(init 스크립트로 확인) →
+    // ① 디버그: 나중 쪽이 env.generated.ts 를 덮어씀(PR #7) ② release: staging 만 만들어도 production 검사(예시 값 금지)가 돌아 실패(S25 INF-1).
+    def requested = gradle.startParameter.taskNames.join(" ").toLowerCase()
+    def named = ["stagingdebug", "stagingrelease", "productiondebug", "productionrelease"].any { requested.contains(it) }
+    def variantRequested = !named || requested.contains(variant.name.toLowerCase())
     def generate = {
         checkPlaceholder()
         checkAppInfo()
-        // 2026-11-19 E2E 에서 발견: assembleStagingDebug 그래프에도 preProductionDebugBuild 가 끼어(라이브러리 debug 의존) 나중에 도는 쪽이
-        // env.generated.ts 를 production 값으로 덮어써 Metro(디버그) 앱이 production 처럼 동작했다(개발자 메뉴 막힘).
-        // 요청한 작업 이름에 변형 이름이 있으면(예: assembleStagingDebug) 그 변형만 쓴다. 이름이 없으면(assembleDebug 등) 예전처럼
-        def requested = gradle.startParameter.taskNames.join(" ").toLowerCase()
-        def named = ["stagingdebug", "stagingrelease", "productiondebug", "productionrelease"].any { requested.contains(it) }
-        // 리뷰 M-R1: 디버그 변형만 건너뛴다 — release 번들은 언제나 자기 값을 쓴다(혼합 호출에서도 번들 직전 generate)
-        if (!isRelease && named && !requested.contains(variant.name.toLowerCase())) {
-            return
-        }
         writeEnvTs(e, vName, vCode, linkHost, isRelease)
     }
-    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패)
-    variant.preBuildProvider.configure { doFirst { isRelease ? { checkPlaceholder(); checkAppInfo() }() : generate() } }
+    // preBuild: 디버그는 생성 파일을 쓰고, release 는 예시 값·앱 정보 검사만(네이티브 컴파일 전에 일찍 실패).
+    // 요청하지 않은 변형의 preBuild(위 CMake 의존으로 끌려 온 것)는 아무것도 하지 않는다. release 번들 직전 generate 는 언제나(리뷰 M-R1)
+    variant.preBuildProvider.configure {
+        doFirst {
+            if (!variantRequested) return
+            isRelease ? { checkPlaceholder(); checkAppInfo() }() : generate()
+        }
+    }
     def bundleTask = "createBundle${variant.name.capitalize()}JsAndAssets"
     tasks.matching { it.name == bundleTask }.configureEach { t ->
         // env 값·버전이 바뀌면 번들을 다시 만든다(생성 파일 내용은 doFirst 전에 검사되므로 따로 입력으로 둔다)
@@ -556,9 +560,8 @@ tasks.register("verifyOssLicenses") {
         if (proc.exitValue() != 0) throw new GradleException("오픈소스 라이선스 목록(JS)이 낡았어요. app 에서 npm run oss 로 다시 만들어 커밋해 주세요.")
     }
 }
-// 리뷰 O1: 검사는 production release(출시 산출물)에서만 — staging release·디버그는 네트워크·node 상태와 무관하게 빌드
-android.applicationVariants.configureEach { variant ->
-    if (!variant.buildType.debuggable && variant.flavorName == "production") {
-        variant.preBuildProvider.configure { dependsOn("verifyOssLicenses") }
-    }
-}
+// 리뷰 O1: 검사는 production release(출시 산출물)에서만 — staging release·디버그는 네트워크·node 상태와 무관하게 빌드.
+// preProductionReleaseBuild 는 CMake 공유 설정 때문에 staging release 에도 끌려오므로(S25 INF-1) 산출 작업에만 건다
+// PR #44 리뷰 M1: assemble·bundle 만 걸면 installProductionRelease·packageProductionRelease 경로가 빠진다 →
+// 모든 production release 산출 경로가 지나는 JS 번들 작업에 건다
+tasks.matching { it.name == "createBundleProductionReleaseJsAndAssets" }.configureEach { dependsOn("verifyOssLicenses") }

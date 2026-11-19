@@ -39,7 +39,7 @@ test('미연결: 날짜 줄·스티치, 미연결이면 도장 줄 숨김(서버
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByText('번호를 받으면 그때부터 답이 저장돼요'));
-  expect(screen.getByText('오늘 코스예요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
+  expect(screen.getByText('세 가지를 차례로 해요')).toBeTruthy(); // 0/3 인사 한 줄(P3 v4)
   expect(screen.getByTestId('date-line')).toBeTruthy();
   await new Promise<void>(r => setTimeout(() => r(), 30));
   expect(screen.queryByText('이번 주 도장')).toBeNull(); // 기기 로컬 도장 0 → 줄 숨김(감사 M1·디자인 판정)

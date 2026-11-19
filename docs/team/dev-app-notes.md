@@ -547,3 +547,9 @@
 ### P1 사후 검증 M9(재확인 5) · 11-19
 - 넘침을 묶음 컨테이너 높이(어림 minHeight·flexGrow 로 늘어난 값) 대신 **내용 높이**로 잰다: 키패드 영역 y(제목·안심 줄로만 정해짐) + 키패드 실제 높이(키 높이로만 정해짐, 늘어나지 않는 감싸개 keypad-content). 창 높이·어림·하단 고정(오프라인 Banner) 변화와 무관해 '넘치지 않았는데 키를 줄이거나 단계를 올리는' 일이 없다. 재현 G(360×740 3단계가 4단계로 가던 것)·Banner 로 창이 줄어도 그대로인 경우를 테스트로.
 - L22: Screen fillScrollable 이면 fill 화면에서도 넘칠 때 '더 있음' 흐림을 보인다. L23(약관 링크 확인 중 진행 표시)·L24(1.3·1.5·삼성 글꼴·3버튼 실측)·L25(4단계 0 줄 반쯤 보임, 디자인 판정)는 남김.
+
+### D-40 소리를 미디어 스트림으로 · 2026-11-19 (리드 결정, S25 1회차)
+- 원인: react-native-sound 0.13.0 Android 는 `setCategory('Ambient')` 를 `STREAM_NOTIFICATION` 으로 둔다(`Sound.kt`: Playback→MUSIC, Ambient→NOTIFICATION) → BGM·도장 소리가 알림 볼륨을 따랐다.
+- 변경: `audio/engines.soundCategory()` Android `'Playback'`(STREAM_MUSIC), iOS `'Ambient'` 유지(무음 스위치). `mixWithOthers=true` 그대로 → 오디오 포커스 요청 없음(라이브러리: `if (!mixWithOthers) requestAudioFocus`). 무음·진동은 기존대로 `getRinger`(벨소리 모드)로 내지 않음. `MainActivity` 에 `volumeControlStream = STREAM_MUSIC` → 앱이 앞에 있을 때 볼륨 키가 미디어 볼륨.
+- 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
+- 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.

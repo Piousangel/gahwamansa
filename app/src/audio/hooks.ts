@@ -87,7 +87,7 @@ export function useAudioInputs(o: {bgmEnabled: boolean; bgmScreen: boolean}): Au
 
 /**
  * 배경 음악 한 곡. 이 훅이 트랙을 열고(load) 화면을 떠날 때 멈추고 해제(release)까지 한다(리뷰 M5 — 호출부는 자산만 넘긴다).
- * - 정책이 play 면 반복 재생(읽어 주는 동안 10%), stop 이면 정지.
+ * - 정책이 play 면 반복 재생(읽어 주는 동안 5%), stop 이면 정지.
  * - 앱이 뒤로 가거나 출력이 끊겨 멈췄으면, 돌아와도 저절로 다시 틀지 않는다(스파이크 6-5, 리뷰 M2). 사용자가 음악을 껐다 켜면 다시 튼다.
  * 음원은 CT-04, 화면 연결은 AP-04.
  */
