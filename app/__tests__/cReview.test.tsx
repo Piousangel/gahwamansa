@@ -163,7 +163,7 @@ test('이미 어르신으로 연결된 폰은 자녀 로그인을 막는다', as
   await waitFor(() => screen.getByText('이 폰은 부모님 휴대폰으로 쓰고 있어요'));
   expect(screen.queryByLabelText('이메일 주소')).toBeNull();
   expect(send).not.toHaveBeenCalled();
-  await press('알겠어요');
+  await press('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 

@@ -135,7 +135,7 @@ test('기간 지남은 안내 패널(5절 문구), 알겠어요 → 비운 번�
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await typeCode('111111');
   await waitFor(() => screen.getByText('번호 기간이 지났어요'));
-  await press('알겠어요');
+  await press('다른 번호 쓰기');
   expect(screen.getByLabelText('연결 번호 6자리 쓰는 칸')).toBeTruthy();
 });
 
@@ -158,7 +158,7 @@ test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번�
   render(<AppRoot api={api} role="parent" />);
   await typeCode('111111');
   await waitFor(() => screen.getByText('번호 기간이 지났어요'));
-  await press('알겠어요');
+  await press('다른 번호 쓰기');
   await typeCode('123456');
   await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
   await press('이 번호로 연결하기');
