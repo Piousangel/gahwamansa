@@ -22,6 +22,9 @@ test('최근 답: 호칭 제목, 선택지, 날짜, 대화 제안을 보여 준�
   render(<AppRoot api={api} role="child" />);
   await waitFor(() => screen.getByText('엄마의 최근 답'));
   expect(screen.getByText('가을')).toBeTruthy();
+  // 디자인 #103: 홈 최근 답은 answer(40/52·400·확대 상한 1.3)
+  expect(StyleSheet.flatten(screen.getByText('가을').props.style)).toMatchObject({fontSize: 40, lineHeight: 52, fontWeight: '400'});
+  expect(screen.getByText('가을').props.maxFontSizeMultiplier).toBe(1.3);
   expect(screen.getByText('2020년 11월 16일')).toBeTruthy(); // 오래된 날짜도 그대로
   expect(screen.getByText('이 답으로 이야기를 시작해 봐요')).toBeTruthy(); // 지난 날 답(C4 확정)
   expectNoPressure();
