@@ -560,13 +560,13 @@ describe('디자인 판정 11-18 ②③(C0 연령 줄·C6 확인 줄)', () => {
     await waitFor(() => screen.getByRole('button', {name: '인증번호 받기'}));
   };
 
-  test('C0: 연령 줄은 inkSub, 이메일 화면에도 약관 줄 아래 연령 줄(100%는 하단 고정 안)', async () => {
+  test('C0: 연령 줄은 inkSub, 선택 화면은 본문 끝(v4 Q1: 하단 고정은 타사 버튼 둘만), 이메일 화면은 약관 줄 아래 연령 줄(하단 고정 안)', async () => {
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2, fontScale: 1}); // jest 모의 기본 글자 배율은 2
     render(<AppRoot api={createFakeApi()} />);
     await press(/자녀 휴대폰이에요/);
     await waitFor(() => screen.getByTestId('age-notice'));
     expect(StyleSheet.flatten(screen.getByTestId('age-notice').props.style).color).toBe(color.inkSub);
-    expect(inDock('age-notice')).toBe(true);
+    expect(inDock('age-notice')).toBe(false);
     await toEmailStage();
     expect(screen.getByTestId('legal-child')).toBeTruthy();
     expect(screen.getByTestId('age-notice')).toBeTruthy();
