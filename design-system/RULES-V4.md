@@ -17,7 +17,7 @@
 | R-08 | info 글자는 infoSoft 띠 위(7.35)에서, 면 + 아이콘과 함께 쓴다(단독 글자색 금지) | 토큰(allowed) + 렌더(Banner 계약) | DS 레인 |
 | R-09 | 높이는 minHeight만(어르신 주 72·보조 64·링크 64·간격 12, 자녀 56/48). 글자 상자에 height·maxHeight 숫자 금지 | lint: height·maxHeight 숫자 + 토큰(role minHeight 존재) | DS 레인 |
 | R-10 | 말줄임 금지(numberOfLines·ellipsize). 예외 3곳(낱말 칸·브랜드 버튼·번호 칸)은 ui/ 안에서 주석과 테스트로 | lint: `numberOfLines`·`ellipsizeMode` + 렌더: 예외 3곳 | DS 레인 |
-| R-11 | 확대 상한은 역할 토큰에서만(본문 2.0, 큰 제목·Dock·번호 1.5). 화면이 `maxFontSizeMultiplier`를 고르지 못한다. **배율과 상관없이 적용**(200%에서도 입력 카드는 잘리지 않고, 넘치는 것은 본문 스크롤로 닿는다) | lint: `maxFontSizeMultiplier` 금지 + 렌더: fontScale 2.0 주입 | DS 레인 |
+| R-11 | 확대 상한은 역할 토큰에서만(본문 2.0, 큰 제목·Dock·번호 1.5). 화면이 `maxFontSizeMultiplier`를 고르지 못한다. **배율과 상관없이 적용**(200%에서도 입력 카드는 잘리지 않고, 넘치는 것은 본문 스크롤로 닿는다). **Field 입력 글자(`typeRoles.fieldInput`)의 상한은 1.5로 항상 고정**(자판 열림 여부·화면과 무관, 화면별로 값을 정하지 않는다) | lint: `maxFontSizeMultiplier` 금지 + 렌더: fontScale 2.0 주입 | DS 레인 |
 | R-12 | Dock 슬롯은 주 1 + 보조 0~1 + 한 줄 note. 약관은 본문 끝. 넘치면 note → 보조 순으로 본문 끝, 최후에 '더 있음' 표시 + 테스트 실패. **단서(SocialGroup)**: 로그인 화면은 주 슬롯 안에 `SocialGroup`(카카오 → 구글 → Apple(iOS만), 최대 3개, 같은 높이·폭·반경)을 둔다. 그룹이 들어가도 Dock ≤ 40%이고, 넘치면 보조 링크가 본문으로 간다(`dock.socialGroup`). 간격: 주 버튼과 링크 24 이상, 요소 사이 8 이상 | 타입(슬롯 수) + 렌더: fontScale 2.0에서 Dock ≤ 40% | DS 레인 |
 | R-13 | placeholder 금지. 안내는 Field의 label·hint | lint: `placeholder` 금지 + 타입(Field에 prop 없음) | DS 레인 |
 | R-14 | BackLink 하나(화살표 28/24·글자 24/18·알약 card + line 1.5, 64×120/56), 목적지 문구, 보이는 글 = TalkBack 라벨, 배율로 숨기지 않음 | 렌더: a11y 라벨 일치·배율 2.0에서 존재 | DS 레인 |
@@ -26,7 +26,7 @@
 | R-17 | 400/700 두 단계만(500은 S25 실측 뒤). 어르신 본문 20(22는 어르신 확인 뒤). **단서**: 소셜 버튼(카카오·구글·Apple) 글자 500은 브랜드 가이드 예외로 700 역할 집계에 넣지 않는다. 한 화면 700은 2역할까지(제목·버튼)이며 약관 링크는 400 + 밑줄 | 토큰(typeRoles weight 집합) | DS 레인 |
 | R-18 | 어르신 글자 20 미만·손글씨 30 미만, 자녀 16 미만 금지 | 토큰(typeRoles 최소) | DS 레인 |
 
-| R-19 | '더 있음' 표시는 글자 위에 겹치는 흐림이 아니라 스크롤 영역 밖 24 띠(아래 화살표 아이콘만, 읽기 제외)로 둔다 | 렌더: 표시 띠가 스크롤 영역과 겹치지 않음 | DS 레인 |
+| R-19 | '더 있음' 표시는 **본문이 넘칠 때만** 보이고, 글자 위에 겹치는 흐림이 아니라 스크롤 영역 밖 24 띠(아래 화살표 아이콘만, 읽기 제외)로 둔다. 넘치지 않으면 띠도 없다 | 렌더: 표시 띠가 스크롤 영역과 겹치지 않음 | DS 레인 |
 | R-20 | 인접 크기 비율 1.2 미만 쌍은 색·밑줄·아이콘으로 보완하고 `tests.ratioCompensatedPairs`에 이름을 둔다(link/sub 추가) | 토큰 | DS 레인 |
 
 ## 디자인이 SUMMARY 값에서 바꾼 것 (이유 포함)

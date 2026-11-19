@@ -663,6 +663,20 @@
     "hand": {
       "note": "손글씨(Nanum Pen Script). 어르신 32, 30 미만 금지",
       "tone": "inkTitle"
+    },
+    "fieldInput": {
+      "elder": {
+        "size": 34,
+        "lineHeight": 44
+      },
+      "child": {
+        "size": 18,
+        "lineHeight": 26
+      },
+      "weight": 400,
+      "tone": "inkBody",
+      "maxFontScale": 1.5,
+      "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 Jua 입력, 손글씨 아님"
     }
   },
   "typeRules": [
