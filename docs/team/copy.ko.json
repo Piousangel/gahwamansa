@@ -681,7 +681,7 @@
     "settings_sub": "오늘 코스 화면과 마친 화면에서만 나와요"
   },
   "app_info": {
-    "_src": "copy-v3 11-13(WR-04), 법률 in-app-notices §3 순서. 부모님(P13)·자녀(C7) 공용, ai_music 은 부모님만",
+    "_src": "copy-v3 11-13(WR-04), 법률 in-app-notices §3 순서. 부모님(P13)·자녀(C7) 공용, ai_music 은 부모님만. ai_voice 라이터 확정 11-19(미리 생성 음성이 있을 때만)",
     "title": "앱 정보",
     "terms": "이용약관",
     "privacy": "개인정보 처리방침",
@@ -690,6 +690,7 @@
     "ai_title": "AI가 만든 것",
     "ai_photo": "앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요",
     "ai_music": "배경 음악은 AI(Google Lyria)가 만든 연주곡이에요",
+    "ai_voice": "읽어 주는 목소리는 AI가 만든 목소리예요. 사람이 읽은 게 아니에요",
     "not_medical": "병원 앱이 아니고, 안부나 안전을 확인하는 서비스가 아니에요",
     "business_title": "사업자 정보",
     "business": {
