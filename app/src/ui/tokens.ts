@@ -1,4 +1,6 @@
 // 디자인 토큰 v3 (원본: design-system/tokens-v3.json, 값이 어긋나면 __tests__/designSystem.test.tsx 가 실패한다).
+// v4(2026-11-19): 새 코드는 ./tokensV4(생성물, 원본 design-system/tokens-v4.json)와 ui/ds 컴포넌트를 쓴다.
+//   이 파일은 한 릴리스 동안 v3 별칭으로 그대로 둔다(값을 바꾸지 않아 지금 화면이 깨지지 않음). 대응표는 ./tokensV4Migration.
 // 규칙: 색은 역할 이름으로만 참조하고 화면에서 헥스를 직접 쓰지 않는다.
 // 글꼴: tokens-v3 fontCandidate 가 "라이선스 미확인"이라 빌드 1은 시스템 글꼴(fontFamily 미지정)을 쓴다.
 //       교체할 때는 font 값만 바꾼다(파일 번들 + 라이선스 확인 후).
@@ -36,6 +38,9 @@ export const brand = {
 /** 시스템 글꼴 유지. undefined 면 RN 기본(Android Roboto/Noto CJK, iOS SF/Apple SD Gothic Neo). */
 export const font = {title: undefined, body: undefined, hand: undefined} as const;
 
+export {tokensV4} from './tokensV4';
+
+/** @deprecated v3 크기 표. 새 코드는 tokensV4.type 역할(ui/ds Text role)을 쓴다(대응표 tokensV4Migration.typeScaleV3toV4). */
 export const typeScale = {
   elder: {
     display: 36, title: 32, titleSm: 28, bubble: 24, bodyLg: 22, body: 20, hand: 32, handMin: 30,
@@ -45,6 +50,7 @@ export const typeScale = {
 } as const;
 
 // v3 값. 본문 20, 큰 본문 22(시안 P3 v4 토큰 정리: 예전 body 22 이름은 폐기하고 typeScale 과 같은 이름으로)
+/** @deprecated v3 숫자 크기. 새 코드는 ui/ds Text role 을 쓴다. */
 export const fontSize = {
   display: 36, title: 32, titleSm: 28, bubble: 24, bodyLg: 22, body: 20, hand: 32,
   buttonPrimary: 32, buttonSecondary: 26, childBody: 18, childMin: 16,
