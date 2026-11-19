@@ -157,4 +157,8 @@ if grep -qE "ANR in $APP_ID|am_anr.*$APP_ID" "$OUT_DIR/logcat.txt" || grep -A3 "
   fail "앱 ANR·크래시가 기록됐어요($OUT_DIR/anr-crash.txt). 흐름이 통과해도 실패로 봅니다."
 fi
 [ "$RC" -eq 0 ] || fail "흐름 실패(rc=$RC). 캡처·보고서: $OUT_DIR"
+# 첫 화면 접힘 경계(L28·M10): flow 가 첫 화면에서 멈춘 상태를 호스트에서 좌표로 본다(audit/p1-fold.yaml 과 함께)
+if [ "${FOLD_CHECK:-0}" = "1" ]; then
+  python3 -I "$E2E_DIR/audit/fold-check.py" "$(command -v adb)" || fail "접힘 경계 검사 실패(캡처: $OUT_DIR)"
+fi
 echo "e2e: 통과(앱 ANR·크래시 0). 캡처·보고서: $OUT_DIR"

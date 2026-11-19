@@ -209,6 +209,77 @@ describe('재확인 5 M9: 컨테이너가 아니라 내용 높이로 넘침을 �
   });
 });
 
+// 리드 결정 L25·디자인 #54(RULES-V4 R-15): 4단계 첫 화면 끝이 키 줄을 반쯤 가르면 그 줄 앞에 여백을 넣어 줄째로 접힘 밖으로(키 64 그대로)
+describe('4단계 접힘 경계는 줄 경계', () => {
+  const rowsAt = async (ys: number[], h = 64) =>
+    act(async () => {
+      ys.forEach((y, i) => fireEvent(screen.getByTestId(`key-row-${i + 1}`), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}}));
+    });
+  const areaY = async (y: number) =>
+    act(async () => {
+      fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: 400}}});
+    });
+  // 키패드 안 줄 위치: 칸 68 + 12 + 칸 아래 줄 34 = 114 부터 70 간격
+  const ROWS = [114, 184, 254, 324];
+
+  test('360×640 1.0: 0·지움 줄이 접힘에 반쯤 걸리면 그 줄 앞에 여백 → 줄 전체가 접힘 밖, 키 64 그대로', async () => {
+    dims(360, 640);
+    await openConnect();
+    expect(stageOf(360, 640, 1).level).toBe(4);
+    await viewport(560); // 4단계 창(하단 고정 없음, 모의 inset 0) → 접힘 560, 흐림 532부터
+    await areaY(130); // 키패드 위 끝 = 4 + 130 = 134 → 줄 위 끝 248·318·388·458
+    await rowsAt(ROWS);
+    // 4번째 줄(458~522)은 흐림(532) 위라 걸리지 않는다 → 여백 없음
+    expect(screen.queryByTestId('fold-gap')).toBeNull();
+    await viewport(500); // 접힘 500, 흐림 472 → 4번째 줄(458~522)이 반쯤
+    const gap = screen.getByTestId('fold-gap');
+    expect(StyleSheet.flatten(gap.props.style).height).toBe(500 - 458); // 줄 위 끝을 접힘으로
+    expect(keyH()).toBe(64);
+    // 여백을 넣은 뒤의 줄 위치(여백만큼 아래)로 다시 와도 판정이 흔들리지 않는다
+    await rowsAt([ROWS[0], ROWS[1], ROWS[2], ROWS[3] + 42]);
+    expect(StyleSheet.flatten(screen.getByTestId('fold-gap').props.style).height).toBe(42);
+  });
+
+  test('200%처럼 1~9 줄이 걸리면 그 줄(예: 7·8·9) 앞에서 끊는다(어떤 배율에서도 줄 경계)', async () => {
+    dims(360, 640, 2);
+    await openConnect();
+    await viewport(560);
+    await areaY(300); // 큰 글자: 제목·안심 줄이 길다 → 위 끝 304, 줄 418·488·558·628
+    await rowsAt(ROWS);
+    const gap = screen.getByTestId('fold-gap');
+    expect(StyleSheet.flatten(gap.props.style).height).toBe(560 - 488); // 2번째 줄(488~552)이 흐림(532)에 걸림 → 그 앞에서
+    const container = screen.getByTestId('key-row-2').parent;
+    expect(container).toBeTruthy();
+  });
+
+  test('재확인 7 M10: 3버튼 내비(inset 48)는 시스템 버튼에 덮이는 줄도 접힘 밖으로(흐림 28 대신 48)', async () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 0, bottom: 48, left: 0, right: 0}));
+    try {
+      dims(360, 640);
+      await openConnect();
+      await viewport(560); // 접힘 560. 제스처라면 흐림 532 → 4번째 줄(458~522)은 통과
+      await areaY(130); // 줄 위 끝 248·318·388·458, 4번째 줄 아래 끝 522
+      await rowsAt([114, 184, 254, 324 + 6]); // 4번째 줄 464~528: 532 위지만 560 − 48 = 512 아래 → 버튼 밑
+      const gap = screen.getByTestId('fold-gap');
+      expect(StyleSheet.flatten(gap.props.style).height).toBe(560 - 464); // 줄 위 끝을 접힘(창 아래 끝)으로
+      expect(keyH()).toBe(64);
+      // 같은 줄 배치를 inset 0(제스처)에서는 밀지 않는다 — 위 '360×640 1.0' 테스트의 4번째 줄(458~522) 경우와 같음
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
+
+  test('0~3단계에서는 여백을 넣지 않는다(첫 화면 묶음이 키패드를 담는다)', async () => {
+    dims(411, 914);
+    await openConnect();
+    expect(screen.queryByTestId('fold-gap')).toBeNull();
+  });
+});
+
 describe('2·3단계 묶음(그리기)', () => {
   test('잰 본문 창이 오면 묶음 = 창 − 위 여백 − 흐림(재리뷰 M1), 판정은 바뀌지 않는다', async () => {
     dims(360, 914, 1.3);

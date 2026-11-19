@@ -18,7 +18,7 @@ export function legalLinks(urls: {terms: string | null; privacy: string | null} 
 
 /** 약관 줄(LegalText)에 넘길 onOpen + 오프라인 상태(재확인 4 M7: 화면 읽기 알림만이 아니라 앱 정보 행처럼 Banner 로 보인다).
  *  어르신·자녀 스택 공통 라우트 'Web'(app/ 를 import 하지 않으려 최소 타입만). 화면에 다시 들어오면 오프라인 줄을 지운다 */
-export function useLegalOpen(): {open: (url: string, label: string, key?: string) => void; offline: boolean} {
+export function useLegalOpen(): {open: (url: string, label: string, key?: string) => void; offline: boolean; busy: boolean} {
   const navigation = useNavigation<NativeStackNavigationProp<{Web: {target: WebTarget}}>>();
   const web = useInAppWeb(target => navigation.navigate('Web', {target}));
   const [offline, setOffline] = useState(false);
@@ -37,5 +37,5 @@ export function useLegalOpen(): {open: (url: string, label: string, key?: string
     },
     [web],
   );
-  return {open, offline};
+  return {open, offline, busy: web.busy !== null}; // busy: 연결 확인 중(재확인 6 L23)
 }
