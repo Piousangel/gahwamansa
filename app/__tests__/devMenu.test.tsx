@@ -8,6 +8,12 @@ import {cleanupTestFamily, createTestFamily, isTestEmail} from '../src/dev/testF
 import {ServerError} from '../src/features/types';
 import {memoryStore} from '../src/lib/localStamps';
 import {createFakeApi} from '../src/features/fakeApi';
+// 앱 전체 모듈(내비·화면·오디오 등)은 파일 맨 위에서 불러온다. 테스트 안에서 require 하면 그 평가 시간(부하 때 5초 이상, 2026-11-19 측정)이
+// 그 테스트의 시간 제한에 들어가 '버전 7번 → 어르신 전환'이 15초를 넘겼다 — 시간 제한이 아니라 화면 흐름만 재게 한다.
+import {App as DevApp} from '../testUtils/devApp';
+import {AppRoot} from '../src/app/AppRoot';
+import {DevMenuHost as StubDevMenuHost} from '../src/dev/DevMenuHost.stub';
+import {GoTrueClient} from '@supabase/auth-js';
 
 declare const __dirname: string;
 const path: {join(...p: string[]): string} = require('path');
@@ -230,8 +236,7 @@ describe('보안 리뷰 반영: 보관 세션(M2)·분기(L4)', () => {
     registerDevSessionCleaner(null);
   });
   test('M2: supabase auth 비공개 _removeSession 이 아직 있다(이름이 바뀌면 여기서 실패)', () => {
-    const {GoTrueClient} = require('@supabase/auth-js');
-    expect(typeof GoTrueClient.prototype._removeSession).toBe('function');
+    expect(typeof (GoTrueClient.prototype as unknown as {_removeSession?: unknown})._removeSession).toBe('function');
   });
   test('L4: 4초가 지나면 탭 수를 처음부터 센다', () => {
     jest.useFakeTimers();
@@ -412,8 +417,7 @@ describe('테스트 가족 한 번에 만들기', () => {
 
 describe('메뉴 화면(fake 모드)', () => {
   test('버전 7번 → 환경 표시 → 어르신으로 전환하면 앱을 처음부터(역할 지정)', async () => {
-    const {App} = require('../testUtils/devApp');
-    render(<App />);
+    render(<DevApp />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: '설정'}));
@@ -432,15 +436,13 @@ describe('메뉴 화면(fake 모드)', () => {
     });
     await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
     expect(screen.queryByText('개발자 메뉴')).toBeNull();
-  }, 15000); // 재확인 S2: 앱 전체를 그리는 흐름이라 첫 실행이 느릴 수 있다
+  }, 15000); // 재확인 S2. 모듈 평가를 파일 위로 옮겨(위 import 주석) 혼자 ~1초, 무거운 부하에서도 ~4초
 });
 
 describe('production 대역·fake 초기화', () => {
   test('production 대역(DevMenuHost.stub)은 메뉴가 없고 구현을 import 하지 않는다', () => {
-    const {DevMenuHost: Stub} = require('../src/dev/DevMenuHost.stub');
-    const {AppRoot} = require('../src/app/AppRoot');
     const api = createFakeApi({consented: true});
-    render(<Stub api={api}>{({appKey}: {appKey: number}) => <AppRoot key={appKey} api={api} role="parent" />}</Stub>);
+    render(<StubDevMenuHost api={api}>{({appKey}: {appKey: number}) => <AppRoot key={appKey} api={api} role="parent" />}</StubDevMenuHost>);
     expect(screen.queryByTestId('dev-menu')).toBeNull();
     const src: string = require('fs').readFileSync(path.join(__dirname, '../src/dev/DevMenuHost.stub.tsx'), 'utf8');
     expect(src).not.toMatch(/sessionSlots|testFamily|setSession|bumojasik-dev-menu-impl/);
@@ -457,7 +459,6 @@ describe('production 대역·fake 초기화', () => {
   });
 
   test('M2: 자녀 로그아웃(처음으로)하면 앱이 보관 세션 정리 훅을 부른다', async () => {
-    const {AppRoot} = require('../src/app/AppRoot');
     const fn = jest.fn(async () => {});
     registerDevSessionCleaner(fn);
     try {
