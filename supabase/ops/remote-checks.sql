@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000049', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000050', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장
@@ -38,9 +38,9 @@ with checks(check_name, ok, detail) as (
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')) = 0, null
   union all
-  select '앱 실행 가능 definer 36개(허용 목록과 같은 수, 0046 기준)',
+  select '앱 실행 가능 definer 37개(허용 목록과 같은 수, 0050 기준)',
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 36,
+           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 37,
          (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute'))
   union all
