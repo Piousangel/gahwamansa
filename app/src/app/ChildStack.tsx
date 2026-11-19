@@ -7,7 +7,7 @@ import {ChildReport} from '../features/home/ChildReport';
 import {DeleteAccountScreen} from '../features/account/DeleteAccountScreen';
 import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {ChildGate} from '../features/child/ChildGate';
-import {ChildLogin} from '../features/child/ChildLogin';
+import {ChildLogin, ChildLoginCode, ChildLoginEmail} from '../features/child/ChildLogin';
 import {RelationScreen} from '../features/child/RelationScreen';
 import {ChildCodeScreen} from '../features/child/ChildCodeScreen';
 import {ChildWaitScreen} from '../features/child/ChildWaitScreen';
@@ -27,6 +27,8 @@ const Tab = createBottomTabNavigator();
 export type ChildParams = {
   Gate: undefined;
   Login: undefined;
+  LoginEmail: undefined;
+  LoginCode: {email: string};
   Relation: undefined;
   Code: {code: string; title: string; renewed?: boolean; expiresAt?: string; from?: 'relation'}; // renewed: 지난 번호가 만료돼 새로 받음, expiresAt: 아는 경우 공유 메시지 기한
   Wait: undefined;
@@ -68,6 +70,8 @@ export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyo
     <Stack.Navigator initialRouteName={initialRouteName} screenOptions={stackScreenOptions(Platform.OS)}>
       <Stack.Screen name="Gate" component={ChildGate} />
       <Stack.Screen name="Login" component={ChildLogin} />
+      <Stack.Screen name="LoginEmail" component={ChildLoginEmail} />
+      <Stack.Screen name="LoginCode" component={ChildLoginCode} />
       <Stack.Screen name="Relation" component={RelationScreen} />
       <Stack.Screen name="Code" component={ChildCodeScreen} />
       <Stack.Screen name="Wait" component={ChildWaitScreen} />

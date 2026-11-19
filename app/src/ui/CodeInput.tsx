@@ -21,12 +21,26 @@ type Props = {
   foldGap?: {before: number; h: number};
   /** 키 줄(1~4)의 위치(키패드 안 y)·높이 알림 */
   onRowLayout?: (row: number, y: number, h: number) => void;
+  /** 칸(과 칸 아래 줄)과 키 사이에 더하는 여백(남는 높이, 최대 24는 화면이 정한다) */
+  keysGap?: number;
 };
 
 const ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
+// 디자인 결정(11-19, 키패드 남는 높이): 모든 줄 높이는 같고 키는 64~68 을 넘지 않는다.
+//   '모두 지움'은 좁은 화면에서 '모두 / 지움' 두 줄이 되는데, 기본 줄높이면 두 줄이 키(64)보다 커져 마지막 줄만 높아졌다(360×700 실측 80).
+//   → 글자 키는 줄높이를 글자 + 2 로 좁히고, 그 키의 줄 수(lines)가 키 안(테두리 2×2 제외)에 들어가는 만큼만 확대한다(최대 FONT_SCALE_MAX).
+//   재확인 8 M11: 상한은 키마다 줄 수 기준 — '지움'은 한 줄이라 1.5 까지, '모두 지움'은 좁은 화면에서 두 줄이라 그 기준
+const WORD_LINE_EXTRA = 2;
+const KEY_BORDER_Y = 4;
+export function wordKeyScaleMax(h: number | undefined, textSize = 26, lines: 1 | 2 = 2): number {
+  const box = h ?? Math.max(64, size.codeBox);
+  return Math.max(1, Math.min(FONT_SCALE_MAX, (box - KEY_BORDER_Y) / (lines * (textSize + WORD_LINE_EXTRA))));
+}
+
 // 명세 §3: 칸 flex·높이 68·반경 16·간격 8·숫자 34, 키 높이 68·반경 22·테두리 3·숫자 34. 같은 줄 글자 키는 26(시안 P1_connect_v4, "모두 지움"·"지움").
-function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number}) {
+function Key({label, a11y, onPress, textSize = 34, h, lines = 1}: {label: string; a11y: string; onPress: () => void; textSize?: number; h?: number; /** 글자 키가 꺾이는 줄 수(확대 상한 기준) */ lines?: 1 | 2}) {
+  const word = textSize < 34; // '모두 지움'·'지움'
   return (
     <Pressable
       accessibilityRole="button"
@@ -37,15 +51,15 @@ function Key({label, a11y, onPress, textSize = 34, h}: {label: string; a11y: str
       <Text
         testID={`key-${label}`}
         {...koreanTextProps}
-        maxFontSizeMultiplier={FONT_SCALE_MAX}
-        style={[styles.keyText, {fontSize: textSize}]}>
+        maxFontSizeMultiplier={word ? wordKeyScaleMax(h, textSize, lines) : FONT_SCALE_MAX}
+        style={[styles.keyText, {fontSize: textSize}, word ? {lineHeight: textSize + WORD_LINE_EXTRA} : null]}>
         {keepAllChildren(label)}
       </Text>
     </Pressable>
   );
 }
 
-export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout}: Props) {
+export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLabel, belowCells, groupRef, foldGap, onRowLayout, keysGap}: Props) {
   // 접힘 경계 여백(RULES-V4 R-15 '접힘 경계는 줄·요소 경계', 디자인 #54): 첫 화면 끝이 키 줄을 반쯤 가르면 그 줄 앞에 여백을 넣어 줄 전체를 접힘 밖으로 민다
   const gap = (row: number) => (foldGap && foldGap.before === row && foldGap.h > 0 ? <View testID="fold-gap" style={{height: foldGap.h}} /> : null);
   return (
@@ -62,6 +76,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
         ))}
       </View>
       {belowCells ? <View style={styles.below}>{belowCells}</View> : null}
+      {keysGap && keysGap > 0 ? <View testID="keys-gap" style={{height: keysGap}} /> : null}
       {ROWS.map((r, i) => (
         <React.Fragment key={r[0]}>
         {gap(i + 1)}
@@ -74,7 +89,7 @@ export function CodeInput({value, onDigit, onDelete, onClear, keyHeight, groupLa
       ))}
       {gap(4)}
       <View testID="key-row-4" onLayout={onRowLayout ? e => onRowLayout(4, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined} style={[styles.row, keyHeight ? styles.rowFitted : null]}>
-        <Key h={keyHeight} label="모두 지움" a11y="전부 지우기" onPress={onClear} textSize={26} />
+        <Key h={keyHeight} label="모두 지움" a11y="모두 지움" onPress={onClear} textSize={26} lines={2} />
         <Key h={keyHeight} label="0" a11y="숫자 0" onPress={() => onDigit('0')} />
         <Key h={keyHeight} label="지움" a11y="한 칸 지우기" onPress={onDelete} textSize={26} />
       </View>

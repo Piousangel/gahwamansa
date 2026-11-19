@@ -554,6 +554,12 @@
 - 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
 - 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.
 
+### 경로별 CI(GitHub Actions) · 2026-11-19
+- `.github/workflows/app.yml`: `app/**`·문구 원본·`supabase/migrations/**`(계약 테스트가 읽음)·`design-system/**` 가 바뀐 PR·main 푸시에서만. Node 22.11(engines 최솟값), `npm ci` → 문구 사본 동일 → OSS(JS) 최신 → tsc → lint → jest(`--maxWorkers=2 --ci`, 통합 제외). 비밀값·Android 빌드 없음.
+- `.github/workflows/server.yml`: `supabase/**`·`scripts/photos/**`·루트 package 가 바뀐 경우만. ① 단위: Node 24 로 `supabase/functions/_shared/*.test.mts`·`supabase/ops/*.test.mjs`·`scripts/photos/*.test.mjs`(로컬 Node 26 에서 28/28·12/12). ② pgTAP: 루트 devDependency supabase CLI 3.1.0 으로 러너 안 도커에 로컬 스택(스튜디오·메일·엣지 등 제외) → `db reset`(처음부터 재생 + 시드) → `test db`. 원격 DB·secrets 안 씀.
+- 액션은 커밋 SHA 고정(checkout v4.2.2, setup-node v4.4.0 — `git ls-remote` 로 확인). `permissions: contents: read`, 같은 브랜치 실행은 앞 것을 취소.
+- 로컬에서 Actions 자체는 돌리지 못함(act 없음). pgTAP 단계는 공유 로컬 DB(54322)와 포트가 겹쳐 이 맥에서는 `supabase/ops/replay-check.sh` 가 같은 일을 한다. 첫 실행 결과를 PR 에서 확인할 것.
+
 ### AC-05 이벤트 후속(PR #61 리뷰 L1~L4) · 2026-11-19
 - 세션 전 보관(realApi `waiting`): `app_first_open` 1개만 보관한다(다른 이벤트는 세션이 있어야 생기는 행동이라 세션이 없으면 버린다). 로그아웃(`signOut`)·계정 삭제(`deleteMyAccount`) 때 비운다 — 앞 사람의 역할 고르기가 다음 계정 세션으로 나가지 않게.
 - `child_first_answer_viewed` 1회 표시는 **계정 기준**(`prefs` 키 + `:accountTag`)이다. 같은 기기에서 다른 자녀 계정이 들어와도 그 계정의 첫 답을 센다. 가명값을 모르면 보내지 않는다. 가명값은 기기 저장 키에만 쓰고 이벤트에는 넣지 않는다. `app_first_open`은 역할을 고르기 전이라 기기 기준이다.
@@ -583,3 +589,24 @@
 | 제스처 | 360×640 1.0·2.0 | — | 통과 |
 
   - 별건(디자인 확인): 3단계(fill) 360×700·740 에서 0·지움 줄 키가 다른 줄보다 높다(221px vs 176px, 키패드가 남는 높이를 마지막 줄로 채움). 잘림·겹침은 아님.
+
+### C0 v4 후속(PR #73 리뷰·디자인 #74) · 11-19
+- DsScreen R-12 예외: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞, 입력 바로 아래)에 둔다. 자판이 닫히면 다시 Dock. 자판이 열려 있으면 재는 높이에서 아래 inset 을 뺀다(자판이 덮음).
+- 실측: 320×640 200% C0-b 자판 열림은 inset 을 빼면 Dock 이 상한 안이라 풀리지 않는다(캡처). 앞서 보고한 '210 > 152' 경고는 C0-b 밑에 남은 C0-a(소셜 묶음)가 자판에 반응한 것 → 소셜 묶음은 자판이 열려 있으면 풀지도 경고하지도 않게 함.
+- C0-b 약관·연령은 tail(풀린 주 버튼 뒤).
+- c0-fit.yaml: 모든 배율에서 실제로 스크롤해 출구 링크 assertVisible. 이메일 경로 child_signup_completed{email} 테스트 추가.
+### P1 키패드 남는 높이(디자인 결정 11-19)
+- 원인: 3단계 360×700·740 에서 마지막 줄만 높았던 것(80dp)은 남는 높이가 아니라 '모두 지움'(26)이 '모두 / 지움' 두 줄로 꺾이며 기본 줄높이로 키(64)를 넘은 것. 같은 줄 키가 함께 늘었다.
+- 고침: 글자 키는 줄높이 = 글자 + 2, 확대 상한 = min(1.5, (키 − 테두리 4) / (2 × 줄높이)) → 두 줄이 키 안. 글자 크기 26 그대로.
+- 남는 높이: 키는 늘리지 않는다(64~68). 칸(과 칸 아래 줄)·키 사이 여백에 최대 24(`KEYS_GAP_MAX`) → 나머지는 키패드 영역 가운데 정렬로 위·아래 반씩. 내용 높이는 여백을 뺀 값으로 기록(넘침 판정 불변). 4단계는 여백 없음.
+- fold-check.py 에 '통째로 보이는 줄끼리 높이 같음' 검사 추가.
+- 실측(emulator-5556 제스처, p1-fold + fold-check, px @2.75): 360×700 1.0 네 줄 모두 182(66dp) · 360×740 1.0 네 줄 187(68) · 411×914 1.0·1.3 네 줄 187 · 360×640 1.0 보이는 세 줄 176(64). 모두 통과.
+
+### C3 v4 연결 기다리는 중(#42 시안·V9) · 11-19
+- DsScreen(step) + 위 영역 제목 '연결 기다리는 중' + 설정 링크(줄이 모자라면 아래 줄로). BackLink 없음(가입 끝, R-14 예외).
+- 번호 카드(라벨·display 번호·기한·카드 안 알림 줄) → 3단계(새 문구, `_status_steps` 라이터 확인 전). 연결 칩·예시 카드 삭제. Dock = 번호 보내기(돌아오면 다시 보내기) + 보조 복사하기. 만료: 안내 띠(Card notice) + 새 번호 만들기, 제목은 남김.
+- 복사 확인은 ds Banner(done, 나타날 때 한 번 읽음) — 카드 바로 위.
+- 디자인 결정(PR #83): ① 번호 카드 = ds Card outlined(흰 면 + line 1.5) ② 150% 이상은 Dock = 주 버튼 하나, 복사하기는 본문 끝·알림 줄은 카드 바로 아래 ③ 접힘 맞춤: 3단계 제목·행 중 스크롤 창 끝에 걸치는 요소 위에 잰 만큼 marginTop. 위치는 높이만으로 쌓아 계산(onLayout y 에서 간격을 빼는 방식은 측정 시점과 간격 상태가 어긋나 켜졌다 꺼졌다 함 — 실측). 실측 360×640 100% 2단계에서 끝·3단계 아래, 320×640 200% 제목에서 끝·1단계 아래, 360×740 다 들어감
+- 리뷰(#83): M1 만료로 바뀌면 announce 1회, L1 공유 뒤 안내 announce, L5 복사 띠 key 로 다시 읽음, L6 불러오는 중 Dock = loading, L2 만료 띠 new_code_note 뺌(디자인 a), L3 dockKey 에 kind·icon, L4 Dock 이 그린 단계와 같은 측정만 씀
+- DsScreen: R-12 Dock 풀림을 `dockReleaseOnKeyboard` 로만 켬(C0-b 만, P6 충돌 방지 #82 L2). 풀린 조건 기억(L3), 넘침 단계 ref(L4).
+- 재확인(bcf7189) 반영: H1 접힘 기준 = 본문 영역(스크롤 창 + 띠, Screen onBodyArea) − 띠 24. 띠가 나오고 사라져도 그대로(스크롤 창 높이를 쓰면 맨 아래에서 튐, '잰 값 중 최대' 판은 첫 배치의 일시적 큰 값을 잡아 틀림 — 실측). 접힘 맞춤은 ui/ds useFoldGap(count, between, from, glue)로 일반화. L9 묶음 제목은 첫 단계와 붙여 민다(glue). L7 처음부터 만료면 알리지 않음(번호 카드를 보던 중 바뀔 때만). L8 기준 150% 이상 유지(디자인 a). L10 접힘 맞춤은 3단계 묶음만(번호 카드는 늘 첫 요소, 알림 줄은 카드 안/바로 아래라 대상 밖) — 다른 화면은 useFoldGap 로 각자.

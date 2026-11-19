@@ -20,6 +20,8 @@ export type FieldProps = {
   maxLength?: number;
   testID?: string;
   inputRef?: React.Ref<React.ComponentRef<typeof TextInput>>;
+  /** 읽기 이름이 보이는 라벨보다 길 때(보이는 라벨을 앞에 담아야 함, 예: '인증번호' → '인증번호 6자리') */
+  accessibilityLabel?: string;
 };
 
 const KIND: Record<FieldKind, {keyboardType: KeyboardTypeOptions; multiline: boolean; extra: Partial<TextInputProps>}> = {
@@ -32,7 +34,7 @@ const KIND: Record<FieldKind, {keyboardType: KeyboardTypeOptions; multiline: boo
 
 const c = ds.color;
 
-export function Field({label, hint, error, kind = 'text', value, onChangeText, onSubmitEditing, autoFocus, editable = true, maxLength, testID = 'field', inputRef}: FieldProps) {
+export function Field({label, hint, error, kind = 'text', value, onChangeText, onSubmitEditing, autoFocus, editable = true, maxLength, testID = 'field', inputRef, accessibilityLabel}: FieldProps) {
   const a = useAudience();
   const k = KIND[kind];
   // 입력 글자는 fieldInput 역할(상한 1.5, 자판 열림과 상관없이). label·hint 는 각 역할 상한(2.0)
@@ -57,8 +59,9 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
       <TextInput
         ref={inputRef}
         testID={testID}
-        accessibilityLabel={label}
-        accessibilityLabelledBy={`${id}-label`}
+        accessibilityLabel={accessibilityLabel ?? label}
+        // 읽기 이름을 따로 받으면 그것만(labelledBy 가 있으면 보이는 짧은 라벨이 이긴다)
+        accessibilityLabelledBy={accessibilityLabel ? undefined : `${id}-label`}
         accessibilityHint={[hint, error].filter(Boolean).join(' ') || undefined}
         accessibilityState={{disabled: !editable}}
         value={value}

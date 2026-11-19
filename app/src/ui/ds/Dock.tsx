@@ -78,12 +78,12 @@ export function DockNoteView({note}: {note: DockNote}) {
 }
 
 /** Dock 안쪽(Screen 의 하단 고정 영역에 들어간다). onContentHeight 는 넘침 판단용 자연 높이 */
-export function Dock({primary, secondary, note, spill = 0, onContentHeight}: DockProps & {spill?: DockSpillLevel; onContentHeight?: (h: number) => void}) {
+export function Dock({primary, secondary, note, spill = 0, onContentHeight}: DockProps & {spill?: DockSpillLevel; /** h = 잰 높이, rendered = 그때 그린 넘침 단계(PR #83 리뷰 L4) */ onContentHeight?: (h: number, rendered: DockSpillLevel) => void}) {
   return (
     <View
       testID="ds-dock"
       style={styles.dock}
-      onLayout={(e: LayoutChangeEvent) => onContentHeight?.(Math.ceil(e.nativeEvent.layout.height))}>
+      onLayout={(e: LayoutChangeEvent) => onContentHeight?.(Math.ceil(e.nativeEvent.layout.height), spill)}>
       <Primary p={primary} />
       {secondary && spill < 2 ? <Secondary s={secondary} /> : null}
       {note && spill < 1 ? <DockNoteView note={note} /> : null}

@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError, ServerError} from '../src/features/types';
@@ -9,6 +9,8 @@ afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
 });
+
+const pressLink = async (name: string) => act(async () => fireEvent.press(screen.getByRole('link', {name})));
 
 test('real 시작: 오프라인이라 whoAmI 가 실패하면 멈추지 않고 다시 하기를 보여 준다', async () => {
   const api = createFakeApi();
@@ -83,8 +85,10 @@ test('대기 화면: 상태를 불러오기 전에는 번호 보내기를 누를
   });
   const issue = jest.spyOn(api, 'issueInviteCode');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}));
-  expect(screen.getByRole('button', {name: '번호 보내기'})).toBeDisabled();
+  // PR #83 리뷰 L6: 이유 없는 비활성 대신 불러오는 중(loading) — 누를 수 없고 '잠시만요'로 읽힌다
+  const dock = await waitFor(() => within(screen.getByTestId('screen-dock')));
+  const btn = await waitFor(() => dock.getByRole('button', {name: /잠시만요/}));
+  expect(btn).toBeDisabled();
   await act(async () => release());
   expect(issue).not.toHaveBeenCalled();
 });
@@ -145,9 +149,9 @@ test('자녀 로그인에서 처음으로 돌아갈 수 있다', async () => {
   await press(/자녀 휴대폰이에요/);
   await press('이메일로 시작하기'); // 소셜 버튼 화면에서 이메일 인증번호 경로로
   await waitFor(() => screen.getByText('이메일로 시작해요'));
-  await press('이전 화면으로 가기'); // 이메일 단계의 이전 = 로그인 방법(소셜) 화면
+  await pressLink('로그인으로'); // C0-b BackLink = 로그인 고르기(소셜) 화면
   await waitFor(() => screen.getByRole('button', {name: '카카오 로그인'}));
-  await press('이전 화면으로 가기'); // 그 이전 = 역할 선택
+  await pressLink('처음으로'); // C0-a BackLink = 역할 선택
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
 });
 

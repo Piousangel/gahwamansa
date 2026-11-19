@@ -175,6 +175,23 @@ describe('자녀 퍼널', () => {
     await waitFor(() => expect(callsOf(log, 'child_signup_completed')).toEqual([{login_method: 'kakao'}]));
   });
 
+  test('이메일 경로(C0-b → C0-c): 틀린 번호면 없음, 맞는 번호로 확인되면 child_signup_completed{login_method: email} 한 번', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await press('이메일로 시작하기');
+    await waitFor(() => screen.getByText('이메일로 시작해요'));
+    fireEvent.changeText(screen.getByLabelText('이메일 주소'), 'kid@example.test');
+    await press('인증번호 받기');
+    await waitFor(() => screen.getByLabelText('인증번호 6자리'));
+    fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '000000'); // fake: 틀린 번호
+    await waitFor(() => screen.getByText('인증번호가 맞지 않아요. 가장 최근 메일의 번호를 확인해 주세요'));
+    expect(events(log)).not.toContain('child_signup_completed');
+    fireEvent.changeText(screen.getByLabelText('인증번호 6자리'), '246810');
+    await waitFor(() => expect(callsOf(log, 'child_signup_completed')).toEqual([{login_method: 'email'}]));
+  });
+
   test('C4 답 카드를 처음 보면 child_first_answer_viewed{days_since_connect} 한 번(답 내용 없음)', async () => {
     const connected = new Date(Date.now() + 9 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10);
     const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -215,6 +232,7 @@ describe('자녀 퍼널', () => {
   });
 
   test('응원을 받은 분이 있으면 cheer_sent{message_key} 한 번(받는 분 정보 없음)', async () => {
+    jest.useFakeTimers(); // 취소 가능 4초를 실제로 기다리지 않는다(부하 정리 2차)
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
@@ -222,7 +240,7 @@ describe('자녀 퍼널', () => {
     await press('응원 보내기');
     await press('늘 고마워요');
     await act(async () => {
-      await new Promise<void>(r => setTimeout(() => r(), 4300)); // 취소 가능 시간이 지나야 보낸다
+      jest.advanceTimersByTime(4300); // 취소 가능 시간이 지나야 보낸다
     });
     await waitFor(() => expect(callsOf(log, 'cheer_sent')).toEqual([{message_key: 'thanks_always'}]));
   });
@@ -233,7 +251,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'), {timeout: 8000});
+    await waitFor(() => screen.getByTestId('wait-code'), {timeout: 8000});
     await press('번호 보내기');
     await press('복사하기');
     expect(callsOf(log, 'invite_share_tapped')).toEqual([{channel: 'share_sheet'}, {channel: 'copy'}]);
@@ -244,7 +262,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({who: 'child'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} restore />);
-    await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}), {timeout: 8000});
+    await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}));
     await press('번호 만들기');
     await waitFor(() => expect(callsOf(log, 'invite_code_issued')).toEqual([{purpose: 'parent_code'}]));
   });

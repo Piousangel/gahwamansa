@@ -178,10 +178,11 @@
       "until": "{시각}까지 쓸 수 있어요",
       "steps_title": "이렇게 하시면 돼요",
       "steps": [
-        "{호칭} 폰에 가화만사성을 설치해요",
-        "첫 화면에서 이 버튼을 눌러요",
-        "숫자 6개를 쓰고, 답을 보여 줄지 고르면 돼요"
+        "{호칭} 폰에 가화만사성을 설치하고 열어요",
+        "링크로 열면 번호를 확인하고 '이 번호로 연결하기'를 눌러요",
+        "답을 보여 줄지 고르면 돼요"
       ],
+      "_status_steps": "C3 v4 시안(#42)·UX V9 결정 문구. 라이터 묶음 확인 전(PR #42 리뷰 3 '라이터 확인' 목록)",
       "expired_title": "번호 기간이 지났어요",
       "expired_body": "새 번호를 만들어 다시 보내 주세요",
       "new_code": "새 번호 만들기",
@@ -469,6 +470,14 @@
     "google": "Google로 계속하기",
     "email_link": "이메일로 시작하기",
     "signing_in": "로그인하고 있어요",
+    "back_choose": "로그인으로",
+    "back_email": "이메일 주소로",
+    "preview_title": "이런 앱이에요",
+    "preview_lines": ["하루 한 장, 우리 집 앨범", "마음 가는 쪽을 하나 골라요", "최근 한 달 고른 답을 모아 봐요"],
+    "parent_exit_note": "부모님은 로그인 없이 가족에게 받은 번호만 쓰면 돼요",
+    "parent_exit": "부모님이시면 처음으로",
+    "code_label_short": "인증번호",
+    "_src_v4": "라이터 묶음 2(PR #46, back_choose·back_email·preview_title·code_label_short, 카드 줄은 스토어 캡션 확정문)·묶음 3(PR #51, parent_exit_note·parent_exit)",
     "code_group_a11y": {
       "empty": "인증번호 6자리 쓰는 칸",
       "partial": "인증번호 6자리, {n}자리 썼어요",

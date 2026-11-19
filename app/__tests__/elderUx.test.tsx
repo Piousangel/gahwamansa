@@ -108,7 +108,7 @@ describe('단계 체크 시점: 실제 흐름(리뷰 M1 증명)', () => {
     await press('다 봤어요');
     await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
     expect(screen.queryByTestId('step-check-anim', {includeHiddenElements: true})).toBeNull(); // 전환 중: 아직 없음
-    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}), {timeout: 3000});
+    await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}));
   });
 });
 
@@ -136,7 +136,7 @@ describe('P7 후속', () => {
     await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
     await press('오늘은 넘어갈게요');
     await waitFor(() => screen.getByTestId('p7-stage'));
-    await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1), {timeout: 4000}); // 연출이 시작됐다
+    await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1)); // 연출이 시작됐다
     fireEvent.press(screen.getByTestId('p7-stage'));
     await waitFor(() => expect(StyleSheet.flatten(screen.getByTestId('p7-text').props.style).opacity).toBe(1));
   });

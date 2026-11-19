@@ -2,6 +2,8 @@ import React from 'react';
 import {Linking, StyleSheet, Text, type StyleProp, type TextStyle} from 'react-native';
 import {Text20} from './Text20';
 import {color} from './tokens';
+import {roleText, type Audience} from './ds/roles';
+import {keepAllChildren, koreanTextProps} from './koreanText';
 
 export type LegalLink = {label: string; url: string | null; /** 호출부가 여는 곳을 고를 때 쓰는 이름(예: terms·privacy) */ key?: string};
 
@@ -13,6 +15,15 @@ export type LegalLink = {label: string; url: string | null; /** 호출부가 여
 // ui 는 문구를 모른다 — 문장·낱말·주소는 호출부가 넘긴다.
 export const LEGAL_LINK_LINE_H = 48;
 
+function DsSub({audience, children, ...rest}: React.ComponentProps<typeof Text> & {audience: Audience}) {
+  const r = roleText('sub', audience, 'muted');
+  return (
+    <Text {...koreanTextProps} {...rest} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={r.style}>
+      {keepAllChildren(children)}
+    </Text>
+  );
+}
+
 export function LegalText({
   text,
   links,
@@ -21,16 +32,25 @@ export function LegalText({
   onOpen = url => {
     Linking.openURL(url).catch(() => {});
   },
+  audience,
 }: {
   text: string;
   links: LegalLink[];
   style?: StyleProp<TextStyle>;
   testID?: string;
   onOpen?: (url: string, label: string, key?: string) => void;
+  /** v4 화면(ui/ds): 문장은 sub 역할·보조색, 링크는 link 역할(400 + 밑줄, C0 v4 시안). 주면 style 은 쓰지 않는다 */
+  audience?: Audience;
 }) {
+  // v4: 역할 값으로 그리는 글자(크기·색·확대 상한은 roleText 가 정한다)
+  const linkStyle = audience ? [roleText('link', audience).style, styles.dsLink] : styles.link;
   const live = links.filter((l): l is LegalLink & {url: string} => !!l.url && text.includes(l.label));
   if (live.length === 0) {
-    return (
+    return audience ? (
+      <DsSub audience={audience} testID={testID} accessibilityLabel={text}>
+        {text}
+      </DsSub>
+    ) : (
       <Text20 testID={testID} style={style}>
         {text}
       </Text20>
@@ -49,11 +69,28 @@ export function LegalText({
       parts.push(rest.slice(0, h.at));
     }
     parts.push(
-      <Text key={i++} accessibilityRole="link" onPress={() => onOpen(h.l.url, h.l.label, h.l.key)} style={styles.link}>
+      <Text key={i++} accessibilityRole="link" onPress={() => onOpen(h.l.url, h.l.label, h.l.key)} style={linkStyle}>
         {h.l.label}
       </Text>,
     );
     rest = rest.slice(h.at + h.l.label.length);
+  }
+  const a11y = {
+    accessibilityLabel: text,
+    accessibilityActions: live.map((l, n) => ({name: `link-${n}`, label: l.label})),
+    onAccessibilityAction: (e: {nativeEvent: {actionName: string}}) => {
+      const l = live[Number(e.nativeEvent.actionName.replace('link-', ''))];
+      if (l) {
+        onOpen(l.url, l.label, l.key);
+      }
+    },
+  };
+  if (audience) {
+    return (
+      <DsSub audience={audience} testID={testID} {...a11y}>
+        {parts}
+      </DsSub>
+    );
   }
   return (
     <Text20
@@ -76,4 +113,5 @@ export function LegalText({
 const styles = StyleSheet.create({
   link: {fontWeight: 'bold', textDecorationLine: 'underline', color: color.inkTitle},
   tall: {lineHeight: LEGAL_LINK_LINE_H},
+  dsLink: {textDecorationLine: 'underline'},
 });
