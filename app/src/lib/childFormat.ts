@@ -67,3 +67,17 @@ export function formatAnswerDate(ymd: string, now: Date = new Date()): string {
   const [y, m, d] = ymd.split('-').map(Number);
   return y === Number(todayKst.slice(0, 4)) ? `${m}월 ${d}일` : `${y}년 ${m}월 ${d}일`;
 }
+
+// 연결된 날 'YYYY-MM-DD'(KST)부터 오늘(KST)까지 지난 날 수(같은 날 0). 계측 days_since_connect(AC-05) 전용, 화면에는 쓰지 않는다.
+// 형식이 틀리거나 미래 날짜면 null(속성을 빼고 보낸다).
+export function daysSinceYmd(ymd: string, now: Date = new Date()): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return null;
+  }
+  const today = Date.parse(new Date(now.getTime() + KST).toISOString().slice(0, 10));
+  const from = Date.parse(ymd);
+  if (!Number.isFinite(from) || from > today) {
+    return null;
+  }
+  return Math.round((today - from) / 86400e3);
+}

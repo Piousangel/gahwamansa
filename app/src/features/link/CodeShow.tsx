@@ -18,11 +18,13 @@ type Props = {
   primaryLabel: string;
   onPrimary: () => void;
   top?: React.ReactNode; // 이전 바 등
+  onShare?: () => void; // 보내기를 눌렀을 때(계측, 공유 창을 열기 전)
 };
 
-export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary, top}: Props) {
+export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary, top, onShare}: Props) {
   const shown = formatCode(code);
   const send = () => {
+    onShare?.();
     Share.share({message: shareMessage.split('{번호}').join(shown)}).catch(() => {});
   };
   // 보내기·다음 버튼은 하단 고정 영역(내비게이션 바 위)

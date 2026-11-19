@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -21,6 +21,8 @@ import {useBootLoading} from '../../app/splash';
 import {formatAnswerDate} from './formatDate';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
+import {daysSinceYmd} from '../../lib/childFormat';
+import {track, trackOnce} from '../track';
 
 const c = copy.child;
 const h = c.home;
@@ -49,6 +51,16 @@ export function ChildHome() {
   const reachable = list.filter(p => p.connected && p.parentId); // 옛 서버(parent_id 없음)면 보낼 대상이 없다
   const dup = findTitleDup(list);
 
+  // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
+  const firstSeen = list.find(p => p.shared && p.latest);
+  const firstSeenDays = firstSeen?.connectedDate ? daysSinceYmd(firstSeen.connectedDate) : null;
+  const hasAnswer = !!firstSeen;
+  useEffect(() => {
+    if (hasAnswer) {
+      trackOnce(api, 'child_first_answer_viewed', firstSeenDays !== null ? {days_since_connect: firstSeenDays} : {}).catch(() => {});
+    }
+  }, [hasAnswer, firstSeenDays, api]);
+
   const makeCode = async (p: ChildParent) => {
     if (making) {
       return;
@@ -56,6 +68,7 @@ export function ChildHome() {
     setMaking(true);
     try {
       const code = await api.issueInviteCode(p.parentId || null);
+      track(api, 'invite_code_issued', {purpose: p.parentId ? 'reconnect' : 'parent_code'}); // AC-05
       navigation.navigate('Code', {code, title: p.title});
     } catch (e) {
       show({text: childErrorMessage(e, h.error).title, kind: 'error', action: {label: h.error.button, onPress: () => makeCode(p)}});

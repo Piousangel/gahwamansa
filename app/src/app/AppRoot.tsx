@@ -21,6 +21,7 @@ import {clearDevSessions} from '../dev/devGate';
 import {startInviteSources, subscribeInvite, type InviteBanner} from '../lib/linkSources';
 import {emitRouteChange, navRef} from '../navigation/navRef';
 import {PushHost} from './PushHost';
+import {trackOnce} from '../features/track';
 
 export type Role = 'parent' | 'child';
 type Start = 'loading' | 'Connect' | 'CourseHome' | 'offline';
@@ -201,6 +202,10 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       <RoleSelect
         codeFound={invite.visible}
         onChoose={r => {
+          // AC-05 퍼널 1칸: 이 기기에서 역할을 처음 고른 때 한 번. 세션 전이면 realApi 가 들고 있다가 세션이 생기면 보낸다.
+          // install_source 는 서버 형식(영문 소문자·숫자, 밑줄 없음)에 맞춰 번호가 들어온 경로만(모르면 뺀다). 번호 값은 싣지 않는다
+          const via = invite.visible ? (invite.source === 'referrer' ? 'referrer' : invite.source === 'app_link' ? 'applink' : null) : null;
+          trackOnce(api, 'app_first_open', via ? {role_guess: r, install_source: via} : {role_guess: r}).catch(() => {});
           setStart('Connect');
           setWho(r);
         }}
