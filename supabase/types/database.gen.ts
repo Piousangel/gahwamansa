@@ -276,6 +276,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"first_answer_notices": {
+                  Row: {
+                    "child_id": string,"created_at": string,"family_id": string,"reason": string | null,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "child_id": string,"created_at"?: string,"family_id": string,"reason"?: string | null,"status": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "child_id"?: string,"created_at"?: string,"family_id"?: string,"reason"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "first_answer_notices_child_id_fkey"
+      columns: ["child_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "first_answer_notices_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invite_codes": {
                   Row: {
                     "code": string,"created_by": string,"disabled_at": string | null,"expires_at": string,"family_id": string,"id": string,"max_uses": number | null,"reusable": boolean,"target_profile_id": string | null,"used_at": string | null,"used_by": string | null
@@ -611,6 +637,9 @@ isOneToOne: false
                            },
 "family_child_summary":
 { Args: { "p_family": string,"p_parent": string }; Returns: Json
+                           },
+"first_answer_backfill":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "get_my_cheers":
 { Args: Record<PropertyKey, never>; Returns: Json
