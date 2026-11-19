@@ -162,6 +162,18 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 앱 할 일(앱 줄 몫): P9 삭제 확인 화면이 `none`을 받으면 "가족 기록은 없고, 로그인 정보와 약관 동의 기록만 지워져요" 같은 안내를 보여 준다(문구는 라이터). 삭제 뒤 기기 정리는 기존과 같다. 지금 앱 `deleteMyAccount`는 반환값을 쓰지 않아 깨지지 않는다. `deleteScopePreview`의 `scope` 타입에 `'none'`을 추가해야 한다.
 - 연결 직후 경쟁(삭제 확인과 같은 순간 번호 연결): 서버가 인증 사용자 행을 잠근 뒤 프로필을 다시 보고, 그 사이 연결됐으면 프로필 기준 삭제(child·parent·family)로 처리한다.
 
+### dev_reset_today() → jsonb  (0051, staging QA S25 — 오늘 코스 다시 하기)
+```ts
+// sb.rpc('dev_reset_today')
+//   → { ok: true; session_date: 'YYYY-MM-DD'; sessions: number; answers: number }
+//   | { ok: false; reason: 'disabled' | 'not_test_family' }
+// 어르신(parent) 본인만 — 자녀·연결 전 기기는 예외 parent_required, anon은 실행 불가
+```
+- 서버 스위치 `server_flags.dev_reset_enabled`가 켜진 DB(로컬 시드·staging 운영자)에서, **테스터 가족(`families.is_test`, §15)** 의 어르신만 동작한다. production은 스위치가 꺼져 있어 항상 `disabled`.
+- 본인의 **오늘(KST)** `daily_sessions`·`answers`만 지운다. 어제 이전 기록, 같은 가족의 다른 어르신, 콘텐츠 커서, 응원, 이벤트는 그대로. 커서가 그대로이므로 다시 `start_today`를 부르면 **같은 날 콘텐츠**로 처음부터 시작한다(`advanced=false`).
+- 감사 행(`admin_audit` action `dev_reset_today`, 처리자 `self`, 대상 프로필·가족, 지운 개수). 1년 보관 규칙은 다른 감사 행과 같다.
+- 앱(개발자 메뉴 등 staging 빌드에서만 노출) 할 일: 성공하면 오늘 코스 화면 상태를 비우고 `start_today`를 다시 부른다. `disabled`·`not_test_family`는 토스트로 이유만.
+
 ## 3. 공통
 ### log_event(p_name text, p_props jsonb default '{}') → jsonb  (0022)
 - 이름(이 목록만): `app_first_open, child_signup_completed, invite_code_issued, parent_code_redeemed, parent_code_failed, consent_shown, parent_consent_accepted, parent_consent_declined, course_step_completed, course_completed, child_report_viewed, invite_share_tapped, consent_revoked, account_deleted, cheer_sent, push_permission_result, link_opened, referrer_found, code_prefilled`(마지막 3개 0029), `paid_sheet_opened, paid_interest_tapped, photo_zoom_opened, child_first_answer_viewed, push_opened`(0034).
@@ -266,6 +278,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
 | record_session_step · start_today · get_today_content · my_day_index · save_answer · my_week_stamps · parent_history | 어르신 | parent 역할·본인 행만, save_answer는 동의 확인 |
 | parent_preview_child_view | 어르신 | parent 역할·본인 항목만(자녀 화면과 같은 내부 함수, 0050) |
+| dev_reset_today | 어르신 | parent 역할·본인 오늘 기록만, 스위치·테스터 가족일 때만(0051) |
 | give_consent · withdraw_consent | 어르신 | parent 역할·본인, 이력 기록 |
 | get_my_cheers · mark_cheers_read | 어르신 | 받는 본인 것만 |
 | parent_family_list | 어르신 | 본인 가족, 개인정보 없음 |
@@ -356,7 +369,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 2. **푸시**: ⑥ — `runs_with_note`(config_error·oauth_failed·invalid_ratio_hold)가 있으면 FCM 서비스 계정·프로젝트 확인. 일일 알림 `sent`가 0인데 대상이 있으면 `push_copy` 적재 여부(no_copy) 확인.
 3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
-5. 월 1회: `admin_audit` 지난 한 달 점검(§4), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
+5. 월 1회: `admin_audit` 지난 한 달 점검(§4, `action <> 'dev_reset_today'`로 QA 초기화 행은 따로 — 0051), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`(프로필 없는 계정은 `admin_delete_user`, 0049)로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 - 감사 사유 규칙(DECISIONS 11-18): `admin_delete_*`의 사유(reason)에는 **요청 번호만**(예: `REQ-2026-012 웹 삭제 요청`), 이름·메일·닉네임·기종 같은 개인정보 금지. 처리자(operator)는 사람 이름 대신 역할명(`owner`). admin_audit는 1년 보관되고 대상이 지워져도 남는다(0039). 요청 번호↔메일 대응은 문의 메일함의 삭제 요청 대장에만(내부관리계획 §6·§7). 0047·0049부터 서버가 `@`·전각 ＠·9자리 이상 숫자(구분자 제거 후)가 든 사유를 `pii_in_args`로 거부한다.
 
@@ -365,6 +378,19 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 표시·해제: `node supabase/ops/mark-test-family.mjs --email --operator <처리자> [--unset]` → 메일은 프롬프트로 입력(셸 기록에 남지 않게), 또는 `--family <id>`. 대상 호스트 대조, 메일·id는 끝 4자리만 출력, 감사 행 `test_family_mark`.
 - 앱·서비스 역할 모두 `families`를 직접 UPDATE할 수 없다(0045, 쓰기는 definer 함수만). 가족 없는 설치 이벤트(app_first_open)는 테스터 구분이 안 된다.
 - 0045에 재검토 Q-L1 포함: 사진 주소 변경 감사의 처리자 = 실제 호출 역할(`service_role`, Studio는 `postgres`).
+
+### 개발 스위치(server_flags, 0051)
+- 표 `server_flags(name, enabled, updated_at)` — 지금 이름은 `dev_reset_enabled` 하나. 마이그레이션은 행을 넣지 않는다(= 모든 환경 기본 꺼짐). 앱·anon·서비스 역할은 읽기·쓰기 불가.
+- 로컬: `supabase/seed_dev_flags.sql`(db reset 때만)로 켜짐.
+- staging: QA 기간에 운영자가 SQL Editor(postgres)에서 켜고, 끝나면 끈다. 값은 비밀이 아니다.
+  ```sql
+  insert into public.server_flags (name, enabled) values ('dev_reset_enabled', true) on conflict (name) do update set enabled = excluded.enabled, updated_at = now();
+  update public.server_flags set enabled = false, updated_at = now() where name = 'dev_reset_enabled';  -- 끄기
+  ```
+- production: 켜지 않는다. remote-checks "개발 스위치 꺼짐" 줄이 production에서는 반드시 true(staging은 QA 중 false 허용). 표가 RLS(정책 없음)라 RLS를 우회하지 못하는 역할로 돌리면 이 줄은 **판정 보류(null)** 로 나온다 — 그때는 SQL Editor(postgres)에서 다시 본다. 실측(리뷰 PR #37): postgres·service_role·`supabase_read_only_user`(`db query --remote --read-only`)는 모두 RLS를 우회하므로 정상 판정된다.
+- 원격 방지: 로컬 시드는 `server_flag_seed_local`을 부르고, 이 함수는 Vault에 `project_url`이 있는 DB(staging·production)에서는 켜지 않는다(pgTAP 확인). 그래도 원격에 시드를 넣는 명령(`db push --include-seed`, `db reset --linked`)은 쓰지 않는다(§18).
+- 후속(리뷰 PR #37 L3, 리드 결정 대기): 누가 언제 켰는지 기록이 없다(`updated_at`은 직접 넣어야 바뀜). 안 — 갱신 트리거로 `updated_at = now()`, 켜기·끄기를 `admin_audit`(action `flag_set`)에 남기는 트리거, 또는 remote-checks detail에 `updated_at` 표시.
+- 후속(L4): QA가 다시 하기를 반복하면 `dev_reset_today` 감사 행이 쌓인다 → 월 1회 감사 점검(§14-5)은 `action <> 'dev_reset_today'`로 나눠 본다.
 
 ## 16. 마이그레이션 대장(서버 기준, SV-17) — 계획 문서 대장(docs/plans/10 §2)은 리드가 이 표로 갱신
 | 번호 | 내용 | main | staging |
@@ -389,7 +415,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0047 | 키 위생(E1·E7: display_name 제거·pii_in_args·카카오 포기 뷰) | 병합 | 미반영 |
 | 0048 | 약관 게시 버전·재동의 판단 | 병합 | 미반영 |
 | 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 병합 | 미반영 |
-| 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 브랜치 server-parent-preview | 미반영 |
+| 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 병합 | 미반영 |
+| 0051 | 개발 스위치 server_flags + dev_reset_today(테스터 가족 오늘 코스 다시) | 브랜치 server-dev-reset-today | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
@@ -448,6 +475,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).
 11. **다시 확인**: `remote-checks.sql` 전부 true(심사 기간이면 심사 번호 줄만 예외). 결과를 staging 반영 기록에 붙인다.
+- **시드를 원격에 넣지 않는다**: `supabase db push --include-seed`, `supabase db reset --linked` 금지(시드는 로컬 전용 — 콘텐츠·약관·개발 스위치. 약관 게시는 B-3a, 콘텐츠는 publish-content). 개발 스위치 시드는 Vault project_url이 있으면 켜지지 않지만 그것에 기대지 않는다(0051 L1).
 - 되돌리기: down 파일은 수동·부분이라 원칙은 **앞으로 고치기**(새 마이그레이션). 함수는 이전 커밋으로 다시 배포, cron은 `select cron.unschedule('<이름>')`로 멈춤.
 
 ### C. production dry-run 점검(P1 업로드 직전, 사용자)

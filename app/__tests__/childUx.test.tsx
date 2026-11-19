@@ -418,7 +418,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
   });
 
   async function openSettings() {
-    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await press('설정');
   }
@@ -428,18 +428,64 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     const openSettingsSpy = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
     await openSettings();
     await waitFor(() => screen.getByTestId('child-notify-row'));
-    expect(screen.getByRole('button', {name: '알림, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: '가족 연결, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'})).toBeTruthy();
     fireEvent.press(screen.getByTestId('child-notify-row'));
     await waitFor(() => expect(openSettingsSpy).toHaveBeenCalled());
     expect(request).toHaveBeenCalled();
   });
 
-  test('켜짐: C7 알림 행은 무엇을 알려 주는지(누르는 행 아님)', async () => {
+  test('켜짐: C7 \'가족 연결\' 토글(스위치) — 끄면 set_push_enabled(false), 켜면 (true)', async () => {
     android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
+    const set = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
+    const row = screen.getByRole('switch', {name: '가족 연결'});
+    expect(row.props.accessibilityState.checked).toBe(true); // my_push_settings 기본 켬
+    fireEvent.press(row);
+    await waitFor(() => expect(set).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(false));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => expect(set).toHaveBeenLastCalledWith(true));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true));
+  });
+
+  test('C7 토글: 실패하면 되돌리고 알린다', async () => {
+    android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
+    jest.spyOn(api, 'setPushEnabled').mockResolvedValue({ok: false, reason: 'invalid'});
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => screen.getByTestId('toast'));
+    expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true);
+  });
+
+  test('C7: 휴대폰에서 \'family\' 채널을 끄면 꺼짐 표시 + 누르면 그 채널 설정', async () => {
+    android(34, true);
+    const native = require('../src/push/notifyNative');
+    jest.spyOn(native, 'channelEnabled').mockResolvedValue(false);
+    const openCh = jest.spyOn(native, 'openNotifySettings').mockResolvedValue(undefined);
     await openSettings();
-    await waitFor(() => screen.getByTestId('child-notify-row'));
-    expect(screen.getByLabelText('알림, 가족 휴대폰과 연결되면 알려 드려요')).toBeTruthy();
-    expect(screen.queryByRole('button', {name: /알림이 휴대폰 설정에서/})).toBeNull();
+    await waitFor(() => screen.getByRole('button', {name: '가족 연결, 설정 열기, 알림이 휴대폰 설정에서 꺼져 있어요'}));
+    fireEvent.press(screen.getByTestId('child-notify-row'));
+    expect(openCh).toHaveBeenCalledWith('family');
+  });
+
+  test('리드 결정: 권한이 이미 허용돼 있어도 앱을 여는 것만으로는 자녀 받기 동의(set_push_enabled)를 남기지 않는다', async () => {
+    android(34, true);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', pushEnabled: false, childFamily: true});
+    const set = jest.spyOn(api, 'setPushEnabled');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 300));
+    });
+    expect(set).not.toHaveBeenCalled();
   });
 
   test('Android 12 이하는 런타임 권한이 없어 켜짐으로 본다, 상태를 모르면(iOS 등) 행을 숨긴다', async () => {
@@ -651,23 +697,23 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
     expect(out).toHaveBeenCalledTimes(1);
   });
 
-  test('AC-08: Android 13+ 는 시스템 복사 확인이 떠서 앱 토스트 생략(화면 읽기 1회), 12 이하는 토스트', async () => {
+  test('AC-08·감사 L2: 복사하면 토스트 대신 번호 카드 바로 위 인라인 \'복사했어요\' 띠(2초, polite) — 시스템 클립보드 미리보기와 겹치지 않음', async () => {
     const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
-    const a11y = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
     try {
-      setPlatform('android', 33);
-      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
-      a11y.mockClear();
-      await press('복사하기');
-      expect(screen.queryByTestId('toast')).toBeNull();
-      expect(a11y.mock.calls.filter(c => c[0] === '복사했어요')).toHaveLength(1);
-      screen.unmount();
-      setPlatform('android', 32);
-      render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-      await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
-      await press('복사하기');
-      await waitFor(() => screen.getByTestId('toast'));
+      for (const v of [33, 32]) {
+        setPlatform('android', v);
+        render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
+        await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+        await press('복사하기');
+        expect(screen.queryByTestId('toast')).toBeNull();
+        const band = screen.getByTestId('wait-copied');
+        expect(band.parent?.parent?.props.accessibilityLiveRegion ?? band.parent?.props.accessibilityLiveRegion).toBe('polite');
+        await act(async () => {
+          await new Promise<void>(r => setTimeout(() => r(), 2100));
+        });
+        expect(screen.queryByTestId('wait-copied')).toBeNull();
+        screen.unmount();
+      }
     } finally {
       setPlatform(orig.OS, orig.Version);
     }
@@ -713,5 +759,125 @@ describe('재검토 R1·R2', () => {
     const buttons = screen.getAllByRole('button', {name: '로그아웃'});
     fireEvent.press(buttons[buttons.length - 1]);
     await waitFor(() => expect(clear).toHaveBeenCalledWith(expect.anything(), 'acc-r2'));
+  });
+});
+
+describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
+  const RN = require('react-native');
+  test('M10: C1 호칭은 높이 56·2열 격자(7개), \'‹ 이전\'은 역할 선택으로', async () => {
+    const {CHOICE_H} = require('../src/ui/ChoiceGrid');
+    expect(CHOICE_H).toBe(56);
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    const group = screen.getByTestId('title-group');
+    expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row');
+    expect(within(group).getAllByRole('radio')).toHaveLength(7);
+    await press('이전 화면으로 가기');
+    await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
+  });
+
+  test('M10: C2 \'‹ 이전\'은 C1 으로, 연결 기다리기는 대기 화면 하나만 남긴다', async () => {
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'), {timeout: 8000});
+    await press('번호 만들기');
+    await waitFor(() => screen.getByRole('button', {name: '이전 화면으로 가기'}));
+    await press('이전 화면으로 가기');
+    await waitFor(() => screen.getByTestId('title-group'));
+  });
+
+  test('M7: 약관 줄의 두 낱말은 주소가 있으면 링크(굵게·밑줄·읽기 역할 링크), 없으면 일반 글자', () => {
+    const {LegalText} = require('../src/ui/LegalText');
+    const {legalLinks} = require('../src/shared/legalLinks');
+    const open = jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(true);
+    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} />);
+    const links = screen.getAllByRole('link');
+    expect(links.map(l => l.props.children)).toEqual(['이용약관', '개인정보 처리방침']);
+    expect(StyleSheet.flatten(links[0].props.style)).toMatchObject({fontWeight: 'bold', textDecorationLine: 'underline'});
+    fireEvent.press(links[1]);
+    expect(open).toHaveBeenCalledWith('https://p.example');
+    screen.unmount();
+    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: null, privacy: null})} />);
+    expect(screen.queryAllByRole('link')).toHaveLength(0); // 누를 수 없는데 링크처럼 보이지 않게
+  });
+
+  test('리뷰 M2 구조: 링크가 있으면 줄 높이 48(누름 영역), 문장은 한 번 읽고 TalkBack 동작으로 각 링크를 연다, 여는 곳은 주입(앱 안 웹 화면 자리)', () => {
+    const {LegalText, LEGAL_LINK_LINE_H} = require('../src/ui/LegalText');
+    const {legalLinks} = require('../src/shared/legalLinks');
+    const onOpen = jest.fn();
+    const text = '연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요';
+    render(<LegalText testID="legal" text={text} links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} onOpen={onOpen} />);
+    const line = screen.getByTestId('legal');
+    expect(LEGAL_LINK_LINE_H).toBeGreaterThanOrEqual(48);
+    expect(StyleSheet.flatten(line.props.style).lineHeight).toBe(LEGAL_LINK_LINE_H);
+    expect(line.props.accessibilityLabel).toBe(text);
+    expect(line.props.accessibilityActions.map((x: {label: string}) => x.label)).toEqual(['이용약관', '개인정보 처리방침']); // 순서: 문장 → 이용약관 → 처리방침
+    fireEvent(line, 'accessibilityAction', {nativeEvent: {actionName: 'link-0'}});
+    expect(onOpen).toHaveBeenCalledWith('https://t.example', '이용약관', 'terms');
+    fireEvent.press(screen.getAllByRole('link')[1]);
+    expect(onOpen).toHaveBeenLastCalledWith('https://p.example', '개인정보 처리방침', 'privacy');
+  });
+
+  test('C4 호칭 겹침 시트도 같은 격자(막힌 이름 비활성)', async () => {
+    render(<AppRoot api={createFakeApi({parents: [{title: '엄마'}, {title: '엄마'}]})} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '이름 고르기'}));
+    await press('이름 고르기');
+    const grid = screen.getByTestId('title-dup-options');
+    expect(StyleSheet.flatten(grid.props.style).flexDirection).toBe('row');
+    expect(within(grid).getByLabelText('엄마, 이미 쓰는 이름, 사용할 수 없음').props.accessibilityState.disabled).toBe(true);
+  });
+});
+
+describe('PR1 리뷰 M1: 자녀 약관·방침 동의 기록', () => {
+  test('로그인 성공 직후 record_terms_agreement(v1·v1), 실패하면 이 계정에 남기고 다음 시작 때 한 번만 다시', async () => {
+    const {recordChildTerms, retryChildTerms} = require('../src/shared/childTerms');
+    const store = memoryStore();
+    const api = createFakeApi({accountTag: 'acc-t'});
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    expect(await recordChildTerms(api, store)).toBe(true);
+    expect(rec).toHaveBeenCalledWith('v1', 'v1');
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBeNull();
+    rec.mockRejectedValueOnce(new Error('offline'));
+    expect(await recordChildTerms(api, store)).toBe(false);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBe('1');
+    rec.mockClear();
+    rec.mockRejectedValueOnce(new Error('offline')); // 다시 보내기도 실패하면 표시를 남긴다(재확인 4 M8)
+    await retryChildTerms(api, store);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBe('1');
+    await retryChildTerms(api, store); // 다음 시작: 성공 → 지움
+    expect(rec).toHaveBeenCalledTimes(2);
+    expect(await store.getItem('terms_pending_v1:acc-t')).toBeNull();
+    await retryChildTerms(api, store); // 남은 것이 없으면 부르지 않는다
+    expect(rec).toHaveBeenCalledTimes(2);
+  });
+
+  test('C0 소셜 로그인에 성공하면 기록한다(약관 줄을 본 그 로그인)', async () => {
+    const api = createFakeApi();
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    jest.spyOn(api, 'signInWithSocial').mockResolvedValue('ok');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('legal-child'));
+    await press(/카카오/);
+    await waitFor(() => expect(rec).toHaveBeenCalledWith('v1', 'v1'));
+  });
+
+  test('로그인을 취소하면 기록하지 않는다', async () => {
+    const api = createFakeApi();
+    const rec = jest.spyOn(api, 'recordTermsAgreement');
+    jest.spyOn(api, 'signInWithSocial').mockResolvedValue('cancelled');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('legal-child'));
+    await press(/카카오/);
+    await act(async () => {});
+    expect(rec).not.toHaveBeenCalled();
+  });
+
+  test('로그아웃·계정 삭제 정리 대상에 다시 보낼 표시도 들어간다', async () => {
+    const {clearAccountKeys} = require('../src/lib/accountStore');
+    const store = memoryStore();
+    await store.setItem('terms_pending_v1:z', '1');
+    await clearAccountKeys(store, 'z');
+    expect(await store.getItem('terms_pending_v1:z')).toBeNull();
   });
 });

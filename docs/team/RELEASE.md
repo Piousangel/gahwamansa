@@ -99,6 +99,22 @@ keytool -exportcert -keystore app/android/app/debug.keystore -alias androiddebug
 - **1~3 전까지 주의(리뷰 M2)**: 지금 `staging.env` 의 카카오 키는 production 과 같다. 두 앱이 같은 `kakao{키}://oauth` 주소를 받으므로, **한 폰에 두 앱을 같이 설치하면** 카카오톡 없이 하는 카카오계정(웹) 로그인 복귀가 선택창이 뜨거나 다른 앱으로 갈 수 있다. 키를 나누기 전에는 staging 을 production 앱이 없는 폰에만 설치한다. 빌드할 때마다 Gradle 이 이 상태를 경고한다.
 - 키를 바꾼 뒤 `staging.env` 를 커밋하고 staging 을 다시 빌드한다(카카오 scheme 도 그 키로 바뀜).
 
+### 6.1 iOS 콘솔 등록(빌드 2 — 지금은 계획, iOS 준비 N8)
+번들 ID 는 Android 패키지와 같게 고정한다: production `com.bumojasik.app`, staging `com.bumojasik.app.staging`(App Store Connect 에 앱을 만들면 번들 ID 는 바꿀 수 없음, iOS 감사 N7). 아래는 **Apple Developer 계정·Team ID 가 생긴 뒤** 사용자 몫. 값(키·ID)은 env·xcconfig 로만 넣고 커밋할 수 있는 공개 값만 저장소에 둔다.
+
+| # | 어디 | 할 일 | 넣을 곳 |
+|---|---|---|---|
+| i1 | 카카오 디벨로퍼스 > 앱(1653853) > 플랫폼 > iOS | 번들 ID `com.bumojasik.app`(production 키), staging 키(위 1번에서 나눈 키)에 `com.bumojasik.app.staging` | 앱: Info.plist URL scheme `kakao{네이티브 키}`, `LSApplicationQueriesSchemes`(kakaokompassauth·kakaolink 등). **SceneDelegate 구조라 복귀 URL 은 `scene(_:openURLContexts:)` 에서 처리**(iOS 감사 2.2) |
+| i2 | Google Cloud(gahwa-mansaseong) > 사용자 인증 정보 | **iOS OAuth 클라이언트 2개**(번들 ID 별: production·staging). 각 클라이언트의 iOS client ID·reversed client ID 를 받는다 | env(예: `GOOGLE_IOS_CLIENT_ID`, 공개 값) → 앱 `GoogleSignin.configure({iosClientId})`, Info.plist URL scheme = reversed client ID |
+| i3 | 각 환경 Supabase > Auth > Providers > Google | **Authorized Client IDs** 에 그 환경의 iOS client ID 추가(웹·Android 와 쉼표로 함께). iOS 구글 ID 토큰 nonce 때문에 'Skip nonce check' 가 필요할 수 있음 — 재확인 후 결정(iOS 감사 2.2) | 대시보드 |
+| i4 | 각 환경 Supabase > Auth > Providers > Kakao | Client ID 는 Android 와 같은 네이티브 키(플랫폼만 추가) — 변경 없음 확인 | 대시보드 |
+| i5 | Firebase 콘솔(gahwa-mansaseong) > 프로젝트 설정 > 앱 추가 > iOS | 번들 ID 2개 등록(iOS 감사 N6) → `GoogleService-Info.plist` 2개(저장소 밖 보관, gitignore 위치에 복사). **APNs 인증 키(.p8)** 업로드(Apple 계정 필요, U6) | Xcode configuration 별 plist 복사 Build Phase, `FirebaseApp.configure()` |
+| i6 | Apple Developer > Identifiers | 두 번들 ID 에 Capability: Push Notifications, Associated Domains(초대 링크), Sign in with Apple(심사 4.8 — 카카오·구글을 주므로 필요) | entitlements 파일(iOS 감사 2.3) |
+| i7 | Apple > Sign in with Apple(Services ID·키) + Supabase > Providers > Apple | Supabase Apple provider 설정(Services ID·Team ID·Key ID·.p8) | 대시보드(비밀은 대시보드에만) |
+
+- 순서: i5(번들 ID 등록·plist)는 Apple 계정 없이 지금도 된다(무료). i1~i4 는 iOS 빌드를 시작하는 날, i6·i7·.p8 은 Apple 계정 뒤.
+- 환경 값은 env 생성 공통 스크립트(`app/scripts/appEnv.js`, N2 PR)가 env 에서 읽어 iOS 쪽 xcconfig 로도 내보내게 확장한다(키를 env 한 곳에 — 지금 Android 와 같은 원칙).
+
 ## 7. staging 빌드·배포
 
 ```bash
