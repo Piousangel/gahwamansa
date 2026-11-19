@@ -1,0 +1,52 @@
+# C3 연결 기다리는 중 v4 실측(시안 child/C3_C4_P8_ds4 #42). fake API: 자녀 → 카카오 → 호칭 '엄마' → 번호 → C3.
+# 기대: 첫 화면에 제목·설정 + 번호 카드(번호·기한·알림 켜기) 통째로, Dock 번호 보내기(+ 100% 복사하기), 넘치면 '더 있음' 띠. 스크롤하면 3단계 끝까지.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c3-fit.yaml
+# 주의: clearState 를 쓰지 않는다(p1-fit.yaml 머리 주석: Metro 호스트 고정이 지워짐). fake API 는 앱을 다시 켜면 처음부터라 상관없다.
+appId: com.bumojasik.app.staging
+name: C3 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '카카오 로그인'
+    timeout: 10000
+- tapOn: '카카오 로그인'
+- extendedWaitUntil:
+    visible: '부모님을 어떻게 부르세요\?'
+    timeout: 10000
+- tapOn: '엄마'
+- scrollUntilVisible:
+    element: '번호 만들기'
+    direction: DOWN
+- tapOn: '번호 만들기'
+- extendedWaitUntil:
+    visible: '번호가 만들어졌어요'
+    timeout: 10000
+- scrollUntilVisible:
+    element: '연결 기다리기'
+    direction: DOWN
+- tapOn: '연결 기다리기'
+- extendedWaitUntil:
+    visible:
+      id: 'wait-code'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c3-first
+- assertVisible: '연결 기다리는 중'
+- assertVisible: '번호 보내기'
+- scrollUntilVisible:
+    element: '답을 보여 줄지 고르면 돼요'
+    direction: DOWN
+- takeScreenshot: c3-scrolled
+- scrollUntilVisible:
+    element: '복사하기'
+    direction: DOWN
+- tapOn: '복사하기'
+- takeScreenshot: c3-copied

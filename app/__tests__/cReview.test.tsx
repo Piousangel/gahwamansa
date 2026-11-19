@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError, ServerError} from '../src/features/types';
@@ -85,8 +85,10 @@ test('대기 화면: 상태를 불러오기 전에는 번호 보내기를 누를
   });
   const issue = jest.spyOn(api, 'issueInviteCode');
   render(<AppRoot api={api} restore />);
-  await waitFor(() => screen.getByRole('button', {name: '번호 보내기'}));
-  expect(screen.getByRole('button', {name: '번호 보내기'})).toBeDisabled();
+  // PR #83 리뷰 L6: 이유 없는 비활성 대신 불러오는 중(loading) — 누를 수 없고 '잠시만요'로 읽힌다
+  const dock = await waitFor(() => within(screen.getByTestId('screen-dock')));
+  const btn = await waitFor(() => dock.getByRole('button', {name: /잠시만요/}));
+  expect(btn).toBeDisabled();
   await act(async () => release());
   expect(issue).not.toHaveBeenCalled();
 });
