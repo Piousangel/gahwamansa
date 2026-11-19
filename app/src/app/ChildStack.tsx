@@ -15,6 +15,7 @@ import {ChildSettings} from '../features/child/ChildSettings';
 import {ChildAppInfo} from '../features/child/ChildAppInfo';
 import {ChildTabBar} from './ChildChrome';
 import {ToastProvider} from '../ui/Toast';
+import {AudienceProvider} from '../ui/ds';
 import {NewConnectionBanner} from '../features/home/NewConnectionBanner';
 import {useSession} from './session';
 import {stackScreenOptions} from '../navigation/stackOptions';
@@ -30,7 +31,7 @@ export type ChildParams = {
   LoginEmail: undefined;
   LoginCode: {email: string};
   Relation: undefined;
-  Code: {code: string; title: string; renewed?: boolean; expiresAt?: string; from?: 'relation'}; // renewed: 지난 번호가 만료돼 새로 받음, expiresAt: 아는 경우 공유 메시지 기한
+  Code: {code: string; title: string; renewed?: boolean; expiresAt?: string}; // renewed: 지난 번호가 만료돼 새로 받음, expiresAt: 아는 경우 공유 메시지 기한
   Wait: undefined;
   Tabs: undefined;
   Settings: undefined;
@@ -66,6 +67,8 @@ function Tabs({navigation}: NativeStackScreenProps<ChildParams, 'Tabs'>) {
 export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyof ChildParams}) {
   return (
     // 자녀 화면 공용 토스트(U0). 시트·대화상자 위 오류는 토스트가 아니라 모달 안 오류 줄(리뷰 M2)
+    // audience 는 스택 루트에서 한 번(디자인 시스템 패널 r1 H: 기본값이 elder 라 감싸지 않은 화면 — Gate·C2·계정 지우기 — 이 어르신 치수였다)
+    <AudienceProvider value="child">
     <ToastProvider>
     <Stack.Navigator initialRouteName={initialRouteName} screenOptions={stackScreenOptions(Platform.OS)}>
       <Stack.Screen name="Gate" component={ChildGate} />
@@ -84,5 +87,6 @@ export function ChildStack({initialRouteName = 'Gate'}: {initialRouteName?: keyo
       <Stack.Screen name="Oss" component={OssScreen} />
     </Stack.Navigator>
     </ToastProvider>
+    </AudienceProvider>
   );
 }

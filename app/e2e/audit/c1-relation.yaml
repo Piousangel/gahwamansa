@@ -1,0 +1,32 @@
+# C1 호칭 회귀 캡처(ds Choice 2열 — 디자인 결정 a, 글자 150% 이상·칸에서 줄바꿈이면 저절로 1열) → 번호 만들기 → C3 바로(V9, C2 없음).
+# 주의: clearState 를 쓰지 않는다(c3-fit.yaml 머리 주석: Metro 호스트 고정이 지워짐). fake API 는 앱을 다시 켜면 처음부터.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=320x640 FONT_SCALE=2.0 app/e2e/run.sh audit/c1-relation.yaml
+appId: com.bumojasik.app.staging
+name: C1 호칭 실측
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/wait-first-screen.yaml
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '카카오 로그인'
+    timeout: 10000
+- tapOn: '카카오 로그인'
+- extendedWaitUntil:
+    visible: '부모님을 어떻게 부르세요\?'
+    timeout: 10000
+- tapOn: '엄마'
+- waitForAnimationToEnd
+- takeScreenshot: c1-first
+- scrollUntilVisible:
+    element: '번호 만들기'
+    direction: DOWN
+- tapOn: '번호 만들기'
+- extendedWaitUntil:
+    visible:
+      id: 'wait-code'
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: c1-next

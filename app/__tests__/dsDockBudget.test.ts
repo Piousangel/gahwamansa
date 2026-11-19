@@ -40,6 +40,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.send, onPress: noop}},
   },
   {
+    name: 'C1 호칭 고르기(번호 만들기 하나)',
+    screen: 'RelationScreen',
+    variant: 'form',
+    audience: 'child',
+    dock: {primary: {label: copy.relation.next, onPress: noop}},
+  },
+  {
     name: 'C3 연결 기다리는 중(번호 보내기 + 복사하기)',
     screen: 'ChildWaitScreen',
     variant: 'step',

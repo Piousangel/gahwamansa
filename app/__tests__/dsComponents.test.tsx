@@ -236,3 +236,35 @@ describe('Card·Section·Banner·StateView', () => {
     expect(screen.getByText('잠시 문제가 있어요').props.accessibilityRole).toBe('header');
   });
 });
+
+describe('Choice columns(디자인 결정 a)', () => {
+  const {fitsTwoColumns} = require('../src/ui/ds/Choice');
+  const names = ['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님'].map(label => ({label}));
+  test('360(목록 312)·100%면 호칭 7개가 2열, 150% 이상이면 1열', () => {
+    expect(fitsTwoColumns(names, 312, 18, 1)).toBe(true);
+    expect(fitsTwoColumns(names, 312, 18, 1.3)).toBe(false); // 130%: '할아버지'가 칸에서 꺾여 1열(150% 전이라도)
+    expect(fitsTwoColumns(names, 312, 18, 1.5)).toBe(false);
+    expect(fitsTwoColumns(names, 312, 18, 2)).toBe(false);
+  });
+  test('한 칸에서 글이 줄바꿈되면 1열(긴 이름·긴 보조 줄)', () => {
+    expect(fitsTwoColumns([{label: '아주아주 긴 이름입니다'}], 272, 18, 1)).toBe(false);
+    expect(fitsTwoColumns([{label: '엄마', hint: '이미 쓰는 이름', disabled: true}], 312, 18, 1, 16)).toBe(true);
+    expect(fitsTwoColumns([{label: '엄마', hint: '이미 쓰는 이름이라 고를 수 없어요', disabled: true}], 312, 18, 1, 16)).toBe(false);
+  });
+  test('2열이면 칸 폭을 나누고, 고른 칸은 ✓ + 굵은 테두리(색만으로 구분하지 않음), 막힌 칸은 disabled', () => {
+    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
+    render(
+      <AudienceProvider value="child">
+        <Choice mode="radio" columns={2} items={[{key: 'a', label: '엄마'}, {key: 'b', label: '아빠', disabled: true, a11yLabel: '아빠, 이미 쓰는 이름'}]} value="a" onSelect={() => {}} />
+      </AudienceProvider>,
+    );
+    expect(StyleSheet.flatten(screen.getByTestId('choice').props.style)).toMatchObject({flexDirection: 'row', flexWrap: 'wrap'});
+    const [a, b] = screen.getAllByRole('radio');
+    const st = StyleSheet.flatten(typeof a.props.style === 'function' ? a.props.style({pressed: false}) : a.props.style);
+    expect(st.width).toBeCloseTo((312 - 12) / 2);
+    expect(st.borderWidth).toBe(4);
+    expect(b.props.accessibilityState).toMatchObject({disabled: true});
+    expect(b.props.accessibilityLabel).toBe('아빠, 이미 쓰는 이름');
+    jest.restoreAllMocks();
+  });
+});

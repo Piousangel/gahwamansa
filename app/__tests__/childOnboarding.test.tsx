@@ -67,12 +67,14 @@ test('가족 만들기 -> 호칭(기본 부모님) -> 번호 만들기 -> 큰 �
   expect(screen.getByRole('radio', {name: '부모님', checked: true})).toBeTruthy();
   fireEvent.press(screen.getByText('엄마'));
   await press('번호 만들기');
-  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+  // V9: C2 없이 바로 C3(번호 카드가 맨 위)
+  await waitFor(() => screen.getByTestId('wait-code'));
+  expect(screen.queryByText('번호가 만들어졌어요')).toBeNull();
   expect(create).toHaveBeenCalledTimes(1);
   expect(title).toHaveBeenCalledWith('엄마');
   expect(issue).toHaveBeenCalledTimes(1);
   expect(screen.getByText('123 456')).toBeTruthy();
-  expect(screen.getByText('엄마 폰에서 이 번호를 써 주세요')).toBeTruthy();
+  expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
   await press('번호 보내기');
   expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('123 456')}));
 });
@@ -85,7 +87,7 @@ test('번호 만들기가 실패하면 알리고 다시 할 수 있다', async (
   await press('번호 만들기');
   await waitFor(() => screen.getByText('번호가 만들어지지 않았어요. 잠시 뒤에 다시 해 볼까요?'));
   await press('번호 만들기');
-  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+  await waitFor(() => screen.getByTestId('wait-code'));
 });
 
 test('연결 대기 -> 어르신이 번호를 쓰면 연결됨(호칭께서 정해요) -> 앨범', async () => {
@@ -99,9 +101,7 @@ test('연결 대기 -> 어르신이 번호를 쓰면 연결됨(호칭께서 정�
   await waitFor(() => screen.getByText('부모님을 어떻게 부르세요?'));
   fireEvent.press(screen.getByText('아빠'));
   await press('번호 만들기');
-  await waitFor(() => screen.getByText('번호가 만들어졌어요'));
-  await press('연결 기다리기');
-  await waitFor(() => screen.getByTestId('wait-code'));
+  await waitFor(() => screen.getByTestId('wait-code')); // C2 없이 바로 C3
   expect(screen.getByText('아빠 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
   expect(screen.getByText('연결 기다리는 중')).toBeTruthy();
   await api.redeemInviteCode('123456'); // 어르신 폰에서 번호 입력

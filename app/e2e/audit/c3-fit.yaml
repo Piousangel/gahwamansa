@@ -27,13 +27,6 @@ tags:
     direction: DOWN
 - tapOn: '번호 만들기'
 - extendedWaitUntil:
-    visible: '번호가 만들어졌어요'
-    timeout: 10000
-- scrollUntilVisible:
-    element: '연결 기다리기'
-    direction: DOWN
-- tapOn: '연결 기다리기'
-- extendedWaitUntil:
     visible:
       id: 'wait-code'
     timeout: 10000
