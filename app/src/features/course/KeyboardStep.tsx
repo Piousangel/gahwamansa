@@ -223,7 +223,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   return (
     <DsScreen
       variant="step"
-      back={{label: copy.course.to_home, onPress: toCourseHome}}
+      back={{to: copy.course.to_home, onPress: toCourseHome}}
       backAside={asideSkip}
       header={<StepHeader name={copy.course.step.hangul} n={3} />}
       stepInfo={stepA11y(copy.course.step.hangul, 3)}
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   figure: {alignItems: 'center', gap: 2},
   thumb: {width: 96, backgroundColor: color.card, paddingTop: 5, paddingHorizontal: 5, paddingBottom: 12, boxShadow: shadow.soft, transform: [{rotate: '-2deg'}]},
   thumbImg: {width: 86, height: 75, backgroundColor: color.paperSoft},
-  figcaption: {color: color.ink, fontSize: 20},
+  figcaption: {color: color.inkBody, fontSize: 20},
   cells: {flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center'},
   cell: {borderRadius: 14, borderWidth: 3, borderStyle: 'dashed', borderColor: color.line, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center'},
   cellPlain: {borderStyle: 'solid', borderColor: color.action},
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   // 입력칸(오목): 종이색 면 + 아래 밑줄, 높이 72 이상, 글자 34
   input: {minHeight: 56, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: ds.color.card, borderRadius: ds.radius.input, borderWidth: 1.5, borderColor: ds.color.line},
   inputFocused: {borderWidth: 3, borderColor: ds.color.action},
-  sub: {color: color.ink},
+  sub: {color: color.inkBody},
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},
   matchedIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: color.doneSoft, alignItems: 'center', justifyContent: 'center'},
 });

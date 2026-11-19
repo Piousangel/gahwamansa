@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   // 지금 쓸 칸: noticeSoft 면 + 테두리 4(action) + 고정 커서 막대(깜박임 없음)
   cellNow: {borderWidth: 3, borderBottomWidth: 3, borderColor: color.action, backgroundColor: color.noticeSoft},
   cursor: {width: 3, height: 34, backgroundColor: color.ink},
-  cellText: {fontSize: 34, color: color.ink, fontWeight: 'bold'},
+  cellText: {fontSize: 34, color: color.inkBody, fontWeight: 'bold'},
   row: {flexDirection: 'row', gap: 8, marginBottom: 8},
   // 키 = 볼록(누르는 곳): 흰 면 + 테두리 3(line) + 옅은 그림자, 최소 64(DECISIONS 실기기 규칙, QA P1#9). 눌림은 actionSoft
   // 시안 P1_connect_v4: 반경 14·테두리 2(line)

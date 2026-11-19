@@ -543,10 +543,40 @@
     ],
     "button": "앨범으로"
   },
+  "dismiss": {
+    "close": "닫기",
+    "later": "다음에"
+  },
   "nav": {
-    "back": "‹ 이전",
-    "back_a11y": "이전 화면으로 가기",
-    "back_course": "‹ 오늘 코스",
+    "to": {
+      "Connect": "번호 쓰기로",
+      "Consent": "답 나누기로",
+      "CourseHome": "오늘 코스로",
+      "PhotoStep": "사진 보기로",
+      "QuestionStep": "둘 중 고르기로",
+      "KeyboardStep": "낱말 쓰기로",
+      "CourseDone": "오늘 도장으로",
+      "History": "지난 날로",
+      "HistoryDay": "그날 기록으로",
+      "Settings": "설정으로",
+      "Family": "연결된 가족으로",
+      "DeleteAccount": "모두 지우기로",
+      "DeleteDone": "처음으로",
+      "PushPermission": "알림 안내로",
+      "Web": "약관·방침으로",
+      "Oss": "오픈소스 목록으로",
+      "FamilyPreview": "가족 미리 보기로",
+      "Gate": "처음으로",
+      "Login": "로그인으로",
+      "LoginEmail": "이메일 주소로",
+      "LoginCode": "인증번호로",
+      "Relation": "호칭 고르기로",
+      "Code": "번호로",
+      "Wait": "기다리는 화면으로",
+      "AppInfo": "앱 정보로",
+      "Album": "앨범으로",
+      "Past": "지난 날로"
+    },
     "back_course_a11y": "오늘 코스로 돌아가기"
   },
   "first": {

@@ -119,7 +119,7 @@ describe('SocialButton(브랜드 예외)', () => {
 describe('BackLink', () => {
   test('어르신: 링크 역할, 보이는 글 = 라벨, 64×120 이상, 흰 알약 + line 테두리, 화살표', () => {
     const onPress = jest.fn();
-    render(<BackLink label="오늘 코스로" onPress={onPress} />);
+    render(<BackLink to="오늘 코스로" onPress={onPress} />);
     const el = screen.getByTestId('back-link');
     expect(el.props.accessibilityRole).toBe('link');
     expect(el.props.accessibilityLabel).toBe('오늘 코스로');
@@ -133,7 +133,7 @@ describe('BackLink', () => {
     expect(onPress).toHaveBeenCalled();
   });
   test('자녀 높이 56, 접힌 위 영역의 단계 정보는 힌트로', () => {
-    render(child(<BackLink label="이전" onPress={noop} context="3단계 중 2단계" />));
+    render(child(<BackLink to="설정으로" onPress={noop} context="3단계 중 2단계" />));
     expect(pressStyle('back-link').minHeight).toBe(56);
     expect(screen.getByTestId('back-link').props.accessibilityHint).toBe('3단계 중 2단계');
   });

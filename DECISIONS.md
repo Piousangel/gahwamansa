@@ -522,6 +522,8 @@
 - R-15 접힘 경계는 화면 공용 `ui/FoldStack`으로: 접힘에 걸치는 첫 요소를 통째로 아래로 민다(P1 CodeInput 규칙 일반화). 계산은 `ui/ds/foldPush` 하나를 FoldStack·useFoldGap(자녀)이 함께 쓴다(#91 리뷰 L1: 큰 요소는 밀지 않음, 첫 요소는 allowFirst, from·glue). 묶음 안 줄 단위가 필요한 요소(P5 선택지 2장)는 `split`으로 카드마다 / 버린 안: 화면마다 공간 단계(p5Space) — 기기·문구마다 표를 다시 짜야 해서
 - (디자인 11-20, 전문가 리뷰 A2 8/8) Jua 폐기. 본문·제목 한 벌 번들, 1순위 Noto Sans KR(2순위 Pretendard). 숫자는 tabular(Noto 기본, Pretendard는 fontVariant 필수). 비교 렌더 docs/design/font-compare/FONT-COMPARE.png(앱 글꼴 아님 표기): 200%에서 이 문장은 Noto 5줄/Pretendard 4줄, 실기기 줄바꿈 부담이 크면 font.body 한 곳만 바꿔 Pretendard로. tokens-v4 answer·answerRow의 fontFace Jua 삭제는 글꼴 번들 뒤(5:101)
 
+## 2026-11-20 Expo 전환하지 않음(오너)
+- RN CLI 유지, 출시 우선. Expo(EAS Build·Update)는 빌드 1 출시 뒤 iOS 착수 시점에 bare 방식으로 다시 검토
 ## 2026-11-20 P6 자판으로 쓰기 v4(2기 레인)
 - 쓰는 중 음절 칸(맞은 칸 채움) 삭제, 본보기 낱말 한 줄(fieldInput 상한 1.5)을 입력 칸 바로 위에(시안 ds4b·r1/7 H). '마칠게요'는 1.5초 비활성 대신 보통 모양 + 누름 무시
 - DsScreen backAside(BackLink 줄 오른쪽 한 요소) 추가 — 자판 열림 100% '넘어갈게요'

@@ -58,7 +58,7 @@ test('선택지: 확정 문구 4개 1열 Choice(action, 버튼), 글자는 bodyL
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
 });
 
-const sheetProps = {title: '제목', closeLabel: '닫기', testID: 's'};
+const sheetProps = {title: '제목', testID: 's'};
 const opener = {current: {tag: 'opener'}};
 
 describe('ds Sheet(공용, PR #93 L4)', () => {

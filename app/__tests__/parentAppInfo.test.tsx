@@ -62,7 +62,7 @@ test('약관: 값이 있으면 useInAppWeb 로 열고, 안 닿으면 화면을 �
   // 리뷰 L9 ①: 두 번째는 실제로 앱 안 웹 화면이 열린다
   await waitFor(() => screen.getByTestId('web-page'));
   // 리뷰 L4: 설정으로 돌아오면 오프라인 한 줄은 지워져 있다
-  await press('이전 화면으로 가기');
+  await press('설정으로');
   await waitFor(() => screen.getByTestId('settings-row-oss'));
   expect(screen.queryByTestId('app-info-offline')).toBeNull();
 });

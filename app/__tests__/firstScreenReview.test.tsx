@@ -72,7 +72,7 @@ test('앱 실행당 1회: 번호 화면에 갔다가 돌아오면 다시 재생�
   await waitFor(() => expect(timing).toHaveBeenCalled());
   const n = timing.mock.calls.length;
   await press(/부모님 휴대폰이에요/);
-  await press('이전 화면으로 가기');
+  await press('처음으로');
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
   await measure();
   await act(async () => {});

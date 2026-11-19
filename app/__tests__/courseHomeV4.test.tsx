@@ -142,7 +142,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('사진 보기')).toBeTruthy(); // 보기 전용은 단계 표시 없이 이름만
     expect(screen.queryByText(/1 \/ 3/)).toBeNull();
     expect(screen.queryByRole('button', {name: '다 봤어요'})).toBeNull();
-    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
+    fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로'}).slice(-1)[0]);
     await waitFor(() => screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요'));
     expect(counts(spies)).toEqual(before);
   });
@@ -157,7 +157,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByText('가을')).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull(); // 누를 수 없음
     expect(screen.queryByRole('button', {name: '정했어요'})).toBeNull();
-    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
+    fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로'}).slice(-1)[0]);
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });
@@ -179,7 +179,7 @@ describe('코스 홈 v4', () => {
     expect(screen.getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
     expect(screen.queryByLabelText('낱말 쓰는 칸')).toBeNull();
     expect(screen.queryByRole('button', {name: '다 썼어요'})).toBeNull();
-    fireEvent.press(screen.getByRole('button', {name: '오늘 코스로'}));
+    fireEvent.press(screen.getAllByRole('button', {name: '오늘 코스로'}).slice(-1)[0]);
     await waitFor(() => screen.getByTestId('date-line'));
     expect(counts(spies)).toEqual(before);
   });

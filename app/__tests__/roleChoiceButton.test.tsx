@@ -42,12 +42,12 @@ test('눌림: 두께 3, 4 내려감, 면 actionSoft. 손을 떼면 바로 이동
   expect(onPress).toHaveBeenCalledTimes(1);
 });
 
-test('제목 26 상한·굵게·inkTitle, 둘째 줄 20 ink', () => {
+test('제목 26 상한·굵게·inkTitle, 둘째 줄 20 inkBody(읽는 글, 디자인 시스템 패널 r1)', () => {
   render(<RoleChoiceButton tone="child" title="자녀 휴대폰이에요" sub="부모님께 보낼 번호를 만들어요" onPress={() => {}} />);
   const t = StyleSheet.flatten(screen.getByText('자녀 휴대폰이에요').props.style);
   expect(t.fontSize).toBe(26);
   expect(t.color).toBe(color.inkTitle);
   const sub = StyleSheet.flatten(screen.getByText('부모님께 보낼 번호를 만들어요').props.style);
   expect(sub.fontSize).toBe(20);
-  expect(sub.color).toBe(color.ink);
+  expect(sub.color).toBe(color.inkBody);
 });
