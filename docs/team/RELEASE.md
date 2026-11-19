@@ -41,6 +41,7 @@ node scripts/appEnv.js verify-bundle --flavor production <번들 파일…>     
 - 버전을 주지 않으면 `package.json` version · `git rev-list --count HEAD` · 짧은 sha(iOS 처럼 빌드 도구가 버전을 넘기지 않는 경우). 실패는 종료 코드 1 + 한국어 한 줄, 경고는 `경고:` 줄.
 - 규칙 테스트: `__tests__/appEnvScript.test.ts`.
 - **node 필수**: Android 빌드·IDE 동기화가 설정 단계에서 이 스크립트를 부른다(원래 JS 번들에도 필요). 찾는 순서: `NODE_BINARY`(환경변수 또는 `~/.gradle/gradle.properties` 의 `NODE_BINARY=/경로/node`) → `~/.nvm/versions/node` 가장 높은 판 → `/opt/homebrew/bin/node` → `/usr/local/bin/node` → PATH. 못 찾으면 "빌드에 node 가 필요해요" 로 멈춘다. Dock 에서 연 Android Studio 는 셸 PATH 가 없으니 터미널에서 `studio .` 로 열거나 `NODE_BINARY` 를 적는다(라이브러리 일부도 PATH 의 node 를 직접 부른다).
+  - 증상: 빌드·동기화에 `A problem occurred starting process 'command 'node''` 나 `does not specify compileSdk`(라이브러리 설정이 node 실행 실패로 중간에 멈춘 결과)가 보이면 **그 Gradle 이 쓰는 PATH 에 node 가 없는 것**이다. 다른 곳(GUI 등)에서 켜진 Gradle 데몬이 남아 있어도 같다 → 터미널에서 `./gradlew --stop` 뒤 다시(다른 사람 빌드가 돌고 있으면 `--no-daemon` 으로 한 번).
 - **iOS(빌드 2, 아직 프로젝트에 넣지 않음)** — Run Script 두 개:
   1. **맨 앞**(Compile Sources 전) "env 생성": Xcode Run Script 는 PATH 가 거의 없으므로 RN 템플릿처럼 `.xcode.env` 를 먼저 불러 `NODE_BINARY` 를 쓴다. 출시 configuration 은 `--require-real-env`(Android `build-production.sh` 와 같게). 출력 파일이 없어 매번 돌아야 하므로 "Based on dependency analysis" 를 끈다.
      ```sh
