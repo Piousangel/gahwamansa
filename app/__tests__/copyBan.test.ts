@@ -44,6 +44,9 @@ test('계정 지우기 로그인 풀림: 어르신용은 로그인 대신 문의
   expect([p.title, p.body, p.button].some(s => /로그인/.test(s))).toBe(false);
   expect(p.button).toBe(copy.app_info.contact); // 버튼 이름 = 도착(앱 정보 '문의하기')
   expect(`${p.title}${p.body}`).not.toMatch(/@|https?:/); // 메일 주소·URL 은 앱 정보 상수(CONTACT_EMAIL)에서, 문구에 쓰지 않는다
+  // 익명 기기는 본인 확인 수단이 없어 가족(자녀 계정)으로 확인한 뒤에만 지운다(dev-server-notes §19 ③) — 조건 없는 약속 금지
+  expect(p.body).toMatch(/가족 확인 뒤/);
+  expect(p.body).toMatch(/가족이 대신 문의/);
   expect(copy.delete.signed_out.button).toBe('다시 로그인하기'); // 자녀용은 그대로
 });
 
