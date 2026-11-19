@@ -12,13 +12,14 @@ const {ESLint}: {
 } = require('eslint');
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
-// 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193
+// 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
 const BASELINE: Record<string, number> = {
   fontSize: 9,
   fontWeight: 8,
   lineHeight: 3,
   color: 0,
-  height: 12,
+  height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
+  fixedBox: 12, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
   fontScale: 16,
   placeholder: 1,
@@ -63,6 +64,8 @@ test.each([
   ['import * as RN', "import * as RN from 'react-native';\nexport const A = () => <RN.View />;\n", 'rnImport'],
   ['JSX 색 리터럴', "import {Icon} from '../../ui/assets/icons';\nexport const A = () => <Icon name=\"icon-check\" color=\"#ff0000\" />;\n", 'color'],
   ['Text20 size', "import {Text20} from '../../ui/Text20';\nexport const A = () => <Text20 size={28}>a</Text20>;\n", 'text20Size'],
+  ['height 만 고정(글자 상자 후보)', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({row: {height: 56, padding: 8}});\n", 'height'],
+  ['가로·세로 고정 상자', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({dot: {width: 36, height: 36}});\n", 'fixedBox'],
 ])('규칙이 잡는다: %s', async (_n, code, kind) => {
   const eslint = new ESLint({cwd: path.join(__dirname, '..')});
   for (const filePath of ['src/features/course/__dsProbe.tsx', 'src/app/__dsProbe.tsx', 'src/push/__dsProbe.tsx']) {
@@ -72,6 +75,13 @@ test.each([
   // ui/ 는 잡지 않는다(컴포넌트 안 예외)
   const ui = await eslint.lintText(code, {filePath: path.join(__dirname, '..', 'src/ui/ds/__dsProbe.tsx')});
   expect(KINDS_OF(ui)).toEqual([]);
+});
+
+test('가로·세로 고정 상자는 height 로 세지 않는다(오탐 제외, 리뷰 L1)', async () => {
+  const eslint = new ESLint({cwd: path.join(__dirname, '..')});
+  const code = "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({dot: {width: 36, height: 36}, img: {width: 96, maxHeight: 84}});\n";
+  const r = await eslint.lintText(code, {filePath: path.join(__dirname, '..', 'src/features/course/__dsProbe.tsx')});
+  expect(KINDS_OF(r)).toEqual(['fixedBox', 'fixedBox']);
 });
 
 export {};
