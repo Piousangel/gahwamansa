@@ -86,6 +86,21 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - `title` = 가족이 나를 부르는 호칭(어르신별, 없으면 가족 호칭). 연결 전 기기는 `{title:null, family:[]}`. 심사 가족도 정상 목록(심사자가 P16을 볼 수 있게, 개인정보 없음).
 - 연결 끊기 RPC는 없다(P16 시트 두 갈래: `withdraw_consent` 또는 P9 `delete_my_account`).
 
+### parent_preview_child_view() → jsonb  (0050, P13 '가족에게 이렇게 보여요', PR #11 리뷰 M1)
+```ts
+// sb.rpc('parent_preview_child_view') → {
+//   summary: { parent_title: string | null, parents: [ChildSummaryParent] },   // child_summary()와 같은 모양, 내 항목 1개만
+//   history: { parents: [ChildHistoryParent] }                                // child_answer_history()와 같은 모양, 내 항목 1개만
+// }
+// ChildSummaryParent = { parent_id, title, connected, connected_date, shared, latest: { prompt, choice_label, starter, answered_date } | null }
+// ChildHistoryParent = { parent_id, title, connected, shared, answers: [{ session_date, prompt, prompt_short, option_a, option_b, choice_label }] }
+```
+- **자녀가 받는 값과 같은 내부 함수**(`family_child_summary`·`family_child_history`)로 계산한다. 그래서 `latest`는 기간 제한이 없고(30일보다 오래된 답도 자녀 홈에 보이는 그대로), C5 지난 답은 최근 30일·최대 30개·서버 `prompt_short`("바다와 산 중")다. 앱은 parent_history를 걸러 흉내 내지 말고 이 값을 자녀 화면 부품(C2 카드·C5 줄)에 그대로 넣는다 — 자녀 쪽 파서(parseChildSummary 류)를 재사용할 수 있다.
+- **미리보기 호칭은 `summary.parents[0].title`**(본인 호칭). `summary.parent_title`은 자녀 화면과 같은 가족 기본 호칭이라 어르신이 두 분인 가족에서는 다른 분의 호칭일 수 있다(PR #18 리뷰 L1). 출력 전체는 골든 테스트(`child_view_golden.test.sql`)로 고정 — 내부 함수를 고치면 자녀 화면·미리보기가 함께 바뀌므로 기대값과 이 계약을 같이 바꾼다.
+- 동의 안 함·철회: 자녀와 똑같이 `shared=false`, `latest=null`, `answers=[]`(철회 즉시). 미리보기에 "지금은 가족에게 보이지 않아요" 같은 상태를 보여 주는 것은 앱·라이터 몫.
+- 본인 항목만: 같은 가족의 다른 어르신 항목은 주지 않는다(그분의 동의는 자녀에게 공개한 것). 자녀 계정 정보(이름·메일·id)는 원래 없다. `parents`가 빈 배열이 되는 경우는 없다(본인 프로필이 있어야 실행됨).
+- 어르신 본인만: 자녀·프로필 없는 기기는 `parent_required`, anon은 실행 불가. 내부 함수는 가족 id를 받으므로 앱·anon·서비스 역할 모두 직접 못 부른다.
+
 ### get_my_cheers() → jsonb  (0020, P8)
 ```json
 { "unread_count": 2, "cheers": [ { "id": "uuid", "message_key": "warm_day", "sent_at": "timestamptz" } ] }
@@ -250,6 +265,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | redeem_invite_code · peek_invite_code | 어르신 기기 | 익명만, 잠금·시도 한도 |
 | discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
 | record_session_step · start_today · get_today_content · my_day_index · save_answer · my_week_stamps · parent_history | 어르신 | parent 역할·본인 행만, save_answer는 동의 확인 |
+| parent_preview_child_view | 어르신 | parent 역할·본인 항목만(자녀 화면과 같은 내부 함수, 0050) |
 | give_consent · withdraw_consent | 어르신 | parent 역할·본인, 이력 기록 |
 | get_my_cheers · mark_cheers_read | 어르신 | 받는 본인 것만 |
 | parent_family_list | 어르신 | 본인 가족, 개인정보 없음 |
@@ -369,10 +385,11 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0043 | 관리자·게시 리뷰 반영 | 병합 | 미반영 |
 | 0044 | 카카오·사진 주소 재검토 | 병합 | 미반영 |
 | 0045 | 테스터 표시·Q-L1 | 브랜치(리뷰 대기) | 미반영 |
-| 0046 | 약관 동의 이력·금지어 제약 | 브랜치 server-l1-launch | 미반영 |
-| 0047 | 키 위생(E1·E7: display_name 제거·pii_in_args·카카오 포기 뷰) | 브랜치 server-l1-launch | 미반영 |
-| 0048 | 약관 게시 버전·재동의 판단 | 브랜치 server-l1-launch | 미반영 |
-| 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 브랜치 server-l1-launch | 미반영 |
+| 0046 | 약관 동의 이력·금지어 제약 | 병합 | 미반영 |
+| 0047 | 키 위생(E1·E7: display_name 제거·pii_in_args·카카오 포기 뷰) | 병합 | 미반영 |
+| 0048 | 약관 게시 버전·재동의 판단 | 병합 | 미반영 |
+| 0049 | xhigh 리뷰 후속(뷰 쓰기 회수·pii 보강·금지어 정규화·연결 전 계정 삭제) | 병합 | 미반영 |
+| 0050 | 어르신 미리보기 parent_preview_child_view(자녀 화면 계산 공통 함수) | 브랜치 server-parent-preview | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 

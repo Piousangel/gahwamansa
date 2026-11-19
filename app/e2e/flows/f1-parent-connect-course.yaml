@@ -44,7 +44,12 @@ tags:
 - tapOn:
     id: 'kb-input'
 - inputText: 'a'
-- hideKeyboard
+# 안정화(2026-11-18 전체 실행 1회 실패: 자판이 이미 닫힌 상태의 hideKeyboard 가 '뒤로'로 처리돼 앱을 벗어남) → 버튼이 가려졌을 때만 닫는다
+- runFlow:
+    when:
+      notVisible: '다 썼어요'
+    commands:
+      - hideKeyboard
 - takeScreenshot: f1-p6
 - tapOn: '다 썼어요'
 - extendedWaitUntil:

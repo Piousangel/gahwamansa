@@ -70,7 +70,8 @@ test('입력칸은 비제어(value 재주입 없음), 시스템 자판 설정 �
   await toKeyboardStep();
   expect(input().props.value).toBeUndefined();
   expect(input().props.autoCorrect).toBeUndefined();
-  expect(input().props.placeholder).toBe('여기를 누르면 자판이 나와요');
+  expect(input().props.placeholder).toBeUndefined(); // v4 2-8 placeholder 금지(PR #14 리뷰 M1) — 안내는 칸 위 글·읽기 힌트
+  expect(input().props.accessibilityHint).toBe('여기를 누르면 자판이 나와요');
   await type('나');
   expect(input().props.value).toBeUndefined();
 });
@@ -235,12 +236,12 @@ test('20초가 지나면 넘어가기가 또렷해진다', async () => {
   expect(screen.getByTestId('kb-skip-strong')).toBeTruthy();
 });
 
-test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고 제목은 남긴다', async () => {
+test('자판 열림(100%): 사진·안내·이유 줄·넘어가기를 숨기고, 단계 제목도 접는다(PR #14 리뷰 M2·v4 2-5: 배율 무관)', async () => {
   await toKeyboardStep();
   await act(async () => {
     fireEvent(input(), 'focus');
   });
-  expect(screen.getByText('자판으로 쓰기')).toBeTruthy();
+  expect(screen.queryByText('자판으로 쓰기')).toBeNull();
   expect(screen.queryByText('보이는 낱말을 아래 칸에 써요')).toBeNull();
   expect(screen.queryByText('천천히 써 봐요')).toBeNull();
   expect(screen.queryByText('한 글자만 써도 누를 수 있어요')).toBeNull();

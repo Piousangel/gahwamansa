@@ -589,6 +589,12 @@ isOneToOne: false
 "event_prop_ok":
 { Args: { "p_key": string,"p_val": Json }; Returns: boolean
                            },
+"family_child_history":
+{ Args: { "p_family": string,"p_parent": string }; Returns: Json
+                           },
+"family_child_summary":
+{ Args: { "p_family": string,"p_parent": string }; Returns: Json
+                           },
 "get_my_cheers":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -651,6 +657,9 @@ isOneToOne: false
                            },
 "parent_history":
 { Args: { "p_days"?: number }; Returns: Json
+                           },
+"parent_preview_child_view":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "parent_streak":
 { Args: { "p_parent": string,"p_today"?: string }; Returns: number

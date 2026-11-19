@@ -432,3 +432,22 @@
 
 ## 2026-11-19 약관 재동의 게이트(needs_reagree)
 - 빌드 1은 약관·방침 v1만 존재 → 재동의 화면 게이트 없음, 앱은 계약(needs_reagree)만 유지. v2 게시 시 재동의 화면 추가(법률 확인 후), 등록 절차는 내부관리계획 §6
+
+## 2026-11-19 iOS 준비(감사 docs/team/qa/2026-11-19-ios-readiness-audit.md)
+- 빌드 1에 당길 것 N1~N8: 초대 페이지 아이폰 분기(N1), env 생성기를 공통 node 스크립트로(N2), 토큰 p_platform=Platform.OS(N3), 방침·법률 묻음에 Apple 로그인·APNs(N4), 자녀 로그인 Apple 버튼 자리(N5), Firebase iOS 앱 등록(N6), RELEASE.md iOS 콘솔 절차(N8)
+- N7 번들 ID: iOS도 com.bumojasik.app / staging은 com.bumojasik.app.staging (Android와 동일)
+- 팀 추천 채택(위임): Apple 로그인 제공(4.8), iPhone 전용(iPad 끔, 빌드 2 설정 때), 아이폰 초대는 번호 직접 입력(Install Referrer 없음)
+- 사용자 결정 대기: Apple Developer 가입(연 99달러, 개인/법인), 앱 이름 선점 시기, APNs 키 발급, iOS 빌드·TestFlight용 iPhone
+- 빌드 2 주의(감사 문서): iOS 알림 켜기는 앱이 먼저 권한을 요청해야 설정 항목이 생김, 스와이프 뒤로 가기가 useBackAction 우회, SceneDelegate openURLContexts
+- (디자인 N5, 11-19) 자녀 로그인 Apple 버튼 자리 확정: iPhone에서만(`Platform.OS === 'ios'`) 구글 아래 '카카오 → 구글 → Apple' 순서, 세 버튼 같은 높이 56·폭·반경 12·글자 크기. Apple은 검정 스타일·문구 'Apple로 로그인'·공식 로고 자산. 320×640·글자 200%는 하단 고정 없이 한 스크롤로 세 버튼이 첫 화면. 시안 `docs/design/v3/screens/child/C0_login_ios.dc.html`(canvas 등록), 규정 `design-system/assets/third-party-login/GUIDELINES.md` Apple 절. 앱 구현은 B2
+- (N5 리뷰 반영, 11-19) Apple 버튼은 네이티브 버튼이 아니라 공식 로고 자산 + 직접 만든 커스텀 버튼으로 구현(리드 결정). HIG 수치·줄바꿈 규정은 원문 미확인이라 최소 높이는 44로 통일, 구현 전 원문 재확인
+
+## 2026-11-19 디자인 시스템 v4 (오너 실기기 피드백 → 회의 docs/team/board/2026-11-19-design-system-v4/SUMMARY.md)
+- 위계를 크기 하나에서 크기·굵기·색·면으로: 본문 차콜 400, 제목·버튼만 700(화면당 2역할), 갈색은 누를 수 있는 것에만(면·밑줄·아이콘 동반), 크기 단계 비율 1.2 이상
+- 잘림 방지: 버튼 최소 높이만, 하단 Dock은 주 버튼 1+보조 1+한 줄, 약관은 본문 끝, placeholder 금지(Field label/hint), 자판 열리면 위 영역 접기
+- BackLink 통일(화살표+24, 알약 면, 64×120 이상), 화면 틀 6종, 공통 컴포넌트 14종, 원시 fontSize·color는 lint 경고 + 위반 수 기준선 테스트
+- 빌드 1 범위: 토큰 v4·핵심 컴포넌트·오너 캡처 3화면·어르신 P3~P7·C0·응원 시트·C3, 상한 60h(추정), 기능 동결 1~2일 지연 수용(완성도 우선 원칙). 나머지 화면은 빌드 2
+- 순서: tokens-v4.json 원본 → 시안 v4(디자인)와 토큰·컴포넌트(DS 레인) 병렬 → 화면 적용은 시안 뒤
+
+## 2026-11-19 staging 반영 0050 (사용자 승인 "올려")
+- db push 1개, 원격 최신 0050. remote-checks true 21줄(definer 37개·anon 0, 자녀 화면 내부 함수 실행 권한 없음, 뷰 쓰기 0, 파기 배치 성공 등). 예상된 false 6줄(Vault 2·약관 게시·응원 문장·푸시 문구·auth 감사 로그)은 이전과 같음

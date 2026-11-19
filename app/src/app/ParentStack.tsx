@@ -1,4 +1,5 @@
 import React from 'react';
+import {Platform} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ConnectScreen} from '../features/link/ConnectScreen';
 import {ParentFamilyScreen} from '../features/family/ParentFamilyScreen';
@@ -18,6 +19,8 @@ import {CourseDone} from '../features/course/CourseDone';
 import {PushPermissionScreen} from '../push/PushPermissionScreen';
 import {WebScreen, type WebParams} from './WebScreen';
 import {OssScreen} from './OssScreen';
+import {FamilyPreviewScreen} from '../features/account/FamilyPreview';
+import {stackScreenOptions} from '../navigation/stackOptions';
 
 export type ParentParams = {
   // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
@@ -28,12 +31,13 @@ export type ParentParams = {
   PushPermission: undefined; // N1 알림 안내(AU-04, src/push)
   Web: WebParams; // 앱 안 웹 화면(AU-07)
   Oss: undefined; // 오픈소스 라이선스(AU-06)
+  FamilyPreview: undefined; // P13 '가족에게 이렇게 보여요'(AP-06)
 };
 const Stack = createNativeStackNavigator<ParentParams>();
 
 export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRouteName?: keyof ParentParams; prefill?: Prefill}) {
   return (
-    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{headerShown: false}}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={stackScreenOptions(Platform.OS)}>
       <Stack.Screen name="Connect" component={ConnectScreen} initialParams={prefill ? {prefill} : undefined} />
       <Stack.Screen name="Consent" component={ConsentScreen} />
       <Stack.Screen name="CourseHome" component={CourseHome} />
@@ -50,6 +54,7 @@ export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRou
       <Stack.Screen name="PushPermission" component={PushPermissionScreen} />
       <Stack.Screen name="Web" component={WebScreen} />
       <Stack.Screen name="Oss" component={OssScreen} />
+      <Stack.Screen name="FamilyPreview" component={FamilyPreviewScreen} />
     </Stack.Navigator>
   );
 }

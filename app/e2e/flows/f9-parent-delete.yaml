@@ -27,12 +27,12 @@ tags:
 - tapOn:
     text: '모두 지우기'
     index: 0
-- runFlow:
-    when:
-      visible: '모두 지울까요\?'
-    commands:
-      - takeScreenshot: f9-p9-confirm2
-      - tapOn: '모두 지우기'
+# 2단계 확인 상자(P9 H1, 필수): 제목 '정말 모두 지울까요?' — 늦게 떠도 기다리고, 사라지는 회귀는 실패로(리뷰 M2)
+- extendedWaitUntil:
+    visible: '정말 모두 지울까요\?'
+    timeout: 10000
+- takeScreenshot: f9-p9-confirm2
+- tapOn: '모두 지우기'
 - extendedWaitUntil:
     visible: '모두 지웠어요'
     timeout: 10000

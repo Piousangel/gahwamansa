@@ -8,10 +8,7 @@ tags:
 - launchApp:
     clearState: true
 - runFlow:
-    file: ../common/dismiss-system-dialogs.yaml
-- extendedWaitUntil:
-    visible: '이 휴대폰은 누구 거예요\?'
-    timeout: 60000
+    file: ../common/wait-first-screen.yaml
 - tapOn: '부모님 휴대폰이에요.*'
 - extendedWaitUntil:
     visible: '코스 보기'
