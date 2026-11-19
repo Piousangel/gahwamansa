@@ -31,7 +31,8 @@ export function ChildHomeEmpty({fold}: {fold: ReturnType<typeof useEmptyFold>}) 
             key={x.title}
             testID={`child-home-example-${i + 1}`}
             accessible
-            accessibilityLabel={`${e.chip}, ${x.title}, ${x.line} ${x.choice}`}
+            // 재확인 L7: 읽기 이름에는 '○월 ○일'(기호로 읽힘)을 빼고 spoken 을 쓴다
+            accessibilityLabel={`${e.chip}, ${x.title}, ${x.spoken} ${x.choice}`}
             onLayout={fold.onItem(i + 1)}
             style={[styles.example, fold.gapStyle(i + 1)]}>
             <View style={styles.chip}>

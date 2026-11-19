@@ -33,8 +33,8 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
       if (h === undefined) {
         return; // 다 잰 뒤에
       }
-      if (top >= viewH) {
-        break; // 이미 접힘 밖
+      if (top >= Math.max(viewH, pushAt)) {
+        break; // 이미 접힘 밖(겹쳐 그리는 흐림이 있으면 그 아래 끝까지 — 흐림 속에서 시작하는 요소도 민다, PR #87 재확인 L6)
       }
       if (top + h > viewH && i >= from) {
         const withPrev = i - 1 >= from && glue.includes(i - 1);
