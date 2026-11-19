@@ -1,0 +1,2 @@
+-- 0056 되돌리기(수동). push_daily_eligible을 0036 정의(p.consented_at is not null 포함)로 다시 실행한다.
+-- 되돌리면 답 공유에 동의하지 않은 어르신은 알림을 켜 두어도 일일 알림을 받지 못한다(DECISIONS 11-19 결정과 어긋남).
