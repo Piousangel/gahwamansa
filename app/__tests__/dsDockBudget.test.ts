@@ -61,6 +61,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
   },
   {
+    name: 'P6 자판으로 쓰기 닫힘(다 썼어요 + 이유 + 오늘은 넘어갈게요 — #104 ①)',
+    screen: 'KeyboardStep',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.next.hangul, disabled: true, disabledReason: copy.keyboard.need_one, onPress: noop}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+  },
+  {
     name: 'P7 완료(알겠어요)',
     screen: 'CourseDone',
     variant: 'step',
