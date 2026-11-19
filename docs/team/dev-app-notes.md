@@ -469,3 +469,16 @@
 - production release 게이트: `src/production/google-services.json` 이 없으면 빌드 실패.
 - `FCM_WIRED` 는 **false 유지**(리드 지시): P13 어르신 토글은 main 에 있으나 C7 자녀 '가족 연결' 토글이 아직 없음(DECISIONS 11-18: 둘 다 필요).
 - 토큰 시험(2026-11-19, emulator-5554 Google APIs 이미지, staging 디버그 + 임시 real 모드·임시 시험 코드 — 커밋 안 함): `createFcmTokenSource().getToken()` → **발급됨**(길이만 기록, 값은 로그·출력 안 함). POST_NOTIFICATIONS 허용 상태. 실제 수신(QA-07)은 FCM_WIRED 를 켠 뒤.
+
+### Firebase 리뷰 M2 — 설치 ID·FCM 등록이 언제 생기나(기기 관찰) · 2026-11-19
+- 조건: emulator-5554(Android 15, Google APIs), staging 디버그(arm64)·real 모드, 새로 설치·`pm clear` 뒤 시작. `log.tag.FirebaseInstallations/FirebaseMessaging/FirebaseApp=VERBOSE`. 근거: logcat 줄 수 + 앱 데이터의 `no_backup/PersistedInstallation.<앱id>.json`(설치 ID 를 서버에 등록하면 생기는 파일)·`files/generatefid.lock`. 토큰·설치 ID 값은 기록하지 않음.
+
+| # | FCM_WIRED | 화면 | 알림 권한 | Installations·Messaging 로그 | 설치 ID 파일 |
+|---|---|---|---|---|---|
+| A | false(현재 main) | 첫 화면(역할 전) 150초 | 거부 | 0줄 | 없음(`no_backup` 폴더 자체 없음) |
+| A2 | false | 부모님 선택 → 번호 화면, 60초 | **허용** | 0줄 | 없음 |
+| B3 | true(임시, 커밋 안 함) | 부모님 선택, 60초 | 거부 | 0줄 | 없음 |
+| C | true(임시) | 부모님 선택, 60초 | 허용 | 14줄(`FirebaseMessaging: Making new request …`·`Invoking onNewToken`) | **생김**(`PersistedInstallation…json`, `generatefid.lock`) |
+
+- 앱 시작 때 생기는 것은 `FirebaseApp initialization successful`(로컬 초기화)·`files/datastore/FirebaseHeartBeat…`·`shared_prefs/com.google.firebase.messaging.xml`(`proxy_notification_initialized` 하나) — 모두 기기 안 파일이고 네트워크 요청 흔적(Installations·Messaging 로그)은 없다.
+- 결론: **설치 ID 생성·FCM 등록은 `FCM_WIRED=true` 이고 알림 권한이 허용되고 역할이 정해진 뒤 토큰을 요청할 때만** 일어난다(firebase.json 자동 초기화 끔 + 앱이 권한 확인 뒤에만 getToken). 지금 main(false)에서는 권한을 허용해도 0. 네트워크 패킷은 직접 잡지 못했다(에뮬레이터 프록시 미사용, `/proc/net/xt_qtaguid` 없음) — 근거는 SDK 로그·파일.
