@@ -96,6 +96,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 // ChildHistoryParent = { parent_id, title, connected, shared, answers: [{ session_date, prompt, prompt_short, option_a, option_b, choice_label }] }
 ```
 - **자녀가 받는 값과 같은 내부 함수**(`family_child_summary`·`family_child_history`)로 계산한다. 그래서 `latest`는 기간 제한이 없고(30일보다 오래된 답도 자녀 홈에 보이는 그대로), C5 지난 답은 최근 30일·최대 30개·서버 `prompt_short`("바다와 산 중")다. 앱은 parent_history를 걸러 흉내 내지 말고 이 값을 자녀 화면 부품(C2 카드·C5 줄)에 그대로 넣는다 — 자녀 쪽 파서(parseChildSummary 류)를 재사용할 수 있다.
+- **미리보기 호칭은 `summary.parents[0].title`**(본인 호칭). `summary.parent_title`은 자녀 화면과 같은 가족 기본 호칭이라 어르신이 두 분인 가족에서는 다른 분의 호칭일 수 있다(PR #18 리뷰 L1). 출력 전체는 골든 테스트(`child_view_golden.test.sql`)로 고정 — 내부 함수를 고치면 자녀 화면·미리보기가 함께 바뀌므로 기대값과 이 계약을 같이 바꾼다.
 - 동의 안 함·철회: 자녀와 똑같이 `shared=false`, `latest=null`, `answers=[]`(철회 즉시). 미리보기에 "지금은 가족에게 보이지 않아요" 같은 상태를 보여 주는 것은 앱·라이터 몫.
 - 본인 항목만: 같은 가족의 다른 어르신 항목은 주지 않는다(그분의 동의는 자녀에게 공개한 것). 자녀 계정 정보(이름·메일·id)는 원래 없다. `parents`가 빈 배열이 되는 경우는 없다(본인 프로필이 있어야 실행됨).
 - 어르신 본인만: 자녀·프로필 없는 기기는 `parent_required`, anon은 실행 불가. 내부 함수는 가족 id를 받으므로 앱·anon·서비스 역할 모두 직접 못 부른다.
