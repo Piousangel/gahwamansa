@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000049', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000050', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장
@@ -38,9 +38,9 @@ with checks(check_name, ok, detail) as (
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')) = 0, null
   union all
-  select '앱 실행 가능 definer 36개(허용 목록과 같은 수, 0046 기준)',
+  select '앱 실행 가능 definer 37개(허용 목록과 같은 수, 0050 기준)',
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 36,
+           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 37,
          (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute'))
   union all
@@ -115,6 +115,12 @@ with checks(check_name, ok, detail) as (
   select '프로필 없는 계정 삭제 경로(0049 P20)',
          has_function_privilege('service_role', 'public.admin_delete_user(uuid,text,text)', 'execute')
            and not has_function_privilege('authenticated', 'public.admin_delete_user(uuid,text,text)', 'execute'), null
+  union all
+  select '자녀 화면 내부 함수 실행 권한 없음(앱·anon·서비스 역할, 0050)',
+         not exists (select 1 from unnest(array['public.family_child_summary(uuid,uuid)', 'public.family_child_history(uuid,uuid)']) f(fn),
+                            unnest(array['authenticated', 'anon', 'service_role']) r(role)
+                      where has_function_privilege(r.role, f.fn, 'execute')),
+         'false면 가족 id를 넘겨 다른 가족의 답을 읽을 수 있음(대시보드 grant 확인)'
   union all
   select '인증 감사 로그 최근 30일 쌓임(auth.audit_log_entries)',
          (select count(*) from auth.audit_log_entries where created_at > now() - interval '30 days') > 0,
