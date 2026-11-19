@@ -19,11 +19,13 @@ export function stepA11y(name: string, n: 1 | 2 | 3, review?: boolean): string {
 }
 
 // review: 보기 전용(다시 보기). 단계 표시를 숨기고 읽기는 "사진 보기, 다시 보는 중"(11절 11b, 기록이 안 남는다는 것을 알림).
-export function StepHeader({name, n, review}: {name: string; n: 1 | 2 | 3; review?: boolean}) {
+// compact: 큰 글자(150% 이상)에서 단계 표시를 '1 / 3'만(label 역할) — 사진 아래 질문 첫 문장이 첫 화면에 들게(P4 시안 #95 200% 보드).
+//   읽기는 그대로 '사진 보기, 3단계 중 1단계'. 보기 전용은 이름만(숫자 없음)이라 그대로 heading
+export function StepHeader({name, n, review, compact}: {name: string; n: 1 | 2 | 3; review?: boolean; compact?: boolean}) {
   const titleRef = useScreenTitleRef(true);
   return (
     <View ref={titleRef} testID="step-header" accessible accessibilityRole="header" accessibilityLabel={stepA11y(name, n, review)}>
-      <Text role="heading">{review ? name : `${name} · ${n} / ${TOTAL_STEPS}`}</Text>
+      {compact && !review ? <Text role="label">{`${n} / ${TOTAL_STEPS}`}</Text> : <Text role="heading">{review ? name : `${name} · ${n} / ${TOTAL_STEPS}`}</Text>}
     </View>
   );
 }

@@ -10,7 +10,8 @@ import {Choice, DsScreen, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {appCopy, copy} from '../../copy/copy';
-import {FoldStack, foldPush} from '../../ui/FoldStack';
+import {FoldStack} from '../../ui/FoldStack';
+import {foldPush} from '../../ui/ds/foldPush';
 import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
@@ -101,9 +102,9 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
           : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
       }>
       <FoldStack viewport={viewport} gap={20} testID="p5-body" split="choice" onTop={setChoiceTop}>
-        {error ? <StepErrorBanner error={error} /> : null}
-        {header}
-        <View testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
+        {error ? <StepErrorBanner key="error" error={error} /> : null}
+        <React.Fragment key="header">{header}</React.Fragment>
+        <View key="title" testID="p5-title-group" style={[styles.titleGroup, styles.readBar, reading ? styles.reading : null]}>
           <Text testID={q.prompt ? 'p5-question' : undefined} role="title">{title}</Text>
           <Text testID="p5-hint" role="sub" tone="muted">{appCopy.question_hint}</Text>
         </View>
@@ -124,7 +125,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
           onSelect={k => setChoice(k as 'A' | 'B')}
         />
         {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
-        {q.prompt ? <ReadAloud text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
+        {q.prompt ? <ReadAloud key="read" text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
       </FoldStack>
     </DsScreen>
   );

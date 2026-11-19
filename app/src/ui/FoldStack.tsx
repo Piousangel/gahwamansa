@@ -1,12 +1,14 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {View, type LayoutChangeEvent} from 'react-native';
+import {foldPush} from './ds/foldPush';
 
 /**
  * 세로 묶음 + 접힘 경계 맞춤(RULES-V4 R-15 '모든 배율에서 접힘 경계는 줄/요소 경계').
  * 본문 스크롤 영역(viewport) 아래 끝에 걸치는 첫 요소를 찾아, 그 요소 앞에 여백을 넣어 통째로 접힘 아래로 민다.
  * 반쯤 잘린 버튼·글줄이 첫 화면에 보이지 않게 하고, 아래 '더 있음' 띠(R-19)가 다음 내용을 알린다.
  * - 계산은 자연 높이(요소 높이 + gap)로만 해서 넣은 여백이 다시 계산을 흔들지 않는다.
- * - 요소가 viewport 보다 크면(넣어도 안 들어감) 밀지 않는다. viewport 를 모르면(0) 아무것도 하지 않는다.
+ * - 계산은 ui/ds/foldPush 하나(자녀 useFoldGap 과 같은 것, PR #91 리뷰 L1). 큰 요소·첫 요소 규칙은 그쪽 주석.
+ * - 자식마다 key 를 준다(위치 id 는 오류 띠·안내 줄이 생기고 사라질 때 다른 요소를 가리킨다, 리뷰 L2).
  * - 이 묶음은 스크롤 내용의 직접 자식이어야 한다(top 값 = 스크롤 내용 안 위치). P1 키패드(CodeInput)와 같은 규칙을 일반화.
  */
 export function FoldStack({viewport, gap, children, testID, onFold, split, onTop}: {
@@ -71,34 +73,4 @@ function naturalTop(top: number, heights: (number | undefined)[], gap: number, i
     return null;
   }
   return heights.slice(0, index).reduce<number>((y, h) => y + (h as number) + gap, top);
-}
-
-/**
- * 접힘에 걸치는 첫 요소와 넣을 여백(순수 함수, 테스트용). 높이를 아직 모르는 요소가 있으면 계산하지 않는다.
- * allowFirst: 첫 요소도 민다(묶음 안의 하위 줄 — 첫 줄 앞 여백 = 묶음 전체를 미는 것과 같다)
- */
-export function foldPush(
-  viewport: number,
-  top: number,
-  heights: (number | undefined)[],
-  gap: number,
-  allowFirst = false,
-): {index: number; space: number} | null {
-  if (viewport <= 0 || heights.some(h => h === undefined)) {
-    return null;
-  }
-  let y = top;
-  for (let i = 0; i < heights.length; i++) {
-    const h = heights[i] as number;
-    if (i > 0) {
-      y += gap;
-    }
-    const bottom = y + h;
-    if (y < viewport && bottom > viewport + 0.5) {
-      // 이미 첫 화면에 일부만 보이는 요소: 위가 접힘보다 아래로 가게 민다(요소가 한 화면보다 크면 두고 스크롤로)
-      return h < viewport && (allowFirst || y > top) ? {index: i, space: Math.ceil(viewport - y) + 1} : null;
-    }
-    y = bottom;
-  }
-  return null;
 }

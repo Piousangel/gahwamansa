@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {LayoutChangeEvent, ViewStyle} from 'react-native';
+import {foldPush} from './foldPush';
 
 /**
  * 접힘 경계 맞춤(RULES-V4 R-15 '모든 배율에서 접힘 경계는 줄·요소 경계'): 첫 화면 끝(스크롤 창 아래 끝)이
@@ -24,25 +25,13 @@ export function useFoldGap(count: number, between: number, from = 0, glue: reado
     if (!viewH || blockY === null) {
       return;
     }
-    let next: {before: number; h: number} | null = null;
-    let top = blockY;
-    let prevTop = blockY;
-    for (let i = 0; i < count; i++) {
-      const h = hs[i];
-      if (h === undefined) {
-        return; // 다 잰 뒤에
-      }
-      if (top >= viewH) {
-        break; // 이미 접힘 밖
-      }
-      if (top + h > viewH && i >= from) {
-        const withPrev = i - 1 >= from && glue.includes(i - 1);
-        next = withPrev ? {before: i - 1, h: Math.ceil(viewH - prevTop)} : {before: i, h: Math.ceil(viewH - top)}; // 걸침 → 그 위에 간격(제목이면 함께)
-        break;
-      }
-      prevTop = top;
-      top += h + between;
+    const heights = Array.from({length: count}, (_, i) => hs[i]);
+    if (heights.some(h => h === undefined)) {
+      return; // 다 잰 뒤에
     }
+    // 계산은 foldPush 하나(어르신 FoldStack 과 같은 것, PR #91 리뷰 L1). 묶음 첫 요소도 민다(allowFirst = 묶음째)
+    const found = foldPush(viewH, blockY, heights, between, {allowFirst: true, from, glue});
+    const next = found ? {before: found.index, h: found.space} : null;
     if ((next?.before ?? -1) !== (gap?.before ?? -1) || Math.abs((next?.h ?? 0) - (gap?.h ?? 0)) > 1) {
       setGap(next);
     }
