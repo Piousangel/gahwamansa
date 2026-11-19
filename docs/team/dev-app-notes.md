@@ -482,3 +482,9 @@
 
 - 앱 시작 때 생기는 것은 `FirebaseApp initialization successful`(로컬 초기화)·`files/datastore/FirebaseHeartBeat…`·`shared_prefs/com.google.firebase.messaging.xml`(`proxy_notification_initialized` 하나) — 모두 기기 안 파일이고 네트워크 요청 흔적(Installations·Messaging 로그)은 없다.
 - 결론: **설치 ID 생성·FCM 등록은 `FCM_WIRED=true` 이고 알림 권한이 허용되고 역할이 정해진 뒤 토큰을 요청할 때만** 일어난다(firebase.json 자동 초기화 끔 + 앱이 권한 확인 뒤에만 getToken). 지금 main(false)에서는 권한을 허용해도 0. 네트워크 패킷은 직접 잡지 못했다(에뮬레이터 프록시 미사용, `/proc/net/xt_qtaguid` 없음) — 근거는 SDK 로그·파일.
+
+### D-40 소리를 미디어 스트림으로 · 2026-11-19 (리드 결정, S25 1회차)
+- 원인: react-native-sound 0.13.0 Android 는 `setCategory('Ambient')` 를 `STREAM_NOTIFICATION` 으로 둔다(`Sound.kt`: Playback→MUSIC, Ambient→NOTIFICATION) → BGM·도장 소리가 알림 볼륨을 따랐다.
+- 변경: `audio/engines.soundCategory()` Android `'Playback'`(STREAM_MUSIC), iOS `'Ambient'` 유지(무음 스위치). `mixWithOthers=true` 그대로 → 오디오 포커스 요청 없음(라이브러리: `if (!mixWithOthers) requestAudioFocus`). 무음·진동은 기존대로 `getRinger`(벨소리 모드)로 내지 않음. `MainActivity` 에 `volumeControlStream = STREAM_MUSIC` → 앱이 앞에 있을 때 볼륨 키가 미디어 볼륨.
+- 읽어 주기(TTS): `@mhpdev/react-native-speech` 는 TextToSpeech 출력 속성을 바꾸지 않아 기본 미디어 스트림. `ducking` 은 다른 앱 소리를 잠깐 줄이는 포커스 요청(USAGE_ASSISTANCE_ACCESSIBILITY 속성)만 — 출력 스트림과 무관. 세 소리가 모두 미디어 볼륨을 따른다.
+- 실기기 확인 필요(QA-04): 알림 볼륨 0·미디어 볼륨 있음에서 도장·BGM·읽어 주기가 들리는지, 무음·진동에서 도장·BGM 이 안 나는지, 볼륨 키가 미디어 막대를 움직이는지.
