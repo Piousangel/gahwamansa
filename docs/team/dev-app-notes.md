@@ -544,3 +544,6 @@
 
 - 앱 시작 때 생기는 것은 `FirebaseApp initialization successful`(로컬 초기화)·`files/datastore/FirebaseHeartBeat…`·`shared_prefs/com.google.firebase.messaging.xml`(`proxy_notification_initialized` 하나) — 모두 기기 안 파일이고 네트워크 요청 흔적(Installations·Messaging 로그)은 없다.
 - 결론: **설치 ID 생성·FCM 등록은 `FCM_WIRED=true` 이고 알림 권한이 허용되고 역할이 정해진 뒤 토큰을 요청할 때만** 일어난다(firebase.json 자동 초기화 끔 + 앱이 권한 확인 뒤에만 getToken). 지금 main(false)에서는 권한을 허용해도 0. 네트워크 패킷은 직접 잡지 못했다(에뮬레이터 프록시 미사용, `/proc/net/xt_qtaguid` 없음) — 근거는 SDK 로그·파일.
+### P1 사후 검증 M9(재확인 5) · 11-19
+- 넘침을 묶음 컨테이너 높이(어림 minHeight·flexGrow 로 늘어난 값) 대신 **내용 높이**로 잰다: 키패드 영역 y(제목·안심 줄로만 정해짐) + 키패드 실제 높이(키 높이로만 정해짐, 늘어나지 않는 감싸개 keypad-content). 창 높이·어림·하단 고정(오프라인 Banner) 변화와 무관해 '넘치지 않았는데 키를 줄이거나 단계를 올리는' 일이 없다. 재현 G(360×740 3단계가 4단계로 가던 것)·Banner 로 창이 줄어도 그대로인 경우를 테스트로.
+- L22: Screen fillScrollable 이면 fill 화면에서도 넘칠 때 '더 있음' 흐림을 보인다. L23(약관 링크 확인 중 진행 표시)·L24(1.3·1.5·삼성 글꼴·3버튼 실측)·L25(4단계 0 줄 반쯤 보임, 디자인 판정)는 남김.

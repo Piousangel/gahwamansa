@@ -94,11 +94,15 @@ describe('P1 화면 = pickStage 결과(이벤트를 기다리지 않음)', () =>
   });
 });
 
-// 사후 검증(재확인 4 H5): 묶음이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
-const block = async (h: number) =>
+// 사후 검증(재확인 4 H5): 내용이 예정 높이보다 크면 ① 넘친 만큼 키를 줄임(64 이상) ② 아니면 한 단계 ③ 그래도 넘치면 4단계. 최대 2회
+// 재확인 5 M9: 넘침은 내용 높이(키패드 영역 y + 키패드 실제 높이)로 잰다 — 묶음 컨테이너(minHeight·flexGrow) 높이가 아니다
+const AREA_Y = 140;
+const content = async (bottom: number, y = AREA_Y) =>
   act(async () => {
-    fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: h}}});
+    fireEvent(screen.getByTestId('keypad-area'), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: 999}}});
+    fireEvent(screen.getByTestId('keypad-content'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: bottom - y}}});
   });
+const block = content; // 아래 테스트의 '묶음 높이' = 내용 아래 끝
 const FILL_BOTTOM = 8;
 
 describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
@@ -155,6 +159,53 @@ describe('사후 검증(재확인 4 H5, 최대 2회·올리기만)', () => {
       fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 590}}});
     });
     await waitFor(() => expect(titleSize()).toBe(stageOf(411, 900, 1).level >= 1 ? 22 : 28));
+  });
+});
+
+describe('재확인 5 M9: 컨테이너가 아니라 내용 높이로 넘침을 잰다', () => {
+  test('재현 G: 360×740(3단계·키 68) — 어림 minHeight 로 늘어난 묶음과 더 작은 실제 창을 비교해 4단계로 가지 않는다', async () => {
+    dims(360, 740);
+    await openConnect();
+    const st = stageOf(360, 740, 1);
+    expect(st).toEqual({level: 3, keyH: 68});
+    const guess = firstHeight() as number; // 어림 묶음 높이(minHeight)
+    // 묶음 컨테이너는 어림 minHeight 로 늘어나 있다(옛 판정은 이 값을 썼다)
+    await act(async () => {
+      fireEvent(screen.getByTestId('connect-first'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: guess}}});
+    });
+    await viewport(guess + 4 + FADE - 20); // 실제 창은 어림보다 20 작다
+    const real = firstHeight() as number;
+    expect(real).toBe(guess - 20);
+    // 내용(제목·안심 줄 아래 키패드)은 실제 창 안에 들어간다
+    await content(real - 5);
+    expect(keyH()).toBe(68);
+    expect(firstHeight()).toBe(real); // 3단계 그대로(4단계면 minHeight 없음)
+    expect(inDock('connect-links')).toBe(false);
+  });
+
+  test('0단계에서 하단 고정에 오프라인 Banner 가 생겨 창이 줄어도, 내용이 들어가면 키·단계 그대로', async () => {
+    dims(411, 914);
+    await openConnect();
+    const st = stageOf(411, 914, 1);
+    await viewport(700);
+    await content(600); // 여유 있게 들어감
+    await viewport(640); // Banner 로 하단 고정이 커져 창이 60 줄어듦
+    expect(titleSize()).toBe(28);
+    expect(keyH()).toBe(st.keyH);
+    // 정말로 넘치게 되면(내용 아래 끝 > 예정) 그때 조정한다
+    await content(640 - 4 - FILL_BOTTOM + 8);
+    expect(keyH()).toBe(st.keyH - 2);
+  });
+
+  test('재확인 5 L22: fill 화면이어도 안전망으로 넘치면 아래 \'더 있음\' 흐림이 보인다', async () => {
+    dims(411, 914);
+    await openConnect();
+    const body = screen.getByTestId('screen-body');
+    await act(async () => {
+      fireEvent(body, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 600}}});
+      fireEvent(body, 'scroll', {nativeEvent: {contentOffset: {x: 0, y: 0}, contentSize: {width: 312, height: 900}, layoutMeasurement: {width: 312, height: 600}}});
+    });
+    expect(screen.getByTestId('screen-more', {includeHiddenElements: true})).toBeTruthy();
   });
 });
 
