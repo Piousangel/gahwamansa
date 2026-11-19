@@ -1,0 +1,800 @@
+[
+ {
+  "file": "docs/design/v3/screens/parent/P0_start.dc.html",
+  "board": 0,
+  "png": "P0_start-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 1,
+  "png": "P1c_confirm-01.png",
+  "label": "P1c · 링크로 열림(호칭 단서)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 2,
+  "png": "P1c_confirm-02.png",
+  "label": "P1c · 호칭 미리보기 없음(번호만)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 3,
+  "png": "P1c_confirm-03.png",
+  "label": "P1c · 연결하고 있어요",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 4,
+  "png": "P1c_confirm-04.png",
+  "label": "P1c · 손으로 쓴 번호(이 번호가 맞나요?)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 5,
+  "png": "P1c_confirm-05.png",
+  "label": "P1c · 기간 지남",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 6,
+  "png": "P1c_confirm-06.png",
+  "label": "P1c · 이미 쓴 번호",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 7,
+  "png": "P1c_confirm-07.png",
+  "label": "P1c · 이미 연결된 휴대폰",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 8,
+  "png": "P1c_confirm-08.png",
+  "label": "글자 150% · P1c · 링크로 열림(호칭 단서)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 9,
+  "png": "P1c_confirm-09.png",
+  "label": "글자 150% · P1c · 손으로 쓴 번호(이 번호가 맞나요?)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 10,
+  "png": "P1c_confirm-10.png",
+  "label": "글자 200% · P1c · 링크로 열림(호칭 단서)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P1c_confirm.dc.html",
+  "board": 11,
+  "png": "P1c_confirm-11.png",
+  "label": "글자 200% · P1c · 손으로 쓴 번호(이 번호가 맞나요?)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_settings.dc.html",
+  "board": 0,
+  "png": "P13_settings-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 1,
+  "png": "P13_more-01.png",
+  "label": "설정 v2 · 알림·소리·미리보기·앱 정보 행 추가",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 2,
+  "png": "P13_more-02.png",
+  "label": "알림이 휴대폰 설정에서 꺼짐",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 3,
+  "png": "P13_more-03.png",
+  "label": "알림 한 행 · 응원 채널만 휴대폰에서 꺼짐(행 아래 안내)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 4,
+  "png": "P13_more-04.png",
+  "label": "가족에게 이렇게 보여요(자녀 화면과 같은 내용)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 5,
+  "png": "P13_more-05.png",
+  "label": "앱 정보 · AI 고지·음악 출처",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 6,
+  "png": "P13_more-06.png",
+  "label": "답 보여 주기 행 · 보여 주는 중(› 없음, 동사 버튼)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 7,
+  "png": "P13_more-07.png",
+  "label": "그만 보여 주기 · 행 아래 확인 펼침",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 8,
+  "png": "P13_more-08.png",
+  "label": "동의 거부 · P3 띠 '다시 정하기'로 들어옴(다시 보여 주기 확인이 펼쳐진 채)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 9,
+  "png": "P13_more-09.png",
+  "label": "앱 정보 → 이용약관(앱 안 웹 화면)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 10,
+  "png": "P13_more-10.png",
+  "label": "앱 정보 → 오픈소스 라이선스",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 11,
+  "png": "P13_more-11.png",
+  "label": "앱 정보 · 인터넷 없음에서 링크 누름(토스트)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 12,
+  "png": "P13_more-12.png",
+  "label": "글자 150% · 설정 v2 · 알림·소리·미리보기·앱 정보 행 추가",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 13,
+  "png": "P13_more-13.png",
+  "label": "글자 200% · 가족에게 이렇게 보여요(자녀 화면과 같은 내용)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P13_more.dc.html",
+  "board": 14,
+  "png": "P13_more-14.png",
+  "label": "글자 200% · 답 보여 주기 행 · 보여 주는 중(› 없음, 동사 버튼)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 1,
+  "png": "P15_history-01.png",
+  "label": "지난 날 · 목록(최신이 위, 빈 날 없음)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 2,
+  "png": "P15_history-02.png",
+  "label": "지난 날 · 한 날",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 3,
+  "png": "P15_history-03.png",
+  "label": "지난 날 · 빈 상태",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 4,
+  "png": "P15_history-04.png",
+  "label": "지난 날 · 보여 주지 않은 날(고른 답 줄 없음)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 5,
+  "png": "P15_history-05.png",
+  "label": "한 날 · 보여 주지 않은 날",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 6,
+  "png": "P15_history-06.png",
+  "label": "글자 150% · 지난 날 · 목록(최신이 위, 빈 날 없음)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 7,
+  "png": "P15_history-07.png",
+  "label": "글자 150% · 지난 날 · 한 날",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P15_history.dc.html",
+  "board": 8,
+  "png": "P15_history-08.png",
+  "label": "글자 200% · 지난 날 · 한 날",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 1,
+  "png": "P16_family-01.png",
+  "label": "P16 · 가족 1명",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 2,
+  "png": "P16_family-02.png",
+  "label": "P16 · 가족 2명",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 3,
+  "png": "P16_family-03.png",
+  "label": "P16 · 그만두기 시트(두 갈래)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 4,
+  "png": "P16_family-04.png",
+  "label": "P16 · 빈 상태(아직 연결 전)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 5,
+  "png": "P16_family-05.png",
+  "label": "글자 150% · P16 · 가족 1명",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 6,
+  "png": "P16_family-06.png",
+  "label": "글자 150% · P16 · 그만두기 시트(두 갈래)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P16_family.dc.html",
+  "board": 7,
+  "png": "P16_family-07.png",
+  "label": "글자 200% · P16 · 가족 1명",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P9_delete.dc.html",
+  "board": 0,
+  "png": "P9_delete-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P10_deleted.dc.html",
+  "board": 0,
+  "png": "P10_deleted-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/parent/P8_cheer.dc.html",
+  "board": 0,
+  "png": "P8_cheer-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C1_relation.dc.html",
+  "board": 1,
+  "png": "C1_relation-01.png",
+  "label": "기본 · 호칭 1칸(기본 부모님)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C1_relation.dc.html",
+  "board": 2,
+  "png": "C1_relation-02.png",
+  "label": "할머니를 고른 상태(닫힌 목록 7개 중)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C1_relation.dc.html",
+  "board": 3,
+  "png": "C1_relation-03.png",
+  "label": "만드는 중",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C1_relation.dc.html",
+  "board": 4,
+  "png": "C1_relation-04.png",
+  "label": "만들기 실패",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C1_relation.dc.html",
+  "board": 5,
+  "png": "C1_relation-05.png",
+  "label": "글자 150% · 기본 · 호칭 1칸(기본 부모님)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C2_code.dc.html",
+  "board": 1,
+  "png": "C2_code-01.png",
+  "label": "기본 · 번호 1개 + 보내기",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C2_code.dc.html",
+  "board": 2,
+  "png": "C2_code-02.png",
+  "label": "복사됨",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C2_code.dc.html",
+  "board": 3,
+  "png": "C2_code-03.png",
+  "label": "글자 150%",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C2_code.dc.html",
+  "board": 4,
+  "png": "C2_code-04.png",
+  "label": "기간이 지남 · 새로 만들기",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C4_home_states.dc.html",
+  "board": 1,
+  "png": "C4_home_states-01.png",
+  "label": "로딩",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C4_home_states.dc.html",
+  "board": 2,
+  "png": "C4_home_states-02.png",
+  "label": "오류",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C4_home_states.dc.html",
+  "board": 3,
+  "png": "C4_home_states-03.png",
+  "label": "응원 보내기 시트",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C4_home_states.dc.html",
+  "board": 4,
+  "png": "C4_home_states-04.png",
+  "label": "보냈어요(토스트)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C4_home_states.dc.html",
+  "board": 5,
+  "png": "C4_home_states-05.png",
+  "label": "글자 150%",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 1,
+  "png": "C5_history-01.png",
+  "label": "기본 · 최근 30일, 최신순(어르신 1명)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 2,
+  "png": "C5_history-02.png",
+  "label": "어르신 2명 · 호칭 머리글로 구분",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 3,
+  "png": "C5_history-03.png",
+  "label": "빈 상태",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 4,
+  "png": "C5_history-04.png",
+  "label": "부모님이 보여 주지 않는 중",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 5,
+  "png": "C5_history-05.png",
+  "label": "오류",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 6,
+  "png": "C5_history-06.png",
+  "label": "로딩(정지 자리표시)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 7,
+  "png": "C5_history-07.png",
+  "label": "글자 150% · 기본 · 최근 30일, 최신순(어르신 1명)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_history.dc.html",
+  "board": 8,
+  "png": "C5_history-08.png",
+  "label": "글자 150% · 어르신 2명 · 호칭 머리글로 구분",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_report.dc.html",
+  "board": 1,
+  "png": "C5_report-01.png",
+  "label": "기본 · 지난 답 목록 + 곧 유료",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_report.dc.html",
+  "board": 2,
+  "png": "C5_report-02.png",
+  "label": "빈 상태",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_report.dc.html",
+  "board": 3,
+  "png": "C5_report-03.png",
+  "label": "오류",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_report.dc.html",
+  "board": 4,
+  "png": "C5_report-04.png",
+  "label": "로딩",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C5_report.dc.html",
+  "board": 5,
+  "png": "C5_report-05.png",
+  "label": "글자 150% · 기본 · 지난 답 목록 + 곧 유료",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C6_paid_sheet.dc.html",
+  "board": 1,
+  "png": "C6_paid_sheet-01.png",
+  "label": "기본 · 예정 가격 3안 + 관심 있어요",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C6_paid_sheet.dc.html",
+  "board": 2,
+  "png": "C6_paid_sheet-02.png",
+  "label": "누른 뒤 · 시트 안 한 줄 + 관심 남김(비활성)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C6_paid_sheet.dc.html",
+  "board": 3,
+  "png": "C6_paid_sheet-03.png",
+  "label": "글자 150% · 기본 · 예정 가격 3안 + 관심 있어요",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 1,
+  "png": "C7_settings_v2-01.png",
+  "label": "기본 · 로그아웃·새 폰 연결 번호·앱 정보 추가",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 2,
+  "png": "C7_settings_v2-02.png",
+  "label": "로그아웃 확인",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 3,
+  "png": "C7_settings_v2-03.png",
+  "label": "앱 정보(AI 고지 포함)",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 4,
+  "png": "C7_settings_v2-04.png",
+  "label": "알림 가족 연결 채널이 휴대폰에서 꺼짐",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 5,
+  "png": "C7_settings_v2-05.png",
+  "label": "글자 150% · 기본 · 로그아웃·새 폰 연결 번호·앱 정보 추가",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C7_settings_v2.dc.html",
+  "board": 6,
+  "png": "C7_settings_v2-06.png",
+  "label": "글자 200% · 기본 · 로그아웃·새 폰 연결 번호·앱 정보 추가",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_child.dc.html",
+  "board": 1,
+  "png": "C8_delete_child-01.png",
+  "label": "기본",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_child.dc.html",
+  "board": 2,
+  "png": "C8_delete_child-02.png",
+  "label": "지우는 중",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_child.dc.html",
+  "board": 3,
+  "png": "C8_delete_child-03.png",
+  "label": "지우기 실패",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_child.dc.html",
+  "board": 4,
+  "png": "C8_delete_child-04.png",
+  "label": "글자 150% · 기본",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_family.dc.html",
+  "board": 1,
+  "png": "C8_delete_family-01.png",
+  "label": "기본 · 입력 전",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_family.dc.html",
+  "board": 2,
+  "png": "C8_delete_family-02.png",
+  "label": "입력 맞음",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_family.dc.html",
+  "board": 3,
+  "png": "C8_delete_family-03.png",
+  "label": "사전 조회 실패 · 입력 전(가장 강한 경고)",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_family.dc.html",
+  "board": 4,
+  "png": "C8_delete_family-04.png",
+  "label": "사전 조회 실패 · 입력 완료",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C8_delete_family.dc.html",
+  "board": 5,
+  "png": "C8_delete_family-05.png",
+  "label": "글자 150% · 기본 · 입력 전",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C9_done.dc.html",
+  "board": 1,
+  "png": "C9_done-01.png",
+  "label": "child · 내 계정",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C9_done.dc.html",
+  "board": 2,
+  "png": "C9_done-02.png",
+  "label": "family · 마지막 자녀",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/child/C9_done.dc.html",
+  "board": 3,
+  "png": "C9_done-03.png",
+  "label": "글자 150% · family · 마지막 자녀",
+  "w": null,
+  "h": null
+ },
+ {
+  "file": "docs/design/v3/screens/common/S1_error.dc.html",
+  "board": 0,
+  "png": "S1_error-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/common/S2_empty.dc.html",
+  "board": 0,
+  "png": "S2_empty-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/common/S2_loading.dc.html",
+  "board": 0,
+  "png": "S2_loading-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ },
+ {
+  "file": "docs/design/v3/screens/common/N3_connected.dc.html",
+  "board": 1,
+  "png": "N3_connected-01.png",
+  "label": "잠금 화면 · 처음 연결",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/common/N3_connected.dc.html",
+  "board": 2,
+  "png": "N3_connected-02.png",
+  "label": "잠금 화면 · 새 폰 다시 연결",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/common/N3_connected.dc.html",
+  "board": 3,
+  "png": "N3_connected-03.png",
+  "label": "앱 안 · 다른 탭에 있을 때 위쪽 배너",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/common/N3_connected.dc.html",
+  "board": 4,
+  "png": "N3_connected-04.png",
+  "label": "규칙",
+  "w": null,
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/common/N3_connected.dc.html",
+  "board": 5,
+  "png": "N3_connected-05.png",
+  "label": "글자 150% · 앱 안 · 다른 탭에 있을 때 위쪽 배너",
+  "w": "390",
+  "h": "844"
+ },
+ {
+  "file": "docs/design/v3/screens/common/P14_disconnected.dc.html",
+  "board": 0,
+  "png": "P14_disconnected-page.png",
+  "label": "(보드 구분 없음, 전체 페이지)"
+ }
+]
