@@ -10,11 +10,11 @@
 | R-01 | 글자색·면의 짝은 `allowed` 표(역할×면)에 있는 것만 쓴다. 어르신 7:1, 자녀 4.5:1, 경계·아이콘 3:1 | 토큰: `contrast-v4.py --check` OK + 컴포넌트가 쓰는 짝이 allowed에 있는지 | DS 레인(L4) |
 | R-02 | 화면은 역할(role·tone)만 고른다. hex 색·fontSize·fontWeight·lineHeight 숫자 리터럴 금지 | lint: `no-restricted-syntax`(features/·app/) → 처음엔 warn, AU-10에 error | DS 레인 |
 | R-03 | RN의 Text·TextInput·Pressable 직접 import 금지(공통 컴포넌트만) | lint: `no-restricted-imports` | DS 레인 |
-| R-04 | 한 화면에 700 굵기를 쓰는 역할은 **3개 이하(v5)**, 본문은 400. v4의 '2개 이하'는 Jua 서체 강조(answer)를 따로 셌기 때문이며, Jua 폐기(A2)로 answer가 Noto Sans KR 700이 되어 제목·버튼·answer 3개로 센다. 자녀 '어르신 답'이 있는 화면은 answer가 그 중 1개 | 렌더: 화면 트리에서 role별 weight 집계 | 화면 레인 |
+| R-04 | 한 화면에 700 굵기를 쓰는 역할은 **어르신 화면 2개 이하, 자녀 화면 3개 이하(제목·버튼·answer)**, 본문은 400. v4의 '2개'는 Jua 서체 강조(answer)를 따로 셌기 때문이며, Jua 폐기(A2)로 answer가 Noto Sans KR 700이 되었다. 어르신 화면에는 answer가 없으므로 2개를 그대로 유지하고(리드 결정 11-20), 자녀 화면만 answer 1개를 더해 3개다 | 렌더: 화면 트리에서 role별 weight 집계(audience별 상한) | 화면 레인 |
 | R-05 | 인접 역할 크기 비율 1.2 이상. 보완 쌍(`tests.ratioCompensatedPairs`)만 굵기·색으로 보완 | 토큰 | DS 레인 |
 | R-06 | 누를 수 있는 것은 면·밑줄·아이콘 중 하나를 반드시 함께 쓴다. action 글자색은 누르는 것에만 | 렌더: Button·Link·BackLink·ListRow 컴포넌트 계약 테스트 | DS 레인 |
 | R-07 | accent는 화면당 1곳이고 dangerInk와 같은 화면에 쓰지 않는다 | 렌더: 화면 렌더에서 accent·danger 톤 개수 | 화면 레인 |
-| R-08 | info 글자는 infoSoft 띠 위(7.35)에서, 면 + 아이콘과 함께 쓴다(단독 글자색 금지) | 토큰(allowed) + 렌더(Banner 계약) | DS 레인 |
+| R-08 | info 글자는 infoSoft 띠 위(7.10)에서, 면 + ⓘ 아이콘과 함께 쓴다(단독 글자색 금지). **v5: 누르는 파랑(action)과 정보 시멘트(info)는 명도 대비가 1.06이라 색만으로 구분되지 않는다 → info 글자에는 밑줄을 쓰지 않고, 누르는 파랑 글자는 밑줄·면(버튼·알약)·아이콘 중 하나를 반드시 함께 쓴다.** | 토큰(allowed) + 렌더(Banner 계약, 링크 밑줄/면/아이콘 있음·info 밑줄 없음). **렌더 테스트는 L4에 넘길 항목** | DS 레인(L4) |
 | R-09 | 높이는 minHeight만(어르신 주 72·보조 64·링크 64·간격 12, 자녀 56/48). 글자 상자에 height·maxHeight 숫자 금지 | lint: height·maxHeight 숫자 + 토큰(role minHeight 존재) | DS 레인 |
 | R-10 | 말줄임 금지(numberOfLines·ellipsize). 예외 3곳(낱말 칸·브랜드 버튼·번호 칸)은 ui/ 안에서 주석과 테스트로 | lint: `numberOfLines`·`ellipsizeMode` + 렌더: 예외 3곳 | DS 레인 |
 | R-11 | 확대 상한은 역할 토큰에서만(본문 2.0, 큰 제목·Dock·번호 1.5). 화면이 `maxFontSizeMultiplier`를 고르지 못한다. **배율과 상관없이 적용**(200%에서도 입력 카드는 잘리지 않고, 넘치는 것은 본문 스크롤로 닿는다). **Field 입력 글자(`typeRoles.fieldInput`)의 상한은 1.5로 항상 고정**(자판 열림 여부·화면과 무관, 화면별로 값을 정하지 않는다) | lint: `maxFontSizeMultiplier` 금지 + 렌더: fontScale 2.0 주입 | DS 레인 |
@@ -28,7 +28,7 @@
 
 | R-19 | '더 있음' 표시는 **본문이 넘칠 때만** 보이고, 글자 위에 겹치는 흐림이 아니라 스크롤 영역 밖 24 띠(아래 화살표 아이콘만, 읽기 제외)로 둔다. 넘치지 않으면 띠도 없다 | 렌더: 표시 띠가 스크롤 영역과 겹치지 않음 | DS 레인 |
 | R-20 | 인접 크기 비율 1.2 미만 쌍은 색·밑줄·아이콘으로 보완하고 `tests.ratioCompensatedPairs`에 이름을 둔다(link/sub 추가) | 토큰 | DS 레인 |
-| R-21 | 자녀 화면의 '어르신이 고른 답·쓴 낱말'은 `answer`(대표 1개, 자녀 40/52, 확대 상한 1.3)·`answerRow`(목록·시트·여러 분 행, 26/36)만 쓴다(Noto Sans KR 700, inkTitle). 호칭 머리글(sub 16~20)보다 항상 크고 위에 온다. **한 화면에 700 굵기 글자 역할은 3개 이하(R-04)이고 그중 `answer`는 1개**. `title`(화면 제목)과 `answerRow`는 크기가 같지만 title은 화면 제목 1개, answerRow는 답 행이다. 노란 팻말(B2 v2)은 후보(accentSun, 오너 결정 전 allowed 미반영) | 토큰(typeRoles.answer·answerRow) + 렌더(역할 사용·화면당 answer 1개) | DS 레인·자녀 레인 |
+| R-21 | 자녀 화면의 '어르신이 고른 답·쓴 낱말'은 `answer`(대표 1개, 자녀 40/52, 확대 상한 1.3)·`answerRow`(목록·시트·여러 분 행, 26/36)만 쓴다(Noto Sans KR 700, inkTitle). 호칭 머리글(sub 16~20)보다 항상 크고 위에 온다. **자녀 화면의 700 굵기 글자 역할은 3개 이하(제목·버튼·answer, R-04)이고 그중 `answer`는 1개**(어르신 화면에는 answer가 없어 2개). `title`(화면 제목)과 `answerRow`는 크기가 같지만 title은 화면 제목 1개, answerRow는 답 행이다. 노란 팻말(B2 v2)은 후보(accentSun, 오너 결정 전 allowed 미반영) | 토큰(typeRoles.answer·answerRow) + 렌더(역할 사용·화면당 answer 1개) | DS 레인·자녀 레인 |
 
 ## 디자인이 SUMMARY 값에서 바꾼 것 (이유 포함)
 1. **BackLink 알약 면: paperSoft → card(흰) + line 테두리 1.5.** action 글자가 paperSoft 위에서 6.47로 어르신 7:1에 못 미친다(card 위 7.80). SUMMARY 2-5·Q7에는 정정 줄을 붙였다.
@@ -75,9 +75,10 @@
 - 크기: hero(P7·P3D·C4) 화면 너비 − 좌우 20(어르신 24)·minHeight 120, row(지난 날) minHeight 56. 끈(길이 24·선 2)과 못(지름 8, 먹)은 hero만, 움직이지 않고 판만 매달린다. **기울기 hero −2°, 목록 0°**. 처음 볼 때 3°→−2° 한 번(600ms, 동작 줄이기는 정지).
 - 글자: **48dp 이상에서만 손글씨**(나눔손글씨 붓, 어르신 60×1.18·자녀 52), 그보다 작으면 Noto Sans KR 700. 확대 상한 1.3.
 - 면·선: 노랑(sign) + 먹 테두리 2, 반경 3. 비어 있을 때는 흰 면 + 점선(시멘트 1.5).
+- **노랑 오용 방지**: `sign` 면(#FFD43B)·`signInk`·`signEdge` 토큰은 **Sign 컴포넌트 파일 안에서만 쓰는 비공개 export**다(`ui/ds/Sign.tsx`가 토큰을 가져가고, 다른 파일은 sign 색을 import할 수 없게 lint `no-restricted-imports`/토큰 index에서 제외). 화면·다른 컴포넌트가 노랑이 필요하면 Sign을 쓴다.
 - 읽기: '고르신 쪽, {글자}'(끈·못은 읽지 않음). 검사: 토큰(allowed에 signInk는 sign 위만) + 렌더(화면당 sign 1개, 노랑이 sign 밖에서 쓰이지 않음).
 
 ### R-23 장식 폐기와 심볼 교체안 (O-8)
 - **폐기**: 해님(인사·첫 화면), 스티치(점선 구분선), 테이프, 폴라로이드 마운트·모서리, 家 인장 도장. 사진은 둘레 장식 없이 그대로 쓰고, AI 고지(사진 아래 한 줄)는 유지한다. P7 도장 연출은 '팻말이 걸리는' 연출로 교체(끈은 P6부터 걸려 있음).
 - 구분은 장식이 아니라 여백·행 테두리로 한다.
-- **심볼 교체안(제안, 오너·리드 확인)**: 노랑 팻말 윤곽(먹 테두리 2, 짧은 끈) 안에 **家 한 글자**(Noto Sans KR 900, 먹). 런처 아이콘·스플래시·스토어 그래픽 한 종만이고, 이 한 곳만 sign 노랑의 브랜드 예외다. 인장(주홍)·해님·폴라로이드는 쓰지 않는다. 최종 에셋은 O-2 후속에서 제작.
+- **심볼 교체안 — 후보(오너 확인 전)**: 노랑 팻말 윤곽(먹 테두리 2, 짧은 끈) 안에 **家 한 글자**(Noto Sans KR 900, 먹). 인장(주홍)·해님·폴라로이드는 쓰지 않는다. 최종 에셋은 오너 확인 뒤 제작. **채택하려면 리뷰어 조건 3가지를 함께 지킨다**: ① **런처 아이콘·스플래시·스토어 그래픽에만** 쓴다(앱 화면 안 장식으로 쓰지 않는다, sign 노랑의 브랜드 예외는 이 한정) ② **`brand.symbol` 토큰을 `sign`과 분리**해 둔다(같은 #FFD43B여도 이름·사용처를 나눠 sign 전용 규칙을 깨지 않게) ③ **스토어 설명에서 家의 뜻을 연결**한다('가화만사성'의 첫 글자 家, 라이터 문구 필요).

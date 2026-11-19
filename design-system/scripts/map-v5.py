@@ -74,6 +74,8 @@ d['_meta'] = {'name': '토큰 v5 (B2 v2 장날 팻말 값 매핑)', 'date': '202
     'status': '오너 결정 11-20: O-1(팻말 = 고른 쪽)·O-2(B2 v2 채택)·O-6(도장 7칸 삭제)·O-8(장식 폐기). tokens-v4.json의 역할×면 체계는 그대로, 값만 교체',
     'basis': 'design-system/scripts/map-v5.py 가 tokens-v4.json 에서 생성, 대비는 contrast-v4.py tokens-v5.json 으로 계산',
     'rule': '화면은 역할만 고른다. 노랑은 sign 전용. 갈색(v4 action)은 폐기, 누르는 것은 차일 파랑'}
+d['brand'] = {'symbol': {'value': '#FFD43B', 'status': '후보(오너 확인 전)', 'use': '런처 아이콘·스플래시·스토어 그래픽에만. sign과 이름·사용처 분리(앱 화면 안 사용 금지)', 'ink': '#151515'},
+    'note': '노랑 팻말 윤곽 + 家 한 글자. 스토어 설명에서 家의 뜻(가화만사성)을 연결'}
 d['v3Aliases'] = d.get('v3Aliases', {})
 d['v3Aliases']['v4Deprecated'] = '해님(sun·sunRay·blush)·家 인장(brandSeal*)·테이프(tape)·accentSun·accentPeach 는 v5에서 삭제(O-8 장식 폐기)'
 d.pop('candidates', None)   # accentSun 후보(팻말 면)는 sign 으로 대체
