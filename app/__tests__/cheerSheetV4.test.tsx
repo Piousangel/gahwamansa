@@ -12,7 +12,9 @@ const RN = require('react-native');
 afterEach(() => {
   jest.restoreAllMocks();
 });
-jest.setTimeout(20000);
+// PR #98 리뷰 L2: 부하(load 20+)에서 첫 화면·시트가 늦게 떠 흔들렸다 — waitFor 는 전역 asyncUtilTimeout 10초(jest.after.js)를 따르고,
+// 첫 화면 대기만 15초로 늘린다. 테스트 한 개의 상한도 30초로
+jest.setTimeout(30000);
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}]});
@@ -20,9 +22,9 @@ const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마'
 async function openSheet() {
   jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
   render(<AppRoot api={homeApi()} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}), {timeout: 15000});
   await press('응원 보내기');
-  await waitFor(() => screen.getByText('어떤 말을 보낼까요?'));
+  await waitFor(() => screen.getByText('어떤 말을 보낼까요?'), {timeout: 15000});
 }
 
 test('시트 머리: 제목(머리글) + 닫기 48×48 알약, 보조 한 줄, 손잡이 막대 없음(V14 ①)', async () => {
@@ -129,6 +131,35 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
       insets.mockImplementation(orig);
     }
   });
+});
+
+test('ds Sheet footer(PR #100 리뷰 L3): 스크롤 밖 아래에 고정(내용이 넘쳐도 스크롤 안에 들어가지 않음), 200%에서도 그대로', () => {
+  for (const fontScale of [1, 2]) {
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 320, height: 640, scale: 2.75, fontScale});
+    render(
+      <AudienceProvider value="child">
+        <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener} footer={<RNText testID="foot">저장</RNText>}>
+          {Array.from({length: 12}, (_, i) => (
+            <RNText key={i}>선택지 {i}</RNText>
+          ))}
+        </Sheet>
+      </AudienceProvider>,
+    );
+    const scroll = screen.getByTestId('s-scroll');
+    act(() => {
+      fireEvent(scroll, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 320, height: 300}}});
+      fireEvent(scroll, 'contentSizeChange', 320, 900); // 넘침 → 띠
+    });
+    expect(within(scroll).queryByTestId('foot')).toBeNull(); // 스크롤 내용 안이 아니다
+    const footer = screen.getByTestId('s-footer');
+    expect(within(footer).getByTestId('foot')).toBeTruthy();
+    // 패널 안 순서: 스크롤 → 더 있음 띠 → footer(맨 아래 고정)
+    const order = screen.root
+      .findAll(n => typeof n.type === 'string' && ['s-scroll', 'more-band', 's-footer'].includes(n.props.testID))
+      .map(n => n.props.testID);
+    expect(order).toEqual(['s-scroll', 'more-band', 's-footer']);
+    screen.unmount();
+  }
 });
 
 test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(L1)', () => {

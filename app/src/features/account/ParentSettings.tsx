@@ -1,3 +1,4 @@
+import {SWITCH_COLORS} from '../../ui/ds/switchColors';
 import React, {useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Switch, useWindowDimensions, View} from 'react-native';
 import {prefs} from '../../lib/prefs';
@@ -192,7 +193,7 @@ function BgmRow() {
       </View>
       {on === null ? null : (
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <Switch value={on} onValueChange={toggle} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
+          <Switch value={on} onValueChange={toggle} {...SWITCH_COLORS} />
         </View>
       )}
     </Pressable>
@@ -235,8 +236,7 @@ function SfxRow() {
           <Switch
             value={on}
             onValueChange={toggle}
-            trackColor={{false: color.lineSoft, true: color.done}}
-            thumbColor={color.card}
+            {...SWITCH_COLORS}
           />
         </View>
       )}

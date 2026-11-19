@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A1 일력 · C4 자녀 첫 답 보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;700&display=block" rel="stylesheet">
+<link rel="stylesheet" href="../common/frame.css"><link rel="stylesheet" href="style.css">
+<style>
+  body.child .scroll{padding:0 8px}
+  .ctop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px 0}
+  body.child .link{min-height:48px}
+  .lede{padding:0 12px 12px}
+  .mini{display:flex;gap:12px;align-items:flex-start;padding:12px 0 4px;flex-wrap:wrap}
+  .mini .num{--fs:56px;--lh:60px;--cap:1.5}
+  .crow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:4px 0 4px}
+  .crow img{width:120px;height:97px;object-fit:cover;flex:0 0 auto}
+  .ans{display:flex;flex-direction:column;gap:2px;padding:4px 0 8px}
+  .ask{background:var(--white);border-left:4px solid var(--ink);padding:12px 14px;margin:12px 0 8px}
+  body.child .dock{padding:12px 20px 20px}
+</style>
+</head><body class="child">
+<div class="phone">
+  <div class="scroll">
+    <div class="ctop blk"><h1 class="t-title">엄마의 일력</h1><a class="link t-link tap" data-min="48" href="#">설정</a></div>
+    <p class="t-body sub lede blk">엄마가 오늘 장을 처음 채우셨어요</p>
+    <div class="sheet">
+      <div class="bind" aria-hidden="true"></div>
+      <div class="mini blk">
+        <span class="num t-display" aria-label="20일">20</span>
+        <span class="side" style="display:flex;flex-direction:column;flex:1 1 120px"><span class="t-heading">11월 금요일</span><span class="t-sub sub">음력 10월 12일</span></span>
+      </div>
+      <figure class="crow blk"><img src="../../../../../../../content/photos/day-04.jpg" alt="감 익는 마당 사진"><figcaption><span class="t-body" style="display:block">감 익는 마당</span><span class="t-sub sub">AI가 만든 그림</span></figcaption></figure>
+      <div class="perf" aria-hidden="true"><i></i><i></i></div>
+      <div class="ans blk"><span class="t-sub sub">곶감과 홍시 중에</span><span class="t-display" style="--fs:34px;--lh:44px">홍시</span></div>
+      <div class="ans blk"><span class="t-sub sub">쓰신 낱말</span><span class="t-title">감</span></div>
+    </div>
+    <div class="ask blk"><p class="t-heading">이야기 꺼내기</p><p class="t-body">감나무 있던 집 이야기를 여쭤봐요</p></div>
+  </div>
+  <div class="more" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+  <div class="dock"><a class="btn child t-btn tap" data-min="56" href="#">응원 보내기</a></div>
+  <div class="sian">시안 예시 문구</div>
+</div>
+<script src="../common/frame.js"></script>
+</body></html>

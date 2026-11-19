@@ -1,8 +1,8 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {AppState, Pressable, StyleSheet, Switch, View} from 'react-native';
-import {Text20} from '../../ui/Text20';
+import {SWITCH_COLORS, Text} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
 import {useToast} from '../../ui/Toast';
-import {color, size} from '../../ui/tokens';
 import {copy} from '../../copy/copy';
 import {channelEnabled, openNotifySettings} from '../../push/notifyNative';
 import {registerToken} from '../../push/pushClient';
@@ -54,10 +54,14 @@ export function FamilyPushRow({api}: {api: Api}) {
         onPress={open}
         style={({pressed}) => [styles.row, pressed ? styles.pressed : null]}>
         <View style={styles.text}>
-          <Text20 weight="bold">{p.channel.family}</Text20>
-          <Text20 style={styles.sub}>{p.system_off.body}</Text20>
+          <Text role="bodyLg">{p.channel.family}</Text>
+          <Text role="sub" tone="muted">
+            {p.system_off.body}
+          </Text>
         </View>
-        <Text20 style={styles.sub}>{p.system_off.open_child}</Text20>
+        <Text role="body" tone="muted">
+          {p.system_off.open_child}
+        </Text>
       </Pressable>
     );
   }
@@ -97,19 +101,20 @@ export function FamilyPushRow({api}: {api: Api}) {
       onPress={toggle}
       style={({pressed}) => [styles.row, pressed ? styles.pressed : null]}>
       <View style={styles.text}>
-        <Text20 weight="bold">{p.channel.family}</Text20>
-        <Text20 style={styles.sub}>{p.channel.family_desc}</Text20>
+        <Text role="bodyLg">{p.channel.family}</Text>
+        <Text role="sub" tone="muted">
+          {p.channel.family_desc}
+        </Text>
       </View>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Switch value={enabled} onValueChange={toggle} disabled={busy} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
+        <Switch value={enabled} onValueChange={toggle} disabled={busy} {...SWITCH_COLORS} />
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: size.touchMin, paddingVertical: 10},
+  row: {flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: ds.touch.child.primary, paddingVertical: 10},
   pressed: {opacity: 0.7},
   text: {flex: 1},
-  sub: {color: color.inkSub},
 });

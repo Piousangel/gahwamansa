@@ -1,3 +1,4 @@
+import {SWITCH_COLORS} from '../../ui/ds/switchColors';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {AppState, Pressable, StyleSheet, Switch, View} from 'react-native';
 import {Text20} from '../../ui/Text20';
@@ -149,7 +150,7 @@ export function NotifyRows() {
           <Text20 style={styles.sub}>{p.settings_sub}</Text20>
         </View>
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <Switch value={!!s.enabled} onValueChange={toggle} trackColor={{false: color.lineSoft, true: color.done}} thumbColor={color.card} />
+          <Switch value={!!s.enabled} onValueChange={toggle} {...SWITCH_COLORS} />
         </View>
       </Pressable>
       {failed ? (

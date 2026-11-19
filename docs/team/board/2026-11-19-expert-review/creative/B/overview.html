@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>디렉터 B 시안 모음</title>
+<style>
+  body { margin: 0; padding: 24px; background: #D9DDE2; font: 16px/1.5 -apple-system, 'Apple SD Gothic Neo', sans-serif; color: #111; }
+  h2 { margin: 28px 0 10px; font-size: 20px; }
+  h2:first-child { margin-top: 0; }
+  .strip { display: flex; gap: 10px; flex-wrap: wrap; }
+  figure { margin: 0; }
+  img { height: 640px; display: block; background: #fff; }
+  figcaption { font-size: 14px; padding-top: 4px; }
+</style>
+</head>
+<body>
+<script>
+  // ?p=<안> 하나만, ?row=<화면들,쉼표> 로 v2 화면 일부만
+  const V1 = ['P3', 'P4', 'P7', 'C4'];
+  const plans = [
+    ['b1-broadcast', '안 1 아침 방송', V1, ['100', '200']],
+    ['b2-market', '안 2 장날 좌판(v1)', V1, ['100', '200']],
+    ['b3-familyroom', '안 3 가족방 한 줄', V1, ['100', '200']],
+    ['b2v2-market', '안 2 v2 장날 팻말', ['P1', 'P3', 'P4', 'P5', 'P6', 'P7', 'P3D', 'H', 'C4'], ['100', '200', '320-200']],
+    ['b2v2-market', '안 2 v2 P6→P7 정지 프레임(0·300·550·900ms)', ['T0', 'T1', 'T2', 'T3'], ['100']],
+  ];
+  const q = new URLSearchParams(location.search);
+  const only = q.get('p'); const row = q.get('row');
+  for (const [p, name, screens, sizes] of plans) {
+    if (only && only !== p) continue;
+    const list = row ? row.split(',').filter(x => screens.includes(x)) : screens;
+    if (!list.length) continue;
+    const h = document.createElement('h2'); h.textContent = name; document.body.appendChild(h);
+    const s = document.createElement('div'); s.className = 'strip';
+    for (const sc of list) for (const f of sizes) {
+      const w = f.startsWith('320') ? 320 : 360;
+      const label = f === '100' ? '360×640 · 100%' : f === '200' ? '360×640 · 200%' : '320×640 · 200%';
+      s.insertAdjacentHTML('beforeend', `<figure><img style="width:${w}px" src="img/${p}-${sc}-${f}.png" alt="${name} ${sc} ${label}"><figcaption>${sc} · ${label}</figcaption></figure>`);
+    }
+    document.body.appendChild(s);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+/* 디렉터 B 시안 공통 틀: 360×640 화면 하나. 글자 크기는 역할 값 × 배율(--f20 상한 2.0, --f15 상한 1.5) */
+:root { --f20: 1; --f15: 1; --w: 360px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { word-break: keep-all; overflow-wrap: break-word; }
+html, body { width: var(--w); height: 640px; overflow: hidden; background: var(--bg); }
+.scr { width: var(--w); height: 640px; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); position: relative; }
+.scr[hidden] { display: none; }
+.body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.body::-webkit-scrollbar { display: none; }
+.pad { padding-left: 20px; padding-right: 20px; }
+.more { flex: 0 0 24px; display: flex; align-items: center; justify-content: center; }
+.more[hidden] { display: none; }
+.more svg { width: 20px; height: 20px; }
+.dock { flex: 0 0 auto; padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+img { display: block; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

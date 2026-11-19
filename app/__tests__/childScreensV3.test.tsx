@@ -520,6 +520,18 @@ describe('C7 설정 v2', () => {
     await waitFor(() => screen.getByRole('button', {name: '부르는 이름, 어머니'}));
   });
 
+  test('C7 v4: 부르는 이름 시트는 ds Sheet + Choice(radio), 닫히면 연 행으로 포커스(returnFocusRef)', async () => {
+    await openSettings();
+    await press('부르는 이름, 엄마');
+    const group = screen.getByTestId('title-group');
+    expect(group.props.accessibilityRole).toBe('radiogroup');
+    expect(within(group).getAllByRole('radio')).toHaveLength(7);
+    expect(within(group).getByRole('radio', {name: '엄마'}).props.accessibilityState).toMatchObject({checked: true});
+    const {Sheet} = require('../src/ui/ds');
+    const ref = screen.UNSAFE_getAllByType(Sheet).find(x => x.props.title === '부모님을 어떻게 부르세요?')!.props.returnFocusRef as {current: unknown};
+    expect(ref.current).toBeTruthy(); // '부르는 이름, 엄마' 행
+  });
+
   test('M2: 호칭 저장 실패는 시트 안 오류 줄로(시트는 열린 채)', async () => {
     const api = await openSettings();
     jest.spyOn(api, 'setParentTitleFor').mockRejectedValueOnce(new (require('../src/features/types').OfflineError)('x'));

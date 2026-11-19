@@ -29,6 +29,8 @@ export type SheetProps = {
   /** 닫히면 포커스를 돌려줄 요소(이 시트를 연 버튼, R12). 필수 — 공용 부품이라 쓰는 곳마다 빠뜨리지 않게(PR #93 M1) */
   returnFocusRef: RefObject<unknown>;
   children?: React.ReactNode;
+  /** 스크롤 밖 아래에 고정되는 줄(주 버튼·오류 줄). 선택지가 많아도 저장 버튼을 찾으러 내려가지 않게(C7 부르는 이름) */
+  footer?: React.ReactNode;
   testID?: string;
 };
 
@@ -50,7 +52,7 @@ export function Sheet(props: SheetProps) {
   );
 }
 
-function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, children, testID = 'ds-sheet'}: SheetProps) {
+function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, children, footer, testID = 'ds-sheet'}: SheetProps) {
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef);
   useToastModalGuard(visible); // 열려 있는 동안 토스트를 띄우지 않는다(UX U2)
@@ -114,6 +116,11 @@ function SheetInner({visible, title, sub, onClose, closeLabel, returnFocusRef, c
             {children}
           </ScrollView>
           {more ? <MoreBand /> : null}
+          {footer ? (
+            <View testID={`${testID}-footer`} style={styles.footer}>
+              {footer}
+            </View>
+          ) : null}
         </View>
       </Animated.View>
     </Modal>
@@ -133,4 +140,5 @@ const styles = StyleSheet.create({
     backgroundColor: c.card, alignItems: 'center', justifyContent: 'center',
   },
   closePressed: {backgroundColor: c.actionSoft},
+  footer: {gap: 8, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16},
 });
