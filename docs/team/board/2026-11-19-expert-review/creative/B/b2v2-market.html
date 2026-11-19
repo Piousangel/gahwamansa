@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>B2 v2 장날 팻말</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&family=Nanum+Brush+Script&family=East+Sea+Dokdo&family=Dokdo&family=Black+Han+Sans&display=block" rel="stylesheet">
+<link rel="stylesheet" href="frame.css">
+<script>
+  // 팻말 글꼴 비교용: ?mk=brush(기본)|dokdo|eastsea|bhs
+  (function () {
+    const mk = new URLSearchParams(location.search).get('mk') || 'brush';
+    const F = { brush: "'Nanum Brush Script'", dokdo: "'Dokdo'", eastsea: "'East Sea Dokdo'", bhs: "'Black Han Sans'" };
+    const S = { brush: 1.18, dokdo: 1.0, eastsea: 1.2, bhs: 0.86 }; // 글꼴마다 글자 몸 크기가 달라 같은 눈 크기로 맞추는 배수
+    document.documentElement.style.setProperty('--mk', F[mk] || F.brush);
+    document.documentElement.style.setProperty('--mks', S[mk] || 1);
+  })();
+</script>
+<style>
+/* B2 v2 장날 팻말: 회백 바탕 · 먹 · 시멘트 회 · 차일 파랑(누르는 것) · 팻말 노랑(어르신 글자 전용) + 공통 흰 */
+:root { --bg: #F4F5F2; --card: #FFFFFF; --ink: #151515; --sub: #484B50; --act: #1A4C99; --tag: #FFD43B; }
+body { font-family: 'Nanum Gothic', sans-serif; }
+.t-title { font-size: calc(32px * var(--f15)); line-height: 1.36; font-weight: 700; letter-spacing: -0.01em; }
+.t-head { font-size: calc(26px * var(--f20)); line-height: 1.38; font-weight: 700; }
+.t-lg { font-size: calc(22px * var(--f20)); line-height: 1.45; }
+.t-body { font-size: calc(20px * var(--f20)); line-height: 1.55; }
+.t-sub { font-size: calc(20px * var(--f20)); line-height: 1.55; color: var(--sub); }
+.t-link { font-size: calc(22px * var(--f20)); line-height: 1.4; color: var(--act); text-decoration: underline; text-underline-offset: 4px; }
+.c-title { font-size: calc(26px * var(--f15)); line-height: 1.38; font-weight: 700; }
+.c-head { font-size: calc(20px * var(--f20)); line-height: 1.4; font-weight: 700; }
+.c-body { font-size: calc(16px * var(--f20)); line-height: 1.55; }
+.c-sub { font-size: calc(16px * var(--f20)); line-height: 1.55; color: var(--sub); }
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 4px 12px; padding-top: 12px; flex-wrap: wrap; }
+.tap { min-height: 64px; display: flex; align-items: center; }
+.scr[data-who="child"] .tap { min-height: 48px; }
+.btn { min-height: 72px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 8px 16px; font-weight: 700; }
+.btn.pri { background: var(--act); color: #fff; font-size: calc(30px * var(--f15)); line-height: 1.27; }
+.btn.sec { min-height: 64px; background: var(--card); color: var(--act); border: 2px solid var(--act); font-size: calc(24px * var(--f15)); line-height: 1.33; }
+.scr[data-who="child"] .btn.pri { min-height: 56px; font-size: calc(18px * var(--f15)); }
+.backrow { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding-top: 12px; }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 64px; padding: 0 18px 0 10px; border-radius: 8px; background: var(--card); border: 1.5px solid var(--sub); color: var(--act); font-size: calc(24px * var(--f15)); }
+.back svg { width: 28px; height: 28px; flex: none; }
+
+/* ── 시그니처: 팻말. 노랑은 어르신이 쓴 글자에만 ── */
+.hook { position: relative; padding-top: 26px; }
+.hook::before { content: ''; position: absolute; left: 50%; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--ink); } /* 못 */
+.hook .tag::before { content: ''; position: absolute; left: 50%; top: -22px; width: 2px; height: 22px; background: var(--ink); transform-origin: bottom; } /* 끈 */
+.tagwrap { display: flex; justify-content: center; }
+.tag { position: relative; display: inline-flex; flex-direction: column; align-items: center; background: var(--tag); color: var(--ink); border: 2px solid var(--ink); border-radius: 3px; padding: 6px 24px 8px; transform: rotate(-2deg); text-align: center; }
+.tag .w { font-family: var(--mk); font-size: calc(60px * var(--mks) * var(--f15)); line-height: 1.1; font-weight: 400; }
+.tag.wide { display: flex; width: 100%; min-height: 84px; justify-content: center; padding: 9px 17px; } /* P6 입력칸과 같은 상자: 글자가 제자리에서 바뀐다 */
+.tag.empty { background: var(--card); border: 2px dashed var(--sub); transform: none; color: var(--sub); }
+.tag.mini { transform: rotate(-2deg); padding: 2px 12px 4px; }
+.tag.mini .w { font-size: calc(34px * var(--mks) * var(--f15)); }
+
+.rows { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.row { background: var(--card); border: 1.5px solid var(--sub); border-radius: 6px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; }
+.row .n { font-weight: 700; width: 1.2em; flex: none; text-align: center; }
+.row.now { border: 3px solid var(--ink); }
+.row .end { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: none; }
+.row.done .nm { color: var(--sub); }
+.chk { width: 24px; height: 24px; flex: none; }
+.photo { width: 100%; height: 188px; object-fit: cover; }
+.frame { border: 2px solid var(--ink); border-radius: 4px; background: var(--card); overflow: hidden; }
+.frame figcaption { padding: 6px 12px; border-top: 2px solid var(--ink); white-space: nowrap; }
+.thumbrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.thumb { width: 96px; height: 77px; object-fit: cover; border: 2px solid var(--ink); border-radius: 4px; flex: none; }
+.ai { white-space: nowrap; }
+.choice { min-height: 88px; background: var(--card); border: 2px solid var(--sub); border-radius: 8px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; }
+.choice.on { border: 5px solid var(--act); padding: 9px 15px; }
+.choice .on-mark { margin-left: auto; display: flex; align-items: center; gap: 4px; color: var(--act); font-weight: 700; flex: none; }
+.field { position: relative; width: 100%; background: var(--card); border: 3px solid var(--ink); border-radius: 3px; min-height: 84px; display: flex; align-items: center; justify-content: center; padding: 8px 16px; }
+.field .typed { font-size: calc(36px * var(--f15)); line-height: 1.25; }
+.field .caret { display: inline-block; width: 3px; height: 1.1em; background: var(--act); vertical-align: -0.15em; margin-left: 2px; }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.key { min-height: 64px; border: 2px solid var(--ink); border-radius: 8px; background: var(--card); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: calc(34px * var(--f15)); line-height: 1.2; text-align: center; }
+.key.small { font-size: calc(22px * var(--f15)); font-weight: 400; line-height: 1.15; }
+.cells { display: flex; gap: 6px; }
+.cell { flex: 1 1 0; max-width: 48px; min-height: 68px; border-bottom: 3px solid var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: calc(34px * var(--f15)); }
+.cell.cur { border-bottom-color: var(--act); border-bottom-width: 4px; }
+.hist { display: flex; flex-direction: column; }
+.hrow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1.5px solid var(--sub); min-height: 64px; flex-wrap: wrap; }
+.hrow .thumb { width: 72px; height: 58px; }
+.hrow .meta { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.ask { margin-top: 14px; background: var(--card); border: 1.5px solid var(--sub); border-radius: 6px; padding: 10px 14px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: baseline; }
+
+/* P6→P7 정지 프레임. 실제 시간은 directions-v2 3-1절 타이밍표(CSS/Reanimated). 시안에는 움직임을 넣지 않았다(정지 렌더) */
+.hook > .field::before { content: ''; position: absolute; left: 50%; top: -25px; width: 2px; height: 22px; background: var(--ink); } /* P6 입력칸에도 끈이 걸려 있다 */
+.tx .new { opacity: 0; }
+.tx.t1 .old { opacity: .35; }
+.tx.t1 .field { background: linear-gradient(90deg, var(--tag) 0 55%, var(--card) 55% 100%); }
+.tx.t2 .field, .tx.t3 .field { background: var(--tag); }
+.tx.t2 .field { transform: rotate(-1deg); }
+.tx.t3 .field { transform: rotate(-2deg); border-width: 2px; padding: 9px 17px; }
+.tx .typed.mk { font-family: var(--mk); font-size: calc(60px * var(--mks) * var(--f15)); line-height: 1.1; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+.tx.t2 .typed.mk { opacity: .6; } .tx.t2 .typed.gt { opacity: .4; }
+.tx.t3 .typed.mk { opacity: 1; } .tx.t3 .typed.gt { opacity: 0; }
+.tx.t2 .old, .tx.t3 .old { opacity: 0; }
+.tx.t2 .new { opacity: .5; }
+.tx.t3 .new { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- P1 첫 실행: 자녀가 보낸 번호 쓰기 -->
+<section class="scr" data-id="P1" data-who="elder">
+  <div class="body pad">
+    <h1 class="t-title blk" style="padding-top:20px">자녀가 보낸 번호를 눌러요</h1>
+    <p class="t-sub blk">번호는 자녀 휴대폰 화면에 있어요</p>
+    <div class="cells blk" style="margin-top:12px" aria-label="여섯 자리 중 세 자리 눌렀어요, 4 8 2">
+      <span class="cell">4</span><span class="cell">8</span><span class="cell">2</span><span class="cell cur" aria-label="지금 누를 자리"><span style="width:3px;height:1.1em;background:var(--act)" aria-hidden="true"></span></span><span class="cell"></span><span class="cell"></span>
+    </div>
+    <div class="keys blk" style="margin-top:18px"><a class="key tap">1</a><a class="key tap">2</a><a class="key tap">3</a></div>
+    <div class="keys blk" style="margin-top:8px"><a class="key tap">4</a><a class="key tap">5</a><a class="key tap">6</a></div>
+    <div class="keys blk" style="margin-top:8px"><a class="key tap">7</a><a class="key tap">8</a><a class="key tap">9</a></div>
+    <div class="keys blk" style="margin-top:8px"><a class="key small tap">모두<br>지움</a><a class="key tap">0</a><a class="key small tap" aria-label="한 자리 지움">지움</a></div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+</section>
+
+<!-- P3 오늘 코스 홈(0/3): 비어 있는 팻말 자리 -->
+<section class="scr" data-id="P3" data-who="elder">
+  <div class="body pad">
+    <div class="top blk"><span class="t-sub">11월 20일 금요일</span><a class="t-link tap">설정</a></div>
+    <h1 class="t-title blk">오늘 코스</h1>
+    <div class="rows">
+      <div class="row now tap blk" role="button" aria-label="1, 사진 보기, 지금 할 차례"><span class="n t-lg">1</span><span><span class="t-lg nm" style="font-weight:700;display:block">사진 보기</span><span class="t-body">지금 할 차례</span></span><span class="end"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#151515" stroke-width="2.6" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span></div>
+      <div class="row tap blk" role="button" aria-label="2, 둘 중 고르기, 다음 차례"><span class="n t-lg">2</span><span class="t-lg nm">둘 중 고르기</span></div>
+      <div class="row tap blk" role="button" aria-label="3, 한 단어 쓰기"><span class="n t-lg">3</span><span class="t-lg nm">한 단어 쓰기</span></div>
+    </div>
+    <div class="hook blk" style="margin-top:18px"><div class="tagwrap"><span class="tag empty"><span class="t-body" style="padding:10px 4px">쓰신 낱말이 여기 걸려요</span></span></div></div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">사진 보기</a></div>
+</section>
+
+<!-- P4 사진 보기 -->
+<section class="scr" data-id="P4" data-who="elder">
+  <div class="body pad">
+    <div class="backrow blk"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a></div>
+    <figure class="frame blk" style="margin-top:10px"><img class="photo" src="../../../../../../content/photos/day-15.jpg" alt="장날 아침. 나무 탁자 위 바구니에 무와 감자, 파가 담겨 있어요"><figcaption class="t-sub">AI가 만든 그림</figcaption></figure>
+    <h1 class="t-head blk" style="margin-top:12px">장날 아침</h1>
+    <p class="t-body blk">천천히 보세요. 서두르지 않아도 돼요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock">
+    <a class="btn pri tap">다 봤어요</a>
+    <a class="btn sec tap"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.2" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg>읽어 주세요</a>
+  </div>
+</section>
+
+<!-- P5 둘 중 고르기(고른 뒤) -->
+<section class="scr" data-id="P5" data-who="elder">
+  <div class="body pad">
+    <div class="backrow blk"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a></div>
+    <h1 class="t-head blk" style="margin-top:14px">나들이를 간다면 어느 쪽이요?</h1>
+    <p class="t-sub blk">맞고 틀린 건 없어요</p>
+    <div class="rows" style="gap:12px" role="radiogroup" aria-label="나들이를 간다면 어느 쪽이요?">
+      <a class="choice on tap blk" role="radio" aria-checked="true"><span class="t-lg" style="font-weight:700">시장 구경</span><span class="on-mark t-body"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>골랐어요</span></a>
+      <a class="choice tap blk" role="radio" aria-checked="false"><span class="t-lg">공원 산책</span></a>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">한 단어 쓰기</a></div>
+</section>
+
+<!-- P6 한 단어 쓰기(자판 닫힘, 쓴 뒤). 입력칸이 곧 팻말이 될 자리: 못과 끈이 이미 걸려 있다.
+     입력칸 위치(위에서 약 152)는 P7 팻말 위치와 같다. 화면이 바뀌어도 글자는 제자리에 있다 -->
+<section class="scr" data-id="P6" data-who="elder">
+  <div class="body pad">
+    <div class="backrow blk"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a><a class="t-link tap">넘어갈게요</a></div>
+    <p class="t-lg blk" style="margin-top:12px">사진을 보고 떠오른 낱말을 써요</p>
+    <div class="hook blk" style="margin-top:6px"><label class="field" aria-label="떠오른 낱말"><span class="typed">바구니</span><span class="caret" aria-hidden="true"></span></label></div>
+    <div class="thumbrow blk" style="margin-top:16px"><img class="thumb" src="../../../../../../content/photos/day-15.jpg" alt="오늘 사진, 장날 아침"><div><p class="t-body" style="font-weight:700">장날 아침</p><p class="t-sub ai">AI가 만든 그림</p></div></div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">다 썼어요</a></div>
+</section>
+
+<!-- P7 완료: 쓴 글자가 그 자리에서 팻말이 된다 -->
+<section class="scr" data-id="P7" data-who="elder">
+  <div class="body pad">
+    <h1 class="t-title blk" style="padding-top:44px">오늘 코스를 마쳤어요</h1>
+    <div class="hook blk" style="margin-top:38px"><span class="tag wide"><span class="w">바구니</span></span></div>
+    <p class="t-sub blk" style="text-align:center;margin-top:10px">11월 20일 장날 아침</p>
+    <p class="t-body blk" style="margin-top:16px">쓰신 낱말 그대로 가족에게 보냈어요.<br>내일 아침에 새 사진이 와요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">알겠어요</a></div>
+</section>
+
+<!-- P3D 오늘 코스 홈(3/3): 도장 7칸 대신 오늘 팻말이 홈 맨 위에 걸려 있다. 날짜는 팻말 아래 -->
+<section class="scr" data-id="P3D" data-who="elder">
+  <div class="body pad">
+    <div class="top blk" style="justify-content:flex-end"><a class="t-link tap">설정</a></div>
+    <div class="hook blk" style="margin-top:4px"><span class="tag wide"><span class="w">바구니</span></span></div>
+    <p class="t-sub blk" style="text-align:center;margin-top:10px">11월 20일 장날 아침</p>
+    <h1 class="t-head blk" style="margin-top:18px">오늘 코스를 마쳤어요</h1>
+    <p class="t-body blk">내일 아침 새 사진이 오면<br>오늘 쓰신 낱말은 지난 날로 옮겨 가요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn sec tap">오늘 코스 다시 보기</a><a class="t-link tap" style="justify-content:center">지난 날 보기</a></div>
+</section>
+
+<!-- H 지난 날: 쓴 날만, 최근 것 위. 개수·빈칸·달력 없음 -->
+<section class="scr" data-id="H" data-who="elder">
+  <div class="body pad">
+    <div class="backrow blk"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a></div>
+    <h1 class="t-title blk" style="margin-top:10px">지난 날</h1>
+    <p class="t-sub blk">누르면 그날 사진을 다시 봐요. 사진은 모두 <span class="ai">AI가 만든 그림</span>이에요</p>
+    <div class="hist" style="margin-top:4px">
+      <a class="hrow tap blk" role="link" aria-label="11월 19일 목요일, 쓰신 낱말 평상, 사진 다시 보기"><img class="thumb" src="../../../../../../content/photos/day-14.jpg" alt="여름 저녁 평상 사진, AI가 만든 그림"><span class="meta"><span class="tag mini"><span class="w">평상</span></span><span class="t-sub">11월 19일 목요일</span></span></a>
+      <a class="hrow tap blk" role="link" aria-label="11월 17일 화요일, 쓰신 낱말 두레박, 사진 다시 보기"><img class="thumb" src="../../../../../../content/photos/day-13.jpg" alt="우물가 한낮 사진, AI가 만든 그림"><span class="meta"><span class="tag mini"><span class="w">두레박</span></span><span class="t-sub">11월 17일 화요일</span></span></a>
+      <a class="hrow tap blk" role="link" aria-label="11월 16일 월요일, 쓰신 낱말 항아리, 사진 다시 보기"><img class="thumb" src="../../../../../../content/photos/day-12.jpg" alt="장독대 아침 사진, AI가 만든 그림"><span class="meta"><span class="tag mini"><span class="w">항아리</span></span><span class="t-sub">11월 16일 월요일</span></span></a>
+      <a class="hrow tap blk" role="link" aria-label="11월 14일 토요일, 쓰신 낱말 우산, 사진 다시 보기"><img class="thumb" src="../../../../../../content/photos/day-11.jpg" alt="비 오는 날 처마 사진, AI가 만든 그림"><span class="meta"><span class="tag mini"><span class="w">우산</span></span><span class="t-sub">11월 14일 토요일</span></span></a>
+      <a class="hrow tap blk" role="link" aria-label="11월 13일 금요일, 쓰신 낱말 도시락, 사진 다시 보기"><img class="thumb" src="../../../../../../content/photos/day-10.jpg" alt="소풍 도시락 사진, AI가 만든 그림"><span class="meta"><span class="tag mini"><span class="w">도시락</span></span><span class="t-sub">11월 13일 금요일</span></span></a>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+</section>
+
+
+<!-- C4 자녀: 팻말을 받는다(처음 볼 때 한 번 흔들리며 걸림) -->
+<section class="scr" data-id="C4" data-who="child">
+  <div class="body pad">
+    <div class="top blk"><h1 class="c-title">부모님의 오늘</h1><a class="c-body tap" style="color:var(--act);text-decoration:underline;text-underline-offset:3px">설정</a></div>
+    <p class="c-sub blk">오늘 아침에 쓰신 낱말이 왔어요</p>
+    <div class="hook blk" style="margin-top:6px"><span class="tag wide"><span class="w" style="font-size:calc(52px * var(--mks) * var(--f15))">바구니</span></span></div>
+    <p class="c-sub blk" style="text-align:center;margin-top:8px">11월 20일 장날 아침</p>
+    <div class="thumbrow blk" style="margin-top:12px"><img class="thumb" style="width:80px;height:64px" src="../../../../../../content/photos/day-15.jpg" alt="장날 아침 사진"><div class="kv"><span class="c-sub">본 사진</span><span class="c-body">장날 아침</span><span class="c-sub">고르신 쪽</span><span class="c-body" style="font-weight:700">시장 구경</span></div></div>
+    <p class="c-sub blk" style="margin-top:2px">사진은 <span class="ai">AI가 만든 그림</span>이에요</p>
+    <div class="ask blk"><p class="c-sub">통화할 때 이렇게 여쭤봐요</p><p class="c-body">장 구경 가면 제일 먼저 보시던 게 무엇인지 여쭤봐요</p></div>
+    <p class="c-sub blk" style="margin-top:8px">쓰신 낱말 그대로예요. 앱이 고치지 않아요</p>
+    <div style="height:12px"></div>
+  </div>
+  <div class="more" hidden aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#484B50" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="dock"><a class="btn pri tap">응원 보내기</a></div>
+</section>
+
+<!-- T0~T3: P6 '다 썼어요' → P7 정지 프레임(360·100%). 글자와 칸은 제자리, 둘레만 바뀐다. 시간은 directions-v2 3-1절 -->
+<template id="tx-src">
+  <div class="body pad" style="position:relative">
+    <div class="old backrow"><a class="back tap"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4C99" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg>오늘 코스로</a><a class="t-link tap">넘어갈게요</a></div>
+    <p class="old t-lg" style="margin-top:12px">사진을 보고 떠오른 낱말을 써요</p>
+    <h1 class="new t-title" style="position:absolute;left:20px;right:20px;top:44px">오늘 코스를 마쳤어요</h1>
+    <div class="hook" style="margin-top:6px"><label class="field"><span class="typed gt">바구니</span><span class="typed mk">바구니</span></label></div>
+    <div style="position:relative">
+      <div class="old thumbrow" style="margin-top:16px"><img class="thumb" src="../../../../../../content/photos/day-15.jpg" alt=""><div><p class="t-body" style="font-weight:700">장날 아침</p><p class="t-sub ai">AI가 만든 그림</p></div></div>
+      <div class="new" style="position:absolute;left:0;right:0;top:10px"><p class="t-sub" style="text-align:center">11월 20일 장날 아침</p><p class="t-body" style="margin-top:16px">쓰신 낱말 그대로 가족에게 보냈어요.<br>내일 아침에 새 사진이 와요</p></div>
+    </div>
+  </div>
+  <div class="dock" style="position:relative"><a class="btn pri tap old">다 썼어요</a><a class="btn pri tap new" style="position:absolute;left:20px;right:20px;top:12px">알겠어요</a></div>
+</template>
+<section class="scr tx t0" data-id="T0" data-who="elder"></section>
+<section class="scr tx t1" data-id="T1" data-who="elder"></section>
+<section class="scr tx t2" data-id="T2" data-who="elder"></section>
+<section class="scr tx t3" data-id="T3" data-who="elder"></section>
+<script>
+  for (const s of document.querySelectorAll('.scr.tx')) s.appendChild(document.getElementById('tx-src').content.cloneNode(true));
+</script>
+
+
+<script src="frame.js"></script>
+</body>
+</html>

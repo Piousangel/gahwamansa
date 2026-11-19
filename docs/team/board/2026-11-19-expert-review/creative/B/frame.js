@@ -1,5 +1,5 @@
 /* 디렉터 B 시안 공통 틀.
- * 주소: <안>.html?s=P3&f=2  (s = 화면 id, f = 글자 배율 1 또는 2. 역할별 상한은 CSS 변수 --f15·--f20 으로 적용)
+ * 주소: <안>.html?s=P3&f=2&w=320 (w 생략 시 360)  (s = 화면 id, f = 글자 배율 1 또는 2. 역할별 상한은 CSS 변수 --f15·--f20 으로 적용)
  * 하는 일
  *  1) 화면 하나만 보이기, 배율 변수 넣기
  *  2) R-15 접힘 경계: 스크롤 영역 끝에 걸친 .blk 를 간격으로 통째로 아래로 밀고, 넘칠 때만 '더 있음' 띠(R-19)
@@ -12,6 +12,8 @@
   const root = document.documentElement;
   root.style.setProperty('--f20', f);
   root.style.setProperty('--f15', Math.min(f, 1.5));
+  const w = parseInt(q.get('w') || '360', 10);
+  root.style.setProperty('--w', w + 'px');
   document.querySelectorAll('.scr').forEach(s => { s.hidden = s.dataset.id !== sid; });
   const scr = document.querySelector(`.scr[data-id="${sid}"]`);
   if (!scr) return;
