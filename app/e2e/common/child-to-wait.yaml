@@ -24,5 +24,5 @@ appId: com.bumojasik.app.staging
 - tapOn: '연결 기다리기'
 - extendedWaitUntil:
     visible:
-      id: 'wait-chip'
+      id: 'wait-code'
     timeout: 10000

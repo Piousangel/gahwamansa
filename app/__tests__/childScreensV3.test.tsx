@@ -12,7 +12,7 @@ const waitApi = (o: Parameters<typeof createFakeApi>[0] = {}) => createFakeApi({
 const openWait = async (api: ReturnType<typeof createFakeApi>) => {
   render(<AppRoot api={api} restore />);
   // 파일 첫 렌더는 모듈 첫 로드(사진·SVG)로 느릴 수 있다
-  await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'));
+  await waitFor(() => screen.getByTestId('wait-code'), {timeout: 8000});
 };
 jest.setTimeout(20000);
 // U10: 응원은 '취소' 가능 시간(토스트 표시 4초) 뒤에 보낸다. jest 의 RN 모의 PixelRatio 는 글자 배율 2를 돌려주므로 1로(그대로면 6초)
@@ -34,18 +34,147 @@ const openTab = async (name: string) => {
 };
 
 describe('C3 연결 대기', () => {
-  test('번호 카드(번호·만료 시각) → 3단계 → 예시 1장, 만료 전에는 새 번호 만들기가 없다', async () => {
+  const RN = require('react-native');
+  const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
+  beforeEach(() => {
+    dims(1); // jest 모의 기본 글자 배율은 2 → 100% 기준으로(200%는 테스트 안에서)
+  });
+
+  test('리뷰 M1: 보는 중에 번호가 만료되면 화면 읽기에 한 번 알린다(카드 → 만료 띠)', async () => {
+    const handlers: ((st: string) => void)[] = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, h: (st: string) => void) => {
+      handlers.push(h);
+      return {remove: () => {}};
+    }) as never);
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    const api = waitApi();
+    await openWait(api);
+    expect(said).not.toHaveBeenCalledWith(expect.stringContaining('번호 기간이 지났어요'));
+    const expiredApi = waitApi({childCodeExpired: true});
+    jest.spyOn(api, 'getChildState').mockImplementation(() => expiredApi.getChildState());
+    await act(async () => {
+      handlers.forEach(h => h('active')); // 앞으로 돌아와 다시 확인 → 만료
+    });
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(said).toHaveBeenCalledWith('번호 기간이 지났어요. 새 번호를 만들어 다시 보내 주세요');
+  });
+
+  test('리뷰 L1: 공유 창에서 돌아오면 안내 줄을 한 번 읽어 준다', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    await openWait(waitApi());
+    await press('번호 보내기');
+    await waitFor(() => screen.getByTestId('wait-after-share'));
+    expect(said).toHaveBeenCalledWith('번호를 보냈다면 다시 보내지 않아도 돼요');
+  });
+
+  test('디자인 결정 #83 ①: 번호 카드는 흰 면 + line 1.5 테두리(outlined)', async () => {
+    await openWait(waitApi());
+    const {StyleSheet} = require('react-native');
+    const {ds} = require('../src/ui/ds/roles');
+    const st = StyleSheet.flatten(screen.getByTestId('wait-code').props.style);
+    expect(st.borderWidth).toBe(1.5);
+    expect(st.borderColor).toBe(ds.color.line);
+    expect(st.backgroundColor).toBe(ds.color.card);
+  });
+
+  test('디자인 결정 #83 ②: 200%에서는 Dock = 주 버튼 하나, 복사하기는 본문 끝·알림 줄은 카드 바로 아래', async () => {
+    dims(2);
+    const notifyMod = require('../src/features/child/useNotifyPermission');
+    jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
+    const spy = jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    await openWait(waitApi());
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual([expect.stringMatching(/번호 보내기/)]);
+    const body = within(screen.getByTestId('screen-body'));
+    expect(within(screen.getByTestId('wait-code')).queryByTestId('wait-notify')).toBeNull();
+    expect(body.getByTestId('wait-notify')).toBeTruthy();
+    const order = screen.root.findAll(n => typeof n.type === 'string' && ['wait-code', 'wait-notify', 'wait-steps', 'wait-copy'].includes(n.props.testID)).map(n => n.props.testID);
+    expect(order).toEqual(['wait-code', 'wait-notify', 'wait-steps', 'wait-copy']);
+    await press('복사하기');
+    expect(spy).toHaveBeenCalledWith('123456');
+    // 재확인 2 L11: '복사했어요' 띠는 본문 끝 복사하기 바로 위(카드 위가 아니라)
+    const ids = screen.root.findAll(n => typeof n.type === 'string' && ['wait-code', 'wait-steps', 'wait-copied', 'wait-copy'].includes(n.props.testID)).map(n => n.props.testID);
+    expect(ids).toEqual(['wait-code', 'wait-steps', 'wait-copied', 'wait-copy']);
+  });
+
+  test('디자인 결정 #83 ③(R-15): 첫 화면 끝이 단계 행을 가르면 그 행 위에 잰 만큼 간격 → 통째로 접힘 밖, 걸치지 않으면 간격 없음', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 504); // 본문 영역 504 → 접힘 = 504 − 띠 24 = 480(재확인 H1)
+      lay('wait-steps', 300, 300); // 묶음 위 끝 300, 요소 사이 12
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 32); // 340~372
+      lay('wait-step-2', 0, 48); // 384~432
+      lay('wait-step-3', 0, 48); // 444~492 → 480 에 걸림
+    });
+    expect(mt('wait-step-3')).toBe(480 - 444);
+    expect(mt('wait-step-2')).toBeUndefined();
+    // 간격이 들어간 뒤 같은 높이로 다시 와도 흔들리지 않는다(높이만으로 계산)
+    await act(async () => {
+      lay('wait-step-3', 36, 48);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    // 재확인 H1: 맨 아래로 내려 띠가 사라져 스크롤 창이 커져도(504) 다시 나와도(480) 접힘 기준(본문 영역 − 띠)은 그대로
+    await act(async () => {
+      lay('screen-body', 0, 504);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    await act(async () => {
+      lay('screen-body', 0, 480);
+    });
+    expect(mt('wait-step-3')).toBe(36);
+    // 본문 영역 자체가 커져 다 들어가면 간격 없음
+    await act(async () => {
+      lay('screen-body-area', 0, 624);
+    });
+    expect(mt('wait-step-3')).toBeUndefined();
+  });
+
+  test('재확인 L9: 첫 단계가 걸치면 묶음 제목과 함께 민다(첫 화면 끝에 제목만 남지 않게)', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 404); // 접힘 380
+      lay('wait-steps', 300, 300);
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 72); // 340~412 → 380 에 걸림
+      lay('wait-step-2', 0, 48);
+      lay('wait-step-3', 0, 48);
+    });
+    expect(mt('wait-steps-title')).toBe(380 - 300); // 제목째 접힘 밖
+    expect(mt('wait-step-1')).toBeUndefined();
+  });
+
+  test('재확인 L7: 처음 열 때부터 만료면 알리지 않는다(제목 읽기와 겹치지 않게)', async () => {
+    const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    said.mockClear(); // 앞 테스트에서 쌓인 호출 지움
+    render(<AppRoot api={waitApi({childCodeExpired: true})} restore />);
+    await waitFor(() => screen.getByText('번호 기간이 지났어요'));
+    expect(said).not.toHaveBeenCalledWith(expect.stringContaining('번호 기간이 지났어요'));
+  });
+
+  test('C3 v4: 제목·설정 → 번호 카드(번호·만료 시각) → 3단계, 연결 칩·예시 카드 없음, 만료 전에는 새 번호 만들기가 없다', async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
     await openWait(waitApi());
     expect(screen.getByText('연결 기다리는 중')).toBeTruthy();
     expect(screen.getByText('123 456')).toBeTruthy();
     expect(screen.getByLabelText(/^연결 번호 1 2 3, 4 5 6, .*까지 쓸 수 있어요$/)).toBeTruthy(); // 번호+기한 한 덩어리(L6)
     expect(screen.getByText(/까지 쓸 수 있어요$/)).toBeTruthy();
-    expect(screen.getByText('엄마 폰에 가화만사성을 설치해요')).toBeTruthy();
-    expect(screen.getByText('부모님 휴대폰이에요')).toBeTruthy(); // 부모님 첫 화면의 실제 버튼 글자
-    expect(screen.getByText('숫자 6개를 쓰고, 답을 보여 줄지 고르면 돼요')).toBeTruthy();
-    expect(within(screen.getByTestId('wait-example')).getByText('예시')).toBeTruthy();
-    expect(screen.getByText('AI가 만든 그림')).toBeTruthy();
+    expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
+    expect(screen.getByText("링크로 열면 번호를 확인하고 '이 번호로 연결하기'를 눌러요")).toBeTruthy();
+    expect(screen.getByText('답을 보여 줄지 고르면 돼요')).toBeTruthy();
+    expect(screen.queryByTestId('wait-example')).toBeNull(); // V9: 예시 카드 없음
+    expect(screen.queryByTestId('wait-chip')).toBeNull(); // V9: 연결 칩 삭제
+    // Dock = 주 '번호 보내기' + 보조 '복사하기'
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getByRole('button', {name: '번호 보내기'})).toBeTruthy();
+    expect(dock.getByRole('button', {name: '복사하기'})).toBeTruthy();
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
     expect(screen.queryByTestId('child-tab-bar')).toBeNull(); // 연결 전 탭 바 숨김
     await press('번호 보내기');
@@ -53,16 +182,19 @@ describe('C3 연결 대기', () => {
     expect(share.mock.calls[0][0]).toMatchObject({message: expect.stringContaining('까지 쓸 수 있어요.')});
   });
 
-  test('알림 꺼짐이면 알림 한 줄은 3단계 아래(할 일 먼저)', async () => {
+  test('V9: 알림 꺼짐이면 알림 줄은 번호 카드 안(3단계 위), 켜져 있으면 줄 없음', async () => {
     const notifyMod = require('../src/features/child/useNotifyPermission');
-    jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
+    const spy = jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
     await openWait(waitApi());
+    const card = within(screen.getByTestId('wait-code'));
+    expect(card.getByText('연결되면 알려 드릴게요')).toBeTruthy();
+    expect(card.getByRole('button', {name: '알림 켜기'})).toBeTruthy();
     const text = JSON.stringify(screen.toJSON());
-    const steps = text.indexOf('이렇게 하시면 돼요');
-    const notify = text.indexOf('연결되면 알려 드릴게요');
-    expect(steps).toBeGreaterThan(-1);
-    expect(notify).toBeGreaterThan(steps);
-    expect(notify).toBeLessThan(text.indexOf('매일 이런 사진과 질문이 가요'));
+    expect(text.indexOf('연결되면 알려 드릴게요')).toBeLessThan(text.indexOf('이렇게 하시면 돼요'));
+    screen.unmount();
+    spy.mockReturnValue({denied: false, open: jest.fn()});
+    await openWait(waitApi());
+    expect(screen.queryByTestId('wait-notify')).toBeNull();
   });
 
   test('복사하기 → 번호 카드 위 \'복사했어요\' 띠(감사 L2, 토스트 아님)', async () => {
@@ -70,7 +202,7 @@ describe('C3 연결 대기', () => {
     await openWait(waitApi());
     await press('복사하기');
     expect(spy).toHaveBeenCalledWith('123456');
-    expect(within(screen.getByTestId('wait-copied')).getByText('복사했어요')).toBeTruthy();
+    expect(screen.getByTestId('wait-copied')).toBeTruthy();
   });
 
   test('번호 기간이 지나면 안내 상자 + 새 번호 만들기, 만들면 토스트와 "전에 보낸 번호" 안내', async () => {
@@ -79,7 +211,9 @@ describe('C3 연결 대기', () => {
     render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByText('번호 기간이 지났어요'));
     expect(screen.getByText('새 번호를 만들어 다시 보내 주세요')).toBeTruthy();
-    expect(screen.queryByText('연결 기다리는 중')).toBeNull(); // 만료되면 칩·제목을 숨긴다
+    expect(screen.getByText('연결 기다리는 중')).toBeTruthy(); // v4: 제목은 그대로, 번호 카드·3단계 대신 안내 띠
+    expect(screen.queryByTestId('wait-steps')).toBeNull();
+    expect(screen.queryByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요')).toBeNull(); // 디자인 결정 L2(a)
     await press('새 번호 만들기');
     await waitFor(() => screen.getByText('123 456'));
     expect(issue).toHaveBeenCalledTimes(1);
