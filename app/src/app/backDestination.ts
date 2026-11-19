@@ -13,7 +13,9 @@ export const BACK_TO: Record<RouteName, string> = {
   KeyboardStep: to.KeyboardStep, CourseDone: to.CourseDone, History: to.History, HistoryDay: to.HistoryDay, Settings: to.Settings,
   Family: to.Family, DeleteAccount: to.DeleteAccount, DeleteDone: to.DeleteDone, PushPermission: to.PushPermission, Web: to.Web,
   Oss: to.Oss, FamilyPreview: to.FamilyPreview, Gate: to.Gate, Login: to.Login, LoginEmail: to.LoginEmail, LoginCode: to.LoginCode,
-  Relation: to.Relation, Code: to.Code, Wait: to.Wait, AppInfo: to.AppInfo, Album: to.Album, Past: to.Past,
+  Relation: to.Relation,
+  // [라이터 확인] Code '번호로'·Wait '기다리는 화면으로' — NAMES.md 와 대조 전(W-09 리뷰). 화면 제목(C3 '연결 기다리는 중' 등)에 맞출지 정한다
+  Code: to.Code, Wait: to.Wait, AppInfo: to.AppInfo, Album: to.Album, Past: to.Past,
 };
 
 type NavRoute = {name: string; state?: NavState};

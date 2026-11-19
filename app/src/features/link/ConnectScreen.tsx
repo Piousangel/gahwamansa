@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   sub: {color: color.inkSub},
   invalid: {color: color.dangerInk},
-  legal: {textAlign: 'center', color: color.ink, marginBottom: 4},
+  legal: {textAlign: 'center', color: color.inkBody, marginBottom: 4},
   belowRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   flex: {flex: 1},
   failed: {gap: 8},

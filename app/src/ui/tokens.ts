@@ -1,25 +1,33 @@
-// 디자인 토큰 v3 (원본: design-system/tokens-v3.json, 값이 어긋나면 __tests__/designSystem.test.tsx 가 실패한다).
+// 디자인 토큰 v3 이름(값 원본: tokensV4 ← design-system/tokens-v4.json. tokens-v3.json 과의 차이는 inkSub 하나, __tests__/designSystem.test.tsx 가 지킨다).
 // v4(2026-11-19): 새 코드는 ./tokensV4(생성물, 원본 design-system/tokens-v4.json)와 ui/ds 컴포넌트를 쓴다.
-//   이 파일은 한 릴리스 동안 v3 별칭으로 그대로 둔다(값을 바꾸지 않아 지금 화면이 깨지지 않음). 대응표는 ./tokensV4Migration.
+//   이 파일은 한 릴리스 동안 v3 이름을 별칭으로 남긴다. 대응표는 ./tokensV4Migration.
+// 색 원본은 하나(2026-11-20, 접근성 패널 r1·디자인 시스템 패널 r1): v3 색 이름은 모두 tokensV4.color 에서 가져온다.
+//   값이 v3 와 달라진 이름은 inkSub 하나(#85592F 종이 5.47 → #544B43 7.70, 어르신 7:1). v3 ink 는 v4 v3ColorAlias 대로 action.
+//   읽는 글은 inkBody(차콜), 누를 수 있는 것만 action/ink(갈색) — colorRules ①.
+import {tokensV4} from './tokensV4';
+
 // 규칙: 색은 역할 이름으로만 참조하고 화면에서 헥스를 직접 쓰지 않는다.
 // 글꼴: tokens-v3 fontCandidate 가 "라이선스 미확인"이라 빌드 1은 시스템 글꼴(fontFamily 미지정)을 쓴다.
 //       교체할 때는 font 값만 바꾼다(파일 번들 + 라이선스 확인 후).
 
+const c4 = tokensV4.color;
 const v3 = {
-  paper: '#F6F3EE', card: '#FFFFFF', paperSoft: '#EFE9E0', paperEdge: '#E6DCD0',
-  ink: '#744821', inkTitle: '#4E2F14', inkSub: '#85592F',
-  action: '#744821', actionPressed: '#5A3716', actionSoft: '#EFE0CF', noticeSoft: '#F1E4D4',
-  line: '#A67C5A', lineSoft: '#E3D5C5', lineGhost: '#D8C6B0',
-  disabledBg: '#ECE8E3', disabledInk: '#6B5C4A', tape: '#EADBC4',
-  done: '#166534', doneInk: '#14532D', doneSoft: '#CDEBDD',
-  danger: '#B91C1C', dangerInk: '#991B1B', dangerSoft: '#FEE2E2',
-  sky: '#CFE6F7', sun: '#FFC93C', sunRay: '#F59E0B', blush: '#FF9E7A', brandSealDeep: '#C44F2E',
-  accentSun: '#FFE29A', accentPeach: '#FFD6C2', // 첫 화면 소개 아이콘 원(장식)
+  paper: c4.paper, card: c4.card, paperSoft: c4.paperSoft, paperEdge: c4.paperEdge,
+  ink: c4[tokensV4.v3ColorAlias.ink], inkTitle: c4.inkTitle, inkSub: c4.inkSub,
+  action: c4.action, actionPressed: c4.actionPressed, actionSoft: c4.actionSoft, noticeSoft: c4.noticeSoft,
+  line: c4.line, lineSoft: c4.lineSoft, lineGhost: c4.lineGhost,
+  disabledBg: c4.disabledBg, disabledInk: c4.disabledInk, tape: c4.tape,
+  done: c4.done, doneInk: c4.doneInk, doneSoft: c4.doneSoft,
+  danger: c4.danger, dangerInk: c4.dangerInk, dangerSoft: c4.dangerSoft,
+  sky: c4.sky, sun: c4.sun, sunRay: c4.sunRay, blush: c4.blush, brandSealDeep: c4.brandSealDeep,
+  accentSun: c4.accentSun, accentPeach: c4.accentPeach, // 첫 화면 소개 아이콘 원(장식)
 } as const;
 
 export const color = {
   ...v3,
-  onAction: '#FFFFFF', // 주 버튼·위험 칩 위 흰 글자(대비 7.80 / 8.31)
+  /** 읽는 글(본문·설명·안내). v3 에는 없던 이름 — v3 ink(갈색)는 누를 수 있는 것에만 */
+  inkBody: c4.inkBody,
+  onAction: c4.onAction, // 주 버튼·위험 칩 위 흰 글자(대비 7.80 / 8.31)
   // v2 이름 호환(기존 호출부용). 새 코드는 오른쪽 역할 이름을 쓴다.
   actionDark: v3.actionPressed,
   actionShadow: v3.actionPressed,
@@ -38,7 +46,7 @@ export const brand = {
 /** 시스템 글꼴 유지. undefined 면 RN 기본(Android Roboto/Noto CJK, iOS SF/Apple SD Gothic Neo). */
 export const font = {title: undefined, body: undefined, hand: undefined} as const;
 
-export {tokensV4} from './tokensV4';
+export {tokensV4};
 
 /** @deprecated v3 크기 표. 새 코드는 tokensV4.type 역할(ui/ds Text role)을 쓴다(대응표 tokensV4Migration.typeScaleV3toV4). */
 export const typeScale = {
