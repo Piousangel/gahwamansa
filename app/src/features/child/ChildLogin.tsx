@@ -175,6 +175,7 @@ export function ChildLoginEmail() {
     <AudienceProvider value="child">
       <DsScreen
         variant="form"
+        dockReleaseOnKeyboard // R-12 예외: 200% 자판 열림에서 주 버튼이 40%를 넘으면 입력 바로 아래로(디자인 #74)
         back={{label: t.back_choose, onPress: () => navigation.goBack()}}
         header={
           <>

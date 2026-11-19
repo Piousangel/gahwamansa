@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Keyboard, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Screen as BaseScreen, type ScreenScroll} from '../Screen';
@@ -39,6 +39,9 @@ export type DsScreenProps = {
   children: React.ReactNode;
   /** 본문 맨 끝(Dock 에서 넘친 슬롯 뒤). 예: C0 '부모님이시면 처음으로' 출구는 넘친 이메일 링크보다 아래(시안 C0 v4 200%) */
   tail?: React.ReactNode;
+  /** R-12 예외(디자인 #74)를 켠다: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞)에.
+   *  입력 화면(C0-b 등)만 켠다. 끈 화면(기본)은 Dock 유지 — 예: P6 는 200% 자판 열림에서도 '다 썼어요'를 Dock 에(V4-INDEX, PR #82 리뷰 L2) */
+  dockReleaseOnKeyboard?: boolean;
   scrollRef?: React.Ref<ScreenScroll>;
 };
 
@@ -63,13 +66,19 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef}: DsScreenProps) {
+export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight(v.collapseOnKeyboard);
   const collapsed = kb > 0;
-  const [spill, setSpill] = useState<DockSpillLevel>(0);
+  const [spill, setSpillState] = useState<DockSpillLevel>(0);
+  // PR #82 리뷰 L4: 한 번 그리는 사이 onLayout 이 두 번 와도 오래된 값으로 판단하지 않게 지금 값을 ref 로도 든다
+  const spillRef = useRef<DockSpillLevel>(0);
+  const setSpill = (n: DockSpillLevel) => {
+    spillRef.current = n;
+    setSpillState(n);
+  };
   const ratio = dockRatioFor(variant, dock);
   // R-15(PR #29 리뷰 M3): 자판이 열리면 상한은 실제로 보이는 창(창 높이 - 자판) 기준
   const visible = Math.max(0, height - kb);
@@ -81,11 +90,16 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
     : '';
   // R-12 예외(디자인 결정 11-19, PR #74): 자판이 열린 채 주 버튼 하나만으로도 보이는 창의 40%를 넘으면 Dock 을 풀고
   //   주 버튼을 본문(입력 바로 아래, children 뒤·tail 앞)에 둔다. 자판이 닫히면 다시 Dock. 소셜 묶음은 해당 없음(자판 없는 화면)
+  //   PR #82 리뷰 L3: 같은 조건(창·배율·자판·문구)에서 한 번 풀렸으면 기억해, 다시 그 조건이 되면 Dock 을 그렸다 지우는 프레임 없이 바로 푼다
   const [undock, setUndock] = useState(false);
+  const releasedFor = useRef(new Set<string>());
+  const condKey = `${width}|${height}|${fontScale}|${kb}|${dockKey}`;
   useEffect(() => {
-    setSpill(0);
-    setUndock(false);
-  }, [width, height, fontScale, kb, dockKey]);
+    const known = releasedFor.current.has(condKey);
+    spillRef.current = known ? 2 : 0;
+    setSpillState(known ? 2 : 0);
+    setUndock(known);
+  }, [condKey]);
 
   const onDockHeight = (content: number) => {
     if (!dock) {
@@ -93,15 +107,17 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
     }
     // 자판이 열리면 아래 내비 inset 은 자판이 덮는다 → 재는 높이에서 뺀다(리드 지시 11-19, R-12 예외 측정)
     const total = content + DOCK_PAD_TOP + dockBottomPad(kb > 0 ? 0 : insets.bottom);
-    const next = nextSpill(spill, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
-    if (next !== spill) {
+    const level = spillRef.current;
+    const next = nextSpill(level, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
+    if (next !== level) {
       setSpill(next);
       return;
     }
     if (total > cap) {
       if (kb > 0) {
         // 소셜 묶음 화면에는 입력이 없다: 자판은 스택 위 다른 화면 것(C0-a 가 C0-b 밑에 남아 있을 때) → 풀지도 경고하지도 않는다
-        if (!isSocialGroup(dock.primary)) {
+        if (dockReleaseOnKeyboard && !isSocialGroup(dock.primary)) {
+          releasedFor.current.add(condKey);
           setUndock(true);
         }
       } else if (__DEV__) {

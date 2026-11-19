@@ -1,21 +1,15 @@
 import React, {useEffect, useState} from 'react';
-import {Image, Share, StyleSheet, View} from 'react-native';
+import {Share, StyleSheet, View} from 'react-native';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
-import {TopBar} from '../../ui/TopBar';
-import {Screen} from '../../ui/Screen';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
-import {useToast} from '../../ui/Toast';
-import {SmallButton} from '../../ui/SmallButton';
+import {AudienceProvider, Banner, Button, Card, DsScreen, Heading, Text, type DockProps} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
 import {copyText} from '../../ui/clipboard';
-import {Icon} from '../../ui/assets/icons';
-import {assetRegistry} from '../../ui/assets/registry';
+import {useToast} from '../../ui/Toast';
 import {appCopy, copy, withTitle} from '../../copy/copy';
 import {formatCode} from '../../ui/codeInputLogic';
-import {color, radius} from '../../ui/tokens';
 import {useBootLoading} from '../../app/splash';
 import {childErrorMessage} from '../../shared/childError';
 import {buildShareMessage, codeA11y, formatExpiry} from '../../lib/childFormat';
@@ -26,14 +20,28 @@ import {track} from '../track';
 
 const w = copy.child.wait;
 
-// C3 연결 대기 v4: 막다른 화면 대신 번호 카드(번호·만료 시각·복사) → 부모님 폰 3단계 → 예시 1장(보기 전용).
-// 만료 전에는 새 번호 만들기 없음(받으면 이미 보낸 번호가 무효). 만료되면 제목·칩 대신 안내 상자 + "새 번호 만들기".
+/** 위 영역: 제목 '연결 기다리는 중' + 설정 링크. 줄이 모자라면(200%) 설정이 제목 아래 줄로 내려간다(시안 C3 v4) */
+function WaitHeader({onSettings}: {onSettings: () => void}) {
+  return (
+    <View style={styles.head}>
+      <Heading level={1} style={styles.headTitle}>
+        {w.chip}
+      </Heading>
+      <Button kind="text" size="inline" label={copy.settings.open} onPress={onSettings} testID="wait-settings" />
+    </View>
+  );
+}
+
+// C3 연결 기다리는 중 v4(시안 child/C3_C4_P8_ds4 #42, UX V9): 번호 카드가 맨 위(번호·기한·알림 켜기) → 부모님 폰 3단계.
+// Dock = 주 '번호 보내기' + 보조 '복사하기'(200%에서 넘치면 복사하기는 본문 끝). 연결 칩·예시 카드 없음.
+// 만료 전에는 새 번호 만들기 없음(받으면 이미 보낸 번호가 무효). 만료되면 안내 띠 + '새 번호 만들기'.
+// BackLink 없음: 가입 단계의 끝이라 되돌아갈 곳이 없다(R-14 예외 목록, 시안 주석).
 export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams, 'Wait'>) {
   const {api} = useSession();
   const {state, error, setError, check} = useChildWaitState(api);
   const [busy, setBusy] = useState(false);
   const [renewed, setRenewed] = useState(false); // 이 화면에서 지난 번호 대신 새 번호를 만들었다
-  // UX U12: 공유 창에서 돌아오면 '보냈어요 · 연결 기다리는 중', 주 버튼은 보조 '다시 보내기'로 낮춘다(새 번호를 또 만들지 않게)
+  // UX U12: 공유 창에서 돌아오면 안내 한 줄, 주 버튼은 '다시 보내기'로(새 번호를 또 만들지 않게)
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(0); // 감사 L2: 번호 카드 위 '복사했어요' 띠(2초)
   useEffect(() => {
@@ -86,7 +94,6 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const copyCode = () => {
     if (code && copyText(code.code)) {
       track(api, 'invite_share_tapped', {channel: 'copy'}); // AC-05
-      // 감사 L2(디자인 판정): 토스트 대신 번호 카드 바로 위 인라인 띠 — 아래쪽 시스템 클립보드 미리보기(Android 13+, AC-08)와 겹치지 않는다
       setCopied(n => n + 1);
     }
   };
@@ -95,156 +102,111 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   if (linked) {
     const d = copy.connect_done;
     return (
-      <Screen
-        bottom={
-          <BigButton
-            label={d.button}
-            onPress={() => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Tabs'}]}))}
-          />
-        }>
-        <Text20 size={28} weight="bold">{d.title}</Text20>
-        {d.body.map(l => (
-          <Text20 key={l}>{withTitle(l, title)}</Text20>
-        ))}
-      </Screen>
+      <AudienceProvider value="child">
+        <DsScreen
+          variant="step"
+          header={<Heading level={1}>{d.title}</Heading>}
+          dock={{primary: {label: d.button, onPress: () => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Tabs'}]}))}}}>
+          {d.body.map(l => (
+            <Text key={l} role="bodyLg">
+              {withTitle(l, title)}
+            </Text>
+          ))}
+        </DsScreen>
+      </AudienceProvider>
     );
   }
 
   const expired = !!state && !code && state.hadExpired;
-  const bottom = !state ? (
-    <BigButton label={w.send} disabled onPress={() => {}} />
-  ) : code ? (
-    sent ? <BigButton variant="secondary" label={w.resend} onPress={send} /> : <BigButton label={w.send} onPress={send} />
-  ) : (
-    <BigButton label={expired ? w.new_code : w.make_code} loading={busy} onPress={makeCode} />
-  );
+  const dock: DockProps = !state
+    ? {primary: {label: w.send, onPress: () => {}, disabled: true}}
+    : code
+      ? {
+          primary: sent ? {kind: 'primary', label: w.resend, onPress: send} : {label: w.send, onPress: send},
+          secondary: {kind: 'text', label: w.copy, onPress: copyCode, testID: 'wait-copy'},
+        }
+      : {primary: {label: expired ? w.new_code : w.make_code, loading: busy, onPress: makeCode}};
+  const until = code ? w.until.split('{시각}').join(formatExpiry(code.expiresAt)) : '';
 
   return (
-    <View style={styles.flex}>
-      <Screen top={<TopBar settingsLabel={copy.settings.open} onSettings={settings} />} bottom={bottom}>
-        {!state ? (
-          <Text20>{appCopy.loading}</Text20>
-        ) : expired ? (
-          <View testID="wait-expired" style={styles.notice} accessibilityLiveRegion="polite">
-            <Text20 size={24} weight="bold">{w.expired_title}</Text20>
-            <Text20>{w.expired_body}</Text20>
+    <AudienceProvider value="child">
+      <DsScreen variant="step" header={<WaitHeader onSettings={settings} />} dock={dock}>
+        {!state ? <Text role="body">{appCopy.loading}</Text> : null}
+        {expired ? (
+          <Card tone="notice" testID="wait-expired">
+            <Heading level={2}>{w.expired_title}</Heading>
+            <Text role="body">{w.expired_body}</Text>
             {/* 11-9: 누르기 전에 앞 번호가 무효가 된다는 것을 알림 */}
-            <Text20 style={styles.sub}>{w.new_code_note}</Text20>
-          </View>
-        ) : (
-          <>
-            <View style={styles.chip} testID="wait-chip">
-              <Text20 weight="bold">{w.chip}</Text20>
-            </View>
-            <Text20 size={28} weight="bold" accessibilityRole="header">{withTitle(w.title, title)}</Text20>
-          </>
-        )}
-        {/* 늘 붙어 있는 live region 하나에 글만 바꾼다(새로 붙은 노드는 기기에 따라 안 읽힘) */}
-        <View accessibilityLiveRegion="polite">
-          {copied ? (
-            <View testID="wait-copied" style={styles.copied}>
-              <Icon name="icon-check" size={22} color={color.doneInk} />
-              <Text20 weight="bold" style={styles.copiedText}>{w.copied}</Text20>
-            </View>
-          ) : null}
-        </View>
+            <Text role="sub" tone="muted">
+              {w.new_code_note}
+            </Text>
+          </Card>
+        ) : null}
+        {copied ? <Banner testID="wait-copied" tone="done" text={w.copied} /> : null}
         {code ? (
-          <View testID="wait-code" style={styles.card}>
-            <View style={styles.cardHead}>
-              <Text20 weight="bold" style={styles.sub}>{w.code_label}</Text20>
-              <SmallButton label={w.copy} onPress={copyCode} />
-            </View>
-            {/* 리뷰 L6: 번호와 기한을 한 덩어리로 읽는다(복사하기 버튼은 따로) */}
-            <View
-              accessible
-              accessibilityLabel={`${copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}, ${w.until.split('{시각}').join(formatExpiry(code.expiresAt))}`}>
-              <Text20 size={44} weight="bold" selectable style={styles.code}>
+          <Card testID="wait-code">
+            <Text role="body">{w.code_label}</Text>
+            {/* 리뷰 L6: 번호와 기한을 한 덩어리로 읽는다(복사하기는 Dock) */}
+            <View accessible accessibilityLabel={`${copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}, ${until}`} style={styles.group}>
+              <Text role="display" testID="wait-code-number">
                 {formatCode(code.code)}
-              </Text20>
-              <Text20>{w.until.split('{시각}').join(formatExpiry(code.expiresAt))}</Text20>
+              </Text>
+              <Text role="sub" tone="muted">
+                {until}
+              </Text>
             </View>
-            {renewed ? <Text20 weight="bold">{copy.code.old_invalid}</Text20> : null}
-            {/* UX U12(11-9): 공유 창에서 돌아오면 칩은 그대로, 안내 한 줄 + 주 버튼을 보조 '다시 보내기'로(보냈는지는 앱이 알 수 없어 단정하지 않음) */}
+            {renewed ? <Text role="body">{copy.code.old_invalid}</Text> : null}
+            {/* UX U12(11-9): 공유 창에서 돌아오면 안내 한 줄(보냈는지는 앱이 알 수 없어 단정하지 않음) */}
             {sent ? (
-              <Text20 testID="wait-after-share" weight="bold" accessibilityLiveRegion="polite">{w.after_share}</Text20>
+              <Text role="body" testID="wait-after-share">
+                {w.after_share}
+              </Text>
             ) : null}
-          </View>
+            {/* V9: 알림 켜기는 번호 카드 안(이미 켜졌으면 줄 없음) */}
+            {notify.denied ? (
+              <View testID="wait-notify" style={styles.notify}>
+                <Text role="sub" tone="muted">
+                  {w.notify}
+                </Text>
+                <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+              </View>
+            ) : null}
+          </Card>
         ) : null}
         {error ? (
-          <View accessibilityLiveRegion="polite">
-            <Text20 weight="bold">{error.title}</Text20>
-            <BigButton variant="secondary" label={error.button} onPress={() => check()} />
+          <View accessibilityLiveRegion="polite" style={styles.group}>
+            <Text role="body">{error.title}</Text>
+            <Button kind="secondary" size="dock" label={error.button} onPress={() => check()} />
           </View>
         ) : null}
-        <View style={styles.steps}>
-          <Text20 size={24} weight="bold">{w.steps_title}</Text20>
-          {w.steps.map((s, i) => (
-            <View key={s} style={styles.step}>
-              <View style={styles.num}>
-                <Text20 weight="bold" style={styles.numText}>{String(i + 1)}</Text20>
+        {expired ? null : (
+          <View style={styles.steps} testID="wait-steps">
+            <Heading level={2}>{w.steps_title}</Heading>
+            {w.steps.map((s, i) => (
+              <View key={s} style={styles.step}>
+                <View style={styles.num} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  <Text role="body">{String(i + 1)}</Text>
+                </View>
+                <Text role="body" style={styles.stepText}>
+                  {withTitle(s, title)}
+                </Text>
               </View>
-              <View style={styles.flex}>
-                <Text20>{withTitle(s, title)}</Text20>
-                {i === 1 ? (
-                  // 부모님 첫 화면의 실제 버튼 글자(누를 수 없는 그림)
-                  <View style={styles.fakeButton} accessible accessibilityLabel={copy.first.parent}>
-                    <Text20 weight="bold">{copy.first.parent}</Text20>
-                    <Icon name="icon-chevron-right" size={22} color={color.ink} />
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ))}
-        </View>
-        {/* 알림은 보조: 할 일(3단계) 다음 */}
-        {state && notify.denied ? (
-          <View testID="wait-notify" style={styles.row}>
-            <Text20 style={styles.flex}>{w.notify}</Text20>
-            <SmallButton label={w.notify_button} onPress={notify.open} />
+            ))}
           </View>
-        ) : null}
-        <View testID="wait-example" style={styles.example}>
-          <View style={styles.exampleHead}>
-            <View style={styles.chip}>
-              <Text20 weight="bold">{w.example_chip}</Text20>
-            </View>
-            <Text20 weight="bold" style={styles.flex}>{w.example_title}</Text20>
-          </View>
-          <View style={styles.polaroid}>
-            {assetRegistry['intro-photo'] ? (
-              <Image source={assetRegistry['intro-photo']} style={styles.photo} accessibilityIgnoresInvertColors resizeMode="cover" />
-            ) : null}
-            <Text20 style={styles.sub}>{appCopy.ai_photo_label}</Text20>
-            <Text20 size={24} weight="bold">{w.example_question}</Text20>
-          </View>
-          <Text20 style={styles.sub}>{w.example_note}</Text20>
-        </View>
-      </Screen>
-    </View>
+        )}
+      </DsScreen>
+    </AudienceProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  copied: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.doneSoft, borderRadius: radius.card, paddingVertical: 8, paddingHorizontal: 14},
-  copiedText: {flex: 1, color: color.doneInk},
-  flex: {flex: 1},
-  chip: {alignSelf: 'flex-start', backgroundColor: color.actionSoft, borderRadius: radius.chip, paddingHorizontal: 12, paddingVertical: 4},
-  notice: {backgroundColor: color.noticeSoft, borderRadius: radius.card, padding: 16, gap: 6},
-  card: {backgroundColor: color.card, borderRadius: radius.card, borderWidth: 3, borderColor: color.line, padding: 16, gap: 6},
-  cardHead: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8},
-  code: {letterSpacing: 4, textAlign: 'center'},
-  sub: {color: color.inkSub},
-  row: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: color.paperSoft, borderRadius: radius.card, padding: 12},
-  steps: {gap: 12},
+  head: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 12},
+  headTitle: {flexShrink: 1},
+  group: {gap: 4, alignSelf: 'stretch'},
+  notify: {gap: 4, borderTopWidth: 1.5, borderTopColor: ds.color.lineSoft, paddingTop: 10, alignSelf: 'stretch'},
+  steps: {gap: 12, alignSelf: 'stretch'},
   step: {flexDirection: 'row', gap: 12, alignItems: 'flex-start'},
-  num: {width: 36, height: 36, borderRadius: 18, backgroundColor: color.action, alignItems: 'center', justifyContent: 'center'},
-  numText: {color: color.onAction},
-  fakeButton: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, marginTop: 8, paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: radius.button, borderWidth: 3, borderColor: color.lineGhost, backgroundColor: color.paperSoft,
-  },
-  example: {backgroundColor: color.paperSoft, borderRadius: radius.card, padding: 16, gap: 10},
-  exampleHead: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  polaroid: {backgroundColor: color.card, padding: 12, paddingBottom: 16, borderRadius: 6, gap: 6, transform: [{rotate: '-1.5deg'}]},
-  photo: {width: '100%', aspectRatio: 4 / 3, borderRadius: 2, backgroundColor: color.paperEdge},
+  // 번호 원: 글자가 커지면 같이 커지게 최소 크기만(고정 상자 없음)
+  num: {minWidth: 32, minHeight: 32, borderRadius: 16, paddingHorizontal: 6, backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, alignItems: 'center', justifyContent: 'center'},
+  stepText: {flex: 1},
 });

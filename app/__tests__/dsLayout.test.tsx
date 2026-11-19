@@ -197,7 +197,7 @@ describe('DsScreen', () => {
     }) as never);
     const press = jest.fn();
     render(
-      <DsScreen variant="form" dock={{primary: {label: '인증번호 받기', onPress: press}}} tail={<Text role="sub" testID="tail">약관</Text>}>
+      <DsScreen variant="form" dockReleaseOnKeyboard dock={{primary: {label: '인증번호 받기', onPress: press}}} tail={<Text role="sub" testID="tail">약관</Text>}>
         <Text role="body" testID="field">칸</Text>
       </DsScreen>,
     );
@@ -212,6 +212,42 @@ describe('DsScreen', () => {
     act(() => (handlers.keyboardDidHide ?? []).forEach(f => f()));
     expect(screen.getByTestId('screen-dock')).toBeTruthy();
     expect(screen.queryByTestId('dock-undocked')).toBeNull();
+    // PR #82 리뷰 L3: 같은 조건으로 다시 열리면 재기 전에 바로 풀린 상태(Dock 을 그렸다 지우는 프레임 없음)
+    act(() => (handlers.keyboardDidShow ?? []).forEach(f => f({endCoordinates: {height: 260}})));
+    expect(screen.queryByTestId('screen-dock')).toBeNull();
+    expect(screen.getByTestId('dock-undocked')).toBeTruthy();
+  });
+
+  test('PR #82 리뷰 L2: dockReleaseOnKeyboard 를 켜지 않은 화면은 자판이 열려 넘쳐도 Dock 유지(P6 200% 다 썼어요)', () => {
+    const handlers: Record<string, ((e?: unknown) => void)[]> = {};
+    jest.spyOn(Keyboard, 'addListener').mockImplementation(((ev: string, fn: (e?: unknown) => void) => {
+      (handlers[ev] ??= []).push(fn);
+      return {remove: noop};
+    }) as never);
+    render(
+      <DsScreen variant="step" dock={{primary: {label: '다 썼어요', onPress: noop}}}>
+        <Text role="body">칸</Text>
+      </DsScreen>,
+    );
+    act(() => (handlers.keyboardDidShow ?? []).forEach(f => f({endCoordinates: {height: 260}})));
+    act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 180}}}));
+    expect(screen.getByTestId('screen-dock')).toBeTruthy();
+    expect(screen.queryByTestId('dock-undocked')).toBeNull();
+  });
+
+  test('PR #82 리뷰 L4: 한 번 그리는 사이 onLayout 이 두 번 와도 넘침 단계를 하나씩 정확히 올린다', () => {
+    render(
+      <DsScreen variant="form" dock={dock}>
+        <Text role="body">본문</Text>
+      </DsScreen>,
+    );
+    act(() => {
+      const d = screen.getByTestId('ds-dock');
+      fireEvent(d, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}});
+      fireEvent(d, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 300}}});
+    });
+    // 두 번 다 넘침 → note·보조 모두 본문으로(오래된 0 으로 두 번 1 을 고르지 않는다)
+    expect(within(screen.getByTestId('dock-spill')).getByText('다시 쓰기')).toBeTruthy();
   });
 
   test('SocialGroup 이 든 Dock 은 intro 라도 0.4(R-12, 리뷰 M4)', () => {

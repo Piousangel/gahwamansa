@@ -709,11 +709,15 @@ describe('L3 W2: AC-03 푸시 탭·AC-07 여러 어르신 로그아웃·AC-08 �
       for (const v of [33, 32]) {
         setPlatform('android', v);
         render(<AppRoot api={createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'})} restore />);
-        await waitFor(() => screen.getByRole('button', {name: '복사하기'}));
+        await waitFor(() => screen.getByRole('button', {name: '복사하기'}), {timeout: 8000});
+        const said = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
         await press('복사하기');
         expect(screen.queryByTestId('toast')).toBeNull();
-        const band = screen.getByTestId('wait-copied');
-        expect(band.parent?.parent?.props.accessibilityLiveRegion ?? band.parent?.props.accessibilityLiveRegion).toBe('polite');
+        expect(screen.getByTestId('wait-copied')).toBeTruthy();
+        expect(said).toHaveBeenCalledWith('복사했어요'); // v4 ds Banner: 나타날 때 한 번 읽어 준다(live region 대신)
+        // 번호 카드 바로 위(카드보다 앞)
+        const ids = screen.root.findAll(n => typeof n.type === 'string' && ['wait-copied', 'wait-code'].includes(n.props.testID)).map(n => n.props.testID);
+        expect(ids).toEqual(['wait-copied', 'wait-code']);
         await act(async () => {
           await new Promise<void>(r => setTimeout(() => r(), 2100));
         });

@@ -12,7 +12,7 @@ const waitApi = (o: Parameters<typeof createFakeApi>[0] = {}) => createFakeApi({
 const openWait = async (api: ReturnType<typeof createFakeApi>) => {
   render(<AppRoot api={api} restore />);
   // 파일 첫 렌더는 모듈 첫 로드(사진·SVG)로 느릴 수 있다
-  await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'));
+  await waitFor(() => screen.getByTestId('wait-code'), {timeout: 8000});
 };
 jest.setTimeout(20000);
 // U10: 응원은 '취소' 가능 시간(토스트 표시 4초) 뒤에 보낸다. jest 의 RN 모의 PixelRatio 는 글자 배율 2를 돌려주므로 1로(그대로면 6초)
@@ -34,18 +34,22 @@ const openTab = async (name: string) => {
 };
 
 describe('C3 연결 대기', () => {
-  test('번호 카드(번호·만료 시각) → 3단계 → 예시 1장, 만료 전에는 새 번호 만들기가 없다', async () => {
+  test('C3 v4: 제목·설정 → 번호 카드(번호·만료 시각) → 3단계, 연결 칩·예시 카드 없음, 만료 전에는 새 번호 만들기가 없다', async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
     await openWait(waitApi());
     expect(screen.getByText('연결 기다리는 중')).toBeTruthy();
     expect(screen.getByText('123 456')).toBeTruthy();
     expect(screen.getByLabelText(/^연결 번호 1 2 3, 4 5 6, .*까지 쓸 수 있어요$/)).toBeTruthy(); // 번호+기한 한 덩어리(L6)
     expect(screen.getByText(/까지 쓸 수 있어요$/)).toBeTruthy();
-    expect(screen.getByText('엄마 폰에 가화만사성을 설치해요')).toBeTruthy();
-    expect(screen.getByText('부모님 휴대폰이에요')).toBeTruthy(); // 부모님 첫 화면의 실제 버튼 글자
-    expect(screen.getByText('숫자 6개를 쓰고, 답을 보여 줄지 고르면 돼요')).toBeTruthy();
-    expect(within(screen.getByTestId('wait-example')).getByText('예시')).toBeTruthy();
-    expect(screen.getByText('AI가 만든 그림')).toBeTruthy();
+    expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
+    expect(screen.getByText("링크로 열면 번호를 확인하고 '이 번호로 연결하기'를 눌러요")).toBeTruthy();
+    expect(screen.getByText('답을 보여 줄지 고르면 돼요')).toBeTruthy();
+    expect(screen.queryByTestId('wait-example')).toBeNull(); // V9: 예시 카드 없음
+    expect(screen.queryByTestId('wait-chip')).toBeNull(); // V9: 연결 칩 삭제
+    // Dock = 주 '번호 보내기' + 보조 '복사하기'
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getByRole('button', {name: '번호 보내기'})).toBeTruthy();
+    expect(dock.getByRole('button', {name: '복사하기'})).toBeTruthy();
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
     expect(screen.queryByTestId('child-tab-bar')).toBeNull(); // 연결 전 탭 바 숨김
     await press('번호 보내기');
@@ -53,16 +57,19 @@ describe('C3 연결 대기', () => {
     expect(share.mock.calls[0][0]).toMatchObject({message: expect.stringContaining('까지 쓸 수 있어요.')});
   });
 
-  test('알림 꺼짐이면 알림 한 줄은 3단계 아래(할 일 먼저)', async () => {
+  test('V9: 알림 꺼짐이면 알림 줄은 번호 카드 안(3단계 위), 켜져 있으면 줄 없음', async () => {
     const notifyMod = require('../src/features/child/useNotifyPermission');
-    jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
+    const spy = jest.spyOn(notifyMod, 'useNotifyPermission').mockReturnValue({denied: true, open: jest.fn()});
     await openWait(waitApi());
+    const card = within(screen.getByTestId('wait-code'));
+    expect(card.getByText('연결되면 알려 드릴게요')).toBeTruthy();
+    expect(card.getByRole('button', {name: '알림 켜기'})).toBeTruthy();
     const text = JSON.stringify(screen.toJSON());
-    const steps = text.indexOf('이렇게 하시면 돼요');
-    const notify = text.indexOf('연결되면 알려 드릴게요');
-    expect(steps).toBeGreaterThan(-1);
-    expect(notify).toBeGreaterThan(steps);
-    expect(notify).toBeLessThan(text.indexOf('매일 이런 사진과 질문이 가요'));
+    expect(text.indexOf('연결되면 알려 드릴게요')).toBeLessThan(text.indexOf('이렇게 하시면 돼요'));
+    screen.unmount();
+    spy.mockReturnValue({denied: false, open: jest.fn()});
+    await openWait(waitApi());
+    expect(screen.queryByTestId('wait-notify')).toBeNull();
   });
 
   test('복사하기 → 번호 카드 위 \'복사했어요\' 띠(감사 L2, 토스트 아님)', async () => {
@@ -70,7 +77,7 @@ describe('C3 연결 대기', () => {
     await openWait(waitApi());
     await press('복사하기');
     expect(spy).toHaveBeenCalledWith('123456');
-    expect(within(screen.getByTestId('wait-copied')).getByText('복사했어요')).toBeTruthy();
+    expect(screen.getByTestId('wait-copied')).toBeTruthy();
   });
 
   test('번호 기간이 지나면 안내 상자 + 새 번호 만들기, 만들면 토스트와 "전에 보낸 번호" 안내', async () => {
@@ -79,7 +86,8 @@ describe('C3 연결 대기', () => {
     render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByText('번호 기간이 지났어요'));
     expect(screen.getByText('새 번호를 만들어 다시 보내 주세요')).toBeTruthy();
-    expect(screen.queryByText('연결 기다리는 중')).toBeNull(); // 만료되면 칩·제목을 숨긴다
+    expect(screen.getByText('연결 기다리는 중')).toBeTruthy(); // v4: 제목은 그대로, 번호 카드·3단계 대신 안내 띠
+    expect(screen.queryByTestId('wait-steps')).toBeNull();
     await press('새 번호 만들기');
     await waitFor(() => screen.getByText('123 456'));
     expect(issue).toHaveBeenCalledTimes(1);
