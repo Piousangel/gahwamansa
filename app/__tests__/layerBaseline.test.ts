@@ -16,7 +16,10 @@ jest.setTimeout(120000);
 test('레이어 위반 수가 기준선과 같다', async () => {
   const eslint = new ESLint({cwd: path.join(__dirname, '..')});
   const results = await eslint.lintFiles(['src/**/*.{ts,tsx}']);
-  const msgs = results.flatMap(r => r.messages.filter(m => m.ruleId === 'no-restricted-imports').map(m => m.message));
+  // 같은 규칙에 얹은 디자인 시스템 경고([DS:rnImport])는 dsBaseline.test.ts 가 센다
+  const msgs = results.flatMap(r =>
+    r.messages.filter(m => m.ruleId === 'no-restricted-imports' && !m.message.includes('[DS:')).map(m => m.message),
+  );
   const count = (needle: string) => msgs.filter(m => m.includes(needle)).length;
   expect({
     app: count('조립 계층'),
