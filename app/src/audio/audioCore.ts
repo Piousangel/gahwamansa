@@ -4,7 +4,7 @@
 // - 읽어 주기: 사용자가 직접 누른 소리라 벨소리 무음·진동에서도 허용, 화면 읽기 켜짐이면 막음(readAloudAllowed 한 곳).
 //   새로 읽기 전에 이전 읽기를 멈춘다(겹쳐 읽지 않음).
 // - 효과음: 판단은 lib/audioPolicy sfxAllowed 한 곳. 여기는 이름별 소리 장치를 한 번만 열어 같이 쓰게(sfx)만 한다.
-// - 배경 음악: 읽어 주는 동안 10%(BGM_DUCK_VOLUME, 앱 안 덕킹). 트랙 열기·해제(release)는 useBgm 이 맡는다.
+// - 배경 음악: 읽어 주는 동안 5%(BGM_DUCK_VOLUME, 앱 안 덕킹). 트랙 열기·해제(release)는 useBgm 이 맡는다.
 // - stopAll: 앱이 뒤로 가면(bindAppLifecycle) 읽기·재생 중인 음악을 모두 멈춘다.
 import {BGM_DUCK_VOLUME, readAloudAllowed, type Ringer} from '../lib/audioPolicy';
 

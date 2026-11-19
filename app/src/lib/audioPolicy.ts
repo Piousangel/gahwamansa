@@ -28,8 +28,11 @@ export type AudioDecision = {
   ttsAllowed: boolean;
 };
 
-/** 읽어 주는 동안 음악 크기(bgm-proposal: 10% 이하). */
-export const BGM_DUCK_VOLUME = 0.1;
+/**
+ * 읽어 주는 동안 음악 크기 5%(-26dB). BGM 실측 -19.5 LUFS 라 10%(-20dB)는 말소리와 겨루는 경계에 걸린다
+ * (UX 깊이 회의 V25, SUMMARY (f), DECISIONS 11-19). 이전 값 0.1.
+ */
+export const BGM_DUCK_VOLUME = 0.05;
 
 /**
  * '읽어 주세요'를 보여 주고 말할 수 있는가 — 한 곳에서만 판단한다(SunBubble 버튼 표시·audio.speak 공용).

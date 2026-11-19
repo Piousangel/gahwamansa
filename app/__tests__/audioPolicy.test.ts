@@ -15,11 +15,11 @@ describe('audioPolicy(소리 정책, 의존성 없는 순수 로직)', () => {
     expect(audioPolicy(base)).toEqual({bgm: 'play', bgmVolume: 1, sfx: true, ttsAllowed: true});
   });
 
-  test('덕킹: 읽어 주는 동안 음악은 10% 이하로 줄였다가 끝나면 원래대로', () => {
+  test('덕킹: 읽어 주는 동안 음악은 5% 이하로 줄였다가 끝나면 원래대로', () => {
     const p = audioPolicy({...base, ttsSpeaking: true});
     expect(p.bgm).toBe('play');
     expect(p.bgmVolume).toBe(BGM_DUCK_VOLUME);
-    expect(BGM_DUCK_VOLUME).toBeLessThanOrEqual(0.1);
+    expect(BGM_DUCK_VOLUME).toBeLessThanOrEqual(0.05);
     expect(audioPolicy({...base, ttsSpeaking: false}).bgmVolume).toBe(1);
   });
 

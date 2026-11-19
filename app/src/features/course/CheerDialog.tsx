@@ -67,7 +67,7 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
       returnFocusRef={returnFocusRef}
       testID="cheer-dialog">
       {/* AP-03 읽어 주기: 응원 문장 바로 아래 */}
-      <ReadAloud text={ttsText.cheer(lines.join(' '))} />
+      <ReadAloud text={ttsText.cheer(lines)} />
     </Dialog>
   );
 }
