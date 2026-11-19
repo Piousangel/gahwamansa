@@ -70,7 +70,7 @@ export function RelationScreen() {
     <AudienceProvider value="child">
       <DsScreen
         variant="form"
-        back={{label: copy.login.back, onPress: resetRole}}
+        back={{to: copy.login.back, onPress: resetRole}}
         header={
           <>
             <Heading level={1}>{t.title}</Heading>

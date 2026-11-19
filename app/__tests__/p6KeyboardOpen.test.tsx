@@ -61,9 +61,9 @@ for (const scale of [1, 1.3, 2]) {
 
 test('‹ 오늘 코스 뒤로 링크: 누름 영역 64 이상(높이·폭), 글자 24(고친 값)', async () => {
   await toP6();
-  const back = screen.getByRole('button', {name: '오늘 코스로 돌아가기'});
+  const back = screen.getAllByRole('button', {name: '오늘 코스로'})[0];
   const st = StyleSheet.flatten(typeof back.props.style === 'function' ? back.props.style({pressed: false}) : back.props.style);
   expect(st.minHeight).toBeGreaterThanOrEqual(64);
   expect(st.minWidth).toBeGreaterThanOrEqual(64);
-  expect(StyleSheet.flatten(screen.getByText('‹ 오늘 코스').props.style).fontSize).toBeGreaterThanOrEqual(24);
+  expect(StyleSheet.flatten(screen.getByText('‹ 오늘 코스로').props.style).fontSize).toBeGreaterThanOrEqual(24);
 });

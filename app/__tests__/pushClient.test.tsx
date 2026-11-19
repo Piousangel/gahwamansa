@@ -491,7 +491,7 @@ describe('앱 조립(PushHost)', () => {
     });
     tag = 'acc-b';
     await act(async () => {
-      fireEvent.press(screen.getAllByRole('button', {name: copy.nav.back_a11y})[0]);
+      fireEvent.press(screen.getAllByRole('button', {name: copy.nav.to.Album})[0]); // 탭(앨범) 위에서 연 설정 → '앨범으로'(W-09)
     });
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await act(async () => {});
