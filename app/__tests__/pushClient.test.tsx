@@ -246,14 +246,55 @@ describe('앱 조립(PushHost)', () => {
     expect(request).toHaveBeenCalled();
   });
 
-  test('N1 은 동의 안 한 어르신·이미 받는 중이면 뜨지 않는다', async () => {
-    const api = createFakeApi({linked: true, consented: false, pushEnabled: false});
+  test('PR #65 L1: 답 보여 주기에 동의하지 않은 어르신에게도 코스를 마치면 N1 을 띄운다(별개 동의)', async () => {
+    const api = createFakeApi({linked: true, consented: false, pushEnabled: false, completedSteps: ALL_DONE});
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+  });
+
+  test('N1 은 이미 받는 중이면 뜨지 않는다', async () => {
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: true, completedSteps: ALL_DONE});
     const my = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => expect(my).toHaveBeenCalled());
     await act(async () => {});
-    expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull();
-    expect(my).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+  });
+
+  test('PR #65 L3: 오프라인으로 확인을 못 하면 앱이 앞으로 돌아올 때(active) 다시 확인해 띄운다, 답한 뒤에는 다시 안 띄움', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+      if (type === 'change') {
+        handlers.push(h);
+      }
+      return {remove: jest.fn()};
+    }) as never);
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('denied');
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const real = api.myPushSettings.bind(api);
+    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await waitFor(() => expect(my).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    my.mockImplementation(real);
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await press(copy.push.permission.no);
+    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
+    const calls = my.mock.calls.length;
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+    await waitFor(() => expect(my.mock.calls.length).toBeGreaterThan(calls));
+    await act(async () => {});
+    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
   });
 
   test('어르신 일일 알림 탭: push_opened{daily} + [P3, 사진 보기]', async () => {

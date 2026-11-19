@@ -25,7 +25,7 @@ const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.
 // 화면을 그리지 않는다. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
 export function PushHost({role, source: given}: {role: Role; source?: PushTokenSource}) {
-  const {api, content, consented, done} = useSession();
+  const {api, content, done} = useSession();
   const courseDone = new Set(done).size >= 3; // 오늘 코스(3단계)를 다 마쳤나 — N1 은 도장 뒤(V1)
   const source = useMemo(() => given ?? pickTokenSource(getAppEnv().API_MODE), [given]);
   const deps = useMemo(() => configurePush(api, source), [api, source]);
@@ -156,20 +156,49 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
     }
   }, [pending, role, route, content, api]);
 
-  // N1: 연결·동의한 어르신이 오늘 코스를 다 마치고(P7 도장 → '알겠어요') 코스 홈에 왔을 때, 이 계정에서 아직 답하지 않았으면 한 번
-  // (실행당 한 번만 확인). V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다. 링크 경로의 연결·동의 순서는 그대로
-  const asked = useRef(false);
+  // N1: 연결된 어르신이 오늘 코스를 다 마치고(P7 도장 → '알겠어요') 코스 홈에 왔을 때, 이 계정에서 아직 답하지 않았으면 묻는다.
+  // V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다. 링크 경로의 연결·동의 순서는 그대로.
+  // PR #65 리뷰 L1(리드 결정 11-19): 알림 받기와 답 보여 주기는 별개 동의 — 답 보여 주기에 동의하지 않은 어르신에게도 묻는다.
+  // PR #65 리뷰 L3(리드 결정 11-19): 확인은 '깨어남'(실행·앱이 앞으로 돌아옴)마다 한 번. 오프라인이거나 응답 전에 다른 화면으로 갔으면
+  //   다음 깨어남(또는 같은 깨어남에서 코스 홈으로 돌아올 때)에 다시 확인한다. 이미 답했으면 shouldPromptParent 가 false 라 띄우지 않는다.
+  const [wake, setWake] = useState(0);
   useEffect(() => {
-    if (role !== 'parent' || !linked || !consented || !courseDone || route !== 'CourseHome' || pending || asked.current) {
+    if (role !== 'parent') {
       return;
     }
-    asked.current = true;
-    shouldPromptParent(deps).then(yes => {
-      if (yes && navRef.isReady() && navRef.getCurrentRoute()?.name === 'CourseHome') {
-        navRef.navigate('PushPermission');
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'active') {
+        setWake(w => w + 1);
       }
     });
-  }, [role, linked, consented, courseDone, route, pending, deps]);
+    return () => sub.remove();
+  }, [role]);
+  const checkedWake = useRef(-1);
+  const checking = useRef(false);
+  useEffect(() => {
+    if (role !== 'parent' || !linked || !courseDone || route !== 'CourseHome' || pending) {
+      return;
+    }
+    if (checking.current || checkedWake.current === wake) {
+      return;
+    }
+    checking.current = true;
+    checkedWake.current = wake;
+    shouldPromptParent(deps)
+      .then(yes => {
+        if (!yes) {
+          return;
+        }
+        if (navRef.isReady() && navRef.getCurrentRoute()?.name === 'CourseHome') {
+          navRef.navigate('PushPermission');
+        } else {
+          checkedWake.current = -1; // 묻기로 했는데 다른 화면에 있었다: 코스 홈으로 돌아오면 다시 확인
+        }
+      })
+      .finally(() => {
+        checking.current = false;
+      });
+  }, [role, linked, courseDone, route, pending, deps, wake]);
 
   return null;
 }
