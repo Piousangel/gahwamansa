@@ -630,6 +630,6 @@
 
 ### C8 앱 정보·#100 낮음 · 11-20
 - C8: 배치 그대로, 부품만 ui/ds(DsScreen·Text 역할·Card notice). 굵은 역할은 제목·AI 고지 제목 둘.
-- 테스트 대기 시간 예외(#100 L1): #77 규칙은 '테스트마다 timeout 을 주지 않고 전역 asyncUtilTimeout 10초를 쓴다'(jest.after.js). cheerSheetV4 의 첫 화면·시트 대기 15초와 jest.setTimeout(30000)은 그 예외 — 부하(load 20+)에서 홈 첫 렌더가 10초를 넘겨 흔들렸기 때문(#98 L2).
+- (11-20 바뀜) cheerSheetV4 흔들림 원인은 첫 테스트가 콜드 스타트(4~6초)를 혼자 떠안는 것(#101 리뷰) → beforeAll 에서 AppRoot 를 한 번 그렸다 내려 미리 치르고, 개별 15초 대기·30초 상한(#77 예외)은 되돌림. 같은 패턴인 파일은 같은 예열을 쓴다.
 - 스위치 색(#100 L2): ui/ds SWITCH_COLORS 하나로 — 끔 트랙 line(흰 면 3.72·종이 3.36, 비텍스트 3:1 이상), 켬 done(7.13). 자녀 FamilyPushRow·어르신 ParentSettings(2곳)·NotifyRows 가 모두 같은 값을 쓴다(이전 lineSoft 1.44 미달).
 - Sheet footer 테스트(#100 L3): 스크롤 밖·띠 다음 맨 아래, 글자 1.0·2.0 모두. 200% 화면은 C7 캡처(저장 버튼 고정)로 확인.
