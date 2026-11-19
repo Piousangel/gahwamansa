@@ -11,6 +11,7 @@ import {ChoiceGrid} from '../../ui/ChoiceGrid';
 import {copy, offlineMessage} from '../../copy/copy';
 import {isOffline, isServerError, PARENT_TITLES} from '../types';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {track} from '../track';
 
 const t = copy.relation;
 
@@ -47,7 +48,11 @@ export function RelationScreen() {
       }
       // 살아 있는 가입 번호가 있으면 다시 쓴다(새로 받으면 이미 보낸 번호가 무효가 된다, 서버 0018). 호칭은 위에서 갱신됨
       const s = await api.getChildState();
-      const code = s.kind === 'family' && s.code ? s.code.code : await api.issueInviteCode();
+      const reuse = s.kind === 'family' && s.code ? s.code.code : null;
+      const code = reuse ?? (await api.issueInviteCode());
+      if (!reuse) {
+        track(api, 'invite_code_issued', {purpose: 'parent_code'}); // AC-05: 새로 받은 때만(다시 쓰는 번호는 세지 않음)
+      }
       navigation.navigate('Code', {from: 'relation', code, title, renewed: s.kind === 'family' && !s.code && s.hadExpired, expiresAt: s.kind === 'family' && s.code ? s.code.expiresAt : undefined});
     } catch (e) {
       setFailed(isOffline(e) ? offlineMessage.title : t.failed);

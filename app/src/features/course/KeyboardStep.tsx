@@ -14,7 +14,7 @@ import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
 import {appCopy, copy} from '../../copy/copy';
 import {StepError} from './StepError';
-import {useFinishStep} from './useFinishStep';
+import {useFinishStep, useStepStarted, type HangulResult} from './useFinishStep';
 import {StepHeader} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {confirmedCount, filledCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
@@ -40,6 +40,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const review = !!route.params?.review;
   const toCourseHome = () => navigation.popTo('CourseHome');
   const {finish, error, busy} = useFinishStep();
+  useStepStarted('hangul', review); // AC-05
+  const lastResult = useRef<HangulResult>('finished'); // 저장 실패 뒤 '다시 하기'도 같은 결과(finished/skipped)로
   const {content, done} = useSession();
   const {fontScale} = useWindowDimensions();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -153,13 +155,14 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
     setPhase('writing');
     inputRef.current?.focus();
   };
-  // 계측: useFinishStep 이 course_step_completed {step:'hangul', duration_sec, attempt_no}를 보낸다(0022).
-  //   서버 result 값은 granted·denied 뿐이라 일치·이대로·넘어가기 구분은 싣지 않는다. 글자 내용은 절대 보내지 않는다.
-  // 마치기·이대로 마칠게요·넘어갈게요는 모두 같은 "단계 완료" 기록이다(평가하지 않음).
-  const complete = async () => {
+  // 계측: useFinishStep 이 course_step_completed {step:'hangul', duration_sec, attempt_no, result}를 보낸다(0022·0053).
+  //   result 는 finished(마치기·이대로 마칠게요)·skipped(넘어갈게요) 두 값만 — 맞았는지는 싣지 않는다(사람별 정오 기록 금지, AC-05).
+  //   글자 내용은 절대 보내지 않는다. 셋 모두 같은 "단계 완료" 기록이다(평가하지 않음).
+  const complete = async (result: HangulResult) => {
+    lastResult.current = result;
     setPhase(p => (p === 'sheet' ? 'writing' : p));
     const willFinishCourse = STEP_ORDER.every(s => s === 'hangul' || done.includes(s));
-    if (await finish('hangul', attempts)) {
+    if (await finish('hangul', {attemptNo: attempts, result})) {
       if (willFinishCourse) {
         navigation.replace('CourseDone'); // P7: 알겠어요 → 코스 홈
       } else {
@@ -169,9 +172,9 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   };
 
   const dock = error ? (
-    <StepError error={error} onRetry={complete} />
+    <StepError error={error} onRetry={() => complete(lastResult.current)} />
   ) : phase === 'matched' ? (
-    <BigButton buttonRef={finishRef} label={k.finish} disabled={!canFinish} loading={busy} onPress={complete} />
+    <BigButton buttonRef={finishRef} label={k.finish} disabled={!canFinish} loading={busy} onPress={() => complete('finished')} />
   ) : (
     <>
       <BigButton
@@ -184,10 +187,10 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       />
       {open ? null : skipStrong ? (
         <View testID="kb-skip-strong">
-          <BigButton variant="secondary" label={k.skip} disabled={busy} onPress={complete} />
+          <BigButton variant="secondary" label={k.skip} disabled={busy} onPress={() => complete('skipped')} />
         </View>
       ) : (
-        <SkipLink label={k.skip} disabled={busy} onPress={complete} />
+        <SkipLink label={k.skip} disabled={busy} onPress={() => complete('skipped')} />
       )}
       {/* 감사 L4·디자인 판정: P6 은 '오늘 코스로'(U13)를 숨긴다 — '오늘은 넘어갈게요'와 뜻이 겹쳐 오터치 */}
     </>
@@ -268,7 +271,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
         returnFocusRef={doneRef} // R12: 닫히면 연 버튼('다 썼어요')으로
         actions={[
           {label: k.retry, onPress: retry},
-          {label: k.finish_as_is, onPress: complete},
+          {label: k.finish_as_is, onPress: () => complete('finished')},
         ]}
         onBack={retry}
         testID="kb-retry">

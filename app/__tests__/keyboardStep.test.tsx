@@ -180,7 +180,7 @@ test('반례: 받침 유지로 칸은 다 찼어도 일치가 아니면 "다 썼
   expect(screen.getByText('쓰신 낱말 나뭄')).toBeTruthy();
 });
 
-test('계측: 단계 완료 때 course_step_completed {step:hangul, attempt_no, duration_sec} + course_completed, 글자 없음', async () => {
+test('계측: 단계 시작 + 완료 때 course_step_completed {step:hangul, attempt_no, duration_sec, result:finished} + course_completed, 글자 없음', async () => {
   const {calls} = await toKeyboardStep();
   await type('나모');
   await press('다 썼어요');
@@ -188,13 +188,32 @@ test('계측: 단계 완료 때 course_step_completed {step:hangul, attempt_no, 
   await press('다 썼어요');
   await press('이대로 마칠게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  // 번호 연결(P1)이 남기는 이벤트만 빼고 전부 본다: 다른 이벤트가 끼면 순서 검사가 잡는다
-  const ev = calls.filter(c => c.name === 'logEvent' && c.args[0] !== 'parent_code_redeemed').map(c => c.args);
-  expect(ev).toHaveLength(2);
-  expect(ev[0][0]).toBe('course_step_completed');
-  expect(ev[0][1]).toEqual({step: 'hangul', duration_sec: expect.any(Number), attempt_no: 2});
-  expect(ev[1]).toEqual(['course_completed', {day_index: 1}]);
-  expect(JSON.stringify(ev)).not.toContain('나모');
+  // 코스 이벤트는 전부 본다: 다른 코스 이벤트가 끼면 순서 검사가 잡는다(번호 연결·첫 실행 이벤트는 다른 테스트)
+  const ev = calls.filter(c => c.name === 'logEvent' && String(c.args[0]).startsWith('course_')).map(c => c.args);
+  expect(ev).toHaveLength(3);
+  expect(ev[0]).toEqual(['course_step_started', {step: 'hangul', day_index: 1}]);
+  expect(ev[1][0]).toBe('course_step_completed');
+  // AC-05: '이대로 마칠게요'도 finished(맞았는지는 싣지 않음)
+  expect(ev[1][1]).toEqual({step: 'hangul', duration_sec: expect.any(Number), attempt_no: 2, result: 'finished'});
+  expect(ev[2]).toEqual(['course_completed', {day_index: 1}]);
+  expect(JSON.stringify(calls.filter(c => c.name === 'logEvent'))).not.toContain('나모');
+});
+
+test('계측 AC-05: 맞게 써서 마치기도 finished, 넘어가기는 skipped — 두 값뿐', async () => {
+  const a = await toKeyboardStep();
+  await type('나무');
+  await waitFor(() => expect(screen.getByRole('button', {name: '마칠게요'})).toBeEnabled(), {timeout: 6000});
+  await press('마칠게요');
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  const done1 = a.calls.filter(c => c.name === 'logEvent' && c.args[0] === 'course_step_completed').map(c => c.args[1]);
+  expect(done1).toEqual([expect.objectContaining({step: 'hangul', result: 'finished'})]);
+  screen.unmount();
+
+  const b = await toKeyboardStep();
+  await press('오늘은 넘어갈게요');
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  const done2 = b.calls.filter(c => c.name === 'logEvent' && c.args[0] === 'course_step_completed').map(c => c.args[1]);
+  expect(done2).toEqual([expect.objectContaining({step: 'hangul', result: 'skipped'})]);
 });
 
 test('계측 실패(한도·지워진 계정·네트워크)는 화면을 막지 않는다', async () => {

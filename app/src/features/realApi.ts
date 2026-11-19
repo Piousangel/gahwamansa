@@ -3,7 +3,7 @@ import {OfflineError, ServerError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
-import {parseLogEventResult} from '../api/contract/events';
+import {parseLogEventResult, type EventName, type EventProps} from '../api/contract/events';
 import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
@@ -83,6 +83,14 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
   const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
   // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
   // 못 읽었으면(오프라인) 새 익명 사용자를 만들지 않는다.
+  // 세션이 생기기 전에 난 이벤트(AC-05: 역할 고르기의 app_first_open). 서버는 세션 없는 log_event 를 auth_required 로 버리므로
+  // 여기 잠깐 들고 있다가 세션이 생긴 뒤 첫 ensureSession·logEvent 때 먼저 보낸다. 앱을 새로 켜면 사라진다(최대 4개).
+  const waiting: {name: EventName; props: EventProps}[] = [];
+  const flushWaiting = () => {
+    for (const x of waiting.splice(0)) {
+      Promise.resolve(sb.rpc('log_event', {p_name: x.name, p_props: x.props})).catch(() => {});
+    }
+  };
   const ensureSession = async () => {
     const {data, error} = await sb.auth.getSession();
     if (error) throw new OfflineError(`세션 확인: ${error.message}`);
@@ -90,6 +98,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       const {error: e} = await sb.auth.signInAnonymously();
       if (e) fail('익명 로그인', e);
     }
+    flushWaiting();
   };
   // get_today_content(읽기 전용)·start_today(0024, 커서 전진 + 같은 객체 + advanced) 공용. 미연결이면 미리 보기.
   const loadToday = async (rpc: 'get_today_content' | 'start_today'): Promise<TodayContent | null> => {
@@ -330,6 +339,15 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       return r;
     },
     async logEvent(name, props = {}) {
+      // 세션 전에는 익명 사용자를 만들지 않는다(자녀는 곧 카카오 등으로 로그인한다). 들고 있다가 세션이 생기면 보낸다
+      const {data: cur} = await sb.auth.getSession();
+      if (!cur?.session) {
+        if (waiting.length < 4) {
+          waiting.push({name, props});
+        }
+        return {ok: false, reason: 'no_user'};
+      }
+      flushWaiting();
       const {data, error} = await sb.rpc('log_event', {p_name: name, p_props: props});
       if (error) fail('log_event', error);
       const r = parseLogEventResult(data);

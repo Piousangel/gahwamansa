@@ -1,0 +1,261 @@
+// AC-05 측정(UX 깊이 회의 V10, DECISIONS 11-19 '측정'): 발신 0이던 운영 퍼널 이벤트 11개 + course_step_started.
+// 이름·속성은 서버 화이트리스트(0053) 안에서만 — eventsContract.test 가 이름 목록을, 여기서는 "어디서 무엇을 보내는지"를 본다.
+// 글자 내용·번호·답 내용은 어느 이벤트에도 싣지 않는다.
+import React from 'react';
+import {Share, PixelRatio} from 'react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {AppRoot} from '../src/app/AppRoot';
+import {createFakeApi} from '../src/features/fakeApi';
+import {createRealApi} from '../src/features/realApi';
+import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
+import {memoryStore} from '../src/lib/kvStore';
+import {daysSinceYmd} from '../src/lib/childFormat';
+import {trackOnce} from '../src/features/track';
+import {EVENT_NAMES, EVENT_PROP_VALUES} from '../src/api/contract/events';
+import {enterCode, press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import type {Api} from '../src/features/types';
+import * as clipboard from '../src/ui/clipboard';
+
+jest.setTimeout(20000);
+beforeEach(() => {
+  setPrefsForTest(createPrefs(memoryStore()));
+  jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
+});
+afterEach(() => {
+  setPrefsForTest(null);
+  jest.restoreAllMocks();
+});
+
+const events = (log: jest.SpyInstance) => log.mock.calls.map(c => c[0] as string);
+const callsOf = (log: jest.SpyInstance, name: string) => log.mock.calls.filter(c => c[0] === name).map(c => c[1]);
+
+test('계약: course_step_started 이름과 result finished 값이 있다(서버 0053와 같음)', () => {
+  expect(EVENT_NAMES).toContain('course_step_started');
+  expect(EVENT_PROP_VALUES.result).toEqual(expect.arrayContaining(['finished', 'skipped']));
+});
+
+describe('설치·역할: app_first_open', () => {
+  test('역할을 고르면 role_guess 와 함께 한 번, 처음 화면으로 돌아와 다시 골라도 또 보내지 않는다', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    const {unmount} = render(<AppRoot api={api} />);
+    await press(/부모님 휴대폰이에요/);
+    await waitFor(() => expect(callsOf(log, 'app_first_open')).toEqual([{role_guess: 'parent'}]));
+    unmount();
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await act(async () => {});
+    expect(callsOf(log, 'app_first_open')).toHaveLength(1);
+  });
+
+  test('trackOnce: 같은 틱에 두 번 불려도 한 번', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    await Promise.all([trackOnce(api, 'app_first_open', {role_guess: 'child'}), trackOnce(api, 'app_first_open', {role_guess: 'child'})]);
+    expect(callsOf(log, 'app_first_open')).toEqual([{role_guess: 'child'}]);
+  });
+});
+
+describe('realApi: 세션 전 이벤트는 들고 있다가 세션이 생기면 보낸다(no_user 로 버려지지 않게)', () => {
+  function fakeSb() {
+    let session: object | null = null;
+    const rpc = jest.fn(async (name: string, _args?: unknown) => (name === 'log_event' ? {data: {ok: true}, error: null} : {data: null, error: null}));
+    const sb = {
+      auth: {
+        getSession: jest.fn(async () => ({data: {session}, error: null})),
+        signInAnonymously: jest.fn(async () => {
+          session = {user: {id: 'anon'}};
+          return {error: null};
+        }),
+      },
+      rpc,
+    };
+    return {sb, rpc, login: () => (session = {user: {id: 'u'}})};
+  }
+
+  test('세션 없음 → 익명 사용자를 만들지 않고 보관, 다음 logEvent 때 먼저 보낸다', async () => {
+    const {sb, rpc, login} = fakeSb();
+    const api = createRealApi(sb as never, undefined, 'android');
+    await expect(api.logEvent('app_first_open', {role_guess: 'child'})).resolves.toEqual({ok: false, reason: 'no_user'});
+    expect(rpc).not.toHaveBeenCalled();
+    expect(sb.auth.signInAnonymously).not.toHaveBeenCalled();
+    login(); // 자녀 카카오 로그인
+    await api.logEvent('child_signup_completed', {login_method: 'kakao'});
+    expect(rpc.mock.calls.map(c => (c[1] as {p_name: string}).p_name)).toEqual(['app_first_open', 'child_signup_completed']);
+  });
+
+  test('어르신: 익명 세션을 만드는 첫 호출(ensureSession) 뒤 바로 보낸다, 한 번만', async () => {
+    const {sb, rpc} = fakeSb();
+    const api = createRealApi(sb as never, undefined, 'android');
+    await api.logEvent('app_first_open', {role_guess: 'parent'});
+    await api.peekInviteCode('123456').catch(() => {}); // ensureSession → 세션 생김 → 보관분 전송
+    const sent = rpc.mock.calls.filter(c => c[0] === 'log_event').map(c => c[1]);
+    expect(sent).toEqual([{p_name: 'app_first_open', p_props: {role_guess: 'parent'}}]);
+    await api.logEvent('consent_shown');
+    expect(rpc.mock.calls.filter(c => c[0] === 'log_event')).toHaveLength(2);
+  });
+});
+
+describe('동의(P2): consent_shown · parent_consent_accepted · parent_consent_declined', () => {
+  async function toConsent(api: Api) {
+    render(<AppRoot api={api} role="parent" />);
+    await enterCode('123456');
+    await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  }
+
+  test('보이면 consent_shown, 좋아요 → 저장된 뒤 accepted{consent_version}', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    await toConsent(api);
+    await waitFor(() => expect(callsOf(log, 'consent_shown')).toHaveLength(1));
+    await press('좋아요');
+    await waitFor(() => expect(callsOf(log, 'parent_consent_accepted')).toEqual([{consent_version: expect.stringMatching(/^v\d+$/)}]));
+    expect(events(log)).not.toContain('parent_consent_declined');
+  });
+
+  test('싫어요 → declined', async () => {
+    const api = createFakeApi();
+    const log = jest.spyOn(api, 'logEvent');
+    await toConsent(api);
+    await press('싫어요');
+    expect(callsOf(log, 'parent_consent_declined')).toHaveLength(1);
+    expect(events(log)).not.toContain('parent_consent_accepted');
+  });
+
+  test('저장이 실패하면 accepted 를 보내지 않는다', async () => {
+    const api = createFakeApi();
+    jest.spyOn(api, 'giveConsent').mockRejectedValueOnce(new Error('x'));
+    const log = jest.spyOn(api, 'logEvent');
+    await toConsent(api);
+    await press('좋아요');
+    await waitFor(() => screen.getByTestId('consent-error'));
+    expect(events(log)).not.toContain('parent_consent_accepted');
+  });
+
+  test('이미 동의한 기기는 동의 화면을 건너뛰고 consent_shown 도 없다', async () => {
+    const api = createFakeApi({consented: true});
+    const log = jest.spyOn(api, 'logEvent');
+    await toHomeConsented(api);
+    expect(events(log)).not.toContain('consent_shown');
+  });
+});
+
+describe('단계 시작: course_step_started{step, day_index}', () => {
+  test('연결된 기기가 단계에 들어오면 한 번(사진)', async () => {
+    const api = createFakeApi({linked: true, consented: true});
+    const log = jest.spyOn(api, 'logEvent');
+    await toHomeConsented(api);
+    await pressCourseNext();
+    await waitFor(() => expect(callsOf(log, 'course_step_started')).toEqual([{step: 'photo', day_index: 1}]));
+  });
+
+  test('다 마친 뒤 보기 전용(review)에서는 보내지 않는다', async () => {
+    const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question', 'hangul']});
+    const log = jest.spyOn(api, 'logEvent');
+    await toHomeConsented(api);
+    await press('둘 중 고르기, 했어요');
+    await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
+    await act(async () => {});
+    expect(events(log)).not.toContain('course_step_started');
+  });
+});
+
+describe('자녀 퍼널', () => {
+  test('로그인 성공 → child_signup_completed{login_method}, 취소면 없음', async () => {
+    const api = createFakeApi();
+    jest.spyOn(api, 'signInWithSocial').mockResolvedValueOnce('cancelled').mockResolvedValueOnce('ok');
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} />);
+    await press(/자녀 휴대폰이에요/);
+    await waitFor(() => screen.getByTestId('legal-child'));
+    await press(/카카오/);
+    await act(async () => {});
+    expect(events(log)).not.toContain('child_signup_completed');
+    await press(/카카오/);
+    await waitFor(() => expect(callsOf(log, 'child_signup_completed')).toEqual([{login_method: 'kakao'}]));
+  });
+
+  test('C4 답 카드를 처음 보면 child_first_answer_viewed{days_since_connect} 한 번(답 내용 없음)', async () => {
+    const connected = new Date(Date.now() + 9 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10);
+    const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    const api = createFakeApi({
+      consented: true,
+      parents: [{parentId: 'p1', title: '엄마', connectedDate: connected, latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}],
+    });
+    const log = jest.spyOn(api, 'logEvent');
+    const {unmount} = render(<AppRoot api={api} role="child" />);
+    await waitFor(() => expect(callsOf(log, 'child_first_answer_viewed')).toEqual([{days_since_connect: 3}]));
+    expect(JSON.stringify(log.mock.calls)).not.toContain('봄');
+    unmount();
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await act(async () => {});
+    expect(callsOf(log, 'child_first_answer_viewed')).toHaveLength(1);
+  });
+
+  test('답이 없으면 child_first_answer_viewed 를 보내지 않는다', async () => {
+    const api = createFakeApi({consented: true, parents: [{parentId: 'p1', title: '엄마', latest: null}]});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await act(async () => {});
+    expect(events(log)).not.toContain('child_first_answer_viewed');
+  });
+
+  test('지난 답 탭 → child_report_viewed', async () => {
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('tab', {name: '지난 답'}));
+    expect(events(log)).not.toContain('child_report_viewed');
+    await act(async () => {
+      fireEvent.press(screen.getByRole('tab', {name: '지난 답'}));
+    });
+    await waitFor(() => expect(callsOf(log, 'child_report_viewed')).toEqual([undefined]));
+  });
+
+  test('응원을 받은 분이 있으면 cheer_sent{message_key} 한 번(받는 분 정보 없음)', async () => {
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await press('응원 보내기');
+    await press('늘 고마워요');
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 4300)); // 취소 가능 시간이 지나야 보낸다
+    });
+    await waitFor(() => expect(callsOf(log, 'cheer_sent')).toEqual([{message_key: 'thanks_always'}]));
+  });
+
+  test('C3 번호 보내기·복사하기 → invite_share_tapped{channel}(번호 값 없음)', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마'});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByText('엄마 폰에서 번호를 쓰면 이어져요'), {timeout: 8000});
+    await press('번호 보내기');
+    await press('복사하기');
+    expect(callsOf(log, 'invite_share_tapped')).toEqual([{channel: 'share_sheet'}, {channel: 'copy'}]);
+    expect(JSON.stringify(log.mock.calls)).not.toContain('123456');
+  });
+
+  test('C1 → 새 번호 → invite_code_issued{purpose:parent_code}', async () => {
+    const api = createFakeApi({who: 'child'});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByRole('button', {name: '번호 만들기'}), {timeout: 8000});
+    await press('번호 만들기');
+    await waitFor(() => expect(callsOf(log, 'invite_code_issued')).toEqual([{purpose: 'parent_code'}]));
+  });
+});
+
+describe('daysSinceYmd(KST)', () => {
+  const now = new Date('2026-11-19T15:30:00Z'); // KST 11-20 00:30
+  test('같은 날 0, 사흘 전 3, 형식 오류·미래는 null', () => {
+    expect(daysSinceYmd('2026-11-20', now)).toBe(0);
+    expect(daysSinceYmd('2026-11-17', now)).toBe(3);
+    expect(daysSinceYmd('2026-11-21', now)).toBeNull();
+    expect(daysSinceYmd('11/20', now)).toBeNull();
+  });
+});

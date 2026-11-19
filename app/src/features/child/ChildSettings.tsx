@@ -22,6 +22,7 @@ import {FamilyPushRow} from './FamilyPushRow';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {track} from '../track';
 
 const s = copy.child.settings;
 const rel = copy.relation;
@@ -98,6 +99,7 @@ export function ChildSettings() {
     }
     try {
       const code = await api.issueInviteCode(t.parentId);
+      track(api, 'invite_code_issued', {purpose: 'reconnect'}); // AC-05: 어르신 새 폰 번호
       navigation.navigate('Code', {code, title: t.title});
     } catch (e) {
       show({text: failText(e), kind: 'error', action: {label: copy.errors.offline.button, onPress: () => newPhoneCode(t)}});
