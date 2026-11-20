@@ -44,6 +44,46 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
+test('N-01: 계정 지우기 뒤로는 ds BackLink(목적지 \'설정으로\', 알약) — 누르면 설정으로', async () => {
+  await openParentDelete(createFakeApi({consented: true}));
+  const back = screen.getByTestId('back-link');
+  expect(back.props.accessibilityLabel).toBe('설정으로');
+  await act(async () => {
+    fireEvent.press(back);
+  });
+  await waitFor(() => screen.getByTestId('settings-row-delete'));
+});
+
+test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드웨어 뒤로가 모두 화면을 떠나지 않는다(떠나도 요청은 돌아 계정이 지워짐)', async () => {
+  const {BackHandler} = require('react-native');
+  const handlers: (() => boolean)[] = [];
+  const add = BackHandler.addEventListener;
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation(((type: string, h: () => boolean) => {
+    handlers.push(h);
+    return add.call(BackHandler, type, h);
+  }) as never);
+  const api = createFakeApi({deleteScope: 'child'});
+  const del = jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {})); // 끝나지 않는 지우기
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+  await press('계정 지우기');
+  await press('계정 지우기');
+  await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+  // 1) 뒤로 링크: 눌러도 그대로
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('back-link'));
+  });
+  expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+  // 2) 안 지울래요: 비활성
+  expect(screen.getByRole('button', {name: '안 지울래요'})).toBeDisabled();
+  // 3) 하드웨어 뒤로: 이 화면이 삼킨다(true)
+  let consumed = false;
+  await act(async () => {
+    consumed = handlers[handlers.length - 1]() === true; // 가장 나중에 건 것 = 지우기 화면(포커스)
+  });
+  expect(consumed).toBe(true);
+  expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+});
+
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
