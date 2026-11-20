@@ -39,6 +39,9 @@
 - `{ok:true, cheer_id}` | `{ok:false, reason:'invalid_key'|'invalid_target'|'disconnected'|'daily_limit'}`.
 - 하루 한도(가정): 같은 자녀→같은 어르신 KST 하루 **2개**. 정책 확정 시 상수만 변경.
 - **0059 재시도 멱등**: 앱은 응원 버튼을 누를 때 uuid를 한 번 만들어 `p_request_id`로 보내고, 시간 초과로 다시 보낼 때 **같은 값**을 쓴다. 같은 자녀의 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`(한도 검사보다 먼저 — 재시도가 `daily_limit`으로 보이지 않음). id를 안 보내면 지금과 같다(하위 호환).
+  - PostgREST로 두 키(`{p_parent, p_key}`)만 보내는 옛 호출: 0059를 올린 임시 스택에서 앱 통합 테스트 `__integration__/cheers.test.ts` 2건 PASS(11-20, #215 리뷰 L1 실증) — 3인자(기본값) 판 하나로 이름 인자 호출이 그대로 풀린다.
+  - **요청 id 계약**(리뷰 L2): id는 버튼 한 번마다 새로 만들고, 같은 시간 초과 재시도 안에서만 다시 쓴다. 같은 id로 **다른 어르신·다른 문장**을 보내면 서버는 처음 응원의 성공을 그대로 돌려준다(조용히 무시, 새 응원 없음) — 앱 버그일 때만 생기므로 지금은 `request_conflict`를 두지 않는다. 응원 행이 31일 파기로 지워진 뒤 같은 id는 새 응원이 된다(한도 2개는 그대로).
+  - 연결이 끊긴 뒤의 재시도(리뷰 L3): 대상 확인(`invalid_target`·`disconnected`)이 재시도 확인보다 앞이라, 첫 요청이 성공한 뒤 어르신 연결이 끊기면 재시도는 `disconnected`로 보인다(응원은 이미 한 번 생김, 드묾). 앱은 이 경우를 "보냈어요"로 볼 필요 없음 — 연결 끊김 상태 화면이 우선.
 - 테이블 직접 insert는 막혔다(0020). 자녀는 읽음 여부(read_at)를 볼 수 없다.
 - **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 이 4개로 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
 ```ts

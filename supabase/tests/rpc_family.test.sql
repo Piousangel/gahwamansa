@@ -1,7 +1,7 @@
 -- 4단계: create_family, issue_invite_code 테스트 (pgTAP). 실행: npx supabase test db
 -- 보호하는 것: 자녀만 가족을 만들고 코드를 발급, 코드 형식·만료·개수 제한·유일성, 다른 가족 어르신을 대상으로 지정 금지
 begin;
-select plan(14);
+select plan(15);
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('d0000000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false), -- 새 자녀(프로필 없음)
@@ -27,8 +27,9 @@ select lives_ok($$ select public.create_family() $$, '자녀는 가족을 만들
 select is((select count(*)::int from public.profiles where user_id = 'd0000000-0000-0000-0000-0000000000c1' and role = 'child'), 1, '자녀 프로필이 1개 생긴다');
 select is((select count(*)::int from public.entitlements where plan_id = 'premium' and source = 'free_period'), 1, '무료 기간 권한이 생긴다');
 -- 4. 같은 자녀가 다시 부르면 새로 만들지 않고 같은 가족을 돌려준다(0059 재시도 멱등, 이전: already_has_profile)
-select is((select count(*)::int from public.families where created_by = 'd0000000-0000-0000-0000-0000000000c1')
-          + (public.create_family() ->> 'family_id' is not null)::int, 2, '이미 자녀 프로필이 있으면 같은 가족을 돌려준다(새로 만들지 않음)');
+-- (#215 리뷰 L4) 호출과 개수 세기를 다른 문장으로 나눈다 — 한 문장 안에서는 함수가 새로 만든 행이 스냅샷에 보이지 않는다
+select ok((public.create_family() ->> 'family_id') is not null, '이미 자녀 프로필이 있으면 가족 id를 돌려준다(예외 아님)');
+select is((select count(*)::int from public.families where created_by = 'd0000000-0000-0000-0000-0000000000c1'), 1, '다시 불러도 가족은 하나뿐(새로 만들지 않음)');
 -- 5. 익명(어르신 기기)은 가족을 만들 수 없다
 select pg_temp.act_as('d0000000-0000-0000-0000-0000000000a1', true);
 select throws_like($$ select public.create_family() $$, '%child_required%', '익명 사용자는 가족을 만들 수 없다');
