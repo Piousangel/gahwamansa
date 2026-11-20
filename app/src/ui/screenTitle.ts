@@ -40,3 +40,20 @@ export function useScreenTitleRef(isHeader: boolean) {
     [isHeader, register],
   );
 }
+
+// 맨 위 화면의 제목(마지막에 마운트된 Screen). 사용자가 열지 않은 덮개(N1 등)가 닫히면 연 버튼이 없으니 이 제목으로 초점을 돌려준다(#168 접근성 L2).
+const titleGetters: (() => unknown)[] = [];
+export function registerScreenTitleGetter(get: () => unknown): () => void {
+  titleGetters.push(get);
+  return () => {
+    const i = titleGetters.lastIndexOf(get);
+    if (i >= 0) {
+      titleGetters.splice(i, 1);
+    }
+  };
+}
+/** 맨 위 화면 제목으로 FOCUS_DELAY_MS 뒤 초점. 화면이 없으면 아무것도 하지 않는다 */
+export function focusTopScreenTitle(): () => void {
+  const get = titleGetters[titleGetters.length - 1];
+  return get ? focusLater(get) : () => {};
+}

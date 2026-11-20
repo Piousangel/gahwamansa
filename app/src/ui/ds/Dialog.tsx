@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, type RefObject} from 'react';
-import {Animated, Modal, ScrollView, StyleSheet, View} from 'react-native';
+import React, {useEffect, useRef, useState, type RefObject} from 'react';
+import {Animated, Modal, ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
 import {color as v3color} from '../tokens';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
@@ -9,6 +9,7 @@ import {Button} from './Button';
 import {Text} from './Text';
 import {dismissLabel, type Dismiss} from './dismiss';
 import {ds} from './roles';
+import {MoreBand} from './MoreBand';
 
 const c = ds.color;
 
@@ -29,6 +30,8 @@ export type DialogProps = {
   children?: React.ReactNode;
   /** 하는 쪽(하나). 없으면 닫기만 있는 안내 대화상자 */
   action?: DialogAction;
+  /** 하는 쪽 버튼 바로 아래 한 줄(누르면 무엇이 이어지는지 미리 알림, 예: N1 '휴대폰이 한 번 더 물어봐요'). 버튼 힌트로도 읽는다 */
+  actionHint?: string;
   /** 닫는 쪽 말 — 세 갈래로만(A5·W-09). 문자열을 받지 않는다 */
   dismiss: Dismiss;
   /** 닫는 쪽 버튼·안드로이드 뒤로(밖 누르기로는 닫히지 않는다 — 실수로 닫히지 않게) */
@@ -58,7 +61,7 @@ export function Dialog(props: DialogProps) {
   );
 }
 
-function DialogInner({visible, title, body, children, action, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
+function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
   const a = useAudience();
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef ?? undefined);
@@ -76,6 +79,18 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
     fired.current = true;
     fn();
   };
+  // 본문 넘침(R-19): 창·내용·위치를 재서 끝까지 안 내렸으면 띠
+  const m = useRef({view: 0, content: 0, y: 0});
+  const [more, setMore] = useState(false);
+  const measure = (next: Partial<{view: number; content: number; y: number}>) => {
+    m.current = {...m.current, ...next};
+    const {view, content, y} = m.current;
+    setMore(view > 0 && content > view + 1 && y + view < content - 4);
+  };
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const {contentOffset, contentSize, layoutMeasurement} = e.nativeEvent;
+    measure({view: layoutMeasurement.height, content: contentSize.height, y: contentOffset.y});
+  };
   const danger = action?.kind === 'danger';
   const doIt = action ? (
     <Button
@@ -84,6 +99,7 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
       label={action.label}
       loading={action.loading}
       loadingLabel={action.loadingLabel}
+      accessibilityHint={actionHint}
       onPress={once(action.onPress)}
       testID={`${testID}-action`}
     />
@@ -115,10 +131,23 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
             <Text role="title">{title}</Text>
           </View>
           {body || children ? (
-            <ScrollView style={styles.bodyScroll} contentContainerStyle={styles.bodyContent}>
-              {children}
-              {body ? <Text role="bodyLg">{body}</Text> : null}
-            </ScrollView>
+            <>
+              <ScrollView
+                testID={`${testID}-scroll`}
+                style={styles.bodyScroll}
+                contentContainerStyle={styles.bodyContent}
+                scrollEventThrottle={64}
+                onLayout={e => measure({view: e.nativeEvent.layout.height})}
+                onContentSizeChange={(_w, h) => measure({content: h})}
+                onScroll={onScroll}
+                onScrollEndDrag={onScroll}
+                onMomentumScrollEnd={onScroll}>
+                {children}
+                {body ? <Text role="bodyLg">{body}</Text> : null}
+              </ScrollView>
+              {/* 200% 등에서 본문이 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
+              {more ? <MoreBand /> : null}
+            </>
           ) : null}
           <View accessibilityLiveRegion="polite">
             {error ? (
@@ -128,7 +157,7 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
             ) : null}
           </View>
           <View testID={`${testID}-actions`} style={styles.actions}>
-            {danger || !action ? [close, doIt] : [doIt, close]}
+            {danger || !action ? [close, doIt] : [doIt, actionHint ? <Hint key="hint" text={actionHint} testID={`${testID}-action-hint`} /> : null, close]}
           </View>
         </View>
       </Animated.View>
@@ -136,7 +165,19 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
   );
 }
 
+// 하는 쪽 버튼 아래 미리 알림 한 줄(버튼 힌트로도 읽으므로 화면 읽기에서는 숨긴다)
+function Hint({text, testID}: {text: string; testID: string}) {
+  return (
+    <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      <Text role="sub" style={styles.hint} testID={testID}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  hint: {textAlign: 'center', marginTop: -4},
   scrim: {flex: 1, backgroundColor: v3color.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다

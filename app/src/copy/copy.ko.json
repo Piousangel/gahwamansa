@@ -702,6 +702,9 @@
       "optional": "안 받으셔도 앱은 그대로 써요",
       "yes": "알려 주세요",
       "no": "안 받을게요",
+      "system_hint": "휴대폰이 한 번 더 물어봐요",
+      "turned_on": "알림이 켜졌어요",
+      "_status_v4": "system_hint·turned_on: 라이터 확인 전(N1 v4 덮개, #168 접근성 리뷰 M1·M3, 3기 레인 11-20). 휴대폰 설정에서 막힘일 때 닫는 말은 ds 계약(A5) 'later' = '다음에'",
       "preview_caption": "감 익는 마당",
       "preview_a11y": "알림 예시, 오늘의 사진이 왔어요, 감 익는 마당"
     },

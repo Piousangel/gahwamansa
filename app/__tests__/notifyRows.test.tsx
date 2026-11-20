@@ -123,6 +123,15 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     // N1 기억은 계정별(기기 저장소가 테스트 사이에 남으므로 계정 가명값을 새로)
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE, accountTag: `acc-m1-${++n}`});
     render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => screen.getByTestId('date-line'));
+    // N1 은 P7 의 연속(리드 ⓐ, #168): P7 → 코스 홈으로 돌아올 때만
+    const {navRef} = require('../src/navigation/navRef');
+    await act(async () => {
+      navRef.navigate('CourseDone');
+    });
+    await act(async () => {
+      navRef.navigate('CourseHome');
+    });
     await waitFor(() => screen.getByTestId('n1'));
     await press(copy.push.permission.no);
     await waitFor(() => screen.getByTestId('date-line'));

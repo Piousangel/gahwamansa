@@ -211,7 +211,7 @@ describe('Card·Section·Banner·StateView', () => {
     render(<Section title="지난 기록"><Text role="body">x</Text></Section>);
     expect(screen.getByText('지난 기록').props.accessibilityRole).toBe('header');
   });
-  test('Banner 4종의 글자·아이콘·테두리 × 면 조합은 허용 목록 안(어르신·자녀 모두)', () => {
+  test('Banner 5종의 글자·아이콘·테두리 × 면 조합은 허용 목록 안(어르신·자녀 모두)', () => {
     for (const [tone, look] of Object.entries(BANNER_LOOK)) {
       expect([tone, allowedText(look.text, look.surface), allowedNonText(look.icon, look.surface), allowedNonText(look.border, look.surface)]).toEqual([tone, true, true, true]);
     }

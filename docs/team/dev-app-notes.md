@@ -642,12 +642,13 @@
 - 스위치 색(#100 L2): ui/ds SWITCH_COLORS 하나로 — 끔 트랙 line(흰 면 3.72·종이 3.36, 비텍스트 3:1 이상), 켬 done(7.13). 자녀 FamilyPushRow·어르신 ParentSettings(2곳)·NotifyRows 가 모두 같은 값을 쓴다(이전 lineSoft 1.44 미달).
 - Sheet footer 테스트(#100 L3): 스크롤 밖·띠 다음 맨 아래, 글자 1.0·2.0 모두. 200% 화면은 C7 캡처(저장 버튼 고정)로 확인.
 
-### N1 v4 덮개(3기 어르신 레인, 11-20)
-- N1 을 화면(스택)에서 ds Dialog 덮개로 옮겼다(시안 P6_P7_N1_P2_ds4b N1 보드, 전문가 리뷰 A8 ③: P7 '알겠어요' → N1 → P3). P7 은 popTo 로 스택에 없으므로 세 출구 모두 코스 홈.
-- 덮개 큐 `useCover('push-n1')` — 오늘 다른 덮개가 이미 떴으면 N1 은 뜨지 않고(기록 없음) 다음 깨어남·다음 날 다시 청한다. PushHost 는 청할 때마다 `key` 를 올려 다시 마운트.
-- 뒤로 = 오늘은 넘김(#72 M1) 유지: ds Dialog 에 `onBack`(안드로이드 뒤로가 닫는 쪽 버튼과 뜻이 다를 때만)을 더했다. '안 받을게요' = 거절 기록.
-- 알림 예시 카드(BrandSymbol)는 시안에 없어 뺐다. blocked 안내는 Dialog 오류 줄(읽기 polite).
-- 테스트: 덮개 큐는 앱에 하나라 jest.after.js 가 테스트마다 빈 기억으로 다시 붙인다.
+### N1 v4 Dialog — P7의 연속(3기 어르신 레인, 11-20, #168 리뷰 반영)
+- N1 을 화면(스택)에서 ds Dialog 로 옮겼다(시안 P6_P7_N1_P2_ds4b N1 보드). 덮개 큐는 쓰지 않는다(리드 ⓐ).
+- 언제: PushHost 가 이번 실행에서 경로가 CourseDone → CourseHome 으로 바뀐 것을 보고(P7 '알겠어요'·뒤로) 그때만 parentPromptState 를 확인. 앱 시작·깨어남에는 묻지 않는다.
+- 뒤로 = 오늘은 넘김(#72 M1): ds Dialog `onBack`. '안 받을게요' = 거절 기록. 막힘이면 닫는 말 '다음에'.
+- 막힘: 본문을 ds Banner `notice`(noticeSoft·ⓘ·inkBody, 읽기 알림) 한 줄로 바꿔 끼움. AppState active 에서 권한을 다시 읽어 켜졌으면 '알림이 켜졌어요' 알림 후 닫음.
+- ds Dialog: `actionHint`(하는 쪽 아래 한 줄 + 버튼 힌트), 본문 넘침 '더 있음' 띠(MoreBand). 닫힌 뒤 초점: `focusTopScreenTitle()`(ui/screenTitle — Screen 이 맨 위 제목 getter 를 등록).
+- 테스트: 덮개 큐는 jest.after.js 가 테스트마다 빈 기억으로(다른 덮개용).
 
 ### P6 자판으로 쓰기 v4(시안 P6_P7_N1_P2_ds4b) · 11-20
 - DsScreen(step): BackLink '오늘 코스로'(하드웨어 뒤로 같음), 위 영역 단계 제목(자판 열리면 접힘). DsScreen 에 backAside(BackLink 줄 오른쪽) 추가 — 자판 열림 100% '넘어갈게요'.

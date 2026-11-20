@@ -1,7 +1,7 @@
 // D-04: v4 대화상자 + 덮개 큐(하루 하나, A8). 닫는 말은 세 갈래(A5·W-09)
 import React from 'react';
-import {act, fireEvent, render, renderHook, screen} from '@testing-library/react-native';
-import {AudienceProvider, Dialog} from '../src/ui/ds';
+import {act, fireEvent, render, renderHook, screen, within} from '@testing-library/react-native';
+import {AudienceProvider, Dialog, Text} from '../src/ui/ds';
 import {createCoverQueue, useCover, type CoverStore} from '../src/ui/ds/coverQueue';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 
@@ -50,6 +50,48 @@ describe('ds Dialog', () => {
     act(() => screen.UNSAFE_getByType(require('react-native').Modal).props.onRequestClose());
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  test('actionHint: 하는 쪽 버튼 바로 아래 한 줄 + 버튼 힌트(N1 #168 접근성 M3)', () => {
+    render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} actionHint="휴대폰이 한 번 더 물어봐요" dismiss="close" onDismiss={noop} returnFocusRef={null} />);
+    const actions = screen.getByTestId('ds-dialog-actions');
+    const ids: string[] = [];
+    const walk = (n: {props?: {testID?: string}; children?: unknown[]}) => {
+      if (n.props?.testID) {
+        ids.push(n.props.testID);
+      }
+      (n.children ?? []).forEach(c => c && typeof c === 'object' && walk(c as never));
+    };
+    walk(actions as never);
+    expect(ids.indexOf('ds-dialog-action')).toBeLessThan(ids.indexOf('ds-dialog-action-hint'));
+    expect(ids.indexOf('ds-dialog-action-hint')).toBeLessThan(ids.indexOf('ds-dialog-dismiss'));
+    expect(within(actions).getByTestId('ds-dialog-action-hint', H)).toBeTruthy();
+    expect(screen.getByTestId('ds-dialog-action').props.accessibilityHint).toBe('휴대폰이 한 번 더 물어봐요');
+  });
+
+  test("200%(fontScale 2.0)에서 본문이 넘치면 '더 있음' 띠(R-19), 버튼은 스크롤 밖이라 잘리지 않는다(#168 접근성 M2·M4)", () => {
+    render(
+      <Dialog visible title="내일 새 사진이 오면 알려 드릴까요?" action={{label: '알려 주세요', onPress: noop}} dismiss={{decline: '안 받을게요'}} onDismiss={noop} returnFocusRef={null}>
+        <Text role="bodyLg" testID="long">
+          {'하루 한 번만 알려 드려요. '.repeat(20)}
+        </Text>
+      </Dialog>,
+    );
+    const scroll = screen.getByTestId('ds-dialog-scroll');
+    expect(within(scroll).getByTestId('long')).toBeTruthy();
+    expect(within(scroll).queryByTestId('ds-dialog-actions')).toBeNull();
+    expect(screen.queryByTestId('more-band', H)).toBeNull();
+    act(() => {
+      fireEvent(scroll, 'layout', {nativeEvent: {layout: {width: 280, height: 200}}});
+      fireEvent(scroll, 'contentSizeChange', 280, 800);
+    });
+    expect(screen.getByTestId('more-band', H)).toBeTruthy();
+    act(() => {
+      fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {y: 600}, contentSize: {height: 800, width: 280}, layoutMeasurement: {height: 200, width: 280}}});
+    });
+    expect(screen.queryByTestId('more-band', H)).toBeNull();
+    expect(screen.getByTestId('ds-dialog-action')).toBeTruthy();
+    expect(screen.getByTestId('ds-dialog-dismiss')).toBeTruthy();
   });
 
   test('오류 한 줄은 대화상자 안(모달 위 토스트는 안 보인다), 자녀 audience 를 그대로 넘긴다', () => {
