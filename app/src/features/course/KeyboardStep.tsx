@@ -42,7 +42,7 @@ type Phase = 'writing' | 'sheet' | 'matched';
 // 어르신이 친 글자는 저장하지 않으므로 보여 주지 않는다(정책).
 // 입력 칸 글자: fieldInput 역할에서 줄높이만 뺀다. Android TextInput 은 줄높이를 글자 배율로 늘리지 않아(글자 34×1.5=51 > 줄높이 44)
 // 글자 위쪽이 잘렸다(에뮬레이터 320·360 × 200% 실측, 11-20). 높이는 minHeight·세로 가운데로 맞춘다
-const inputText = {...roleText('fieldInput', 'elder').style, lineHeight: undefined, textAlignVertical: 'center' as const};
+const inputText = {...roleText('fieldInput', 'elder').style, lineHeight: undefined, textAlignVertical: 'center' as const, includeFontPadding: false};
 
 export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
   const review = !!route.params?.review;

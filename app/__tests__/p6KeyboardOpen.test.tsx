@@ -90,6 +90,7 @@ test('입력한 글자 위쪽이 잘리지 않는다 — 입력 칸은 줄높이
   const st = StyleSheet.flatten(input.props.style);
   expect(st.lineHeight).toBeUndefined();
   expect(st.textAlignVertical).toBe('center');
+  expect(st.includeFontPadding).toBe(false); // 글꼴 여백을 빼야 200% 자판 열림에서 카드·버튼이 통째로 들어온다(#192 디자인 리뷰 M1, 실측)
   expect(st.fontSize).toBeGreaterThan(0);
 });
 
