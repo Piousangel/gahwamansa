@@ -577,3 +577,6 @@
 
 ## 2026-11-20 어르신 계정 지우기 로그인 풀림 문구는 한 갈래 (리드)
 - `delete.signed_out_parent_unlinked`(연결한 적 없음 전용) 삭제, 기기 연결 이력은 저장하지 않음. 로그인이 풀리면 기기 기록만으로 '연결한 적 없음'을 확신할 수 없고(재설치 시 사라짐), 안 쓰는 키는 잘못 연결될 여지라 길은 `signed_out_parent`(문의하기) 하나. 연결한 적 없는 계정은 #157(90일 자동 정리) 병합 뒤 그 문구 끝에 '가족과 연결한 적이 없으면 마지막으로 쓴 날부터 {기간} 뒤 저절로 지워져요'를 붙인다(copy `_status_after_157`)
+
+## 2026-11-20 v5 이행 잔재(deprecatedColor·반경 별칭) 제거 조건(#179 리뷰 M2)
+- 생성물 `deprecatedColor`(v5 에서 지운 장식 색 9개, v4 값 고정)와 반경 별칭(card·select·chip·childCard → row 6, input → sign 3)은 화면 레인이 R-23 장식 걷어 내기·4단 이름 이행을 끝낼 때까지만 둔다. 쓰는 곳 수는 dsBaseline `V5_LEFTOVER`(main 병합 뒤 10·63)가 줄기만 하게 지키고, **둘 다 0 이 되는 PR 에서 생성기 표(`V4_DEPRECATED_COLOR`)·별칭(`buildRadius`)과 생성물 항목을 지운다**(L4)

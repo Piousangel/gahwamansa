@@ -20,3 +20,4 @@ export {ListRow, type ListRowTone} from './ListRow';
 export {dismissLabel, DECLINE_FORM, DISMISS_TEXT, type Dismiss} from './dismiss';
 export {Dialog, type DialogProps, type DialogAction} from './Dialog';
 export {useCover, configureCoverQueue, createCoverQueue, coverQueue, type CoverStore} from './coverQueue';
+export {Sign, type SignProps} from './Sign';

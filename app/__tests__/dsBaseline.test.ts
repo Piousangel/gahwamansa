@@ -44,7 +44,8 @@ const BASELINE: Record<string, number> = {
   text20Size: 53,
   rnImport: 21,
   ellipsis: 0,
-  v3Color: 24, // #146 C6 PaidSheet −1
+  v3Color: 22, // #146 C6 PaidSheet −1, #179 M1: 읽는 글 파랑 걷기(main 병합 뒤 실측)
+  sign: 0, // R-22 v5: 화면은 Sign 컴포넌트로만 노랑
 };
 
 jest.setTimeout(180000);
@@ -145,6 +146,8 @@ test.each([
   ['Animated.Text', "import {Animated} from 'react-native';\nexport const A = () => <Animated.Text>a</Animated.Text>;\n", 'rnImport'],
   ['import * as RN', "import * as RN from 'react-native';\nexport const A = () => <RN.View />;\n", 'rnImport'],
   ['JSX 색 리터럴', "import {Icon} from '../../ui/assets/icons';\nexport const A = () => <Icon name=\"icon-check\" color=\"#ff0000\" />;\n", 'color'],
+  ['노랑 팻말 토큰(R-22)', "import {ds} from '../../ui/ds/roles';\nexport const s = ds.color.signInk;\n", 'sign'],
+  ['#FFD43B 리터럴(R-22)', "export const y = '#FFD43B';\n", 'sign'],
   ['Text20 size', "import {Text20} from '../../ui/Text20';\nexport const A = () => <Text20 size={28}>a</Text20>;\n", 'text20Size'],
   ['height 만 고정(글자 상자 후보)', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({row: {height: 56, padding: 8}});\n", 'height'],
   ['가로·세로 고정 상자', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({dot: {width: 36, height: 36}});\n", 'fixedBox'],
@@ -164,6 +167,53 @@ test('가로·세로 고정 상자는 height 로 세지 않는다(오탐 제외,
   const code = "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({dot: {width: 36, height: 36}, img: {width: 96, maxHeight: 84}});\n";
   const r = await eslint.lintText(code, {filePath: path.join(__dirname, '..', 'src/features/course/__dsProbe.tsx')});
   expect(KINDS_OF(r)).toEqual(['fixedBox', 'fixedBox']);
+});
+
+// #179 리뷰 M2: v5 이행 잔재가 줄기만 하게 — 쓰는 곳 수 기준선(늘면 실패, 줄면 숫자를 내린다). 0 이 되면 생성기의 표와 별칭을 지운다(DECISIONS 11-20)
+// #179 리뷰 M1: v3 color.ink(= v5 action 파랑)는 누를 수 있는 것에만 — 쓰는 파일·횟수 화이트리스트(읽는 글은 inkBody·inkTitle)
+const V5_LEFTOVER: Record<string, number> = {
+  deprecatedColor: 10, // tokens.ts 7(v3 별칭) + AlbumMount 1 + ChildHome 1 + CourseHome 해님 1(main 병합) — R-23 장식 걷어 내기
+  radiusAlias: 63, // main 병합 뒤 실측. radius.card·select·chip·childCard·input(4단 별칭)
+};
+const INK_PRESSABLE: Record<string, number> = {
+  'app/BackBar.tsx': 1, // 뒤로 바 글자(밑줄)
+  'features/course/HistoryScreen.tsx': 1, // 행 chevron
+  'features/course/KeyboardStep.tsx': 1, // '넘어가기' 링크(밑줄)
+  'features/course/PhotoZoom.tsx': 1, // '닫기'(밑줄)
+  'features/link/RoleChoiceButton.tsx': 2, // 누름 카드 테두리·chevron
+  'ui/SettingsRow.tsx': 1, // 행 chevron
+  'ui/TextLink.tsx': 2, // 링크 글자(밑줄)·아이콘
+  'ui/TopBar.tsx': 2, // 설정 아이콘·글자
+};
+
+function scanSrc(re: RegExp): Record<string, number> {
+  const src = pathx.join(__dirname, '../src');
+  const walk = (dir: string): string[] =>
+    fsx.readdirSync(dir, {withFileTypes: true}).flatMap(e => (e.isDirectory() ? walk(pathx.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [pathx.join(dir, e.name)] : []));
+  const out: Record<string, number> = {};
+  for (const f of walk(src)) {
+    const rel = pathx.relative(src, f);
+    if (rel === 'ui/tokensV4.ts') {
+      continue;
+    }
+    const n = (fsx.readFileSync(f, 'utf8').match(re) ?? []).length;
+    if (n) {
+      out[rel] = n;
+    }
+  }
+  return out;
+}
+const total = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
+
+test('#179 M2: deprecatedColor·반경 별칭 쓰는 곳 수 기준선(줄기만)', () => {
+  expect({
+    deprecatedColor: total(scanSrc(/deprecatedColor\.[a-zA-Z]+|\bd4\.[a-zA-Z]+/g)),
+    radiusAlias: total(scanSrc(/radius\.(card|select|chip|childCard|input)\b/g)),
+  }).toEqual(V5_LEFTOVER);
+});
+
+test('#179 M1: v3 color.ink(파랑)는 누를 수 있는 것에만 — 화이트리스트 밖에서 쓰면 실패(읽는 글은 inkBody·inkTitle)', () => {
+  expect(scanSrc(/\bcolor\.ink\b(?!Body|Sub|Title)/g)).toEqual(INK_PRESSABLE);
 });
 
 export {};

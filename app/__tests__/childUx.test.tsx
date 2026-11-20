@@ -890,7 +890,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const primary = StyleSheet.flatten(screen.getByRole('button', {name: '번호 만들기'}).props.style);
     expect(primary.minHeight).toBe(56);
     const cell = StyleSheet.flatten(within(group).getByRole('radio', {name: '엄마'}).props.style);
-    expect(cell).toMatchObject({borderRadius: 16, borderWidth: 1.5});
+    expect(cell).toMatchObject({borderRadius: 6, borderWidth: 1.5}); // v5 반경 4단: 선택지 6
     screen.unmount();
     dims(2); // 200%: 칸이 좁아 글이 꺾이지 않게 1열
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
