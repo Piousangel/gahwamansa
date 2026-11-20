@@ -344,6 +344,13 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         failDelete -= 1;
         throw new OfflineError('offline');
       }
+      // #216 리뷰 L: 지우는 사람이 자녀면 어르신 쪽 상태(어르신 계정·연결·답·동의)는 그대로 — 자녀 계정만 지운다
+      const role = who ?? (emailVerified ? 'child' : linked ? 'parent' : 'none');
+      if (role === 'child') {
+        emailVerified = false;
+        who = undefined;
+        return {scope: opts.deleteScope ?? 'child'};
+      }
       steps.clear();
       consented = false;
       // #181 재확인 L: 서버는 계정을 지우면 profiles 행이 없어 같은 uid 라도 'used'(0028 226~231행은 프로필이 있을 때만 ok).
