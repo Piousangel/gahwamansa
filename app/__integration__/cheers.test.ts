@@ -51,6 +51,33 @@ test('응원: 자녀가 보낸 확정 키 응원을 어르신이 받아 읽음 �
   }
 });
 
+test('응원 request_id(서버 0059): 같은 id 로 다시 보내면 새로 넣지 않고 처음 응원을 돌려준다 — 응답만 끊긴 재시도가 두 번 가지 않음, 하루 한도에도 한 번만 셈', async () => {
+  const {uuidV4} = require('../src/lib/uuid');
+  const child = createRealApi(createSupabase(SUPABASE_URL, SUPABASE_KEY));
+  await child.signUpChild(`child-rid-${rid()}@example.test`, `Pw-${rid()}`);
+  await child.createFamily();
+  const code = await child.issueInviteCode();
+  const parent = createRealApi(createSupabase(SUPABASE_URL, SUPABASE_KEY));
+  const linked = await parent.redeemInviteCode(code);
+  if (!linked.ok) {
+    throw new Error(`연결 실패: ${linked.reason}`);
+  }
+  try {
+    const id = uuidV4();
+    const first = await child.sendCheer(linked.profile_id, CHEER_KEYS[1], id);
+    const retry = await child.sendCheer(linked.profile_id, CHEER_KEYS[1], id);
+    expect(first.ok).toBe(true);
+    expect(retry).toEqual(first); // 같은 cheer_id
+    expect((await parent.getMyCheers()).unread_count).toBe(1);
+    // 한도 2: 재시도는 세지 않았으니 새 id 한 번은 더 된다, 그다음은 daily_limit
+    expect((await child.sendCheer(linked.profile_id, CHEER_KEYS[2], uuidV4())).ok).toBe(true);
+    expect(await child.sendCheer(linked.profile_id, CHEER_KEYS[3], uuidV4())).toEqual({ok: false, reason: 'daily_limit'});
+  } finally {
+    await parent.deleteMyAccount();
+    await child.deleteMyAccount();
+  }
+});
+
 test('start_today: 연결된 어르신은 오늘 콘텐츠(+advanced)를, 미연결 기기는 미리 보기를 받는다', async () => {
   const fresh = createRealApi(createSupabase(SUPABASE_URL, SUPABASE_KEY));
   const preview = await fresh.startToday();
