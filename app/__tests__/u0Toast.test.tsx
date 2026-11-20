@@ -75,7 +75,7 @@ describe('Toast(자녀 토스트)', () => {
     fireEvent.press(screen.getByTestId('ok'));
     const t = StyleSheet.flatten(screen.getByText('응원을 보냈어요').props.style);
     expect(t.fontSize).toBe(20);
-    expect(t.fontWeight).toBe('bold');
+    expect(['bold', '700']).toContain(t.fontWeight); // ds Toast(v5)는 숫자 굵기 '700'
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('응원을 보냈어요');
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('toast').props.accessibilityLiveRegion ?? 'none').toBe('none');

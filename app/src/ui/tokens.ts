@@ -36,7 +36,7 @@ export const color = {
   disabled: v3.disabledBg,
   handwrite: v3.ink,
   placeholder: '#FFF59D', // 개발용 라벨 박스(출시 전 에셋으로 교체)
-  scrim: 'rgba(78,47,20,0.58)', // tokens-v3 scrim: 대화상자·시트 뒤 어두운 배경
+  scrim: tokensV4.scrim, // 대화상자·시트 뒤 어두운 배경(v5 생성물)
 } as const;
 
 // 외부 브랜드 색(카카오·구글 로그인 버튼 가이드). 우리 토큰이 아니라 각 회사 가이드 값을 그대로 쓴다.
@@ -111,8 +111,9 @@ export const shadow = {
   soft: '0px 4px 12px rgba(116,72,33,0.18)',
   softPressed: '0px 1px 3px rgba(116,72,33,0.18)',
   lifted: '0px 6px 16px rgba(116,72,33,0.26)',
-  /** 시트(위로 드리움). v4 원본 tokens-v4.json shadow.sheet 와 같은 값(생성물에 shadow 가 아직 없어 여기 둔다, 디자인 시스템 패널 r1) */
-  sheet: '0px -8px 24px rgba(78,47,20,0.22)',
+  /** 시트(위로 드리움)·대화상자 — v5 생성물 */
+  sheet: tokensV4.shadow.sheet,
+  dialog: tokensV4.shadow.dialog,
 } as const;
 
 export const layout = {
