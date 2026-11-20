@@ -68,14 +68,14 @@ isOneToOne: false
                   ]
                 },"cheers": {
                   Row: {
-                    "family_id": string,"from_child": string,"id": string,"message_key": string,"notified_at": string | null,"read_at": string | null,"sent_at": string,"to_parent": string
+                    "family_id": string,"from_child": string,"id": string,"message_key": string,"notified_at": string | null,"read_at": string | null,"request_id": string | null,"sent_at": string,"to_parent": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "family_id": string,"from_child": string,"id"?: string,"message_key": string,"notified_at"?: string | null,"read_at"?: string | null,"sent_at"?: string,"to_parent": string
+                    "family_id": string,"from_child": string,"id"?: string,"message_key": string,"notified_at"?: string | null,"read_at"?: string | null,"request_id"?: string | null,"sent_at"?: string,"to_parent": string
                   }
                   Update: {
-                    "family_id"?: string,"from_child"?: string,"id"?: string,"message_key"?: string,"notified_at"?: string | null,"read_at"?: string | null,"sent_at"?: string,"to_parent"?: string
+                    "family_id"?: string,"from_child"?: string,"id"?: string,"message_key"?: string,"notified_at"?: string | null,"read_at"?: string | null,"request_id"?: string | null,"sent_at"?: string,"to_parent"?: string
                   }
                   Relationships: [
                     {
@@ -498,6 +498,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"stale_purge_failures": {
+                  Row: {
+                    "failures": number,"last_failed_at": string,"last_sqlstate": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "failures"?: number,"last_failed_at"?: string,"last_sqlstate"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "failures"?: number,"last_failed_at"?: string,"last_sqlstate"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"terms_agreements": {
                   Row: {
                     "agreed_at": string,"id": number,"privacy_version": string,"role": string,"terms_version": string,"user_id": string
@@ -598,6 +612,9 @@ isOneToOne: false
                            },
 "advance_content_cursor":
 { Args: { "p_profile": string }; Returns: boolean
+                           },
+"anon_last_activity":
+{ Args: { "p_user": string }; Returns: string
                            },
 "child_answer_history":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -722,6 +739,9 @@ isOneToOne: false
 "purge_expired_data":
 { Args: { "p_now"?: string }; Returns: Json
                            },
+"purge_stale_anonymous":
+{ Args: { "p_now"?: string }; Returns: Json
+                           },
 "push_channel":
 { Args: { "p_kind": string }; Returns: string
                            },
@@ -774,7 +794,7 @@ isOneToOne: false
 { Args: { "p_choice": string,"p_question": string }; Returns: undefined
                            },
 "send_cheer":
-{ Args: { "p_key": string,"p_parent": string }; Returns: Json
+{ Args: { "p_key": string,"p_parent": string,"p_request_id"?: string }; Returns: Json
                            },
 "server_flag":
 { Args: { "p_name": string }; Returns: boolean
@@ -791,6 +811,12 @@ isOneToOne: false
 "set_push_enabled":
 { Args: { "p_enabled": boolean }; Returns: Json
                            },
+"stale_anon_days":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"stale_anonymous_users":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: string[]
+                           },
 "start_today":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -799,6 +825,8 @@ isOneToOne: false
                            },
 "user_delete_core":
 { Args: { "p_user": string }; Returns: Json
+                           } |
+{ Args: { "p_event": string,"p_user": string }; Returns: Json
                            },
 "week_stamps_for":
 { Args: { "p_parent": string,"p_today": string }; Returns: Json

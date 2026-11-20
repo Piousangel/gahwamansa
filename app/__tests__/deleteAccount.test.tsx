@@ -384,7 +384,8 @@ test('감사 H1 회귀: P9 모두 지우기를 한 번 누르면 지우지 않�
   await press('모두 지우기');
   const box = await waitFor(() => screen.getByTestId('delete-confirm2'));
   expect(within(box).getByText('정말 모두 지울까요?')).toBeTruthy();
-  expect(within(box).getByText('되돌릴 수 없어요')).toBeTruthy();
+  expect(within(box).getByText('되돌릴 수 없어요', {includeHiddenElements: true})).toBeTruthy(); // 띠는 보이되 화면 읽기는 제목 라벨이 함께 읽는다(#217)
+  expect(within(box).getByRole('header', {name: '되돌릴 수 없어요. 정말 모두 지울까요?', includeHiddenElements: true})).toBeTruthy();
   expect(del).not.toHaveBeenCalled();
   await act(async () => {
     fireEvent.press(within(box).getByRole('button', {name: '안 지울래요'}));

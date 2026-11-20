@@ -1350,6 +1350,11 @@
         "ratio": 18.26
       },
       {
+        "role": "onAction",
+        "surface": "dangerInk",
+        "ratio": 8.31
+      },
+      {
         "role": "disabledInk",
         "surface": "disabledBg",
         "ratio": 4.81
@@ -1722,7 +1727,8 @@
       ],
       "onAction": [
         "action",
-        "inkTitle"
+        "inkTitle",
+        "dangerInk"
       ],
       "signInk": [
         "sign"
@@ -1830,7 +1836,8 @@
       ],
       "onAction": [
         "action",
-        "inkTitle"
+        "inkTitle",
+        "dangerInk"
       ],
       "signInk": [
         "sign"
@@ -1914,7 +1921,7 @@
     "intent": {
       "accent": "화면당 1곳, dangerInk와 같은 화면 금지(대비 1.02)",
       "info": "글자는 infoSoft 띠 위에서 쓰는 것이 기본(7.35). 단독 글자색 금지(면 + 아이콘과 함께)",
-      "onAction": "action 면 위 흰 글자 전용, v5 는 먹(inkTitle) 면의 토스트 글자도"
+      "onAction": "action 면 위 흰 글자 전용, v5 는 먹(inkTitle) 면의 토스트·Tag 글자와 위험(dangerInk) 면의 Tag danger 글자도"
     }
   },
   "line": {

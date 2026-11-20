@@ -620,4 +620,5 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 새 단언을 쓸 때: 서버가 만든·지운 행(부작용)을 세려면 `reset role;` 뒤에서 센다. 앱에서 이렇게 보여야 한다는 RLS 확인이면 줄 끝에 `-- rls:의도 <이유>`.
 - (#219 리뷰 반영) `-- rls:의도` 뒤에 **이유 글이 없으면 위반**(무엇을 확인하는지: 예 `남의 가족 답 0행`). 단언은 세미콜론까지 모아 한 문장으로 보므로 여러 줄 단언도 잡는다. `set role X`(local 없음)와, 이 파일에서 `set role`·`set local role`을 실행하는 pg_temp 도우미(이름 무관)를 부르면 앱 역할로 본다.
 - CI: `.github/workflows/server.yml` pgTAP 잡이 `supabase test db` 전에 `node supabase/ops/test-rls-lint.mjs supabase/tests`를 돈다.
+- (#219 2차 리뷰 L, 넓힘) `count(1)`·`count(열)`도, 스키마를 생략한 `from 표`(함수 호출·`pg_` 카탈로그·그 파일의 임시 표 제외)도, 결과 집합 단언(`results_eq`·`results_ne`·`set_eq`·`set_ne`·`bag_eq`·`bag_ne`·`is_empty`·`isnt_empty`·`row_eq`)과 `isnt`도 대상이다.
 - 남은 한계: pg_temp 도우미 함수 **안에서** 표를 세는 경우(단언은 `pg_temp.f()`만 부름)는 대상 밖 — 그런 도우미는 `reset role` 뒤에서 부른다.

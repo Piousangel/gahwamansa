@@ -1,4 +1,5 @@
 import React from 'react';
+import {useReportTabBar} from '../ui/toastPlacement';
 import {Pressable, StyleSheet, View} from 'react-native';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -9,8 +10,9 @@ import {color, FONT_SCALE_MAX, size} from '../ui/tokens';
 // 화면 틀이라 글자 확대 1.5배까지. 연결 전(대기 화면)에는 탭 자체가 없다.
 export function ChildTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const onLayout = useReportTabBar(); // 토스트가 막대 실제 높이 위에 뜨게(글자 200%, #199 캡처 L)
   return (
-    <View testID="child-tab-bar" accessibilityRole="tablist" style={[styles.tabs, {paddingBottom: insets.bottom}]}>
+    <View testID="child-tab-bar" accessibilityRole="tablist" onLayout={onLayout} style={[styles.tabs, {paddingBottom: insets.bottom}]}>
       {state.routes.map((route, i) => {
         const focused = state.index === i;
         const label = (descriptors[route.key].options.title ?? route.name) as string;
