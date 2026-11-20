@@ -30,8 +30,8 @@ if 'sign' in col:
     SEMANTIC['signInk'] = ['sign']
     NONTEXT_ROLES = NONTEXT_ROLES + ['signEdge']
     # v5 토스트(#199 디자인 리뷰 M): 안내 토스트 = 먹(inkTitle) 면 위 흰 글자, 오류 토스트 = dangerSoft 면 위 danger 테두리
-    SURFACES = SURFACES + ['inkTitle']
-    SEMANTIC['onAction'] = ['action', 'inkTitle']
+    SURFACES = SURFACES + ['inkTitle', 'dangerInk']
+    SEMANTIC['onAction'] = ['action', 'inkTitle', 'dangerInk']  # dangerInk 면 = Tag danger(대화상자 위험 띠, #217)
     NONTEXT_ROLES = NONTEXT_ROLES + ['danger']
     NONTEXT_SURFACES = NONTEXT_SURFACES + ['dangerSoft']
 
@@ -40,7 +40,7 @@ for r in TEXT_ROLES:
     for s in SURFACES:
         if r in SEMANTIC and s not in SEMANTIC[r]:
             continue
-        if r not in SEMANTIC and s in ('action', 'disabledBg', 'sign', 'inkTitle'):
+        if r not in SEMANTIC and s in ('action', 'disabledBg', 'sign', 'inkTitle', 'dangerInk'):
             continue
         x = cr(col[r], col[s]); matrix.append({'role': r, 'surface': s, 'ratio': x})
         if r == 'disabledInk':
@@ -63,7 +63,7 @@ allowed = {
     'rules': 'allowed 에 없는 role×surface 조합은 토큰 테스트가 실패시킨다(금지 목록이 아니라 허용 목록). intent 는 allowed 위에 얹는 의미 규칙.',
     'intent': {'accent': '화면당 1곳, dangerInk와 같은 화면 금지(대비 1.02)',
                'info': '글자는 infoSoft 띠 위에서 쓰는 것이 기본(7.35). 단독 글자색 금지(면 + 아이콘과 함께)',
-               'onAction': 'action 면 위 흰 글자 전용' + (', v5 는 먹(inkTitle) 면의 토스트 글자도' if 'sign' in col else '')}}
+               'onAction': 'action 면 위 흰 글자 전용' + (', v5 는 먹(inkTitle) 면의 토스트·Tag 글자와 위험(dangerInk) 면의 Tag danger 글자도' if 'sign' in col else '')}}
 
 if '--check' in sys.argv:
     ok = d.get('contrast') == out and d.get('allowed') == allowed

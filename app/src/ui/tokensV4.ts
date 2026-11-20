@@ -207,6 +207,7 @@ export const tokensV4 = {
     {fg: 'dangerInk', bg: 'noticeSoft', audience: ['elder', 'child']},
     {fg: 'onAction', bg: 'action', audience: ['elder', 'child']},
     {fg: 'onAction', bg: 'inkTitle', audience: ['elder', 'child']},
+    {fg: 'onAction', bg: 'dangerInk', audience: ['elder', 'child']},
     {fg: 'signInk', bg: 'sign', audience: ['elder', 'child']},
     {fg: 'inkSub', bg: 'doneSoft', audience: ['child']},
     {fg: 'inkSubChild', bg: 'paper', audience: ['child']},

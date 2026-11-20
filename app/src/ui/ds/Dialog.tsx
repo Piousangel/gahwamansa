@@ -1,7 +1,5 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
-import {Animated, Modal, ScrollView, StyleSheet, Text as RNText, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
-import {Icon} from '../assets/icons';
-import {keepAllChildren, koreanTextProps} from '../koreanText';
+import {Animated, Modal, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
 import {useFadeIn} from '../useFadeIn';
@@ -9,7 +7,8 @@ import {AudienceProvider, useAudience} from './audience';
 import {Button} from './Button';
 import {Text} from './Text';
 import {dismissLabel, type Dismiss} from './dismiss';
-import {ds, fontStyle, roleMark, roleText} from './roles';
+import {ds} from './roles';
+import {Tag} from './Tag';
 import {MoreBand} from './MoreBand';
 
 const c = ds.color;
@@ -132,32 +131,31 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
       }}>
       <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
         <View testID={testID} role="alertdialog" accessibilityViewIsModal style={styles.card}>
-          {warning ? <WarningBand text={warning} testID={`${testID}-warning`} /> : null}
-          {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게 */}
-          <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={title}>
-            <Text role="title">{title}</Text>
-          </View>
-          {body || children ? (
-            <>
-              <ScrollView
-                testID={`${testID}-scroll`}
-                style={styles.bodyScroll}
-                contentContainerStyle={styles.bodyContent}
-                scrollEventThrottle={64}
-                onLayout={e => measure({view: e.nativeEvent.layout.height})}
-                onContentSizeChange={(_w, h) => measure({content: h})}
-                onScroll={onScroll}
-                onScrollEndDrag={onScroll}
-                onMomentumScrollEnd={onScroll}>
-                {children}
-                {body ? <Text role="bodyLg">{body}</Text> : null}
-                {hintInBody ? hintLine : null}
-              </ScrollView>
-              {/* 200% 등에서 본문이 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
-              {more ? <MoreBand /> : null}
-            </>
-          ) : null}
-          <View accessibilityLiveRegion="polite">
+          {/* 200%·좁은 폭에서 넘치면 띠·제목·본문이 함께 스크롤되고 버튼 묶음만 밖(아래)에 남는다(#217 리뷰 M, 방법 1) */}
+          <ScrollView
+            testID={`${testID}-scroll`}
+            style={styles.bodyScroll}
+            contentContainerStyle={styles.bodyContent}
+            scrollEventThrottle={64}
+            onLayout={e => measure({view: e.nativeEvent.layout.height})}
+            onContentSizeChange={(_w, h) => measure({content: h})}
+            onScroll={onScroll}
+            onScrollEndDrag={onScroll}
+            onMomentumScrollEnd={onScroll}>
+            {warning ? <WarningBand text={warning} testID={`${testID}-warning`} /> : null}
+            {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게.
+                warning 이 있으면 열릴 때 초점(제목)에서 띠를 먼저 읽는다 — 띠만 따로 두면 화면 읽기 사용자가 듣지 못한 채 위험 버튼에 닿는다(#217 리뷰 M) */}
+            <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={warning ? `${warning}. ${title}` : title}>
+              <Text role="title">{title}</Text>
+            </View>
+            {children}
+            {body ? <Text role="bodyLg">{body}</Text> : null}
+            {hintInBody ? hintLine : null}
+          </ScrollView>
+          {/* 200% 등에서 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
+          {more ? <MoreBand /> : null}
+          {/* 오류가 없으면 칸이 간격을 차지하지 않게 display none(#217 리뷰 L) — 알림 영역(live region)은 그대로 두어 오류가 생길 때 읽힌다 */}
+          <View testID={`${testID}-error-region`} accessibilityLiveRegion="polite" style={error ? null : styles.none}>
             {error ? (
               <Text role="body" tone="danger" testID={`${testID}-error`}>
                 {error}
@@ -173,18 +171,11 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
   );
 }
 
-// 위험 띠: 위험 면(dangerInk) + 흰 글자 굵게 + 경고 아이콘(장식). 카드 폭 안(maxWidth 100%)·글자 줄바꿈(flexShrink, 말줄임 없음)
+// 위험 띠 = ds Tag danger 변형(R-04 예외는 Tag 하나로 덮인다, #217 리뷰 L). 화면 읽기에서는 숨기고 제목 라벨이 함께 읽는다
 function WarningBand({text, testID}: {text: string; testID: string}) {
-  const a = useAudience();
-  const r = roleText('label', a, 'onAction');
   return (
-    <View testID={testID} style={styles.warn}>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Icon name="icon-warning" size={24} color={c.onAction} />
-      </View>
-      <RNText {...koreanTextProps} {...roleMark('label')} testID={`${testID}-text`} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, fontStyle('body', 700), styles.warnText]}>
-        {keepAllChildren(text)}
-      </RNText>
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" testID={`${testID}-hidden`}>
+      <Tag label={text} tone="danger" icon="icon-warning" testID={testID} />
     </View>
   );
 }
@@ -202,8 +193,7 @@ function Hint({text, testID}: {text: string; testID: string}) {
 
 const styles = StyleSheet.create({
   hint: {textAlign: 'center', marginTop: -4},
-  warn: {flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', gap: 6, backgroundColor: c.dangerInk, borderRadius: ds.radius.row, paddingHorizontal: 12, paddingVertical: 4},
-  warnText: {color: c.onAction, fontWeight: '700', flexShrink: 1},
+  none: {display: 'none'},
   scrim: {flex: 1, backgroundColor: ds.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
