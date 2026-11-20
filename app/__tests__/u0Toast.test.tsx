@@ -1,5 +1,5 @@
 import React from 'react';
-import {AccessibilityInfo, Pressable, StyleSheet, Text} from 'react-native';
+import {AccessibilityInfo, PixelRatio, Pressable, StyleSheet, Text} from 'react-native';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {ToastProvider, useToast, TOAST_MS} from '../src/ui/Toast';
 
@@ -8,6 +8,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1); // RN 모의값은 2 — 기본(100%) 시간으로 본다(150%↑는 8초, D-17)
 });
 afterEach(() => {
   jest.useRealTimers();
