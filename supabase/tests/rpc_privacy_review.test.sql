@@ -28,13 +28,13 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 
 -- 1~3. 자녀: 응원 read_at·프로필 동의/시작일을 직접 읽지 못한다
 select pg_temp.act_as('72000000-0000-0000-0000-0000000000c1', false);
-select is((select count(*)::int from public.cheers), 0, '자녀는 응원 테이블을 직접 읽지 못한다(read_at 노출 차단)');
+select is((select count(*)::int from public.cheers), 0, '자녀는 응원 테이블을 직접 읽지 못한다(read_at 노출 차단)'); -- rls:의도 RLS 확인
 select throws_ok($$ select consented_at from public.profiles $$, '42501', null, '자녀는 프로필의 동의 시각 컬럼을 읽지 못한다');
 select throws_ok($$ select course_start_date from public.profiles $$, '42501', null, '자녀는 프로필의 시작일 컬럼을 읽지 못한다');
 
 -- 4. 어르신은 자기에게 온 응원을 읽는다
 select pg_temp.act_as('72000000-0000-0000-0000-0000000000a1', true);
-select is((select count(*)::int from public.cheers), 1, '어르신은 자기에게 온 응원을 읽는다');
+select is((select count(*)::int from public.cheers), 1, '어르신은 자기에게 온 응원을 읽는다'); -- rls:의도 RLS 확인
 
 -- 5~8. 동의 버전 검증, 철회 후 재동의
 select throws_like($$ select public.give_consent('bad version') $$, '%invalid_version%', '형식이 틀린 동의 문구 버전은 거부된다');

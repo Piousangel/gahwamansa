@@ -41,7 +41,7 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 
 select pg_temp.act_as('70310000-0000-0000-0000-0000000000c1', false);
 select is((select array_agg(token) from public.device_tokens), array['t1'], '내 푸시 토큰만 보인다');
-select is((select count(*)::int from public.families where id = '7031f000-0000-0000-0000-000000000001'), 1, 'helper를 쓰는 가족 RLS도 그대로 동작한다');
+select is((select count(*)::int from public.families where id = '7031f000-0000-0000-0000-000000000001'), 1, 'helper를 쓰는 가족 RLS도 그대로 동작한다'); -- rls:의도 RLS 확인
 reset role;
 set local role anon;
 select throws_ok($$ select public.my_profile_id() $$, '42501', null, 'anon은 helper를 직접 실행하지 못한다');
