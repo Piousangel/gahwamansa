@@ -7,6 +7,10 @@
 // 역할 추적(#219 리뷰 L2): `set local role X`·`set role X`(local 없음)·`reset role`, pg_temp.act_as, 그리고 이 파일에서
 //   `set role`·`set local role`을 실행하는 pg_temp 도우미 함수(이름 무관)를 부르면 앱 역할로 본다.
 // 단언은 세미콜론까지 모아 한 문장으로 본다(#219 리뷰 L1: 여러 줄 단언). 함수 반환값(jsonb)만 세는 단언은 대상이 아니다.
+// 대상 모양(#219 2차 리뷰 L로 넓힘): 값 비교 단언(is·ok·cmp_ok·isnt) 안의 count(*)·count(1)·count(열)·exists,
+//   그리고 결과 집합 단언(results_eq·results_ne·set_eq·set_ne·bag_eq·bag_ne·is_empty·isnt_empty·row_eq)이 표를 읽는 경우.
+//   표는 from public.X·storage.X와 스키마를 생략한 from X(함수 호출·pg_ 카탈로그·이 파일의 임시 표·CTE 이름·extract(… from …) 등 제외).
+//   (#222 리뷰 L) count(distinct 열)도 잡는다.
 // 사용: node supabase/ops/test-rls-lint.mjs [테스트 디렉터리]   → 위반을 출력하고, 있으면 종료 코드 1
 // 테스트: node --test supabase/ops/test-rls-lint.test.mjs
 import {readdirSync, readFileSync} from 'node:fs';
@@ -47,9 +51,36 @@ function statements(sql) {
   return out;
 }
 
+/** 이 파일이 만든 임시 표 이름(create temp table X) — RLS가 없으므로 대상에서 뺀다 */
+function tempTables(sql) {
+  return new Set([...sql.matchAll(/create\s+(?:local\s+)?temp(?:orary)?\s+table\s+(?:if\s+not\s+exists\s+)?(\w+)/gi)].map((m) => m[1].toLowerCase()));
+}
+
+// 스키마 없이 쓴 이름 중 표가 아닌 것(시스템 카탈로그·도우미)
+const NOT_RLS = /^(pg_\w+|information_schema|jsonb?_\w+|unnest|generate_series|lateral|only|current_date|current_timestamp|current_time|localtime|localtimestamp)$/;
+
+/** 문장이 RLS가 걸릴 수 있는 표를 읽는가: from public.X, 또는 스키마 없는 from X(함수 호출·카탈로그·임시 표 제외) (#219 2차 L) */
+function readsTable(s, temps) {
+  // (#222 리뷰 L) 표가 아닌 from을 먼저 걷어낸다: extract·substring·trim·overlay·position(… from …)
+  const t = s.replace(/\b(extract|substring|trim|overlay|position)\s*\(([^()]|\([^()]*\))*\)/g, '$1()');
+  // 이 문장의 CTE 이름(with X as (…), , Y as (…))
+  const ctes = new Set([...t.matchAll(/(?:\bwith(?:\s+recursive)?|,)\s+"?(\w+)"?\s*(?:\([^)]*\)\s*)?as\s*(?:not\s+)?(?:materialized\s+)?\(/g)].map((m) => m[1]));
+  // 스키마를 붙인 표: public과 RLS를 쓰는 다른 스키마(storage). 뒤에 ( 가 오면 함수 호출이라 뺀다
+  for (const m of t.matchAll(/\bfrom\s+(?:only\s+)?"?(public|storage)"?\s*\.\s*"?(\w+)"?(\s*\()?/g)) {
+    if (!m[3]) return true;
+  }
+  for (const m of t.matchAll(/\bfrom\s+(?:only\s+)?"?([a-z_]\w*)\b"?(?!\s*[.(])/g)) {
+    const name = m[1];
+    if (NOT_RLS.test(name) || temps.has(name) || ctes.has(name)) continue;
+    return true;
+  }
+  return false;
+}
+
 /** 순수 검사: 위반 [{line, text, why}] */
 export function lintSql(sql) {
   const helpers = roleHelpers(sql);
+  const temps = tempTables(sql);
   const out = [];
   let role = 'postgres';
   for (const st of statements(sql)) {
@@ -61,7 +92,11 @@ export function lintSql(sql) {
     else if ((m = /^set\s+(?:local\s+)?role\s+"?(\w+)"?/.exec(s))) role = m[1];
     else if ((m = /^select\s+pg_temp\.(\w+)\s*\(/.exec(s)) && (m[1] === 'act_as' || helpers.has(m[1]))) role = 'authenticated';
     if (!APP_ROLES.has(role)) continue;
-    if (!/select\s+(is|ok|cmp_ok)\s*\(/.test(s) || !/\bfrom\s+public\.\w+/.test(s) || !/(count\(\*\)|exists\s*\()/.test(s)) continue;
+    if (!readsTable(s, temps)) continue;
+    // 값 비교 단언(is·ok·cmp_ok·isnt)은 개수·존재를 셀 때만, 결과 집합 단언(results_eq 등)은 표를 읽기만 해도 대상
+    const countLike = /\bselect\s+(is|ok|cmp_ok|isnt)\s*\(/.test(s) && /(\bcount\s*\(\s*(distinct\s+|all\s+)?(\*|1|"?[\w.]+"?)\s*\)|\bexists\s*\()/.test(s);
+    const setLike = /\bselect\s+(results_eq|results_ne|set_eq|set_ne|bag_eq|bag_ne|is_empty|isnt_empty|row_eq)\s*\(/.test(s);
+    if (!countLike && !setLike) continue;
     const mark = /--\s*rls:의도(.*)$/m.exec(st.text);
     if (!mark) out.push({line: st.line, text: st.text.trim().split('\n')[0].slice(0, 140), why: 'no_mark'});
     else if (!mark[1].trim()) out.push({line: st.line, text: st.text.trim().split('\n')[0].slice(0, 140), why: 'no_reason'});
