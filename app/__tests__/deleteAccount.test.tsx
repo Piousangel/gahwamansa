@@ -98,7 +98,7 @@ test('#206 후속: 어르신도 지우는 중에는 뒤로 링크가 사용 안 
   expect(screen.getByText('지우고 있어요')).toBeTruthy();
 });
 
-describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이 반쯤 끊겨도 화면에 갇히지 않는다', () => {
+describe('#208 리뷰 H1: 지우기 화면 안전망 시간 제한(50초, 요청 자체는 realApi 30초) — 연결이 반쯤 끊겨도 화면에 갇히지 않는다', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
@@ -110,7 +110,7 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     expect(screen.queryByText('지우고 있어요')).toBeNull();
     expect(screen.getByRole('button', {name: '다시 하기'})).not.toBeDisabled();
   };
-  test('자녀: 응답이 오지 않으면 30초 뒤 끊김으로 보고 다시 하기', async () => {
+  test('자녀: 응답이 오지 않으면 안전망 시간 뒤 끊김으로 보고 다시 하기', async () => {
     const api = createFakeApi({deleteScope: 'child'});
     jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
     await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
@@ -122,9 +122,9 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     expect(screen.getByText('지우고 있어요')).toBeTruthy();
     expect(say.mock.calls.filter(c => c[0] === '지우고 있어요')).toHaveLength(1); // #208 리뷰 L: 화면 읽기에도 한 번
     await act(async () => {
-      jest.advanceTimersByTime(29000);
+      jest.advanceTimersByTime(49000);
     });
-    expect(screen.getByText('지우고 있어요')).toBeTruthy(); // 30초 전에는 그대로
+    expect(screen.getByText('지우고 있어요')).toBeTruthy(); // 안전망(50초) 전에는 그대로
     await act(async () => {
       jest.advanceTimersByTime(1500);
     });
@@ -141,7 +141,7 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     jest.useFakeTimers();
     await confirmDeleteAll();
     await act(async () => {
-      jest.advanceTimersByTime(30500);
+      jest.advanceTimersByTime(50500);
     });
     jest.useRealTimers();
     await press('다시 하기');
@@ -157,7 +157,7 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     jest.useFakeTimers();
     await confirmDeleteAll();
     await act(async () => {
-      jest.advanceTimersByTime(30500);
+      jest.advanceTimersByTime(50500);
     });
     expect(screen.getByTestId('delete-fail')).toBeTruthy();
     jest.useRealTimers();
@@ -178,14 +178,14 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     await press('계정 지우기');
     await press('계정 지우기');
     await act(async () => {
-      jest.advanceTimersByTime(30500);
+      jest.advanceTimersByTime(50500);
     });
     jest.useRealTimers();
     await press('다시 하기');
     await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
     expect(screen.queryByText('로그인이 풀려 지워지지 않았어요')).toBeNull();
   });
-  test('어르신: 응답이 오지 않으면 30초 뒤 끊김으로 보고 다시 하기 → 다시 하기 결과 none 은 #156 분기(조회 parent + 끊김 = 모두 지웠어요)', async () => {
+  test('어르신: 응답이 오지 않으면 안전망 시간 뒤 끊김으로 보고 다시 하기 → 다시 하기 결과 none 은 #156 분기(조회 parent + 끊김 = 모두 지웠어요)', async () => {
     const api = createFakeApi({consented: true});
     jest.spyOn(api, 'deleteMyAccount').mockImplementationOnce(() => new Promise(() => {})).mockResolvedValueOnce({scope: 'none'});
     await openParentDelete(api);
@@ -193,7 +193,7 @@ describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이
     await confirmDeleteAll();
     expect(screen.getByText('지우고 있어요')).toBeTruthy();
     await act(async () => {
-      jest.advanceTimersByTime(30500);
+      jest.advanceTimersByTime(50500);
     });
     expectRestored();
     jest.useRealTimers();

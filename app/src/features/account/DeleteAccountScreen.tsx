@@ -18,8 +18,10 @@ import {contactMail, openContactMail} from './contactMail';
 import {settleWithin, withTimeout} from '../../lib/timeout';
 import {announce} from '../../ui/a11y';
 
-/** 지우기 요청 시간 제한(#208 리뷰 H1): 넘기면 '응답 끊김'과 같게 — 다시 하기, 뒤 문구는 #156 분기(unsure) */
-export const DELETE_TIMEOUT_MS = 30000;
+/** 지우기 화면 안전망 시간 제한(#208 리뷰 H1). 요청 자체는 realApi 가 30초에 끊는다(DELETE_RPC_TIMEOUT_MS, abortSignal).
+ *  화면은 그 30초 + 서버 삭제 뒤 기기 정리(하나당 3초 × 최대 5) + 여유를 기다린 뒤에도 답이 없으면 끊김으로 본다 — 다시 하기, 뒤 문구는 #156 분기(unsure).
+ *  앱 전체 공통 시간 제한은 서버 멱등성 점검 뒤 L4 가 넣는다 — 그때 이 안전망과 겹치지 않게 맞출 것 */
+export const DELETE_TIMEOUT_MS = 50000;
 /** 지우기 전 확인(사전 조회·계정 표)도 화면을 오래 붙잡지 않게 */
 const PREP_TIMEOUT_MS = 5000;
 
@@ -174,7 +176,7 @@ export function DeleteAccountScreen({role}: Props) {
     );
     try {
       const req = api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
-      // #208 리뷰 H1: 30초 안에 답이 없으면 끊김으로 본다(요청은 서버에서 끝났을 수도 있음 → unsure, 다시 하기 결과는 #156 분기)
+      // #208 리뷰 H1: 안전망(DELETE_TIMEOUT_MS) 안에 답이 없으면 끊김으로 본다(요청은 서버에서 끝났을 수도 있음 → unsure, 다시 하기 결과는 #156 분기)
       // #208 재확인 H ③: 시간 초과 뒤 원래 요청이 늦게 성공하면 버리지 않는다 — 화면이 살아 있고 그 뒤 새 시도가 없으면 결과 화면으로
       req.then(
         late => {

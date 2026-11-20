@@ -12,7 +12,7 @@ import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
-import {parseDeleteScope} from '../api/contract/deleteScope';
+import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -82,6 +82,8 @@ function fail(what: string, error: SbError): never {
 // platform: 이 기기 OS(selectApi 가 Platform.OS 로 넘김, iOS 준비 N3). 통합 테스트(node)는 기본 android
 /** 서버 삭제 뒤 기기 정리 하나당 시간 제한(ms, #208 리뷰 H1) */
 export const CLEANUP_MS = 3000;
+/** 계정 지우기 RPC 시간 제한(ms, #208) — 넘기면 요청을 끊는다 */
+export const DELETE_RPC_TIMEOUT_MS = 30000;
 
 export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform: PushPlatform | null = 'android'): RealApi {
   const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
@@ -151,7 +153,24 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
     async deleteMyAccount() {
       // clearPushToken 은 이 기기 저장소만 지운다(네트워크 없음)
       waiting.length = 0; // 리뷰 L1
-      const {data, error} = await sb.rpc('delete_my_account');
+      // #208 리드 지시: 화면만 풀면 요청은 남는다 → 요청 자체를 RPC_TIMEOUT_MS 에 끊는다(supabase-js abortSignal).
+      //   끊으면 끊김(OfflineError) — 서버에서 끝났을 수도 있어 화면은 unsure(#156 분기·done_unsure)로 간다.
+      //   앱 전체 공통 시간 제한은 서버 멱등성 점검 뒤 L4 가 넣는다 — 그때 이 개별 제한과 겹치지 않게 하나로 합칠 것
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), DELETE_RPC_TIMEOUT_MS);
+      const q = sb.rpc('delete_my_account') as unknown as PromiseLike<{data: unknown; error: unknown}> & {abortSignal?: (s: AbortSignal) => PromiseLike<{data: unknown; error: unknown}>};
+      let res: {data: unknown; error: unknown};
+      try {
+        res = await (typeof q.abortSignal === 'function' ? q.abortSignal(ctrl.signal) : q);
+      } catch (e) {
+        throw ctrl.signal.aborted ? new OfflineError('delete_my_account 시간 초과(요청 끊음)') : e;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (ctrl.signal.aborted) {
+        throw new OfflineError('delete_my_account 시간 초과(요청 끊음)');
+      }
+      const {data, error} = res as {data: {scope: DeleteScope}; error: never};
       if (error) fail('delete_my_account', error);
       await clearPushToken(); // 서버가 토큰 행을 함께 지웠다(0032). 이 기기 기억만 지운다
       // 서버가 앱 데이터와 함께 본인 인증 계정(소셜 식별 정보 포함)까지 지웠다(0017). 이 기기의 정리만 남는다.

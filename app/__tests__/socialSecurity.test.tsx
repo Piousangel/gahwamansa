@@ -125,6 +125,48 @@ test('#208 리뷰 H1: 서버 삭제 뒤 기기 정리(카카오 연결 끊기·�
   }
 });
 
+test('#208 리드: 지우기 RPC 는 30초에 요청 자체를 끊는다(abortSignal) → 끊김(OfflineError), 기기 정리는 하지 않는다', async () => {
+  jest.useFakeTimers();
+  try {
+    const c = sb({session: {user: {id: 'c', app_metadata: {provider: 'kakao', providers: ['kakao']}}}});
+    let signal: AbortSignal | null = null;
+    c.rpc.mockImplementation(((name: string) => {
+      const pending = new Promise((_, reject) => {
+        // supabase-js 처럼 끊으면 거절
+        setTimeout(() => {}, 0);
+        const wait = () => (signal?.aborted ? reject(new Error('AbortError')) : setTimeout(wait, 1000));
+        setTimeout(wait, 1000);
+      });
+      return Object.assign(pending, {
+        abortSignal: (s: AbortSignal) => {
+          signal = s;
+          return pending;
+        },
+        name,
+      });
+    }) as never);
+    const s = social();
+    let err: unknown = null;
+    createRealApi(c as never, s)
+      .deleteMyAccount()
+      .catch(e => {
+        err = e;
+      });
+    const flush = () => new Promise<void>(r => setImmediate(() => r()));
+    for (let i = 0; i < 40 && err === null; i++) {
+      await flush();
+      jest.advanceTimersByTime(1000);
+      await flush();
+    }
+    const {OfflineError} = require('../src/features/types');
+    expect(err).toBeInstanceOf(OfflineError);
+    expect(signal && (signal as AbortSignal).aborted).toBe(true);
+    expect(s.unlinkKakao).not.toHaveBeenCalled();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 // ---- nonce·SHA-256
 test('nonce 는 64자 hex, 로그인마다 다르다', async () => {
   const a = makeNonce();
