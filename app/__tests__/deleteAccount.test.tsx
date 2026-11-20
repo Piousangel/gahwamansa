@@ -100,7 +100,7 @@ test('자녀: 항상 가장 강한 경고, 확인 입력 후에만 삭제, 결�
 
 test('자녀: 내 계정만 삭제된 경우 결과 문구', async () => {
   const api = createFakeApi({deleteScope: 'child'});
-  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
   expect(screen.queryByText('부모님의 기록도 함께 지워져요')).toBeNull();
   await press('계정 지우기');
   await press('계정 지우기');
@@ -127,7 +127,7 @@ test('PR1 리뷰 M2: scope none 이면 호칭(가족 요약)을 묻지 않는다
   screen.unmount();
   const fam = createFakeApi({deleteScope: 'child'});
   const sumFam = jest.spyOn(fam, 'fetchChildSummary');
-  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
   expect(sumFam).toHaveBeenCalled();
 });
 
@@ -283,7 +283,7 @@ describe('#146 리뷰 H1: no_profile 은 지우지 못한 것(로그인 정보 �
     const {ServerError} = require('../src/features/types');
     const api = createFakeApi({deleteScope: 'child'});
     jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
-    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
     await press('계정 지우기');
     await press('계정 지우기');
     await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));
