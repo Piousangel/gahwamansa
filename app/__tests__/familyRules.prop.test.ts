@@ -127,6 +127,16 @@ test('초대 번호: 쓴 사람만 다시 써도 ok(멱등), 다른 사람은 us
   );
 });
 
+test('#181 재확인 L: 계정을 지우면 같은 기기라도 새 익명 계정 — 지우기 전에 쓴 번호는 used(서버: 프로필이 없으면 226~231행 ok 가 아님), 연결도 끊김', async () => {
+  const api = createFakeApi({childFamily: true});
+  await api.createFamily();
+  expect((await api.redeemInviteCode('123456')).ok).toBe(true);
+  expect((await api.redeemInviteCode('123456')).ok).toBe(true); // 지우기 전: 같은 계정 재시도는 ok
+  await api.deleteMyAccount();
+  const r = await api.redeemInviteCode('123456');
+  expect(r).toEqual({ok: false, reason: 'used'});
+});
+
 test('답 공유 동의 버전 형식: v + 숫자 1~3자리만(서버 0035 29행), 아니면 invalid_version', async () => {
   await fc.assert(
     fc.asyncProperty(fc.oneof(fc.stringMatching(/^v[0-9]{1,3}$/), fc.string({maxLength: 6})), async version => {
