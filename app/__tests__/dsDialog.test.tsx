@@ -9,7 +9,31 @@ const noop = () => {};
 const H = {includeHiddenElements: true};
 const labels = () => screen.getAllByRole('button', H).map(b => b.props.accessibilityLabel);
 
+// 11-20 리드 결정: 'ack'(알겠어요) = 받은 소식 확인 상자 전용, 허용 목록 밖에서 쓰면 실패
+function ackUsers(files: {rel: string; text: string}[]): string[] {
+  const {ACK_ALLOWED} = require('../src/ui/ds/dismiss');
+  return files.filter(f => !(ACK_ALLOWED as readonly string[]).includes(f.rel) && /dismiss[=:]\s*\{?\s*['"]ack['"]/.test(f.text)).map(f => f.rel);
+}
+test("'ack' 는 허용 목록(CheerDialog)에서만 — 소스 스캔, 일부러 넣은 위반을 잡는다", () => {
+  const fsx: {readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]; readFileSync(p: string, e: string): string} = require('fs');
+  const pathx: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
+  const src = pathx.join(__dirname, '../src');
+  const walk = (d: string): string[] => fsx.readdirSync(d, {withFileTypes: true}).flatMap(e => (e.isDirectory() ? walk(pathx.join(d, e.name)) : /\.tsx?$/.test(e.name) ? [pathx.join(d, e.name)] : []));
+  const files = walk(src).map(f => ({rel: pathx.relative(src, f), text: fsx.readFileSync(f, 'utf8')}));
+  expect(files.find(f => f.rel === 'features/course/CheerDialog.tsx')?.text).toMatch(/dismiss="ack"/);
+  expect(ackUsers(files)).toEqual([]);
+  expect(ackUsers([{rel: 'features/account/DeleteAccountScreen.tsx', text: '<Dialog dismiss="ack" />'}, {rel: 'features/x.tsx', text: "dismiss: 'ack'"}])).toEqual(['features/account/DeleteAccountScreen.tsx', 'features/x.tsx']);
+});
+
 describe('ds Dialog', () => {
+  test("ack: 하는 쪽 없이 '알겠어요' 하나(주 버튼), 누르면 onDismiss", () => {
+    const onDismiss = jest.fn();
+    render(<Dialog visible title="엄마가 응원을 보냈어요" body="늘 고마워요" dismiss="ack" onDismiss={onDismiss} returnFocusRef={null} />);
+    expect(labels()).toEqual(['알겠어요']);
+    fireEvent.press(screen.getByTestId('ds-dialog-dismiss'));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   test('되돌릴 수 있는 행동: 하는 쪽이 위(주), 닫는 쪽은 아래 "닫기"', () => {
     const onDo = jest.fn();
     const onDismiss = jest.fn();

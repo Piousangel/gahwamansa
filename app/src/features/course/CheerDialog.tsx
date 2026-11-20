@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {useIsFocused} from '@react-navigation/native';
-import {Dialog} from '../../ui/Dialog';
+import {Dialog} from '../../ui/ds';
 import {audio} from '../../audio';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {copy} from '../../copy/copy';
@@ -63,8 +63,9 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
       visible={open && focused}
       title={title}
       body={lines.join('\n')}
-      actions={[{label: copy.cheer.button, onPress: close}]}
-      returnFocusRef={returnFocusRef}
+      dismiss="ack" // '알겠어요' = 받은 응원을 확인함(읽음 처리). 하는 쪽 버튼 없는 알림 상자
+      onDismiss={close}
+      returnFocusRef={returnFocusRef ?? null}
       testID="cheer-dialog">
       {/* AP-03 읽어 주기: 응원 문장 바로 아래 */}
       <ReadAloud text={ttsText.cheer(lines)} />
