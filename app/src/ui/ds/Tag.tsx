@@ -12,7 +12,7 @@ export type TagProps = {
 
 const c = ds.color;
 
-/** 렌더 트리에서 Tag 를 알아보는 표지(굵기 집계 R-04 예외·accent 집계 R-07 — testUtils/designRules) */
+/** 렌더 트리에서 Tag 를 알아보는 표지(굵기 집계 R-04 예외·accent 집계 R-07 — testUtils/designRules). 이 파일·designRules·테스트 밖에서 쓰면 dsTag 소스 스캔이 실패한다 */
 export const TAG_NATIVE_ID = 'ds-tag';
 
 /** 꼬리표 모양(RULES-V4 v5: Tag(accent) = 먹 면 + 흰 글자 + 글자, 반경 6). 테스트가 대비(어르신 7:1)를 계산한다 */

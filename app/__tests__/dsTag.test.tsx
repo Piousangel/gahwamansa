@@ -3,7 +3,16 @@ import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {render, screen} from '@testing-library/react-native';
 import {AudienceProvider, Button, Heading, Tag, TAG_LOOK, Text as DsText} from '../src/ui/ds';
-import {accentUse, boldRoleCount, R04_EXEMPT} from '../testUtils/designRules';
+import {TAG_NATIVE_ID} from '../src/ui/ds/Tag';
+import {accentUse, boldRoleCount, boldRoles, R04_EXEMPT} from '../testUtils/designRules';
+
+const fsx: {readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]; readFileSync(p: string, e: string): string} = require('fs');
+const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
+/** 'ds-tag' 표지가 허용 파일 밖에 나오는 곳(#204 재확인 M). 테스트(__tests__)는 스캔 대상이 아니다 */
+function tagMarkerLeaks(files: {rel: string; text: string}[]): string[] {
+  const ALLOW = ['src/ui/ds/Tag.tsx', 'testUtils/designRules.ts'];
+  return files.filter(f => !ALLOW.includes(f.rel) && /ds-tag|TAG_NATIVE_ID/.test(f.text)).map(f => f.rel);
+}
 import {tokensV4 as t, type Audience} from '../src/ui/tokensV4';
 
 const flat = (s: unknown) => (StyleSheet.flatten(s as never) ?? {}) as Record<string, unknown>;
@@ -78,6 +87,64 @@ describe('R-04·R-07 집계와 Tag', () => {
       </View>,
     );
     expect(boldRoleCount(screen.root)).toBe(1);
+  });
+
+  // #204 재확인 M·L1·L2
+  test('R-04 역할 이름: 제목·주 버튼은 title·button.primary, Tag 는 빠진다', () => {
+    render(
+      <View>
+        <Heading level={1}>오늘 코스</Heading>
+        <Tag label="지금 할 차례" />
+        <Button label="사진 보기" onPress={() => {}} />
+      </View>,
+    );
+    expect(boldRoles(screen.root).sort()).toEqual(['button.primary', 'title']);
+  });
+
+  test('R-04 누수 막기: 면제는 Tag 직계 Text 1개만 — 표지 안에 더 끼운 굵은 글자·한 단계 아래 글자는 센다', () => {
+    render(
+      <View>
+        <View nativeID={TAG_NATIVE_ID}>
+          <Text style={{fontSize: t.type.label.elder.size, lineHeight: t.type.label.elder.lineHeight, fontWeight: '700'}}>지금 할 차례</Text>
+          <Text style={{fontSize: t.type.bodyLg.elder.size, lineHeight: t.type.bodyLg.elder.lineHeight, fontWeight: '700'}}>몰래 끼운 굵은 글</Text>
+          <View>
+            <Text style={{fontSize: t.type.title.elder.size, lineHeight: t.type.title.elder.lineHeight, fontWeight: '700'}}>한 단계 아래</Text>
+          </View>
+        </View>
+      </View>,
+    );
+    expect(boldRoles(screen.root).sort()).toEqual(['bodyLg', 'title']);
+  });
+
+  test('R-04 굵기는 숫자로 700 이상(800·900·bold 포함), 600 은 세지 않는다', () => {
+    const st = (w: string, role: 'title' | 'numeral' | 'bodyLg' | 'body') => ({fontSize: t.type[role].elder.size, lineHeight: t.type[role].elder.lineHeight, fontWeight: w as '700'});
+    render(
+      <View>
+        <Text style={st('900', 'title')}>a</Text>
+        <Text style={st('bold', 'numeral')}>b</Text>
+        <Text style={st('800', 'bodyLg')}>c</Text>
+        <Text style={st('600', 'body')}>d</Text>
+      </View>,
+    );
+    expect(boldRoles(screen.root).sort()).toEqual(['bodyLg', 'numeral', 'title']);
+  });
+
+  test("소스 스캔: 'ds-tag' 표지·TAG_NATIVE_ID 는 ui/ds/Tag.tsx·testUtils/designRules.ts·테스트 밖에 나오면 실패(표지를 빌려 R-04 면제를 받지 못하게)", () => {
+    const root = path.join(__dirname, '..');
+    const walkDir = (d: string): string[] =>
+      fsx.readdirSync(d, {withFileTypes: true}).flatMap(e => (e.isDirectory() ? walkDir(path.join(d, e.name)) : /\.(tsx?|js)$/.test(e.name) ? [path.join(d, e.name)] : []));
+    const files = [...walkDir(path.join(root, 'src')), ...walkDir(path.join(root, 'testUtils'))].map(f => ({rel: path.relative(root, f), text: fsx.readFileSync(f, 'utf8')}));
+    expect(files.length).toBeGreaterThan(100);
+    expect(tagMarkerLeaks(files)).toEqual([]);
+    // 일부러 넣은 위반을 잡는다
+    expect(
+      tagMarkerLeaks([
+        {rel: 'src/features/x/A.tsx', text: '<View nativeID="ds-tag">'},
+        {rel: 'src/ui/B.tsx', text: "import {TAG_NATIVE_ID} from './ds/Tag';"},
+        {rel: 'src/ui/ds/index.ts', text: "export {TAG_NATIVE_ID} from './Tag';"},
+        {rel: 'src/ui/ds/Tag.tsx', text: "export const TAG_NATIVE_ID = 'ds-tag';"},
+      ]),
+    ).toEqual(['src/features/x/A.tsx', 'src/ui/B.tsx', 'src/ui/ds/index.ts']);
   });
 
   test('R-07: Tag 는 accent 1곳으로 센다 — Tag 둘이면 2(화면당 1곳 위반을 잡는다), dangerInk 글자도 본다', () => {
