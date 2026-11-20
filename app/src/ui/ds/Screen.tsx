@@ -37,7 +37,7 @@ export type DsScreenProps = {
   stepInfo?: string;
   dock?: DockProps;
   children: React.ReactNode;
-  /** 본문 맨 끝(Dock 에서 넘친 슬롯 뒤). 예: C0 '부모님이시면 처음으로' 출구는 넘친 이메일 링크보다 아래(시안 C0 v4 200%) */
+  /** 본문 맨 끝(Dock 에서 넘친 슬롯 뒤). 예: C3 큰 글자 '복사하기'(넘친 Dock 보조 뒤) */
   tail?: React.ReactNode;
   /** R-12 예외(디자인 #74)를 켠다: 자판이 열린 채 주 버튼 하나만으로도 보이는 창 40%를 넘으면 Dock 을 풀고 주 버튼을 본문(children 뒤·tail 앞)에.
    *  입력 화면(C0-b 등)만 켠다. 끈 화면(기본)은 Dock 유지 — 예: P6 는 200% 자판 열림에서도 '다 썼어요'를 Dock 에(V4-INDEX, PR #82 리뷰 L2) */

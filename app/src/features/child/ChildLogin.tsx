@@ -104,18 +104,14 @@ export function ChildLogin() {
             ],
           },
           secondary: {kind: 'text', label: t.email_link, disabled: busy, onPress: toEmail},
-        }}
-        tail={
-          // 출구는 본문 맨 끝: 200%에서 Dock 에서 넘친 이메일 링크보다 아래(시안 C0 v4, 리드 결정 '출구는 본문 끝')
-          <View style={styles.group}>
-            <Text role="sub" tone="muted">
-              {t.parent_exit_note}
-            </Text>
-            <Button kind="text" size="inline" label={t.parent_exit} onPress={resetRole} testID="parent-exit" />
-          </View>
-        }>
+        }}>
         {big ? null : <BrandSymbol size={48} />}
         <Heading level={1}>{t.choose_title}</Heading>
+        {/* P-13(전문가 리뷰 r2 H, 3:81·1:91·7:80): 잘못 들어온 어르신이 노란 카카오 버튼보다 먼저 보는 출구 — 제목 바로 아래 한 줄.
+            예전 '출구는 본문 끝'(시안 C0 v4)은 100%에서도 접힘 아래였다. 누르는 사람이 어르신이라 어르신 치수(link 누름 64·글자 22) */}
+        <AudienceProvider value="elder">
+          <Button kind="text" size="inline" label={t.parent_exit_top} onPress={resetRole} testID="parent-exit" />
+        </AudienceProvider>
         <Text role="bodyLg">{t.hint}</Text>
         {!big && height >= PREVIEW_MIN_H ? (
           <Card tone="notice" testID="login-preview">

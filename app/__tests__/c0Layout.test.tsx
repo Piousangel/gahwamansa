@@ -1,5 +1,5 @@
 // C0 로그인 v4(시안 child/C0_login_ds4, 로그인 스택 3화면 분리 Q9). 실기기 S25 버그 11-19(카카오 버튼 잘림)의 재발 방지 포함:
-// Dock = 소셜 묶음(카카오·구글) + 보조 '이메일로 시작하기'뿐. 약관·연령·부모님 출구는 본문 끝(V4-INDEX C0).
+// Dock = 소셜 묶음(카카오·구글) + 보조 '이메일로 시작하기'뿐. 약관·연령은 본문 끝(V4-INDEX C0), 부모님 출구는 제목 바로 아래(P-13).
 // 한계: jest 에는 레이아웃 엔진이 없다. 200%에서 이메일 링크가 본문 끝으로 가는 것(DsScreen 넘침 단계)은 dsLayout 테스트·에뮬레이터 캡처(e2e/audit/c0-fit.yaml)가 근거.
 import React from 'react';
 import {StyleSheet} from 'react-native';
@@ -24,7 +24,7 @@ for (const [name, w, h] of [
   ['S25 411×891', 411, 891],
   ['360×640', 360, 640],
 ] as const) {
-  test(`${name} 글자 1.0: Dock 은 카카오·구글 + 이메일 링크, 약관·연령·부모님 출구는 본문 끝`, async () => {
+  test(`${name} 글자 1.0: Dock 은 카카오·구글 + 이메일 링크, 약관·연령은 본문, 부모님 출구는 제목 바로 아래`, async () => {
     await openC0(w, h);
     const dock = within(screen.getByTestId('screen-dock'));
     expect(dock.getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual([
@@ -38,10 +38,24 @@ for (const [name, w, h] of [
     const body = within(screen.getByTestId('screen-body'));
     expect(body.getByTestId('legal-child')).toBeTruthy();
     expect(body.getByTestId('age-notice')).toBeTruthy();
-    expect(body.getByRole('button', {name: '부모님이시면 처음으로'})).toBeTruthy();
-    expect(body.getByText('부모님은 로그인 없이 가족에게 받은 번호만 쓰면 돼요')).toBeTruthy();
+    expect(body.getByRole('button', {name: '부모님은 로그인하지 않아요 · 처음으로'})).toBeTruthy();
+    expect(body.queryByText('부모님이시면 처음으로')).toBeNull(); // 본문 끝 옛 출구는 없앴다(하나로)
   });
 }
+
+test('P-13: 부모님 출구는 제목 바로 다음(안내·약관보다 앞), 어르신 치수(누름 64·글자 20 이상), 누르면 처음 화면', async () => {
+  await openC0(360, 640);
+  const body = screen.getByTestId('screen-body');
+  const order = within(body)
+    .getAllByText(/로그인하고 시작해요|부모님은 로그인하지 않아요|가족 연결 번호를 만들 때 필요해요/)
+    .map(n => n.props.children);
+  expect(order).toEqual(['로그인하고 시작해요', '부모님은 로그인하지 않아요 · 처음으로', '가족 연결 번호를 만들 때 필요해요']);
+  const exit = screen.getByRole('button', {name: '부모님은 로그인하지 않아요 · 처음으로'});
+  expect(StyleSheet.flatten(exit.props.style).minHeight).toBeGreaterThanOrEqual(64);
+  expect(StyleSheet.flatten(within(exit).getByText('부모님은 로그인하지 않아요 · 처음으로').props.style).fontSize).toBeGreaterThanOrEqual(20);
+  await press('부모님은 로그인하지 않아요 · 처음으로');
+  await waitFor(() => screen.getByText(/이 휴대폰은 누구 거예요/));
+});
 
 test('\'이런 앱이에요\' 카드는 키 760 이상에서만, 심볼·카드는 글자 150% 이상이면 숨김', async () => {
   await openC0(360, 820);
