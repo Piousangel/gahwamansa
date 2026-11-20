@@ -26,6 +26,15 @@ describe('Dialog(어르신 대화상자)', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 
+  test('#194: 경고 띠는 카드 폭을 넘지 않고(maxWidth 100%) 글자가 줄어 줄바꿈된다 — 200%에서 오른쪽 안쪽 여백을 넘던 문제', () => {
+    render(<Dialog visible title="정말 모두 지울까요?" warningLabel="되돌릴 수 없어요" actions={actions()} />);
+    const band = StyleSheet.flatten(screen.getByTestId('dialog-warning').props.style);
+    expect(band).toMatchObject({maxWidth: '100%', alignSelf: 'flex-start', flexDirection: 'row'});
+    const text = StyleSheet.flatten(screen.getByTestId('dialog-warning-text').props.style);
+    expect(text.flexShrink).toBe(1);
+    expect(screen.getByTestId('dialog-warning-text').props.numberOfLines ?? 0).toBe(0); // 자르지 않고 줄바꿈
+  });
+
   test('children: 제목과 본문 사이에 내용(예: P6 음절 칸)을 넣고, 본문 스크롤 안에 같이 둔다', () => {
     render(
       <Dialog visible title="낱말을 한 번 더 볼까요?" body="쓰신 낱말 나모" actions={actions()}>

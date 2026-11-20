@@ -2,7 +2,6 @@ import React, {useRef, useState, type RefObject} from 'react';
 import {Animated, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {color as v3color, shadow} from '../tokens';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
 import {useFadeIn} from '../useFadeIn';
@@ -128,8 +127,8 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
 
 const styles = StyleSheet.create({
   root: {flex: 1, justifyContent: 'flex-end'},
-  scrim: {...StyleSheet.absoluteFill, backgroundColor: v3color.scrim},
-  panel: {backgroundColor: c.paper, borderTopLeftRadius: ds.radius.sheet, borderTopRightRadius: ds.radius.sheet, boxShadow: shadow.sheet, overflow: 'hidden'},
+  scrim: {...StyleSheet.absoluteFill, backgroundColor: ds.scrim},
+  panel: {backgroundColor: c.paper, borderTopLeftRadius: ds.radius.sheet, borderTopRightRadius: ds.radius.sheet, boxShadow: ds.shadow.sheet, overflow: 'hidden'},
   scroll: {flexGrow: 0},
   body: {gap: 12, paddingTop: 12, paddingHorizontal: 20, paddingBottom: 28}, // 아래 inset 은 패널 바닥 여백(PR #93 L2)
   head: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
