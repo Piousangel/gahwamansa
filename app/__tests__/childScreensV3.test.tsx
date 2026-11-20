@@ -308,32 +308,57 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByText('이 답으로 이야기를 시작해 봐요'));
   });
 
-  test('N-10: 글자 150% 이상이면 응원 버튼이 하단 고정이 아니라 카드 바로 아래 본문(고정 틀 = 위 바 + 탭 바), 100%는 하단 고정', async () => {
+  describe('N-10 큰 글자 응원 버튼 자리', () => {
     const RN = require('react-native');
-    const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
-    const api = () => createFakeApi({consented: true, parentTitle: '엄마', latest: {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'}});
-    dims(1);
-    render(<AppRoot api={api()} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
-    expect(screen.queryByTestId('child-home-cheer-inline')).toBeNull();
-    screen.unmount();
-    for (const scale of [1.5, 2]) {
-      dims(scale);
+    let spy: jest.SpyInstance | null = null;
+    const dims = (fontScale: number) => {
+      spy?.mockRestore();
+      spy = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
+    };
+    afterEach(() => {
+      spy?.mockRestore(); // #167 리뷰 M1: 뒤 테스트가 200%로 돌지 않게
+      spy = null;
+    });
+    const order = (re: RegExp) => within(screen.getByTestId('screen-body')).getAllByTestId(re).map(n => n.props.testID);
+
+    test('100%는 하단 고정, 150%·200%는 첫 카드 바로 다음 본문(고정 틀 = 위 바 + 탭 바)', async () => {
+      const api = () => createFakeApi({consented: true, parentTitle: '엄마', latest: {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'}});
+      dims(1);
       render(<AppRoot api={api()} role="child" />);
       await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-      expect(screen.queryByTestId('screen-dock')).toBeNull();
-      const body = within(screen.getByTestId('screen-body'));
-      expect(body.getByTestId('child-home-cheer-inline')).toBeTruthy();
-      expect(within(screen.getByTestId('child-home-cheer-inline')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
-      // 카드 바로 아래(본문 순서: 카드 → 응원 버튼)
-      const ids = body.getAllByTestId(/child-home-card|child-home-cheer-inline/).map(n => n.props.testID);
-      expect(ids).toEqual(['child-home-card', 'child-home-cheer-inline']);
-      // 시트가 닫히면 이 버튼으로 초점을 돌린다(PR #93 M1 그대로)
-      await press('응원 보내기');
-      expect(within(screen.getByTestId('sheet')).getByText('어떤 말을 보낼까요?')).toBeTruthy();
+      expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
+      expect(screen.queryByTestId('child-home-cheer-inline')).toBeNull();
       screen.unmount();
-    }
+      for (const scale of [1.5, 2]) {
+        dims(scale);
+        render(<AppRoot api={api()} role="child" />);
+        await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+        expect(screen.queryByTestId('screen-dock')).toBeNull();
+        expect(order(/child-home-card|child-home-cheer-inline/)).toEqual(['child-home-card', 'child-home-cheer-inline']);
+        await press('응원 보내기'); // 시트가 열린다(닫히면 이 버튼으로 초점, PR #93 M1)
+        expect(within(screen.getByTestId('sheet')).getByText('어떤 말을 보낼까요?')).toBeTruthy();
+        screen.unmount();
+      }
+    });
+
+    test('#167 리뷰 M2: 어르신이 여럿이면 버튼은 첫 카드 바로 다음(둘째 카드 앞)', async () => {
+      dims(2);
+      const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
+      render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
+      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      expect(order(/child-home-card|child-home-cheer-inline/)).toEqual(['child-home-card', 'child-home-cheer-inline', 'child-home-card']);
+    });
+
+    test('#167 리뷰 M2: 첫날 빈 상태면 안내 한 줄 바로 다음(예시 카드보다 앞)', async () => {
+      dims(2);
+      render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest: null}]})} role="child" />);
+      await waitFor(() => screen.getByTestId('child-home-empty'));
+      expect(order(/child-home-empty-line|child-home-cheer-inline|child-home-example-1/)).toEqual([
+        'child-home-empty-line',
+        'child-home-cheer-inline',
+        'child-home-example-1',
+      ]);
+    });
   });
 
   test('응원 보내기: 확정 4개만, 누르면 바로 보내고 "{호칭}께 보냈어요"', async () => {

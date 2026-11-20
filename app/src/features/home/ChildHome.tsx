@@ -112,6 +112,8 @@ export function ChildHome() {
     </AudienceProvider>
   );
   const hasBottom = (!info || reachable.length > 0) && !big;
+  // 큰 글자: 응원 버튼은 첫 카드(첫날이면 안내 한 줄) 바로 다음 — 어르신이 여럿이어도 버튼은 하나라 첫 카드 다음(#167 리뷰 M2)
+  const inline = big && hasBottomContent(info, reachable.length) ? <View testID="child-home-cheer-inline">{bottom}</View> : null;
 
   return (
     <View style={styles.flex}>
@@ -141,13 +143,19 @@ export function ChildHome() {
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
             {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
             {firstDay ? (
-              <ChildHomeEmpty fold={emptyFold} />
+              <ChildHomeEmpty fold={emptyFold} action={inline} />
             ) : (
-              list.map(p => <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />)
+              list.map((p, i) => (
+                <React.Fragment key={`card-${p.parentId}`}>
+                  <AnswerCard parent={p} withHeader={many} />
+                  {i === 0 ? inline : null}
+                </React.Fragment>
+              ))
             )}
           </>
         )}
-        {big ? <View testID="child-home-cheer-inline">{bottom}</View> : null}
+        {/* 받기 전(로딩)·카드가 없을 때는 본문 끝 */}
+        {!info || (!firstDay && list.length === 0) ? inline : null}
         </AudienceProvider>
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
@@ -229,3 +237,8 @@ const styles = StyleSheet.create({
   stitch: {borderTopWidth: 2, borderStyle: 'dashed', borderColor: ds.color.lineSoft, marginVertical: 8},
   starter: {gap: 4},
 });
+
+/** 하단 버튼 자리에 그릴 것이 있는지(받기 전 = 비활성 버튼, 연결된 분이 있으면 응원) */
+function hasBottomContent(info: ChildSummary | null | undefined, reachable: number): boolean {
+  return !info || reachable > 0;
+}

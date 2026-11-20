@@ -19,12 +19,14 @@ export function useEmptyFold() {
   return useFoldGap(4, GAP, 1);
 }
 
-export function ChildHomeEmpty({fold}: {fold: ReturnType<typeof useEmptyFold>}) {
+// action: 큰 글자에서 본문으로 내려온 응원 버튼(N-10) — 안내 한 줄 바로 다음, 예시보다 앞(#167 리뷰 M2). 접힘 계산에서 0번 요소에 함께 든다
+export function ChildHomeEmpty({fold, action}: {fold: ReturnType<typeof useEmptyFold>; action?: React.ReactNode}) {
   return (
     <AudienceProvider value="child">
       <View testID="child-home-empty" style={styles.block} onLayout={fold.onBlock}>
-        <View onLayout={fold.onItem(0)} testID="child-home-empty-line">
+        <View onLayout={fold.onItem(0)} testID="child-home-empty-line" style={styles.lineGroup}>
           <Text role="bodyLg">{e.line}</Text>
+          {action}
         </View>
         {e.examples.map((x, i) => (
           <View
@@ -64,6 +66,7 @@ export function ChildHomeEmpty({fold}: {fold: ReturnType<typeof useEmptyFold>}) 
 
 const styles = StyleSheet.create({
   block: {gap: GAP, alignSelf: 'stretch'},
+  lineGroup: {gap: GAP},
   // 흐린 예시 카드: 점선 + 종이 면(실제 답 카드의 흰 면·테이프와 다르게)
   example: {
     borderWidth: 2, borderStyle: 'dashed', borderColor: ds.color.line, borderRadius: ds.radius.card,
