@@ -10,9 +10,10 @@ import {track} from '../track';
 
 const c = copy.child.cheer;
 
-// 리드 결정(11-18 U10): '취소'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 화면 읽기가 켜졌거나 글자 200% 이상이면 6초
+// 리드 결정(11-18 U10): '되돌리기'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 글자 200% 이상이면 6초.
+// 전문가 리뷰 D-17a(7:90, WCAG 2.2.1): 화면 읽기가 켜졌으면 10초 + 초점을 '되돌리기'로(Toast focusAction)
 export function cheerUndoMs(screenReader: boolean, fontScale: number): number {
-  return screenReader || fontScale >= 2 ? 6000 : 4000;
+  return screenReader ? 10000 : fontScale >= 2 ? 6000 : 4000;
 }
 
 // 응원 보내기(리뷰 M3 + UX U10): 문장을 누르면 확인 없이 "{호칭}께 보냈어요 · 취소" 토스트를 띄우고, 토스트가 떠 있는 동안
@@ -91,6 +92,7 @@ export function useSendCheer(api: Api, onReload: () => void) {
       setSending(true);
       const toastId = show({
         durationMs: ms,
+        focusAction: screenReader, // D-17a: 화면 읽기 사용자는 토스트를 찾아갈 틈이 없다 → 초점을 '되돌리기'로
         onExpire: fire, // 시간 끝·다른 토스트로 바뀜·닫힘 → 보낸다
         text: withTitle(c.sent, targets.map(p => p.title).join('·')),
         action: {

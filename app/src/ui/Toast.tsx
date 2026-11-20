@@ -5,6 +5,7 @@ import {FONT_SCALE_MAX, color, radius, shadow, touch} from './tokens';
 import {Text20} from './Text20';
 import {Icon} from './assets/icons';
 import {announce} from './a11y';
+import {focusLater, FOCUS_DELAY_MS} from './screenTitle';
 import {ToastPlacementContext, toastBottom, type ToastPlacement} from './toastPlacement';
 import {fadeMs, useReduceMotion} from './motion';
 
@@ -16,7 +17,9 @@ type ToastAction = {label: string; onPress: () => void};
 // durationMs: 이 토스트만 표시 시간을 따로(예: 응원 '취소' 가능 시간과 같게, UX U10). 없으면 TOAST_MS
 // onExpire: 행동(action)을 누르지 않고 이 토스트가 끝날 때 한 번(시간 끝·hide·새 토스트로 바뀜·제공자 언마운트).
 //   끝나기 시작하는 순간 행동 버튼은 비활성이 된다(리뷰 M2: 응원은 이 시점에 보내므로 보낸 뒤 '취소'를 누를 틈이 없다)
-type Extra = {durationMs?: number; onExpire?: () => void};
+// focusAction: 나타날 때 화면 읽기 초점을 행동 버튼으로(전문가 리뷰 D-17a, WCAG 2.2.1 — 화면 읽기 사용자가 시간 안에 닿게).
+//   이때는 따로 읽어 주지 않고 버튼 라벨을 '{문구}, {행동}'으로 둔다(한 번만 읽힘, R11). 시트가 닫히며 연 버튼으로 돌아가는 초점(300ms)보다 뒤에 옮긴다.
+type Extra = {durationMs?: number; onExpire?: () => void; focusAction?: boolean};
 export type ToastOptions =
   | ({text: string; kind?: 'info'; action?: ToastAction} & Extra)
   | ({text: string; kind: 'error'; action: ToastAction} & Extra);
@@ -125,13 +128,20 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
   // 리뷰 L3: 시트·대화상자가 열려 숨긴 동안에는 읽지도 시간을 세지도 않는다. 닫히면 그때 읽고 처음부터 센다
   const visible = !!toast && modals === 0;
   const announced = useRef(0);
+  const actionRef = useRef<React.ComponentRef<typeof Pressable>>(null);
+  const focusing = !!toast?.focusAction && !!toast.action;
   useEffect(() => {
     if (!toast || !visible) {
       return;
     }
+    let cancelFocus: (() => void) | undefined;
     if (announced.current !== toast.id) {
       announced.current = toast.id;
-      announce(toast.text);
+      if (focusing) {
+        cancelFocus = focusLater(() => actionRef.current, FOCUS_DELAY_MS * 2);
+      } else {
+        announce(toast.text);
+      }
     }
     const ms = fadeMs(reduce);
     if (ms > 0) {
@@ -142,11 +152,14 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
     }
     // 오류는 "다시 하기"를 누를 때까지 남긴다. 타입을 어기고 action 없이 오면 닫을 길이 없으니 자동으로 사라지게 한다
     if (toast.kind === 'error' && toast.action) {
-      return;
+      return cancelFocus;
     }
     const id = toast.id;
     const t = setTimeout(() => hide(id), toast.durationMs ?? TOAST_MS);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      cancelFocus?.();
+    };
     // 토스트가 바뀌거나 보이기 시작할 때만 다시 센다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast?.id, visible]);
@@ -175,8 +188,10 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
             </Text20>
             {toast.action ? (
               <Pressable
+                ref={actionRef}
+                testID="toast-action"
                 accessibilityRole="button"
-                accessibilityLabel={toast.action.label}
+                accessibilityLabel={focusing ? `${toast.text}, ${toast.action.label}` : toast.action.label}
                 disabled={leaving === toast.id}
                 accessibilityState={{disabled: leaving === toast.id}}
                 onPress={() => act(toast)}
