@@ -22,6 +22,10 @@ import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
 import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
+
+/** 카드 묶음 안 간격(본문 간격과 같게) */
+const CARD_GAP = 16;
 
 /** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
 const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
@@ -57,6 +61,17 @@ export function ChildHome() {
   //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
   const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
+  const cardsFold = useFoldGap(1, CARD_GAP, 1);
+  const cardHs = useRef<number[]>([]);
+  const cardCount = firstDay ? 0 : list.length;
+  const onCardHeight = (i: number, h: number) => {
+    const hs = cardHs.current.slice(0, cardCount);
+    hs[i] = h;
+    cardHs.current = hs;
+    if (hs.length === cardCount && hs.every(x => x !== undefined)) {
+      cardsFold.onHeights(hs);
+    }
+  };
   // N-10(전문가 리뷰 r2 H, 4:201): 200%에서 위 바 + 하단 응원 버튼 + 탭 바 = 화면 51%(R-12 40%). 큰 글자(150% 이상)에서는
   //   응원 버튼을 하단 고정에서 빼 카드 바로 아래 본문으로 둔다(R-12 단서·C3 '큰 글자 = Dock 주 하나' 결정 #83 ②와 같은 방식). 고정 틀 = 위 바 + 탭 바만
   const big = useWindowDimensions().fontScale >= 1.5;
@@ -126,7 +141,14 @@ export function ChildHome() {
       <AudienceProvider value="child">
       {/* 틀은 step(#207 리뷰): 지금 DsScreen 틀은 step·form·intro 셋뿐이고, 탭 화면에 맞는 list 틀은 빌드 1 끝으로 미뤄져 있다(SUMMARY Q8).
           step 은 Dock 상한 40%·자판 접힘 정책이 이 화면과 같다(입력 없음 — 접힐 일도 없음). list 틀이 생기면 그리로 옮긴다 */}
-      <DsScreen variant="step" header={top} dock={dock} onViewport={emptyFold.onViewport}>
+      <DsScreen
+        variant="step"
+        header={top}
+        dock={dock}
+        onViewport={h => {
+          emptyFold.onViewport(h);
+          cardsFold.onViewport(h);
+        }}>
         {error ? (
           <View accessibilityLiveRegion="polite">
             <Text role="body">{error.title}</Text>
@@ -152,12 +174,20 @@ export function ChildHome() {
             {firstDay ? (
               <ChildHomeEmpty fold={emptyFold} action={inline} />
             ) : (
-              list.map((p, i) => (
-                <React.Fragment key={`card-${p.parentId}`}>
-                  <AnswerCard parent={p} withHeader={many} />
-                  {i === 0 ? inline : null}
-                </React.Fragment>
-              ))
+              // R-15(#207 캡처): 200%·130%에서 둘째 카드 머리가 첫 화면 끝(더 있음 띠 위)에 반쯤 걸쳤다 → 카드(첫 카드는 응원 버튼과 한 덩어리)마다
+              //   접힘 밀기. 카드 수가 바뀌므로 높이를 한꺼번에 넘긴다(onHeights). 첫 카드는 밀지 않는다(from 1 — 화면의 주인)
+              <View style={styles.cards} onLayout={cardsFold.onBlock} testID="child-home-cards">
+                {list.map((p, i) => (
+                  <View
+                    key={`card-${p.parentId}`}
+                    style={[styles.cardItem, cardsFold.gapStyle(i)]}
+                    testID={`child-home-card-item-${i + 1}`}
+                    onLayout={e => onCardHeight(i, e.nativeEvent.layout.height)}>
+                    <AnswerCard parent={p} withHeader={many} />
+                    {i === 0 ? inline : null}
+                  </View>
+                ))}
+              </View>
             )}
           </>
         )}
@@ -236,6 +266,8 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
 
 const styles = StyleSheet.create({
   flex: {flex: 1},
+  cards: {gap: CARD_GAP, alignSelf: 'stretch'},
+  cardItem: {gap: CARD_GAP, alignSelf: 'stretch'},
   centerText: {textAlign: 'center'},
   plain: {paddingVertical: 32, alignItems: 'center', gap: 8},
   card: {backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, padding: 20, paddingTop: 28, gap: 6, marginTop: 8},

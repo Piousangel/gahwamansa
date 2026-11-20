@@ -92,6 +92,27 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
   expect(mt('child-home-example-2')).toBeUndefined();
 });
 
+test('#207 캡처(R-15): 어르신이 둘이면 둘째 카드가 첫 화면 끝에 걸칠 때 통째로 민다, 첫 카드(응원 버튼과 한 덩어리)는 밀지 않는다', async () => {
+  const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
+  render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
+  await waitFor(() => screen.getByTestId('child-home-cards'));
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+  const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+  await act(async () => {
+    lay('screen-body-area', 0, 424); // 접힘 = 424 − 띠 24 = 400
+    lay('child-home-cards', 10, 700);
+    lay('child-home-card-item-1', 0, 300); // 10~310(카드 + 응원 버튼)
+    lay('child-home-card-item-2', 0, 260); // 326~586 → 400 에 걸림
+  });
+  expect(mt('child-home-card-item-2')).toBe(400 - 326 + 1);
+  expect(mt('child-home-card-item-1')).toBeUndefined();
+  // 첫 카드가 걸쳐도 밀지 않는다(from 1)
+  await act(async () => {
+    lay('child-home-card-item-1', 0, 500); // 10~510 → 걸침
+  });
+  expect(mt('child-home-card-item-1')).toBeUndefined();
+});
+
 test('리뷰 L3 ①: 동의한 분(답 없음) + 나누지 않는 분이 섞이면 빈 상태 대신 기존 카드', async () => {
   const api = createFakeApi({consented: true, parents: [{title: '엄마'}, {title: '아빠', shared: false}]});
   render(<AppRoot api={api} role="child" />);

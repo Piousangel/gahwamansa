@@ -358,7 +358,7 @@ describe('C4 홈 · 응원', () => {
         render(<AppRoot api={api()} role="child" />);
         await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
         expect(screen.queryByTestId('screen-dock')).toBeNull();
-        expect(order(/child-home-card|child-home-cheer-inline/)).toEqual(['child-home-card', 'child-home-cheer-inline']);
+        expect(order(/^(child-home-card|child-home-cheer-inline)$/)).toEqual(['child-home-card', 'child-home-cheer-inline']);
         await press('응원 보내기'); // 시트가 열린다(닫히면 이 버튼으로 초점, PR #93 M1)
         expect(within(screen.getByTestId('sheet')).getByText('어떤 말을 보낼까요?')).toBeTruthy();
         screen.unmount();
@@ -370,7 +370,7 @@ describe('C4 홈 · 응원', () => {
       const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
       render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
       await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-      expect(order(/child-home-card|child-home-cheer-inline/)).toEqual(['child-home-card', 'child-home-cheer-inline', 'child-home-card']);
+      expect(order(/^(child-home-card|child-home-cheer-inline)$/)).toEqual(['child-home-card', 'child-home-cheer-inline', 'child-home-card']);
     });
 
     test('#167 리뷰 M2: 첫날 빈 상태면 안내 한 줄 바로 다음(예시 카드보다 앞)', async () => {
