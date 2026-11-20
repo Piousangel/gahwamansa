@@ -75,11 +75,11 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.blocked_parent_device.button, onPress: noop}},
   },
   {
-    name: 'C1 호칭 고르기(번호 만들기 하나)',
+    name: 'C1 호칭 고르기(번호 만들기 + 안드로이드 안내 note, P-12)',
     screen: 'RelationScreen',
     variant: 'form',
     audience: 'child',
-    dock: {primary: {label: copy.relation.next, onPress: noop}},
+    dock: {primary: {label: copy.relation.next, onPress: noop}, note: {text: copy.relation.android_only}},
   },
   {
     name: 'C3 연결 기다리는 중(번호 보내기 + 복사하기)',
