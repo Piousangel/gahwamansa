@@ -5,7 +5,8 @@ node_modules/
 .DS_Store
 
 # 작업 도구 상태(진행 기록은 flow 규칙상 커밋하지 않음)
-.claude/
+.claude/*
+!.claude/settings.json
 .gstack/
 
 # Supabase 로컬 상태
