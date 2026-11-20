@@ -383,6 +383,7 @@ type UnregisterPushToken = { ok: true; removed: number };
    - **첫 답 알림 결과 미기록**(0052): `select count(*), min(created_at) from first_answer_notices where status = 'claimed' and created_at < now() - interval '1 hour';` — 0이 아니면 선점 뒤 Edge가 결과(`push_record`)를 남기지 못한 것(함수 중단·배포·secrets 문제). `select * from push_runs where kind = 'parent_first_answer' order by id desc limit 5;`와 Edge `push-events` 로그를 본다. 평생 1회라 다시 보내지 않으며, 행은 `claimed`로 둔다(도달 여부 모름으로 집계). remote-checks에도 같은 줄이 있다.
 3. **콘텐츠 재고**: `select * from content_runway;` — `remaining_new_days < 7`이면 콘텐츠 추가(SV-08 스크립트). `max_cursor`도 함께 본다: 커서가 마지막 날 근처면 곧 한 바퀴를 돌아 첫 날로 돌아가고(그 뒤엔 `remaining_new_days`가 크게 나와 경보가 둔해짐, 리뷰 admin L6), 새 콘텐츠 없이 반복이 시작된다.
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
+   - **연결 전·옛 익명 계정 정리(0057, 90일)**: 같은 배치의 한 단계. 어제 지운 수 `select count(*) from events where name = 'account_purged' and ts > now() - interval '1 day';`(metrics ⑩). 이 단계만 실패하면 배치는 성공으로 끝나고 Postgres 로그에 warning `purge_stale_anonymous_failed: <SQLSTATE>` — 대상 수(remote-checks "익명 계정 정리 준비" detail)가 며칠째 줄지 않으면 로그를 본다.
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4, `action <> 'dev_reset_today'`로 QA 초기화 행은 따로 — 0051), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`(프로필 없는 계정은 `admin_delete_user`, 0049)로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 - 감사 사유 규칙(DECISIONS 11-18): `admin_delete_*`의 사유(reason)에는 **요청 번호만**(예: `REQ-2026-012 웹 삭제 요청`), 이름·메일·닉네임·기종 같은 개인정보 금지. 처리자(operator)는 사람 이름 대신 역할명(`owner`). admin_audit는 1년 보관되고 대상이 지워져도 남는다(0039). 요청 번호↔메일 대응은 문의 메일함의 삭제 요청 대장에만(내부관리계획 §6·§7). 0047·0049부터 서버가 `@`·전각 ＠·9자리 이상 숫자(구분자 제거 후)가 든 사유를 `pii_in_args`로 거부한다.
@@ -435,6 +436,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0053 | 이벤트 AC-05(course_step_started·finished) | PR #61 | 미반영 |
 | 0054 | account_deleted 서버 기록(식별자 없음) | 브랜치 server-account-deleted-event(0053 위) | 미반영 |
 | 0056 | 일일 알림 대상에서 답 공유 동의 조건 제거(알림 받기 동의만) | 브랜치 server-daily-push-consent | 미반영 |
+| 0057 | 연결 전·옛 익명 계정 90일 자동 정리(account_purged) | 브랜치 server-stale-anon-purge | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
@@ -507,13 +509,12 @@ type UnregisterPushToken = { ok: true; removed: number };
 - [ ] 반영 뒤 `remote-checks.sql` + `metrics.sql` ⑧·⑥ 첫날 확인, 06시 점검(§14) 시작
 
 ## 19. 제안(구현 안 함 — 리드·법률 결정 대기, xhigh·법률 재확인 11-19)
-### ① 쓰지 않는 연결 전 계정 정리 배치
-- 문제: 설치 직후 익명 로그인(어르신 기기·미연결 열람)이나 로그인만 하고 가족을 만들지 않은 자녀 계정은 프로필이 없어 파기 배치(0023)에 걸리지 않는다. 그 사이 약관 동의 이력·푸시 토큰·소셜 식별 정보가 기한 없이 남는다. 본인 삭제 경로는 0049로 생겼지만, 앱을 지운 사람은 부를 수 없다.
-- 안: `purge_expired_data`에 한 단계 추가 — `user_delete_core`와 같은 규칙(토큰 삭제·카카오면 해제 큐·인증 계정 삭제 → 동의 이력 cascade)으로
-  - 익명 + 프로필 없음 + `coalesce(last_sign_in_at, created_at)`가 **90일** 넘음
-  - 비익명(카카오·구글·메일) + 프로필 없음 + 마지막 로그인 **1년** 넘음(가족 만들기 전 이탈)
-  - 한 번에 최대 N건(예 500), 결과는 건수만 반환(`stale_users`). 감사 행은 남기지 않는다(배치 파기 — 방침의 보관 기간 표에 한 줄 추가).
-- 영향: 그 기기에서 앱을 다시 열면 세션이 무효 → 앱은 이미 있는 "새 익명 로그인" 경로로 시작(0026과 같음). 연결된 어르신(프로필 있음)은 대상이 아니다. 기간(90일·1년)은 법률·리드 결정. 방침에 "연결하지 않은 계정은 마지막 사용 후 ○일 뒤 삭제" 문장이 필요하다.
+### ① 쓰지 않는 연결 전 계정 정리 배치 → **구현(0057, 익명만 90일, 오너 확정 DECISIONS 11-20)**
+- 대상: 익명 + 프로필 없음(가족과 연결하지 않은 어르신 기기, 재연결로 프로필이 새 기기로 옮겨 가 비워진 옛 익명 계정) + 마지막 활동(가입·로그인·사용자 갱신·세션 갱신·리프레시 토큰 갱신 중 가장 늦은 것)이 90일 넘음. 기간은 `stale_anon_days()` 한 곳.
+- 지울 범위: 연결 전 계정의 `delete_my_account`와 같은 공통 함수(`user_delete_core`) — 토큰·인증 계정 → 약관 확인 기록·identities·세션 cascade. 기록은 식별자 없는 `account_purged`(props `{scope:'stale_anonymous'}`, 시 단위) — 탈퇴(`account_deleted`)와 따로 센다(metrics ⑩).
+- 실행: `purge_expired_data`(cron 00:10 KST)의 한 단계, 한 번에 최대 500명. 실패해도 다른 파기는 계속(결과 키 `stale_anonymous` = -1). 06시 점검 §14-4, remote-checks "익명 계정 정리 준비".
+- **제외**: 제안에 있던 비익명(카카오·구글·메일) 자녀 중 가족을 만들지 않은 계정 1년 정리는 이번 범위가 아니다(오너 결정 범위 밖 — 필요하면 별도 결정).
+- 방침: 4절 새 행·10절, 삭제 안내 2절의 `{연결 전 계정 자동 정리 기간}` = 90일(게시 조건 P21, 법률 PR #154).
 
 ### ② terms_agreements 보관 기한
 - 지금: 계정이 있는 동안 기한 없이 보관, 계정 삭제 때 cascade로 함께 삭제. 같은 버전 쌍은 다시 쌓이지 않아(0048) 사용자당 행 수는 게시한 버전 쌍 수 이하다.
