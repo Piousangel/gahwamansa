@@ -50,5 +50,6 @@ const styles = StyleSheet.create({
   // S25 실기기(11-19) '뒤로 링크가 작다' 최소 수정: 누름 영역 64 이상(높이·폭), 글자 본문(22) 이상. 디자인 규칙 v4 결과가 나오면 맞춘다
   bar: {minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', alignSelf: 'flex-start', paddingRight: 20, paddingVertical: 4},
   pressed: {opacity: 0.6},
-  text: {fontSize: 24, color: color.ink, fontWeight: 'bold'},
+  // R-08(v5): 누르는 파랑 글자는 밑줄·면·아이콘 중 하나와 함께 — 옛 뒤로 바는 밑줄(BackLink 로 옮길 때까지)
+  text: {fontSize: 24, color: color.ink, fontWeight: 'bold', textDecorationLine: 'underline'},
 });

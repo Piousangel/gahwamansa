@@ -11,16 +11,18 @@ import {tokensV4} from './tokensV4';
 //       교체할 때는 font 값만 바꾼다(파일 번들 + 라이선스 확인 후).
 
 const c4 = tokensV4.color;
+// v5 에서 지운 장식 색(O-8·R-23): 화면 레인이 장식을 걷어 낼 때까지만 v4 값(생성물 deprecatedColor)
+const d4 = tokensV4.deprecatedColor;
 const v3 = {
   paper: c4.paper, card: c4.card, paperSoft: c4.paperSoft, paperEdge: c4.paperEdge,
   ink: c4[tokensV4.v3ColorAlias.ink], inkTitle: c4.inkTitle, inkSub: c4.inkSub,
   action: c4.action, actionPressed: c4.actionPressed, actionSoft: c4.actionSoft, noticeSoft: c4.noticeSoft,
   line: c4.line, lineSoft: c4.lineSoft, lineGhost: c4.lineGhost,
-  disabledBg: c4.disabledBg, disabledInk: c4.disabledInk, tape: c4.tape,
+  disabledBg: c4.disabledBg, disabledInk: c4.disabledInk, tape: d4.tape,
   done: c4.done, doneInk: c4.doneInk, doneSoft: c4.doneSoft,
   danger: c4.danger, dangerInk: c4.dangerInk, dangerSoft: c4.dangerSoft,
-  sky: c4.sky, sun: c4.sun, sunRay: c4.sunRay, blush: c4.blush, brandSealDeep: c4.brandSealDeep,
-  accentSun: c4.accentSun, accentPeach: c4.accentPeach, // 첫 화면 소개 아이콘 원(장식)
+  sky: c4.sky, sun: d4.sun, sunRay: d4.sunRay, blush: d4.blush, brandSealDeep: d4.brandSealDeep,
+  accentSun: d4.accentSun, accentPeach: d4.accentPeach, // 첫 화면 소개 아이콘 원(장식)
 } as const;
 
 export const color = {

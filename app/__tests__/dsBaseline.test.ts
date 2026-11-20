@@ -42,6 +42,7 @@ const BASELINE: Record<string, number> = {
   rnImport: 22,
   ellipsis: 0,
   v3Color: 27, // #146 C6 PaidSheet −1
+  sign: 0, // R-22 v5: 화면은 Sign 컴포넌트로만 노랑
 };
 
 jest.setTimeout(180000);
@@ -142,6 +143,8 @@ test.each([
   ['Animated.Text', "import {Animated} from 'react-native';\nexport const A = () => <Animated.Text>a</Animated.Text>;\n", 'rnImport'],
   ['import * as RN', "import * as RN from 'react-native';\nexport const A = () => <RN.View />;\n", 'rnImport'],
   ['JSX 색 리터럴', "import {Icon} from '../../ui/assets/icons';\nexport const A = () => <Icon name=\"icon-check\" color=\"#ff0000\" />;\n", 'color'],
+  ['노랑 팻말 토큰(R-22)', "import {ds} from '../../ui/ds/roles';\nexport const s = ds.color.signInk;\n", 'sign'],
+  ['#FFD43B 리터럴(R-22)', "export const y = '#FFD43B';\n", 'sign'],
   ['Text20 size', "import {Text20} from '../../ui/Text20';\nexport const A = () => <Text20 size={28}>a</Text20>;\n", 'text20Size'],
   ['height 만 고정(글자 상자 후보)', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({row: {height: 56, padding: 8}});\n", 'height'],
   ['가로·세로 고정 상자', "import {StyleSheet} from 'react-native';\nexport const s = StyleSheet.create({dot: {width: 36, height: 36}});\n", 'fixedBox'],

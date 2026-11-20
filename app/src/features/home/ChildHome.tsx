@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   plain: {paddingVertical: 32, alignItems: 'center', gap: 8},
   card: {backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, padding: 20, paddingTop: 28, gap: 6, marginTop: 8},
   // 테이프: 장식(글자 없음)이라 고정 상자 예외(R-09)
-  tape: {position: 'absolute', top: -10, alignSelf: 'center', width: 96, height: 24, backgroundColor: ds.color.tape, transform: [{rotate: '-3deg'}]},
+  tape: {position: 'absolute', top: -10, alignSelf: 'center', width: 96, height: 24, backgroundColor: ds.deprecatedColor.tape, transform: [{rotate: '-3deg'}]},
   stitch: {borderTopWidth: 2, borderStyle: 'dashed', borderColor: ds.color.lineSoft, marginVertical: 8},
   starter: {gap: 4},
 });

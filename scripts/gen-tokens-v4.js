@@ -10,7 +10,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const SRC = path.join(ROOT, 'design-system/tokens-v4.json');
+// 11-20: 원본을 v5(B2 v2 장날 팻말, #151)로. v5 는 design-system/scripts/map-v5.py 가 v4 에서 만들고 contrast-v4.py 가 대비를 채운다
+const SRC = path.join(ROOT, 'design-system/tokens-v5.json');
 const DST = path.join(ROOT, 'app/src/ui/tokensV4.ts');
 
 const AUDIENCES = ['elder', 'child'];
@@ -180,6 +181,50 @@ function buildFont(src) {
   return {bundled: {android: b.android === true, ios: b.ios === true}, body: face('body'), hand: face('hand'), roleFace};
 }
 
+/** 'rgba(21,21,21,.58)' → 'rgba(21,21,21,0.58)' */
+function rnColor(c) {
+  return c.replace(/([(,\s])\.(\d)/g, '$10.$2');
+}
+/** '0 8px 24px rgba(…,.24)' → '0px 8px 24px rgba(…,0.24)' (RN boxShadow) */
+function rnShadow(css) {
+  return rnColor(css)
+    .split(/\s+(?![^(]*\))/)
+    .map(p => (/^-?\d+(\.\d+)?$/.test(p) ? `${p}px` : p))
+    .join(' ');
+}
+/** 팻말(R-22) 숫자 명세. 원본 sign 의 문장 값에서 숫자만 꺼낸다(바뀌면 생성이 멈춘다) */
+function buildSign(src) {
+  const sg = need(src.sign, 'sign');
+  const num = (s, where) => Number(need((/(-?\d+(?:\.\d+)?)/.exec(String(s)) ?? [])[1], where));
+  const pad = (s, where) => String(need(s, where)).split(/\s+/).map(Number);
+  return {
+    hero: {minHeight: need(sg.size?.hero?.minHeight, 'sign.size.hero.minHeight'), padding: pad(sg.size.hero.padding, 'sign.size.hero.padding'), tilt: num(sg.tilt?.hero, 'sign.tilt.hero')},
+    row: {minHeight: need(sg.size?.row?.minHeight, 'sign.size.row.minHeight'), padding: pad(sg.size.row.padding, 'sign.size.row.padding')},
+    radius: need(sg.radius, 'sign.radius'),
+    rope: {nail: num(sg.rope?.nail, 'sign.rope.nail'), string: num(sg.rope?.string, 'sign.rope.string')},
+    handMin: need(src.font?.hand?.minSize, 'font.hand.minSize'),
+  };
+}
+
+/** 반경 4단(v5) + 지운 이름의 별칭(v5 원본 note: 팻말·입력칸 3 / 행·선택지·칩 6 / 버튼 8 / 시트·대화상자 12) */
+function buildRadius(src) {
+  const r = Object.fromEntries(Object.entries(src.radius).filter(([k]) => k !== 'note'));
+  if (r.row === undefined || r.sign === undefined) {
+    return r; // v4 원본(4단 이전)
+  }
+  return {...r, card: r.row, select: r.row, chip: r.row, childCard: r.row, input: r.sign};
+}
+/** v5 v3Aliases.v4Deprecated 에 적힌 색 이름의 v4 값(장식 걷어 내기 전까지만) */
+function buildDeprecatedColor(src) {
+  const list = String(src.v3Aliases?.v4Deprecated ?? '');
+  if (!list) {
+    return {};
+  }
+  const v4 = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-system/tokens-v4.json'), 'utf8')).color;
+  const names = ['sun', 'sunRay', 'blush', 'brandSealDeep', 'brandSeal', 'brandSealGlyph', 'tape', 'accentSun', 'accentPeach'];
+  return Object.fromEntries(names.map(n => [n, need(v4[n]?.value ?? v4[n], `v4 color.${n}`)]));
+}
+
 function build(src) {
   // contrast-v4.py 와 같은 기준: {value} 가 있는 항목만 색
   const colors = Object.fromEntries(
@@ -199,7 +244,7 @@ function build(src) {
       grid: src.space.grid, group: src.space.group, between: src.space.between, section: src.space.section,
       screenX: {elder: src.space.screenX, child: src.space.screenXChild}, topSafeMin: src.space.topSafeMin, bottom: src.space.bottom,
     },
-    radius: Object.fromEntries(Object.entries(src.radius).filter(([k]) => k !== 'note')),
+    radius: buildRadius(src),
     touch: {elder: src.touch.elder, child: src.touch.child},
     fontScaleCap: {body: src.touch.fontScaleCap.body, fixed: src.touch.fontScaleCap.titleDockNumeral, answer: src.touch.fontScaleCap.answer},
     minFont: {elder: src.typeScaleV3.elder.min, child: src.typeScaleV3.child.min},
@@ -220,6 +265,14 @@ function build(src) {
       surface: parseSurface(src.backLink.surface, colors),
       borderWidth: Number(need((/테두리\s*([\d.]+)/.exec(src.backLink.surface) ?? [])[1], 'backLink.surface 테두리 두께')),
     },
+    // v5(11-20): 그림자 2단(시트·대화상자, 나머지는 테두리로)·덮개 배경·선 두께·팻말·브랜드 심볼
+    shadow: {sheet: rnShadow(need(src.shadow.sheet?.css, 'shadow.sheet.css')), dialog: rnShadow(need(src.shadow.dialog?.css, 'shadow.dialog.css'))},
+    scrim: rnColor(need(src.shadow.scrim, 'shadow.scrim')),
+    line: Object.fromEntries(Object.entries(need(src.line, 'line')).filter(([k]) => k !== 'note')),
+    sign: buildSign(src),
+    brand: {symbol: need(src.brand?.symbol?.value, 'brand.symbol.value'), symbolInk: need(src.brand?.symbol?.ink, 'brand.symbol.ink')},
+    // v5 에서 지운 장식 색(O-8, R-23). 화면 레인이 장식을 걷어 낼 때까지만 v4 값으로 남긴다 — 새 코드에서 쓰지 않는다(테스트가 쓰는 곳 수를 센다)
+    deprecatedColor: buildDeprecatedColor(src),
     screenVariants: Object.keys(src.screenVariants).filter(k => !['count', 'overlays', 'variantControls', 'sections', 'oneScreenOnePurpose', 'build1'].includes(k)),
     v3Aliases: src.v3Aliases,
   };
