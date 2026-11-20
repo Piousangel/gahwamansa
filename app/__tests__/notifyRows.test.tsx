@@ -123,7 +123,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     // N1 기억은 계정별(기기 저장소가 테스트 사이에 남으므로 계정 가명값을 새로)
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE, accountTag: `acc-m1-${++n}`});
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByLabelText(copy.push.permission.title));
+    await waitFor(() => screen.getByTestId('n1'));
     await press(copy.push.permission.no);
     await waitFor(() => screen.getByTestId('date-line'));
     await press('설정');
@@ -266,7 +266,7 @@ test('M1 규칙 화면 확인(리뷰 L9 ③): P13 에서 끄면 다음 실행에
   render(<AppRoot api={api} role="parent" restore />); // 서버는 이제 false — 그래도 'off' 기억으로 묻지 않음
   await waitFor(() => screen.getByTestId('date-line'));
   await new Promise<void>(r => setTimeout(() => r(), 300));
-  expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull();
+  expect(screen.queryByTestId('n1')).toBeNull();
 });
 
 test('재확인 N3-② L6 경쟁: 토글 중 앱 복귀(active)로 다시 읽은 옛 값이 새 값을 덮지 않는다', async () => {

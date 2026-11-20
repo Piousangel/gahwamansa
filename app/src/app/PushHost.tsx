@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {AppState} from 'react-native';
 import {parsePushKind, type PushKind} from '../api/contract/push';
 import {isQuietEventFailure} from '../api/contract/events';
@@ -9,6 +9,7 @@ import {ensureChannels, readNotifyPermission} from '../push/notifyNative';
 import {isParentKind, parentStepAfterOpen} from '../push/openRoute';
 import {parentPromptState, registerToken, retryPending} from '../push/pushClient';
 import {configurePush} from '../push/runtime';
+import {N1Prompt} from '../push/N1Prompt';
 import {pickTokenSource, type PushData, type PushTokenSource} from '../push/tokenSource';
 import {handleChildPushOpen} from '../features/home/pushOpen';
 import {useSession} from './session';
@@ -16,19 +17,21 @@ import {useSession} from './session';
 type Role = 'parent' | 'child' | null | 'loading';
 const TAB_ROUTES = ['Album', 'Past']; // 자녀 탭 안 화면(getCurrentRoute 는 가장 안쪽 이름을 준다)
 // 어르신 알림 탭이 끊지 않는 진행 중 화면(리뷰 L6)
-const PARENT_BUSY_ROUTES = ['Connect', 'Consent', 'PushPermission', 'DeleteAccount', 'DeleteDone'];
+const PARENT_BUSY_ROUTES = ['Connect', 'Consent', 'DeleteAccount', 'DeleteDone'];
 const PENDING_TTL_MS = 10 * 60 * 1000;
 type Pending = {data: PushData; kind: PushKind | null; stage: 'open' | 'step'; at: number; tag: string | null | undefined};
 const isChildKind = (k: PushKind) => k === 'parent_connected' || k === 'parent_reconnected' || k === 'parent_first_answer';
 const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().catch(() => null);
 
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.
-// 화면을 그리지 않는다. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
+// 그리는 것은 N1 덮개(ds Dialog, 코스 홈 위) 하나뿐. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
 export function PushHost({role, source: given}: {role: Role; source?: PushTokenSource}) {
   const {api, content, done} = useSession();
   const courseDone = new Set(done).size >= 3; // 오늘 코스(3단계)를 다 마쳤나 — N1 은 도장 뒤(V1)
   const source = useMemo(() => given ?? pickTokenSource(getAppEnv().API_MODE), [given]);
   const deps = useMemo(() => configurePush(api, source), [api, source]);
+  const [ask, setAsk] = useState(0); // N1 을 물을 차례(0 = 아님). 코스 홈에서 '물어야 함'을 확인하면 올린다
+  const [n1Open, setN1Open] = useState(false); // N1 덮개가 실제로 떠 있나(큐가 거절하면 false — 알림 탭을 막지 않는다)
   const route = useCurrentRouteName();
   const linked = content?.linked ?? false;
 
@@ -130,8 +133,8 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       return;
     }
     if (stage === 'open') {
-      // 리뷰 L6: 연결·동의·N1·지우기처럼 진행 중인 화면은 끊지 않는다(그 화면을 떠나 다른 화면이 되면 처리)
-      if (!route || PARENT_BUSY_ROUTES.includes(route)) {
+      // 리뷰 L6: 연결·동의·N1(덮개가 떠 있는 동안)·지우기처럼 진행 중인 화면은 끊지 않는다(그 화면을 떠나 다른 화면이 되면 처리)
+      if (!route || PARENT_BUSY_ROUTES.includes(route) || n1Open) {
         return;
       }
       api
@@ -154,7 +157,7 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       }
       setPending(null);
     }
-  }, [pending, role, route, content, api]);
+  }, [pending, role, route, content, api, n1Open]);
 
   // N1: 연결된 어르신이 오늘 코스를 다 마치고(P7 도장 → '알겠어요') 코스 홈에 왔을 때, 이 계정에서 아직 답하지 않았으면 묻는다.
   // V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다. 링크 경로의 연결·동의 순서는 그대로.
@@ -198,7 +201,7 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
     parentPromptState(deps)
       .then(state => {
         if (state === 'ask' && navRef.isReady() && navRef.getCurrentRoute()?.name === 'CourseHome') {
-          navRef.navigate('PushPermission');
+          setAsk(n => n + 1); // 새로 청할 때마다 다시 마운트 → 덮개 큐에 다시 청한다(어제 거절됐어도 오늘 다시)
         } else if (state !== 'skip') {
           checkedWake.current = -1; // 확인 못 함·다른 화면: 코스 홈으로 돌아오거나 다음 깨어남에 다시
         }
@@ -211,5 +214,14 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       });
   }, [role, linked, courseDone, route, pending, deps, wake, settled]);
 
-  return null;
+  return ask > 0 ? (
+    <N1Prompt
+      key={ask}
+      onVisible={setN1Open}
+      onClose={() => {
+        setN1Open(false);
+        setAsk(0);
+      }}
+    />
+  ) : null;
 }

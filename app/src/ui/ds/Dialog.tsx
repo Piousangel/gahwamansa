@@ -33,6 +33,8 @@ export type DialogProps = {
   dismiss: Dismiss;
   /** 닫는 쪽 버튼·안드로이드 뒤로(밖 누르기로는 닫히지 않는다 — 실수로 닫히지 않게) */
   onDismiss: () => void;
+  /** 안드로이드 뒤로가 닫는 쪽 버튼과 뜻이 다를 때만. 예: N1 은 '안 받을게요' = 거절 기록, 뒤로 = 오늘은 넘김(PR #72 M1). 없으면 onDismiss */
+  onBack?: () => void;
   /** 닫히면 포커스를 돌려줄 요소(R12). 덮개(사용자가 열지 않음)는 null 을 넘긴다 */
   returnFocusRef: RefObject<unknown> | null;
   /** 대화상자 안 오류 한 줄(모달 위 토스트는 보이지 않는다) */
@@ -56,7 +58,7 @@ export function Dialog(props: DialogProps) {
   );
 }
 
-function DialogInner({visible, title, body, children, action, dismiss, onDismiss, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
+function DialogInner({visible, title, body, children, action, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
   const a = useAudience();
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef ?? undefined);
@@ -103,7 +105,7 @@ function DialogInner({visible, title, body, children, action, dismiss, onDismiss
       }}
       onRequestClose={() => {
         if (!action?.loading) {
-          onDismiss();
+          (onBack ?? onDismiss)();
         }
       }}>
       <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>

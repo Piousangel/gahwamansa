@@ -30,6 +30,7 @@ import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {copy} from '../src/copy/copy';
 import {press} from '../testUtils/flow';
+import {coverQueue} from '../src/ui/ds/coverQueue';
 // V1(11-19): N1 은 오늘 코스를 다 마친 뒤 코스 홈에서. 바로 N1 을 보려면 다 마친 상태로 시작한다
 const ALL_DONE: ('photo' | 'question' | 'hangul')[] = ['photo', 'question', 'hangul'];
 
@@ -239,11 +240,13 @@ describe('앱 조립(PushHost)', () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const en = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByLabelText(copy.push.permission.title));
-    expect(screen.getByLabelText(copy.push.permission.preview_a11y)).toBeTruthy();
+    await waitFor(() => screen.getByTestId('n1'));
+    // v4 덮개(ds Dialog, 시안 P6_P7_N1_P2_ds4b N1): 제목·하루 한 번·안 받아도 그대로, 알림 예시 그림은 없다
+    expect(screen.getByLabelText(copy.push.permission.body)).toBeTruthy();
     expect(screen.getByLabelText(copy.push.permission.optional)).toBeTruthy();
+    expect(screen.queryByLabelText(copy.push.permission.preview_a11y)).toBeNull();
     await press(copy.push.permission.yes);
-    await waitFor(() => expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
     expect(en).toHaveBeenCalledWith(true);
     expect(request).toHaveBeenCalled();
   });
@@ -337,9 +340,8 @@ describe('앱 조립(PushHost)', () => {
     const en = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
-    const {navRef} = require('../src/navigation/navRef');
     await act(async () => {
-      navRef.goBack(); // 하드웨어 뒤로와 같은 경로(beforeRemove)
+      screen.UNSAFE_getByType(RN.Modal).props.onRequestClose(); // 하드웨어 뒤로 = 오늘은 넘김
     });
     await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
     const sync = jest.spyOn(api, 'getTodayContent');
@@ -426,11 +428,11 @@ describe('앱 조립(PushHost)', () => {
     render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE})} role="parent" restore />);
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
     await press(copy.push.permission.yes);
-    await waitFor(() => screen.getByTestId('n1-system-off'));
+    await waitFor(() => screen.getByTestId('n1-error'));
     await press(copy.push.system_off.open_parent);
     expect(settings).toHaveBeenCalled();
     await press(copy.push.permission.no);
-    await waitFor(() => expect(screen.queryByTestId('n1-system-off')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('n1-error')).toBeNull());
   });
 
   test('리뷰 L2: 자녀는 권한이 이미 허용이어도 누르기 전에는 받기 동의를 보내지 않는다(토큰 등록만)', async () => {
@@ -454,6 +456,26 @@ describe('앱 조립(PushHost)', () => {
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => expect(reg).toHaveBeenCalled());
     expect(await readPushToken()).toBeNull();
+  });
+
+  test('A8 덮개 하루 하나: 오늘 다른 덮개가 이미 떴으면 N1 은 뜨지 않고 알림 탭도 막지 않는다(거절·넘김 기록 없음 — 다음 날 다시)', async () => {
+    expect(await coverQueue.request('other-cover')).toBe(true);
+    coverQueue.release('other-cover');
+    const src = createFakeTokenSource();
+    setTokenSourceForTest(src);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const my = jest.spyOn(api, 'myPushSettings');
+    const en = jest.spyOn(api, 'setPushEnabled');
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(my).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByTestId('n1')).toBeNull();
+    await act(async () => {
+      src.emitOpen({kind: 'daily'});
+    });
+    await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'daily'}));
+    expect(en).not.toHaveBeenCalled();
   });
 
   test('리뷰 L6: N1 같은 진행 중 화면은 알림 탭이 끊지 않고, 떠난 뒤 처리', async () => {

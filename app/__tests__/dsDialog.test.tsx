@@ -43,6 +43,15 @@ describe('ds Dialog', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  test('onBack 이 있으면 안드로이드 뒤로는 그쪽(닫는 쪽 버튼과 뜻이 다를 때, N1: 뒤로 = 오늘은 넘김)', () => {
+    const onDismiss = jest.fn();
+    const onBack = jest.fn();
+    render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} dismiss={{decline: '안 받을게요'}} onDismiss={onDismiss} onBack={onBack} returnFocusRef={null} />);
+    act(() => screen.UNSAFE_getByType(require('react-native').Modal).props.onRequestClose());
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   test('오류 한 줄은 대화상자 안(모달 위 토스트는 안 보인다), 자녀 audience 를 그대로 넘긴다', () => {
     render(
       <AudienceProvider value="child">

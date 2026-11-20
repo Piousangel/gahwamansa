@@ -11,7 +11,7 @@ const to = copy.nav.to;
 export const BACK_TO: Record<RouteName, string> = {
   Connect: to.Connect, Consent: to.Consent, CourseHome: to.CourseHome, PhotoStep: to.PhotoStep, QuestionStep: to.QuestionStep,
   KeyboardStep: to.KeyboardStep, CourseDone: to.CourseDone, History: to.History, HistoryDay: to.HistoryDay, Settings: to.Settings,
-  Family: to.Family, DeleteAccount: to.DeleteAccount, DeleteDone: to.DeleteDone, PushPermission: to.PushPermission, Web: to.Web,
+  Family: to.Family, DeleteAccount: to.DeleteAccount, DeleteDone: to.DeleteDone, Web: to.Web,
   Oss: to.Oss, FamilyPreview: to.FamilyPreview, Gate: to.Gate, Login: to.Login, LoginEmail: to.LoginEmail, LoginCode: to.LoginCode,
   Relation: to.Relation,
   // [라이터 확인] Code '번호로'·Wait '기다리는 화면으로' — NAMES.md 와 대조 전(W-09 리뷰). 화면 제목(C3 '연결 기다리는 중' 등)에 맞출지 정한다
