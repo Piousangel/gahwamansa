@@ -260,10 +260,6 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         failCheer -= 1;
         throw new OfflineError('offline');
       }
-      const seen = requestId ? cheerByRequest.get(requestId) : undefined;
-      if (seen) {
-        return seen; // 0059 35~38행: 같은 요청의 재시도
-      }
       if (!(CHILD_CHEER_KEYS as readonly string[]).includes(key)) {
         return {ok: false, reason: 'invalid_key'};
       }
@@ -276,6 +272,11 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       }
       if (!p.connected) {
         return {ok: false, reason: 'disconnected'};
+      }
+      // 서버 0059 순서: 키(24~26행) → 대상(27~30행) → 연결(31~33행) → 같은 요청 재시도(35~38행) → 하루 한도(39~43행)
+      const seen = requestId ? cheerByRequest.get(requestId) : undefined;
+      if (seen) {
+        return seen; // 0059 35~38행: 같은 자녀의 같은 request_id 면 새로 넣지 않고 그 응원
       }
       const n = cheersSent.get(parentId) ?? 0;
       if (n >= (opts.cheerDailyLimit ?? 2)) {
