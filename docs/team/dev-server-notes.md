@@ -385,7 +385,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 4. **파기 배치**: `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;` — 어제 성공했는지.
    - **연결 전·옛 익명 계정 정리(0057, 90일)**: 같은 배치의 한 단계. 어제 지운 수 `select count(*) from events where name = 'account_purged' and ts > now() - interval '1 day';`(metrics ⑩).
      - 사용자별 실패: `select count(*), max(failures), max(last_failed_at) from stale_purge_failures;` — 0이 아니면 그 사람만 건너뛴 것(다음 실행에서 정렬 뒤로, 나머지는 계속 지워짐). 같은 사람이 여러 날 실패하면(`failures` 증가) `last_sqlstate`로 원인(FK·트리거·권한)을 보고 서버 줄에 알린다. 사용자 id는 출력·대장에 옮기지 않는다.
-     - 단계 전체 실패(결과 키 `stale_anonymous` = -1)는 배치는 성공으로 끝나고 Postgres 로그에 warning `purge_stale_anonymous_failed: <SQLSTATE>` — 대상 수(remote-checks "익명 계정 정리 준비" detail)가 며칠째 줄지 않으면 로그를 본다.
+     - 단계 전체 실패(결과 키 `stale_anonymous` = -1)는 배치는 성공으로 끝나고 Postgres 로그에 warning `purge_stale_anonymous_failed: <SQLSTATE>`뿐이다 → remote-checks **"익명 계정 정리 진행"이 false**(대상이 있는데 최근 2일 `account_purged` 없음)거나 **"익명 계정 정리 준비"가 false**(Supabase Auth 업그레이드로 `auth.sessions.refreshed_at`·`refresh_tokens.user_id` 등 열이 바뀜)면 정리가 멈춘 것 — 서버 줄에 알린다(두 번째 리뷰 L4). `last_sqlstate = '40P01'`(교착)이 반복되면 배치 시각을 옮긴다(L3).
 5. 월 1회: `admin_audit` 지난 한 달 점검(§4, `action <> 'dev_reset_today'`로 QA 초기화 행은 따로 — 0051), 사진 주소 변경 감사(`action = 'content_image_url'`)가 업로드 작업과 맞는지.
 - 운영 원칙: 사용자 삭제는 Studio에서 인증 사용자를 직접 지우지 말고 `admin_delete_account`(프로필 없는 계정은 `admin_delete_user`, 0049)로만(카카오 해제 큐·감사가 그 경로에만 있음, 재검토 K-L3).
 - 감사 사유 규칙(DECISIONS 11-18): `admin_delete_*`의 사유(reason)에는 **요청 번호만**(예: `REQ-2026-012 웹 삭제 요청`), 이름·메일·닉네임·기종 같은 개인정보 금지. 처리자(operator)는 사람 이름 대신 역할명(`owner`). admin_audit는 1년 보관되고 대상이 지워져도 남는다(0039). 요청 번호↔메일 대응은 문의 메일함의 삭제 요청 대장에만(내부관리계획 §6·§7). 0047·0049부터 서버가 `@`·전각 ＠·9자리 이상 숫자(구분자 제거 후)가 든 사유를 `pii_in_args`로 거부한다.
@@ -514,7 +514,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 ### ① 쓰지 않는 연결 전 계정 정리 배치 → **구현(0057, 익명만 90일, 오너 확정 DECISIONS 11-20)**
 - 대상: 익명 + 프로필 없음(가족과 연결하지 않은 어르신 기기, 재연결로 프로필이 새 기기로 옮겨 가 비워진 옛 익명 계정) + 마지막 활동(가입·로그인·사용자 갱신·세션 갱신·리프레시 토큰 갱신 중 가장 늦은 것)이 90일 넘음. 기간은 `stale_anon_days()` 한 곳.
 - 지울 범위: 연결 전 계정의 `delete_my_account`와 같은 공통 함수(`user_delete_core`) — 토큰·인증 계정 → 약관 확인 기록·identities·세션 cascade. 기록은 식별자 없는 `account_purged`(props `{scope:'stale_anonymous'}`, 시 단위) — 탈퇴(`account_deleted`)와 따로 센다(metrics ⑩).
-- 실행: `purge_expired_data`(cron 00:10 KST)의 한 단계, 한 번에 최대 500명. 한 명씩 예외 블록 — 실패한 사람만 건너뛰고 `stale_purge_failures`에 횟수를 남겨 다음 실행 정렬에서 뒤로(결과 키 `stale_anonymous_failed`). 삭제 직전에 사용자 행을 잠근 채 마지막 활동(세션 `refreshed_at` 포함)을 다시 본다. 단계 전체가 실패해도 다른 파기는 계속(`stale_anonymous` = -1). 06시 점검 §14-4, remote-checks "익명 계정 정리 준비".
+- 실행: `purge_expired_data`(cron 00:10 KST)의 한 단계, 한 번에 최대 200명(사람당 서브트랜잭션 2개, 두 번째 리뷰 L1). 실패 기록은 마지막 실패 30일 뒤 지운다(L2 — 방침 보관표에 "정리 실패 기록 30일" 한 줄 필요, 법률 줄). 한 명씩 예외 블록 — 실패한 사람만 건너뛰고 `stale_purge_failures`에 횟수를 남겨 다음 실행 정렬에서 뒤로(결과 키 `stale_anonymous_failed`). 삭제 직전에 사용자 행을 잠근 채 마지막 활동(세션 `refreshed_at` 포함)을 다시 본다. 단계 전체가 실패해도 다른 파기는 계속(`stale_anonymous` = -1). 06시 점검 §14-4, remote-checks "익명 계정 정리 준비"(auth 열·권한 — Auth 업그레이드로 열이 바뀌면 false)·"익명 계정 정리 진행"(대상이 있는데 2일째 정리 기록이 없으면 false) — 둘 다 함수를 부르지 않아 읽기 전용 역할로도 돈다.
 - **제외**: 제안에 있던 비익명(카카오·구글·메일) 자녀 중 가족을 만들지 않은 계정 1년 정리는 이번 범위가 아니다(오너 결정 범위 밖 — 필요하면 별도 결정).
 - 방침: 4절 새 행·10절, 삭제 안내 2절의 `{연결 전 계정 자동 정리 기간}` = 90일(게시 조건 P21, 법률 PR #154).
 

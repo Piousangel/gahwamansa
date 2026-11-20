@@ -5,12 +5,14 @@
 --   연결된 어르신(프로필 있음)·자녀(소셜 계정, 익명 아님)는 대상이 아니다.
 -- 지울 범위: 앱 delete_my_account의 연결 전 경로와 같은 공통 함수(user_delete_core) — 토큰, 카카오 해제 큐(익명은 없음), 인증 계정 → 약관 확인 기록(terms_agreements)·
 --   identities·세션 cascade. 기록: 식별자 없는 측정 행 account_purged(props {scope:'stale_anonymous'}, 시 단위 시각) — 탈퇴(account_deleted)와 섞이지 않게 이름을 나눈다.
--- 실행: 기존 파기 배치 purge_expired_data(cron purge-expired-data, 매일 00:10 KST)의 한 단계. 한 번에 최대 500명.
+-- 실행: 기존 파기 배치 purge_expired_data(cron purge-expired-data, 매일 00:10 KST)의 한 단계. 한 번에 최대 200명.
 --   이 단계가 실패해도(예: 원격에서 auth 표 권한 문제) 다른 파기는 계속한다(예외 블록, warning). 결과 키 stale_anonymous(-1 = 이 단계 전체 실패).
 --   (리뷰 PR #157 M1) 한 명씩 예외 블록으로 감싸 실패한 사람만 건너뛴다(결과 키 stale_anonymous_failed, warning SQLSTATE만).
 --   실패한 사람은 stale_purge_failures에 횟수를 남기고 다음 실행의 정렬에서 뒤로 보내 맨 앞을 막지 않는다.
 --   (L1) 삭제 직전에 사용자 행을 잠근 채 마지막 활동·프로필을 다시 본다. (L2) 세션 refreshed_at도 활동에 넣는다. (L3) 상수 함수도 서비스 역할 revoke.
 --   06시 점검(§14)은 전날 account_purged 수, 실패 건수(stale_purge_failures)를 본다.
+--   (두 번째 리뷰) L1 한 번에 최대 200명(사람당 서브트랜잭션 2개 — 바깥 사용자 블록 + 측정 기록 블록. 측정 블록은 "측정 실패해도 삭제"를 위해 유지하고 상한을 낮춘다).
+--   L2 실패 기록은 마지막 실패 30일 뒤 지운다(식별자 행이 기한 없이 남지 않게).
 
 create function public.stale_anon_days() returns int
 language sql immutable set search_path = ''
@@ -70,7 +72,7 @@ as $$ select public.user_delete_core(p_user, 'account_deleted') $$;
 
 -- 정리 대상(읽기 전용, 테스트·점검용): 프로필 없는 익명 + 마지막 활동이 기준 시각 - 정리 기간보다 이름.
 -- 정렬: 실패 횟수가 적은 사람 먼저(실패한 사람이 맨 앞을 막지 않게, M1), 그다음 오래된 가입 순.
-create function public.stale_anonymous_users(p_now timestamptz default now(), p_limit int default 500) returns setof uuid
+create function public.stale_anonymous_users(p_now timestamptz default now(), p_limit int default 200) returns setof uuid
 language sql stable security definer set search_path = ''
 as $$
   select u.id
@@ -94,7 +96,7 @@ declare
   n int := 0;
   n_failed int := 0;
 begin
-  for v_uid in select public.stale_anonymous_users(p_now, 500) loop
+  for v_uid in select public.stale_anonymous_users(p_now, 200) loop
     begin
       perform 1 from auth.users where id = v_uid and is_anonymous for update;
       if found and public.anon_last_activity(v_uid) < v_cut
@@ -108,6 +110,7 @@ begin
       on conflict (user_id) do update set failures = f.failures + 1, last_failed_at = now(), last_sqlstate = excluded.last_sqlstate;
     end;
   end loop;
+  delete from public.stale_purge_failures where last_failed_at < p_now - interval '30 days'; -- L2: 실패 기록 30일 보관
   return jsonb_build_object('purged', n, 'failed', n_failed);
 end $$;
 revoke execute on function public.purge_stale_anonymous(timestamptz) from public, anon, authenticated, service_role;

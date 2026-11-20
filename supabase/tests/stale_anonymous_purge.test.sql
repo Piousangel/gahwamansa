@@ -2,7 +2,7 @@
 -- 보호하는 것: 마지막 활동 89일은 남고 91일은 지워짐, 세션 갱신(앱 사용)이 있으면 남음, 연결된 어르신·익명 아닌 자녀는 대상 아님,
 --             재연결로 비워진 옛 익명 계정은 지워짐, 지울 때 약관 확인 기록도 함께, 식별자 없는 account_purged 기록, 파기 배치 결과 키, 실행 권한.
 begin;
-select plan(21);
+select plan(22);
 delete from public.events where name in ('account_purged', 'account_deleted'); delete from public.stale_purge_failures;
 
 insert into auth.users (id, aud, role, is_anonymous, created_at, last_sign_in_at) values
@@ -89,6 +89,10 @@ select is((public.purge_expired_data(now()) ->> 'stale_anonymous_failed')::int, 
 drop trigger t0057_fail_a8 on public.device_tokens;
 select public.purge_stale_anonymous(now()); -- 트리거를 풀면 a8도 지워진다
 select is(public.purge_stale_anonymous(now()), '{"purged": 0, "failed": 0}'::jsonb, '다시 돌려도 지울 것이 없다(멱등)');
+-- 실패 기록 30일 보관(두 번째 리뷰 L2): 다시 활동해 대상이 아닌 사람(a2)의 31일 된 실패 기록은 지워진다
+insert into public.stale_purge_failures (user_id, failures, last_failed_at, last_sqlstate) values ('70570000-0000-0000-0000-0000000000a2', 3, now() - interval '31 days', 'P0001');
+select public.purge_stale_anonymous(now());
+select is((select count(*)::int from public.stale_purge_failures where user_id = '70570000-0000-0000-0000-0000000000a2'), 0, '마지막 실패 30일 넘은 실패 기록은 지운다');
 
 -- 단계 전체 실패(-1): 다른 파기 결과는 그대로 나온다
 create or replace function public.stale_anon_days() returns int language plpgsql immutable set search_path = '' as $$ begin raise exception 'injected'; end $$;
