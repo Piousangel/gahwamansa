@@ -33,9 +33,10 @@ tags:
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: p9-confirm2
+# 확인 상자는 Modal(별도 창)이라 Maestro 에는 상자 안 버튼만 보인다 → index 0(11-20 실측: index 1 은 '찾을 수 없음')
 - tapOn:
     text: '안 지울래요'
-    index: 1
+    index: 0
 - extendedWaitUntil:
     notVisible: '정말 모두 지울까요\?'
     timeout: 10000
