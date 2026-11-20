@@ -215,6 +215,7 @@ type UnregisterPushToken = { ok: true; removed: number };
   select public.admin_delete_user('<auth user id>', '메일 요청 #번호(접수일)', '<처리자>');   -- 0049: 가족 연결 전(프로필 없는) 계정 {ok, scope:'none'} | not_found·has_profile
   ```
   - 계정 삭제 규칙은 앱 `delete_my_account`와 같은 공통 함수(`account_delete_core`): 자녀가 남으면 본인만, 마지막 자녀면 가족 전체 + 어르신 익명 인증 계정, 대상 인증 계정까지.
+  - **이용 기록(events)도 함께(0058, 방침 4절)**: 프로필·가족에 묶인 행은 FK cascade로, 프로필 없이 쌓인 행(연결 전·`device_key` = 인증 uid의 sha256)은 공통 함수가 `device_key`로 지운다 — 대상 본인, 가족 전체 삭제 때 함께 지워지는 어르신 익명 계정, 연결 전 계정(`user_delete_core`: 앱·`admin_delete_user`·0057 자동 정리). 탈퇴·정리 기록(`account_deleted`·`account_purged`)은 식별자가 없어 남는다. **인증 계정을 지우는 길은 공통 함수 두 개뿐**(`account_delete_core`·`user_delete_core(uuid, text)`) — `discard_anonymous_session`(기록 없음으로 user_delete_core)·`admin_cleanup_review_family`(어르신마다 account_delete_core)도 이 함수를 거친다. 새 삭제 경로는 이 둘을 불러야 하며, pgTAP(`delete_events_by_device`)이 `delete from auth.users`가 다른 public 함수에 생기면 실패한다.
   - 프로필이 없는 계정(가족 만들기 전 자녀, 번호 입력 전 어르신 기기)은 `admin_delete_account`가 찾지 못한다(not_found) → `admin_delete_user`(대상은 **auth 사용자 id**). 프로필이 있으면 `has_profile`로 거부하니 `admin_delete_account`를 쓴다. 인증 계정·약관 동의 이력·토큰 삭제, 카카오면 해제 큐, 감사 `delete_user`(detail에 user_id). 대상 계정 찾는 법은 §19 제안 ③(리드 결정 전에는 Studio Authentication에서 사용자를 찾아 id만 복사).
   - 관리자 함수 인자는 모두 **(대상, 사유, 처리자)** 순서(0043 통일). 사유에는 메일 주소·이름 등 개인정보를 적지 말고 접수 번호만(감사 행 1년 보관). 서버가 `pii_in_args`로 거부하는 것(0047·0049): `@`·전각 `＠`·"이름 at 도메인 dot com", 하이픈·공백·점으로 끊어도 이어 붙여 **9자리 이상인 숫자**(전화·카드·계좌). uuid는 먼저 걷어내므로 사유에 가족 id를 적어도 된다.
   - **접수 번호 규칙**: 숫자 8자리 이하(예 `20261119`) 또는 `#n`(예 `#12`). 날짜는 `11-19`·`2026-11-19`로, **시각은 적지 않는다**(`2026-11-19 12:30`은 공백으로 이어 붙어 10자리가 되어 거부).
@@ -439,6 +440,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0054 | account_deleted 서버 기록(식별자 없음) | 브랜치 server-account-deleted-event(0053 위) | 미반영 |
 | 0056 | 일일 알림 대상에서 답 공유 동의 조건 제거(알림 받기 동의만) | 브랜치 server-daily-push-consent | 미반영 |
 | 0057 | 연결 전·옛 익명 계정 90일 자동 정리(account_purged) | 브랜치 server-stale-anon-purge | 미반영 |
+| 0058 | 계정 삭제 때 프로필 없이 쌓인 이용 기록(device_key)도 삭제 | 브랜치 server-delete-events-by-device(0057 위) | 미반영 |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
