@@ -1,5 +1,7 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
-import {Animated, Modal, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
+import {Animated, Modal, ScrollView, StyleSheet, Text as RNText, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
+import {Icon} from '../assets/icons';
+import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
 import {useFadeIn} from '../useFadeIn';
@@ -7,7 +9,7 @@ import {AudienceProvider, useAudience} from './audience';
 import {Button} from './Button';
 import {Text} from './Text';
 import {dismissLabel, type Dismiss} from './dismiss';
-import {ds} from './roles';
+import {ds, fontStyle, roleMark, roleText} from './roles';
 import {MoreBand} from './MoreBand';
 
 const c = ds.color;
@@ -39,6 +41,8 @@ export type DialogProps = {
   onBack?: () => void;
   /** 닫히면 포커스를 돌려줄 요소(R12). 덮개(사용자가 열지 않음)는 null 을 넘긴다 */
   returnFocusRef: RefObject<unknown> | null;
+  /** 제목 위 위험 띠(예: P9 '되돌릴 수 없어요'). 되돌릴 수 없는 행동(action.kind danger)과 함께만 쓴다. 200%에서 카드 폭 안에서 줄바꿈(#194·#200) */
+  warning?: string;
   /** 대화상자 안 오류 한 줄(모달 위 토스트는 보이지 않는다) */
   error?: string | null;
   testID?: string;
@@ -60,7 +64,7 @@ export function Dialog(props: DialogProps) {
   );
 }
 
-function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
+function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, warning, error, testID = 'ds-dialog'}: DialogProps) {
   const a = useAudience();
   // 글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝으로(버튼 묶음은 스크롤 밖이라 줄이 늘면 닫는 쪽이 잘린다 — #168 접근성 재확인 M). 버튼 힌트는 그대로
   const hintInBody = useWindowDimensions().fontScale >= 1.5 && !!(body || children);
@@ -128,6 +132,7 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
       }}>
       <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
         <View testID={testID} role="alertdialog" accessibilityViewIsModal style={styles.card}>
+          {warning ? <WarningBand text={warning} testID={`${testID}-warning`} /> : null}
           {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게 */}
           <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={title}>
             <Text role="title">{title}</Text>
@@ -168,6 +173,22 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
   );
 }
 
+// 위험 띠: 위험 면(dangerInk) + 흰 글자 굵게 + 경고 아이콘(장식). 카드 폭 안(maxWidth 100%)·글자 줄바꿈(flexShrink, 말줄임 없음)
+function WarningBand({text, testID}: {text: string; testID: string}) {
+  const a = useAudience();
+  const r = roleText('label', a, 'onAction');
+  return (
+    <View testID={testID} style={styles.warn}>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Icon name="icon-warning" size={24} color={c.onAction} />
+      </View>
+      <RNText {...koreanTextProps} {...roleMark('label')} testID={`${testID}-text`} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, fontStyle('body', 700), styles.warnText]}>
+        {keepAllChildren(text)}
+      </RNText>
+    </View>
+  );
+}
+
 // 하는 쪽 버튼 아래 미리 알림 한 줄(버튼 힌트로도 읽으므로 화면 읽기에서는 숨긴다)
 function Hint({text, testID}: {text: string; testID: string}) {
   return (
@@ -181,6 +202,8 @@ function Hint({text, testID}: {text: string; testID: string}) {
 
 const styles = StyleSheet.create({
   hint: {textAlign: 'center', marginTop: -4},
+  warn: {flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', gap: 6, backgroundColor: c.dangerInk, borderRadius: ds.radius.row, paddingHorizontal: 12, paddingVertical: 4},
+  warnText: {color: c.onAction, fontWeight: '700', flexShrink: 1},
   scrim: {flex: 1, backgroundColor: ds.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다

@@ -22,6 +22,24 @@ describe('ds Dialog', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
+  test.each(['elder', 'child'] as const)('%s warning 띠(#194·#200 규칙): 제목 위, 위험 면·흰 굵은 글자, 카드 폭 안(maxWidth 100%%)·줄바꿈(flexShrink, 말줄임 없음), 아이콘은 읽지 않음', a => {
+    const {StyleSheet} = require('react-native');
+    const ui = <Dialog visible title="정말 모두 지울까요?" warning="되돌릴 수 없어요" action={{label: '모두 지우기', onPress: noop, kind: 'danger'}} dismiss={{decline: '안 지울래요'}} onDismiss={noop} returnFocusRef={null} testID="d" />;
+    render(a === 'child' ? <AudienceProvider value="child">{ui}</AudienceProvider> : ui);
+    const band = StyleSheet.flatten(screen.getByTestId('d-warning', H).props.style);
+    expect(band).toMatchObject({maxWidth: '100%', alignSelf: 'flex-start', flexDirection: 'row', backgroundColor: t.color.dangerInk});
+    const text = screen.getByTestId('d-warning-text', H);
+    const st = StyleSheet.flatten(text.props.style);
+    expect(st).toMatchObject({color: t.color.onAction, fontWeight: '700', flexShrink: 1});
+    expect(text.props.numberOfLines).toBeUndefined();
+    expect(text.props.maxFontSizeMultiplier).toBe(t.type.label.maxFontScale); // 200%까지 커지되 줄바꿈으로 카드 안에
+    // 띠가 제목보다 먼저(위)
+    const card = screen.getByTestId('d', H);
+    const order = within(card).getAllByText(/되돌릴 수 없어요|정말 모두 지울까요\?/, H).map(n => n.props.children);
+    expect(order[0]).toMatch(/되돌릴 수 없어요/);
+    expect(labels()).toEqual(['안 지울래요', '모두 지우기']); // 위험: 닫는 쪽이 위
+  });
+
   test('되돌릴 수 없는 행동(danger): 닫는 쪽이 위(안전한 쪽이 주), 거절 말은 "안 ○○할게요"', () => {
     render(<Dialog visible title="모두 지울까요?" action={{label: '모두 지우기', onPress: noop, kind: 'danger'}} dismiss={{decline: '안 지울래요'}} onDismiss={noop} returnFocusRef={null} />);
     expect(labels()).toEqual(['안 지울래요', '모두 지우기']);
