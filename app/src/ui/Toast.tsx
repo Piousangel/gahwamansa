@@ -183,9 +183,12 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
                 <Icon name="icon-warning" size={24} color={color.dangerInk} />
               </View>
             ) : null}
-            <Text20 size={20} weight="bold" style={[styles.text, error ? styles.errorText : styles.infoText]}>
-              {toast.text}
-            </Text20>
+            {/* focusing: 문구는 버튼 라벨에 들어 있어 따로 읽히지 않게(같은 말 두 번, #158 리뷰 L) */}
+            <View style={styles.text} importantForAccessibility={focusing ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={focusing}>
+              <Text20 size={20} weight="bold" style={error ? styles.errorText : styles.infoText}>
+                {toast.text}
+              </Text20>
+            </View>
             {toast.action ? (
               <Pressable
                 ref={actionRef}

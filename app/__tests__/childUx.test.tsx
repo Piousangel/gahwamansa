@@ -214,6 +214,41 @@ describe('D-17a 화면 읽기 켜짐: 응원 보냄 토스트 10초 + 초점 되
         jest.advanceTimersByTime(1500); // 10.2초: 보냄
       });
       expect(send).toHaveBeenCalledTimes(1);
+      // #158 리뷰 M: 토스트가 닫히면 초점을 응원 보내기로(초점을 가진 '되돌리기'가 사라지므로)
+      const afterExpire = focusCalls();
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(focusCalls()).toBe(afterExpire + 1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('#158 리뷰 M: 화면 읽기 켜짐에서 되돌리기를 누르면 보내지 않고, 초점은 응원 보내기로 돌아간다', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    const focus = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    jest.useFakeTimers();
+    try {
+      await pickCheerSr(api);
+      await act(async () => {
+        jest.advanceTimersByTime(700);
+      });
+      focus.mockClear();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toast-action'));
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(focus.mock.calls.filter(c => c[1] === 'focus')).toHaveLength(1);
+      expect(screen.getByText('응원을 보내지 않았어요')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(11000);
+      });
+      expect(send).not.toHaveBeenCalled();
     } finally {
       jest.useRealTimers();
     }
