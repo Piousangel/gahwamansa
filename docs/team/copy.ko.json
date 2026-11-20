@@ -420,6 +420,10 @@
     "finish_as_is": "이대로 마칠게요",
     "your_word": "쓰신 낱말",
     "skip": "오늘은 넘어갈게요",
+    "skip_short": "넘어갈게요",
+    "roman_hint": "영어로 써지고 있어요. 자판의 '한/영'을 눌러 주세요",
+    "word_a11y": "따라 쓸 낱말, {낱말}",
+    "_status_v4": "skip_short·roman_hint·word_a11y: 시안 P6_P7_N1_P2_ds4b·라이터 묶음 2(PR #46) 문구, 키는 2기 레인이 11-20 추가(라이터 확인 전)",
     "card_a11y": "쓸 낱말, {낱말}, {n} 글자",
     "count_words": [
       "한",
