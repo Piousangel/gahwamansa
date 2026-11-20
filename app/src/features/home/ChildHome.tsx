@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -58,6 +58,9 @@ export function ChildHome() {
   //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
   const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
+  // N-10(전문가 리뷰 r2 H, 4:201): 200%에서 위 바 + 하단 응원 버튼 + 탭 바 = 화면 51%(R-12 40%). 큰 글자(150% 이상)에서는
+  //   응원 버튼을 하단 고정에서 빼 카드 바로 아래 본문으로 둔다(R-12 단서·C3 '큰 글자 = Dock 주 하나' 결정 #83 ②와 같은 방식). 고정 틀 = 위 바 + 탭 바만
+  const big = useWindowDimensions().fontScale >= 1.5;
 
   // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
   const firstSeen = list.find(p => p.shared && p.latest);
@@ -108,7 +111,7 @@ export function ChildHome() {
       ) : null}
     </AudienceProvider>
   );
-  const hasBottom = !info || reachable.length > 0;
+  const hasBottom = (!info || reachable.length > 0) && !big;
 
   return (
     <View style={styles.flex}>
@@ -144,6 +147,7 @@ export function ChildHome() {
             )}
           </>
         )}
+        {big ? <View testID="child-home-cheer-inline">{bottom}</View> : null}
         </AudienceProvider>
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}

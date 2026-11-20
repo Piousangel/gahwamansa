@@ -308,6 +308,34 @@ describe('C4 홈 · 응원', () => {
     await waitFor(() => screen.getByText('이 답으로 이야기를 시작해 봐요'));
   });
 
+  test('N-10: 글자 150% 이상이면 응원 버튼이 하단 고정이 아니라 카드 바로 아래 본문(고정 틀 = 위 바 + 탭 바), 100%는 하단 고정', async () => {
+    const RN = require('react-native');
+    const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
+    const api = () => createFakeApi({consented: true, parentTitle: '엄마', latest: {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'}});
+    dims(1);
+    render(<AppRoot api={api()} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
+    expect(screen.queryByTestId('child-home-cheer-inline')).toBeNull();
+    screen.unmount();
+    for (const scale of [1.5, 2]) {
+      dims(scale);
+      render(<AppRoot api={api()} role="child" />);
+      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      expect(screen.queryByTestId('screen-dock')).toBeNull();
+      const body = within(screen.getByTestId('screen-body'));
+      expect(body.getByTestId('child-home-cheer-inline')).toBeTruthy();
+      expect(within(screen.getByTestId('child-home-cheer-inline')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
+      // 카드 바로 아래(본문 순서: 카드 → 응원 버튼)
+      const ids = body.getAllByTestId(/child-home-card|child-home-cheer-inline/).map(n => n.props.testID);
+      expect(ids).toEqual(['child-home-card', 'child-home-cheer-inline']);
+      // 시트가 닫히면 이 버튼으로 초점을 돌린다(PR #93 M1 그대로)
+      await press('응원 보내기');
+      expect(within(screen.getByTestId('sheet')).getByText('어떤 말을 보낼까요?')).toBeTruthy();
+      screen.unmount();
+    }
+  });
+
   test('응원 보내기: 확정 4개만, 누르면 바로 보내고 "{호칭}께 보냈어요"', async () => {
     useCheerClock();
     const api = createFakeApi({consented: true, parentTitle: '엄마', latest: null});
