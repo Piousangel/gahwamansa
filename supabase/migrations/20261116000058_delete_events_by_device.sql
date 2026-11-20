@@ -6,6 +6,10 @@
 --   user_delete_core(uuid, text)(0057): 연결 전 계정 — 앱 delete_my_account·admin_delete_user(1인자 판이 이 함수를 부름)와 0057 자동 정리(account_purged) 모두 같은 함수.
 -- 탈퇴·정리 기록(account_deleted·account_purged)은 device_key가 null(식별자 없음)이라 지워지지 않고 남는다(의도).
 -- 다른 사람의 이벤트는 device_key가 달라 남는다.
+-- (리뷰 PR #178 M1·L1, 리드 결정) 인증 계정을 지우는 길을 공통 함수 두 개로만 모은다 — 경로마다 삭제 줄을 따로 넣지 않는다:
+--   discard_anonymous_session(0017, 소셜 로그인 직전 고아 익명 정리) → user_delete_core(uid, null)(기록 없음: 탈퇴가 아니라 같은 기기의 로그인 전환)
+--   admin_cleanup_review_family(0025, 심사 어르신 정리) → 어르신 프로필마다 account_delete_core(심사 가족이라 account_deleted 기록 안 함)
+--   pgTAP이 "public 함수 중 auth.users를 지우는 것은 account_delete_core·user_delete_core(uuid, text) 둘뿐"을 고정한다.
 
 create or replace function public.account_delete_core(p_profile uuid) returns jsonb
 language plpgsql security definer set search_path = ''
@@ -64,7 +68,7 @@ create or replace function public.user_delete_core(p_user uuid, p_event text) re
 language plpgsql security definer set search_path = ''
 as $$
 begin
-  if p_event not in ('account_deleted', 'account_purged') then raise exception 'invalid_event'; end if;
+  if p_event is not null and p_event not in ('account_deleted', 'account_purged') then raise exception 'invalid_event'; end if; -- null = 기록 없음(0058 discard)
   perform 1 from auth.users where id = p_user for update;
   if not found then return null; end if;
   if exists (select 1 from public.profiles where user_id = p_user) then return jsonb_build_object('scope', 'has_profile'); end if;
@@ -73,6 +77,7 @@ begin
   select provider_id from auth.identities where user_id = p_user and provider = 'kakao';
   delete from public.events where device_key = public.event_device_key(p_user); -- 0058: 프로필 없이 쌓인 이용 기록
   delete from auth.users where id = p_user;
+  if p_event is not null then
   begin
     insert into public.events (ts, family_id, profile_id, device_key, actor_role, name, props)
     values (date_trunc('hour', now()), null, null, null, 'none', p_event,
@@ -81,5 +86,41 @@ begin
   exception when others then
     raise warning '%_event_failed: %', p_event, sqlstate; -- 측정 실패는 삭제를 막지 않는다(0054 L1)
   end;
+  end if;
   return jsonb_build_object('scope', 'none');
+end $$;
+
+-- discard_anonymous_session(0017) → 공통 함수. 조건(익명 세션·프로필 없음)은 그대로, 지우는 일은 user_delete_core가(토큰·이용 기록·인증 계정).
+create or replace function public.discard_anonymous_session() returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null
+     or not coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false)
+     or not exists (select 1 from auth.users where id = v_uid and is_anonymous)
+     or exists (select 1 from public.profiles where user_id = v_uid) then
+    return jsonb_build_object('discarded', false);
+  end if;
+  return jsonb_build_object('discarded', coalesce(public.user_delete_core(v_uid, null) ->> 'scope', '') = 'none');
+end $$;
+
+-- admin_cleanup_review_family(0025) → 어르신 프로필마다 account_delete_core(토큰·프로필·이용 기록·인증 계정). 심사 가족이라 탈퇴 기록은 남지 않는다(0054).
+-- 차이: 0025는 익명인 인증 계정만 지웠다. 어르신 기기는 항상 익명 로그인이라 결과는 같다(공통 함수는 대상 프로필의 인증 계정을 지움).
+create or replace function public.admin_cleanup_review_family(p_family uuid) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_pid uuid;
+  v_n int := 0;
+begin
+  if not exists (select 1 from public.families where id = p_family and is_review) then
+    return jsonb_build_object('ok', false, 'reason', 'not_review_family');
+  end if;
+  for v_pid in select id from public.profiles where family_id = p_family and role = 'parent' order by created_at, id loop
+    if public.account_delete_core(v_pid) is not null then v_n := v_n + 1; end if;
+  end loop;
+  update public.invite_codes set disabled_at = now() where family_id = p_family and reusable;
+  return jsonb_build_object('ok', true, 'parents_removed', v_n);
 end $$;

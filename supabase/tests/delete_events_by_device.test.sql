@@ -2,7 +2,7 @@
 -- 보호하는 것: 연결 전 계정 삭제(앱·관리자·0057 자동 정리), 연결된 계정 삭제(연결 전에 쌓인 기록 포함), 가족 전체 삭제 때 어르신 익명 계정 기록,
 --             다른 사람의 이벤트는 남음, 탈퇴·정리 기록(account_deleted·account_purged, 식별자 없음)은 남음.
 begin;
-select plan(8);
+select plan(14);
 delete from public.events where name in ('account_deleted', 'account_purged');
 
 insert into auth.users (id, aud, role, is_anonymous, created_at, last_sign_in_at) values
@@ -64,10 +64,54 @@ reset role;
 select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000c2') + pg_temp.left_for('70580000-0000-0000-0000-0000000000a1'), 0,
           '가족 전체 삭제: 자녀와 함께 지워지는 어르신 익명 계정의 기록도 지워진다');
 
+-- 어르신 본인 삭제(리뷰 #178 L2)
+insert into auth.users (id, aud, role, is_anonymous) values
+  ('70580000-0000-0000-0000-0000000000c3', 'authenticated', 'authenticated', false),
+  ('70580000-0000-0000-0000-0000000000a2', 'authenticated', 'authenticated', true),
+  ('70580000-0000-0000-0000-0000000000d1', 'authenticated', 'authenticated', true), -- 소셜 로그인 직전 고아 익명(discard)
+  ('70580000-0000-0000-0000-0000000000c4', 'authenticated', 'authenticated', false),
+  ('70580000-0000-0000-0000-0000000000a3', 'authenticated', 'authenticated', true); -- 심사 가족 어르신
+insert into public.families (id, created_by, parent_title, is_review) values
+  ('70580000-0000-0000-0000-0000000000f2', '70580000-0000-0000-0000-0000000000c3', '엄마', false),
+  ('70580000-0000-0000-0000-0000000000f3', '70580000-0000-0000-0000-0000000000c4', '엄마', true);
+insert into public.profiles (id, user_id, family_id, role, consented_at) values
+  ('70580000-0000-0000-0000-00000000c003', '70580000-0000-0000-0000-0000000000c3', '70580000-0000-0000-0000-0000000000f2', 'child', null),
+  ('70580000-0000-0000-0000-00000000a002', '70580000-0000-0000-0000-0000000000a2', '70580000-0000-0000-0000-0000000000f2', 'parent', now()),
+  ('70580000-0000-0000-0000-00000000c004', '70580000-0000-0000-0000-0000000000c4', '70580000-0000-0000-0000-0000000000f3', 'child', null),
+  ('70580000-0000-0000-0000-00000000a003', '70580000-0000-0000-0000-0000000000a3', '70580000-0000-0000-0000-0000000000f3', 'parent', now());
+insert into public.events (family_id, profile_id, device_key, actor_role, name, props)
+select null, null, public.event_device_key(u), 'none', 'app_first_open', '{}'::jsonb
+  from unnest(array['70580000-0000-0000-0000-0000000000a2', '70580000-0000-0000-0000-0000000000d1', '70580000-0000-0000-0000-0000000000a3']::uuid[]) u;
+select pg_temp.act_as('70580000-0000-0000-0000-0000000000a2', true);
+select public.delete_my_account();
+reset role;
+select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000a2'), 0, '어르신 본인 삭제: 연결 전 이용 기록이 지워진다');
+
+-- 소셜 로그인 직전 고아 익명 정리(discard, 리뷰 M1): 공통 함수를 거쳐 기록도 지우고, 탈퇴 기록은 남기지 않는다
+select pg_temp.act_as('70580000-0000-0000-0000-0000000000d1', true);
+select is(public.discard_anonymous_session(), '{"discarded": true}'::jsonb, 'discard는 그대로 동작한다');
+reset role;
+select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000d1') + (select count(*)::int from auth.users where id = '70580000-0000-0000-0000-0000000000d1'), 0,
+          'discard: 인증 계정과 이용 기록이 함께 지워진다');
+
+-- 심사 어르신 정리(admin_cleanup_review_family, 리뷰 L1)
+set local role service_role;
+select is(public.admin_cleanup_review_family('70580000-0000-0000-0000-0000000000f3') ->> 'parents_removed', '1', '심사 어르신 정리는 그대로 동작한다');
+reset role;
+select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000a3') + (select count(*)::int from auth.users where id = '70580000-0000-0000-0000-0000000000a3'), 0,
+          '심사 어르신 정리: 인증 계정과 이용 기록이 함께 지워진다');
+
+-- 결정적 검사(리뷰 #178, 리드 결정): 인증 계정을 지우는 public 함수는 공통 함수 둘뿐 — 새 삭제 경로가 생기면 여기서 걸린다
+select is((select array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text)
+             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.prokind = 'f' and pg_get_functiondef(p.oid) ~* 'delete\s+from\s+auth\.users'),
+          array['account_delete_core(uuid)', 'user_delete_core(uuid,text)'],
+          'auth.users를 지우는 public 함수는 account_delete_core·user_delete_core(uuid, text)뿐');
+
 -- 남는 것
 select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000b9'), 1, '다른 사람의 이벤트는 남는다');
-select is((select count(*)::int from public.events where name in ('account_deleted', 'account_purged') and device_key is null), 5,
-          '탈퇴·정리 기록(식별자 없음)은 남는다(삭제 5번)');
+select is((select count(*)::int from public.events where name in ('account_deleted', 'account_purged') and device_key is null), 6,
+          '탈퇴·정리 기록(식별자 없음)은 남는다(본인·관리자·정리 6번, discard·심사 정리는 기록 없음)');
 
 select * from finish();
 rollback;
