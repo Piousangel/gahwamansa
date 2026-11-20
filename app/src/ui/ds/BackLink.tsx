@@ -2,7 +2,7 @@ import React from 'react';
 import {Pressable, StyleSheet, Text as RNText} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
-import {ds, roleText} from './roles';
+import {ds, roleMark, roleText} from './roles';
 import {useAudience} from './audience';
 
 export type BackLinkProps = {
@@ -47,7 +47,7 @@ export function BackLink({to: label, onPress, context, disabled, testID = 'back-
       <Svg testID="back-link-arrow" width={icon} height={icon} viewBox="0 0 24 24" accessibilityElementsHidden importantForAccessibility="no">
         <Path d="M15 5l-7 7 7 7" stroke={disabled ? c.disabledInk : c[b.tone]} strokeWidth={b.icon.stroke} strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </Svg>
-      <RNText {...koreanTextProps} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, styles.label]}>
+      <RNText {...koreanTextProps} {...roleMark('backLink')} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, styles.label]}>
         {keepAllChildren(label)}
       </RNText>
     </Pressable>

@@ -686,9 +686,9 @@
 
 ### 1. 감싸는 방법(확인한 사실)
 - supabase-js 2.119.0 에서 `createClient(url, key, {global: {fetch}})` 의 fetch 하나가 모든 요청에 쓰인다. 이 저장소의 node_modules 를 읽어 확인했다.
-  - PostgREST(rpc·from): `SupabaseClient` 668행 `fetchWithAuth(..., settings.global.fetch)`
-  - Functions(669행)·Storage
-  - Auth(661행): `_initSupabaseAuthClient(..., settings.global.fetch)`. 토큰 갱신·OTP·소셜 로그인 요청도 같은 fetch 를 탄다.
+  - PostgREST(rpc·from): `node_modules/@supabase/supabase-js/dist/index.cjs`(SupabaseClient 생성자) 668행 `fetchWithAuth(..., settings.global.fetch)`
+  - Functions(같은 파일 669행)·Storage
+  - Auth(같은 파일 661행): `_initSupabaseAuthClient(..., settings.global.fetch)`. 토큰 갱신·OTP·소셜 로그인 요청도 같은 fetch 를 탄다.
 - RN 0.88.1 은 `AbortController`, `AbortSignal.timeout()`, `AbortSignal.any()` 를 갖고 있다(`react-native/src/private/webapis/dom/abort-api/AbortSignal.js` 69·89행).
 - 래퍼 모양(안):
   ```ts
@@ -699,11 +699,11 @@
   };
   createClient(url, key, {auth: {...}, global: {fetch: timedFetch(pickTimeout)}});
   ```
-- 개별 요청을 다르게 하려면 PostgREST 빌더의 `.abortSignal(signal)` 을 쓴다(postgrest-js 1143행). 자녀 레인의 '계정 삭제 30초'도 이 방식으로 옮길 수 있다.
+- 개별 요청을 다르게 하려면 PostgREST 빌더의 `.abortSignal(signal)` 을 쓴다(`postgrest-js/dist/index.cjs` 1143행). 자녀 레인의 '계정 삭제 30초'도 이 방식으로 옮길 수 있다.
 - 주의: `fetchWithAuth` 는 fetch 전에 `await getAccessToken()`(세션 읽기·필요하면 토큰 갱신)을 한다. 갱신 요청 자체는 같은 fetch 라 시간 제한이 걸린다. 다만 AsyncStorage 읽기는 시간 제한 밖이다(로컬이라 실제 위험은 낮음).
 
 ### 2. 시간이 다 됐을 때 오류가 어떻게 보이나(확인한 사실)
-- postgrest-js 는 fetch 가 throw 하면 결과를 `{error: {message: 'AbortError: …', code: '', …}, status: 0}` 으로 바꾼다(420~458행, abort 는 재시도하지 않고 바로 실패, 214행).
+- postgrest-js 는 fetch 가 throw 하면 결과를 `{error: {message: 'AbortError: …', code: '', …}, status: 0}` 으로 바꾼다(`node_modules/@supabase/postgrest-js/dist/index.cjs` 420~458행, abort 는 재시도하지 않고 바로 실패, 214행).
 - 앱 `realApi.ts` 의 `looksOffline` 은 `!e.code && (e.status === 0 || … || /timed? ?out/)` 이다(28~30행). 그래서 **시간 초과는 OfflineError 로 분류된다.** 화면은 이미 offline 을 '다시 하기'로 처리하므로 새 UI 가 필요 없다.
 - Auth 쪽 오류는 `AuthRetryableFetchError` 로 감싸지고, 같은 함수가 offline 으로 본다.
 

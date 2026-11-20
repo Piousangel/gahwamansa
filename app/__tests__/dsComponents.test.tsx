@@ -435,4 +435,27 @@ describe('역할 표지 = 실제 style', () => {
       expect([role, st.fontSize, st.lineHeight, st.fontWeight]).toEqual([role, want.fontSize, want.lineHeight, want.fontWeight]);
     }
   });
+  // #214 L2: BackLink·Field 입력·answer·sign 계열도 한 줄씩
+  const one = (ui: React.ReactElement, a: Audience, role: string, weight = true) => {
+    render(<View>{a === 'child' ? child(ui) : ui}</View>);
+    const got = marked().filter(m => m.role === role);
+    expect(got.length).toBe(1);
+    const want = roleText(got[0].role, a).style;
+    const pick = (x: Record<string, unknown>) => (weight ? [x.fontSize, x.lineHeight, x.fontWeight] : [x.fontSize, x.lineHeight]);
+    expect([role, ...pick(got[0].st)]).toEqual([role, ...pick(want as Record<string, unknown>)]);
+    screen.unmount();
+  };
+  test.each(['elder', 'child'] as const)('%s: BackLink(backLink)·Field 입력(fieldInput) 표지 = 실제 style', a => {
+    one(<BackLink to="설정으로" onPress={noop} />, a, 'backLink');
+    one(<Field label="이름" value="" onChangeText={noop} />, a, 'fieldInput');
+  });
+  test('자녀 answer·answerRow 표지 = 실제 style', () => {
+    one(<Text role="answer">가을</Text>, 'child', 'answer');
+    one(<Text role="answerRow">가을</Text>, 'child', 'answerRow');
+  });
+  test.each(['elder', 'child'] as const)('%s: Sign hero(signLabel)·row(signSmall) 표지 = 실제 크기·줄 높이(손글씨면 굵기 400 으로 바뀌어 굵기는 보지 않음)', a => {
+    const {Sign} = require('../src/ui/ds');
+    one(<Sign size="hero" label="가을" readLabel="r" />, a, 'signLabel', false);
+    one(<Sign size="row" label="가을" readLabel="r" />, a, 'signSmall', false);
+  });
 });
