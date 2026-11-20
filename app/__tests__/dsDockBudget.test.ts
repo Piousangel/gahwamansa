@@ -91,7 +91,7 @@ const DOCK_CASES: Case[] = [
   {
     name: 'P2 동의(좋아요 + 싫어요 같은 높이·글자, 넘치면 본문 끝 — N-12·#175)',
     screen: 'ConsentScreen',
-    variant: 'intro',
+    variant: 'step',
     audience: 'elder',
     dock: {primary: {label: copy.consent.accept, onPress: noop}, secondary: {label: copy.consent.decline, onPress: noop}, even: true},
   },

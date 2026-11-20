@@ -16,7 +16,6 @@ import {ParentSettings} from '../features/account/ParentSettings';
 import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {KeyboardStep} from '../features/course/KeyboardStep';
 import {CourseDone} from '../features/course/CourseDone';
-import {PushPermissionScreen} from '../push/PushPermissionScreen';
 import {WebScreen, type WebParams} from './WebScreen';
 import {OssScreen} from './OssScreen';
 import {FamilyPreviewScreen} from '../features/account/FamilyPreview';
@@ -28,7 +27,6 @@ export type ParentParams = {
   PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
   History: undefined; HistoryDay: {day: HistoryDay};
   Settings: {expand?: 'resume'} | undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
-  PushPermission: undefined; // N1 알림 안내(AU-04, src/push)
   Web: WebParams; // 앱 안 웹 화면(AU-07)
   Oss: undefined; // 오픈소스 라이선스(AU-06)
   FamilyPreview: undefined; // P13 '가족에게 이렇게 보여요'(AP-06)
@@ -51,7 +49,6 @@ export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRou
       <Stack.Screen name="HistoryDay" component={HistoryDayScreen} />
       <Stack.Screen name="DeleteAccount">{() => <DeleteAccountScreen role="parent" />}</Stack.Screen>
       <Stack.Screen name="DeleteDone" component={DeleteDoneScreen} />
-      <Stack.Screen name="PushPermission" component={PushPermissionScreen} />
       <Stack.Screen name="Web" component={WebScreen} />
       <Stack.Screen name="Oss" component={OssScreen} />
       <Stack.Screen name="FamilyPreview" component={FamilyPreviewScreen} />

@@ -580,3 +580,11 @@
 
 ## 2026-11-20 v5 이행 잔재(deprecatedColor·반경 별칭) 제거 조건(#179 리뷰 M2)
 - 생성물 `deprecatedColor`(v5 에서 지운 장식 색 9개, v4 값 고정)와 반경 별칭(card·select·chip·childCard → row 6, input → sign 3)은 화면 레인이 R-23 장식 걷어 내기·4단 이름 이행을 끝낼 때까지만 둔다. 쓰는 곳 수는 dsBaseline `V5_LEFTOVER`(main 병합 뒤 10·63)가 줄기만 하게 지키고, **둘 다 0 이 되는 PR 에서 생성기 표(`V4_DEPRECATED_COLOR`)·별칭(`buildRadius`)과 생성물 항목을 지운다**(L4)
+
+## 2026-11-20 N1 알림 묻기를 ds Dialog로, P7의 연속(3기 어르신 레인, #168 리뷰 반영)
+- 시안 P6_P7_N1_P2_ds4b N1(Dialog). 화면(스택 경로 PushPermission) 대신 PushHost 가 코스 홈 위에 그림
+- 리드 결정 ⓐ(#168 기획 리뷰): 덮개 큐에서 빼고 P7 의 연속 — 이번 실행에서 P7(CourseDone) → 코스 홈으로 돌아왔을 때만 묻는다. 앱을 열 때·깨어날 때는 묻지 않는다(토스 '진입 즉시 권한 묻기 금지'). 오프라인으로 확인 못 하면 그때는 넘기고 다음 P7 뒤에
+- '안 받을게요' = 다시 묻지 않음, 뒤로 = 오늘은 넘김(#72 M1, 다음 날 P7 뒤에 다시) — ds Dialog onBack
+- 막힘(시스템 창 안 뜸): 본문을 notice 톤 안내 한 줄로 바꿔 끼움(디자인, '내가 잘못했다'로 읽히지 않게), 닫는 말 '닫기'(이미 서버 동의·다시 묻지 않음, ds A5 close), 설정에서 켜고 돌아오면 다시 읽어 알리고 닫음
+- '알려 주세요' 아래 미리 알림 한 줄(ds Dialog actionHint), 200% 넘침 '더 있음' 띠, 닫힌 뒤 초점은 맨 위 화면 제목(접근성 M1~M4·L2)
+- E5(push_prompt_shown)는 서버 레인 몫 — N1Prompt 에 TODO. '안 받을게요'를 denied 이벤트에 섞지 않음

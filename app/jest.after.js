@@ -2,10 +2,14 @@
 // 화면 단위 테스트는 앱 시작 스플래시(시작 대기·심볼 이동)가 끝난 상태에서 시작한다.
 // 스플래시 자체는 __tests__/splash.test.tsx 가 resetSplash() 로 처음 상태를 만들어 검사한다.
 const {finishBoot, finishFlight} = require('./src/app/splash');
+const {coverQueue} = require('./src/ui/ds/coverQueue');
 
 beforeEach(() => {
   finishBoot();
   finishFlight();
+  // 덮개 큐(하루 하나, A8)는 앱 전체 하나 — 앞 테스트가 오늘 몫을 쓰면 다음 테스트의 덮개(N1 등)가 거절된다. 테스트마다 빈 기억으로
+  let day = null;
+  coverQueue.configure({load: async () => day, save: async d => void (day = d)});
 });
 
 // 가짜 시계를 쓴 테스트가 중간에 실패해도 다음 테스트에 가짜 시계가 남지 않게(부하 정리 2026-11-19: 실제 대기 → 가짜 시계 전환과 함께)
