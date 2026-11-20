@@ -43,6 +43,14 @@ const openKb = async (input: ReturnType<typeof screen.getByLabelText>) => {
   });
 };
 
+test('입력한 글자 위쪽이 잘리지 않는다 — 입력 칸은 줄높이를 고정하지 않고 세로 가운데(에뮬레이터 200% 실측: 글자 34×1.5=51 > 줄높이 44 라 위가 잘렸다)', async () => {
+  const input = await toP6();
+  const st = StyleSheet.flatten(input.props.style);
+  expect(st.lineHeight).toBeUndefined();
+  expect(st.textAlignVertical).toBe('center');
+  expect(st.fontSize).toBeGreaterThan(0);
+});
+
 test('닫힘: 입력 칸은 비운 한 줄(placeholder·multiline 없음, 높이는 minHeight), 안내는 칸 위 글·읽기는 힌트, 본보기 낱말은 칸 바로 위', async () => {
   const input = await toP6();
   expect(input.props.placeholder).toBeUndefined();

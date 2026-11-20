@@ -40,6 +40,10 @@ type Phase = 'writing' | 'sheet' | 'matched';
 // - 입력 글자는 이 화면 안에서만 쓰고 서버·이벤트로 보내지 않는다(단계 완료만 기록).
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). '오늘의 낱말이에요' + 낱말 칸만, 입력칸·기록 없음, 하단 '돌아가기'.
 // 어르신이 친 글자는 저장하지 않으므로 보여 주지 않는다(정책).
+// 입력 칸 글자: fieldInput 역할에서 줄높이만 뺀다. Android TextInput 은 줄높이를 글자 배율로 늘리지 않아(글자 34×1.5=51 > 줄높이 44)
+// 글자 위쪽이 잘렸다(에뮬레이터 320·360 × 200% 실측, 11-20). 높이는 minHeight·세로 가운데로 맞춘다
+const inputText = {...roleText('fieldInput', 'elder').style, lineHeight: undefined, textAlignVertical: 'center' as const};
+
 export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentParams, 'KeyboardStep'>) {
   const review = !!route.params?.review;
   const toCourseHome = () => navigation.popTo('CourseHome');
@@ -289,7 +293,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           returnKeyType="done"
           blurOnSubmit
           maxFontSizeMultiplier={ds.type.fieldInput.maxFontScale}
-          style={[styles.input, open ? styles.inputOpen : null, roleText('fieldInput', 'elder').style, kbOpen ? styles.inputFocused : null]}
+          style={[styles.input, open ? styles.inputOpen : null, inputText, kbOpen ? styles.inputFocused : null]}
         />
       </View>
       {roman ? (
@@ -379,8 +383,9 @@ const styles = StyleSheet.create({
   photoCaption: {paddingVertical: 8, paddingHorizontal: 14},
   guide: {gap: ds.space.group},
   // 리뷰 M2: 3음절 낱말(라디오) + 200%(글자 51)에서도 한 줄 — 320 폭 카드 안쪽 약 260 = 낱말 약 153 + 간격 8 + 입력 칸 96(카드 좌우 여백 6)
-  wordCardOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, paddingVertical: 6, paddingHorizontal: 6},
-  inputOpen: {flexGrow: 1, flexBasis: 96, paddingHorizontal: 10},
+  // 자판 열림: 보이는 본문이 약 75dp(360×640 Gboard) — 줄높이를 뺀 입력 칸(글자 51 + 위아래)이 카드째 들어가게 위아래 여백을 최소로
+  wordCardOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, paddingVertical: 2, paddingHorizontal: 6},
+  inputOpen: {flexGrow: 1, flexBasis: 96, paddingHorizontal: 10, paddingVertical: 0},
   wordCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 3, paddingHorizontal: 14, paddingBottom: 14, gap: 4},
   matchedGroup: {gap: 20},
   matchedHead: {flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap'},
