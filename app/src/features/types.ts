@@ -135,8 +135,9 @@ export interface Api {
   fetchAnswerHistory(): Promise<ParentHistory[]>;
   // 어르신 P13 '가족에게 이렇게 보여요'(0050 parent_preview_child_view): 자녀 C4·C5 와 같은 모양, 본인 항목 1개(어르신만)
   parentPreviewChildView(): Promise<{summary: ChildSummary; history: ParentHistory[]}>;
-  // 응원 보내기: send_cheer(p_parent, p_key)(0020). 어르신 한 분에게
-  sendCheer(parentId: string, key: CheerKey): Promise<SendCheerResult>;
+  // 응원 보내기: send_cheer(p_parent, p_key, p_request_id)(0020·0059). 어르신 한 분에게.
+  // requestId: 보내기 한 번 × 어르신 한 분마다 하나(uuid). 재시도(다시 하기·응답 없음)에는 같은 값 — 서버가 처음 결과를 돌려줘 두 번 보내지지 않는다
+  sendCheer(parentId: string, key: CheerKey, requestId?: string): Promise<SendCheerResult>;
   // 자녀 설정: 이 기기 로그인 수단(세션의 provider). 모르면 null
   getLoginMethod(): Promise<LoginMethod | null>;
   // 기기 기억값을 계정별로 나누는 가명값(auth user id 의 sha256 앞 16자, 리뷰 M4). 로그인 전이면 null

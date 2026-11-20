@@ -58,7 +58,8 @@ export type FakeOptions = {
   parents?: FakeParent[]; // 어르신 여러 명(지정하면 위 한 명 옵션 대신 쓴다)
   failHistory?: number; // fetchAnswerHistory 가 처음 N번 실패(오프라인)
   failHistoryServer?: number; // fetchAnswerHistory 가 처음 N번 서버 오류
-  failCheer?: number; // sendCheer 가 처음 N번 실패(오프라인)
+  failCheer?: number; // sendCheer 가 처음 N번 실패(오프라인 — 서버에 닿지 않음)
+  failCheerAfterSend?: number; // sendCheer 가 처음 N번 '서버는 받았는데 응답이 끊김'(보낸 뒤 오프라인 오류) — request_id 재시도 확인용
   cheerResult?: SendCheerResult; // sendCheer 결과 고정
   loginMethod?: LoginMethod | null; // 기본 kakao
   failPeek?: boolean; // peekInviteCode 가 오프라인으로 실패
@@ -119,7 +120,10 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   let failHistory = opts.failHistory ?? 0;
   let failHistoryServer = opts.failHistoryServer ?? 0;
   let failCheer = opts.failCheer ?? 0;
+  let failCheerAfterSend = opts.failCheerAfterSend ?? 0;
   const cheersSent = new Map<string, number>();
+  // 서버 0059: 같은 자녀의 같은 request_id 면 새로 넣지 않고 처음 결과(성공한 응원)를 돌려준다
+  const cheerByRequest = new Map<string, SendCheerResult>();
   const many = (opts.parents ?? []).map((p, i) => ({...p, parentId: p.parentId ?? `parent-${i + 1}`}));
   // 기본 어르신 한 명(가족 호칭을 그대로 쓴다)
   const single = (): ChildParent => {
@@ -251,10 +255,14 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         history: historyList().slice(0, 1),
       };
     },
-    async sendCheer(parentId, key): Promise<SendCheerResult> {
+    async sendCheer(parentId, key, requestId): Promise<SendCheerResult> {
       if (failCheer > 0) {
         failCheer -= 1;
         throw new OfflineError('offline');
+      }
+      const seen = requestId ? cheerByRequest.get(requestId) : undefined;
+      if (seen) {
+        return seen; // 0059 35~38행: 같은 요청의 재시도
       }
       if (!(CHILD_CHEER_KEYS as readonly string[]).includes(key)) {
         return {ok: false, reason: 'invalid_key'};
@@ -277,7 +285,15 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       // 같은 fake 안에서 어르신 쪽이 받게(개발자 메뉴 역할 전환 → P8, Maestro F6 응원 왕복). 서버 send_cheer → get_my_cheers 와 같은 흐름
       const cheerId = `cheer-${parentId}-${n + 1}`;
       unread = [{id: cheerId, message_key: key, sent_at: new Date().toISOString()}, ...unread];
-      return {ok: true, cheerId};
+      const res: SendCheerResult = {ok: true, cheerId};
+      if (requestId) {
+        cheerByRequest.set(requestId, res); // 서버는 성공한 응원만 request_id 로 남긴다(실패 결과는 다시 계산)
+      }
+      if (failCheerAfterSend > 0) {
+        failCheerAfterSend -= 1;
+        throw new OfflineError('offline'); // 서버엔 들어갔는데 응답이 끊김
+      }
+      return res;
     },
     async createFamily() {
       childFamily = true;

@@ -398,8 +398,8 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       if (error) fail('child_answer_history', error);
       return parseChildHistory(data);
     },
-    async sendCheer(parentId, key): Promise<SendCheerResult> {
-      const {data, error} = await sb.rpc('send_cheer', {p_parent: parentId, p_key: key});
+    async sendCheer(parentId, key, requestId): Promise<SendCheerResult> {
+      const {data, error} = await sb.rpc('send_cheer', {p_parent: parentId, p_key: key, p_request_id: requestId ?? null});
       if (error) fail('send_cheer', error);
       return data.ok ? {ok: true, cheerId: data.cheer_id} : {ok: false, reason: data.reason};
     },
