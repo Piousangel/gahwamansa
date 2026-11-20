@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -58,6 +58,9 @@ export function ChildHome() {
   //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
   const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
+  // N-10(전문가 리뷰 r2 H, 4:201): 200%에서 위 바 + 하단 응원 버튼 + 탭 바 = 화면 51%(R-12 40%). 큰 글자(150% 이상)에서는
+  //   응원 버튼을 하단 고정에서 빼 카드 바로 아래 본문으로 둔다(R-12 단서·C3 '큰 글자 = Dock 주 하나' 결정 #83 ②와 같은 방식). 고정 틀 = 위 바 + 탭 바만
+  const big = useWindowDimensions().fontScale >= 1.5;
 
   // AC-05 전환 분모: 이 기기에서 답 카드를 처음 본 때 한 번(child_first_answer_viewed{days_since_connect}). 답 내용·날짜는 싣지 않는다
   const firstSeen = list.find(p => p.shared && p.latest);
@@ -108,7 +111,9 @@ export function ChildHome() {
       ) : null}
     </AudienceProvider>
   );
-  const hasBottom = !info || reachable.length > 0;
+  const hasBottom = (!info || reachable.length > 0) && !big;
+  // 큰 글자: 응원 버튼은 첫 카드(첫날이면 안내 한 줄) 바로 다음 — 어르신이 여럿이어도 버튼은 하나라 첫 카드 다음(#167 리뷰 M2)
+  const inline = big && hasBottomContent(info, reachable.length) ? <View testID="child-home-cheer-inline">{bottom}</View> : null;
 
   return (
     <View style={styles.flex}>
@@ -138,12 +143,19 @@ export function ChildHome() {
             {/* 호칭 겹침 안내(시안 C4_title_dup): 겹친 동안 닫을 수 없는 줄 + 이름 고르기 */}
             {dup ? <TitleDupNotice api={api} dup={dup} parents={list} onChanged={load} /> : null}
             {firstDay ? (
-              <ChildHomeEmpty fold={emptyFold} />
+              <ChildHomeEmpty fold={emptyFold} action={inline} />
             ) : (
-              list.map(p => <AnswerCard key={`card-${p.parentId}`} parent={p} withHeader={many} />)
+              list.map((p, i) => (
+                <React.Fragment key={`card-${p.parentId}`}>
+                  <AnswerCard parent={p} withHeader={many} />
+                  {i === 0 ? inline : null}
+                </React.Fragment>
+              ))
             )}
           </>
         )}
+        {/* 받기 전(로딩)·카드가 없을 때는 본문 끝 */}
+        {!info || (!firstDay && list.length === 0) ? inline : null}
         </AudienceProvider>
       </Screen>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
@@ -225,3 +237,8 @@ const styles = StyleSheet.create({
   stitch: {borderTopWidth: 2, borderStyle: 'dashed', borderColor: ds.color.lineSoft, marginVertical: 8},
   starter: {gap: 4},
 });
+
+/** 하단 버튼 자리에 그릴 것이 있는지(받기 전 = 비활성 버튼, 연결된 분이 있으면 응원) */
+function hasBottomContent(info: ChildSummary | null | undefined, reachable: number): boolean {
+  return !info || reachable > 0;
+}
