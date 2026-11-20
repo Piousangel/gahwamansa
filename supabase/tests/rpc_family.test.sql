@@ -26,8 +26,9 @@ select pg_temp.act_as('d0000000-0000-0000-0000-0000000000c1', false);
 select lives_ok($$ select public.create_family() $$, '자녀는 가족을 만들 수 있다');
 select is((select count(*)::int from public.profiles where user_id = 'd0000000-0000-0000-0000-0000000000c1' and role = 'child'), 1, '자녀 프로필이 1개 생긴다');
 select is((select count(*)::int from public.entitlements where plan_id = 'premium' and source = 'free_period'), 1, '무료 기간 권한이 생긴다');
--- 4. 같은 사용자가 다시 만들 수 없다
-select throws_like($$ select public.create_family() $$, '%already_has_profile%', '이미 프로필이 있으면 다시 만들 수 없다');
+-- 4. 같은 자녀가 다시 부르면 새로 만들지 않고 같은 가족을 돌려준다(0059 재시도 멱등, 이전: already_has_profile)
+select is((select count(*)::int from public.families where created_by = 'd0000000-0000-0000-0000-0000000000c1')
+          + (public.create_family() ->> 'family_id' is not null)::int, 2, '이미 자녀 프로필이 있으면 같은 가족을 돌려준다(새로 만들지 않음)');
 -- 5. 익명(어르신 기기)은 가족을 만들 수 없다
 select pg_temp.act_as('d0000000-0000-0000-0000-0000000000a1', true);
 select throws_like($$ select public.create_family() $$, '%child_required%', '익명 사용자는 가족을 만들 수 없다');

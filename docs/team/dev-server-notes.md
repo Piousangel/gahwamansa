@@ -34,10 +34,11 @@
 - `set_parent_title(p_title)`(가족 기본 호칭)도 0035부터 겹치면 `duplicate_title`(호칭 없는 어르신이 있고 다른 어르신이 이미 그 호칭일 때). **폐기 예정**: 앱은 `set_parent_title_for`로 옮기고, 빌드 2 첫 서버 묶음에서 제거한다. 호칭 목록은 서버 `parent_titles()`(authenticated 실행 가능)와 같다.
 - 연결(redeem) 때는 기본 호칭이 겹쳐도 막지 않는다. 그래서 child_summary에 같은 title이 둘 보일 수 있다 → 앱은 겹친 어르신에게 호칭 바꾸기를 권한다. 기존 `set_parent_title(p_title)`(가족 기본값)은 그대로.
 
-### send_cheer(p_parent uuid, p_key text) → jsonb  (0020)
+### send_cheer(p_parent uuid, p_key text, p_request_id uuid default null) → jsonb  (0020, 0059 요청 id)
 - 키 4개만: `love_you`·`warm_day`·`thanks_always`·`peaceful_day`(copy-v3-confirmed 6절 확정 4개).
 - `{ok:true, cheer_id}` | `{ok:false, reason:'invalid_key'|'invalid_target'|'disconnected'|'daily_limit'}`.
 - 하루 한도(가정): 같은 자녀→같은 어르신 KST 하루 **2개**. 정책 확정 시 상수만 변경.
+- **0059 재시도 멱등**: 앱은 응원 버튼을 누를 때 uuid를 한 번 만들어 `p_request_id`로 보내고, 시간 초과로 다시 보낼 때 **같은 값**을 쓴다. 같은 자녀의 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`(한도 검사보다 먼저 — 재시도가 `daily_limit`으로 보이지 않음). id를 안 보내면 지금과 같다(하위 호환).
 - 테이블 직접 insert는 막혔다(0020). 자녀는 읽음 여부(read_at)를 볼 수 없다.
 - **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 이 4개로 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
 ```ts
@@ -286,7 +287,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 함수 | 부르는 쪽 | 의도·안에서 하는 검사 |
 |---|---|---|
 | my_profile_id · my_family_id · my_role · my_consented | RLS 정책 식(authenticated) | 정책이 쿼리 역할 권한으로 부르므로 authenticated 필수. 자기 것만 돌려줌 |
-| create_family | 자녀 가입 직후 | 익명 아님·프로필 없음 |
+| create_family | 자녀 가입 직후 | 익명 아님. 이미 자녀 프로필이 있으면 같은 가족·프로필 반환(0059 재시도), 어르신 프로필이면 already_has_profile |
 | issue_invite_code | 자녀 | child 역할, 같은 가족 대상만 |
 | redeem_invite_code · peek_invite_code | 어르신 기기 | 익명만, 잠금·시도 한도 |
 | discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
