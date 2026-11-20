@@ -11,13 +11,14 @@ import {contactMail, openContactMail} from './contactMail';
 export function DeleteDoneScreen() {
   const navigation = useNavigation();
   const {params} = useRoute();
-  const {scope, role, title, noRecord} = (params ?? {}) as {scope: DeleteScope; role: 'parent' | 'child'; title?: string; noRecord?: boolean};
+  const {scope, role, title, noneKind} = (params ?? {}) as {scope: DeleteScope; role: 'parent' | 'child'; title?: string; noneKind?: 'none' | 'unsure'};
   const d = copy.delete;
-  // noRecord 판단(사전 조회·앞선 실패)은 계정 지우기 화면이 한다
-  const parentNone = role === 'parent' && scope === 'none' && !!noRecord;
+  // noneKind 판단(사전 조회 실제 결과·앞선 끊김)은 계정 지우기 화면이 한다. none = 가족 기록 없었음, unsure = 남았는지 모름(#156 리뷰 H2, 라이터 #177)
+  const parentNone = role === 'parent' && scope === 'none' && !!noneKind;
+  const noneCopy = noneKind === 'unsure' ? d.parent.done_unsure : d.parent.done_none;
   const mail = parentNone ? contactMail() : null;
   const message = parentNone
-    ? d.parent.done_none.title
+    ? noneCopy.title
     : role === 'parent'
       ? d.parent.done
       : scope === 'family'
@@ -35,7 +36,7 @@ export function DeleteDoneScreen() {
         ...(mail ? {secondary: {kind: 'secondary' as const, label: d.signed_out_parent.button, onPress: () => openContactMail(mail), testID: 'delete-done-contact'}} : {}),
       }}>
       {role === 'child' ? <Text role="bodyLg">{d.child.thanks}</Text> : null}
-      {parentNone ? <Text role="bodyLg">{d.parent.done_none.body}</Text> : null}
+      {parentNone ? <Text role="bodyLg">{noneCopy.body}</Text> : null}
       {parentNone && !mail ? (
         <Text role="body" testID="delete-done-contact-pending">
           {copy.app_info.contact_pending}

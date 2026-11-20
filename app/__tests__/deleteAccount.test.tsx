@@ -322,6 +322,40 @@ describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 
     expect(screen.getByTestId('delete-done-contact-pending')).toBeTruthy();
     expect(screen.queryByRole('button', {name: '문의하기'})).toBeNull();
   });
+  test('#156 리뷰 H(재현 고정): 사전 조회 실패 + 첫 시도 끊김 + 다시 하기 none → done_unsure(단정하지 않음) + 문의하기', async () => {
+    mockMail = 'help@example.test';
+    const api = createFakeApi({consented: true, failPreview: true});
+    const preview = jest.spyOn(api, 'deleteScopePreview');
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText(copy.delete.parent.done_unsure.body));
+    expect(screen.getByText(copy.delete.parent.done_unsure.title)).toBeTruthy();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(screen.queryByText(copy.delete.parent.done_none.body)).toBeNull(); // '가족과 나눈 기록은 없었어요'도 단정하지 않는다
+    expect(screen.getByRole('button', {name: '문의하기'})).toBeTruthy();
+    expect(preview.mock.calls.length).toBeGreaterThanOrEqual(3); // 처음 + 지우기 전 다시 묻기(두 번 시도마다)
+  });
+  test('#156 리뷰 H: 사전 조회가 처음엔 실패해도 지우기 전에 다시 물어 parent 를 알면, 끊김 뒤 none 은 "모두 지웠어요"(#146 H1)', async () => {
+    const api = createFakeApi({consented: true});
+    const real = api.deleteScopePreview.bind(api);
+    jest.spyOn(api, 'deleteScopePreview').mockRejectedValueOnce(new OfflineError('x')).mockImplementation(real);
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test('사전 조회를 몰라도 앞선 끊김이 없으면 결과 none 은 이 계정에 가족 기록이 없었다는 뜻 → done_none', async () => {
+    const api = createFakeApi({consented: true, failPreview: true});
+    jest.spyOn(api, 'deleteMyAccount').mockResolvedValue({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText(copy.delete.parent.done_none.body));
+  });
   test('어르신 scope parent 는 그대로 "모두 지웠어요"(문의 줄 없음)', async () => {
     mockMail = 'help@example.test';
     await openParentDelete(createFakeApi({consented: true}));

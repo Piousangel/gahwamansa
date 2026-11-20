@@ -42,6 +42,9 @@ export function DeleteAccountScreen({role}: Props) {
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
   const [scope, setScope] = useState<DeleteScope | null>(null);
   const [title, setTitle] = useState('부모님');
+  // 사전 조회의 실제 결과(실패면 null). 위 scope 는 화면 경고용이라 실패하면 'family'(가장 강한 경고)로 채우지만,
+  //   지운 뒤 문구 판단(어르신 none)에는 '모름'을 '가족 기록 있음'으로 읽으면 안 된다(#156 리뷰 1·2 H)
+  const previewScope = useRef<DeleteScope | null>(null);
   useEffect(() => {
     let alive = true;
     const loadTitle = () => {
@@ -59,6 +62,7 @@ export function DeleteAccountScreen({role}: Props) {
           return;
         }
         setScope(r.scope);
+        previewScope.current = r.scope;
         // 호칭은 가족이 있을 때만 쓴다(0049 'none' = 가족 연결 전이면 묻지 않는다, PR1 리뷰 M2)
         if (r.scope !== 'none') {
           loadTitle();
@@ -93,9 +97,14 @@ export function DeleteAccountScreen({role}: Props) {
     clear();
     prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
     // 법률 확인(11-20): 어르신 scope none = 다시 설치한 새 익명 계정(프로필 없음)만 지워졌다 — 옛 기록은 남으므로 '모두 지웠어요'가 아니라 사실 + 문의.
-    //   단, 앞선 시도가 응답만 끊긴 뒤의 none 은 첫 시도에서 이미 지운 것이라(#146 H1) 사전 조회도 none 일 때만 '지울 기록 없음'
-    const noRecord = !child && s === 'none' && (scope === 'none' || !unsure.current);
-    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title, noRecord}}]}));
+    //   단, 앞선 시도가 응답만 끊긴 뒤의 none 은 첫 시도에서 이미 지운 것일 수 있다(#146 H1) — 그때만 '모두 지웠어요'
+    //   그 예외는 사전 조회가 실제로 가족 기록 있음(parent·family)을 돌려줬을 때만 — 조회를 모르면(실패) 단정하지 않고 done_unsure(문의 안내)
+    //   나눔(라이터 #177): 사전 조회 none 또는 앞선 끊김 없음 → done_none / 조회 모름 + 앞선 끊김 → done_unsure / 조회 parent·family + 앞선 끊김 → '모두 지웠어요'
+    const p = previewScope.current;
+    const had = p === 'parent' || p === 'family';
+    const noneKind: 'none' | 'unsure' | undefined =
+      child || s !== 'none' ? undefined : !unsure.current || p === 'none' ? 'none' : p === null ? 'unsure' : had ? undefined : 'unsure';
+    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title, noneKind}}]}));
   };
 
   const run = async () => {
@@ -104,6 +113,16 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
+    // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로
+    if (!child && previewScope.current === null) {
+      await api
+        .deleteScopePreview()
+        .then(r => {
+          previewScope.current = r.scope;
+          setScope(r.scope);
+        })
+        .catch(() => {});
+    }
     const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
     try {
       const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
@@ -133,6 +152,8 @@ export function DeleteAccountScreen({role}: Props) {
   //   이 화면에서 세션을 지우거나 번호 입력으로 보내지 않는다(그러면 새 빈 계정이 생긴다). 주소가 없으면 버튼 없이 contact_pending 한 줄
   const mail = contactMail();
   const parentSignedOut = signedOut && !child;
+  // signed_out_parent_unlinked(라이터 #177, 버튼 없음)는 '연결한 적 없음이 확실할 때만'(법률). no_profile 은 로그인 정보가 없어 서버에서 확인할 수 없고
+  //   이 기기에도 '연결한 적 있음' 기록이 없다 → 확실한 경우가 지금은 없으므로 늘 signed_out_parent(문의 가능). 근거가 생기면(예: 기기 연결 이력) 여기서 나눈다
   const danger = parentSignedOut
     ? null
     : signedOut && failed
