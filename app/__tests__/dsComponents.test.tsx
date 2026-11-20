@@ -233,9 +233,11 @@ describe('Field(placeholder 없음)', () => {
     expect(input.props.maxFontSizeMultiplier).toBe(t.type.fieldInput.maxFontScale);
     expect(flat(input.props.style)).toMatchObject({fontSize: spec('fieldInput', 'elder').size, minHeight: t.touch.elder.primary});
     expect(flat(input.props.style).height).toBeUndefined();
-    expect(screen.getByText('이름').props.maxFontSizeMultiplier).toBe(2);
-    expect(screen.getByTestId('field-hint').props.maxFontSizeMultiplier).toBe(2);
-    expect(screen.getByTestId('field-hint').props.numberOfLines).toBeUndefined();
+    expect(screen.getByText('이름', {includeHiddenElements: true}).props.maxFontSizeMultiplier).toBe(2);
+    // D-18 B4: 보이는 라벨·안내는 읽기에서 숨김 — 칸의 읽기 이름·힌트로 한 번만 듣는다
+    expect(screen.queryByText('이름')).toBeNull();
+    expect(screen.getByTestId('field-hint', {includeHiddenElements: true}).props.maxFontSizeMultiplier).toBe(2);
+    expect(screen.getByTestId('field-hint', {includeHiddenElements: true}).props.numberOfLines).toBeUndefined();
   });
   test('kind: email 자판·자동 대문자 끔, otp 숫자 자판, text 는 여러 줄', () => {
     render(

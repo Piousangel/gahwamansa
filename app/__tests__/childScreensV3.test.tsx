@@ -191,9 +191,12 @@ describe('C3 연결 대기', () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({action: 'sharedAction'} as never);
     await openWait(waitApi());
     expect(screen.getByText('연결 기다리는 중')).toBeTruthy();
-    expect(screen.getByText('123 456')).toBeTruthy();
+    expect(screen.getByText('123 456', {includeHiddenElements: true})).toBeTruthy();
+    // D-18 B3: 번호는 묶음 이름으로 한 번만 읽힌다 — 안쪽 '123 456'은 읽기에서 숨김(따로 초점 없음)
+    expect(screen.queryByText('123 456')).toBeNull();
+    expect(screen.getByTestId('wait-code-group').props.accessibilityLabel).toMatch(/^연결 번호 1 2 3, 4 5 6, /);
     expect(screen.getByLabelText(/^연결 번호 1 2 3, 4 5 6, .*까지 쓸 수 있어요$/)).toBeTruthy(); // 번호+기한 한 덩어리(L6)
-    expect(screen.getByText(/까지 쓸 수 있어요$/)).toBeTruthy();
+    expect(screen.getByText(/까지 쓸 수 있어요$/, {includeHiddenElements: true})).toBeTruthy();
     expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
     expect(screen.getByText("링크로 열면 번호를 확인하고 '이 번호로 연결하기'를 눌러요")).toBeTruthy();
     expect(screen.getByText('답을 보여 줄지 고르면 돼요')).toBeTruthy();
@@ -243,7 +246,7 @@ describe('C3 연결 대기', () => {
     expect(screen.queryByTestId('wait-steps')).toBeNull();
     expect(screen.queryByText('새 번호를 만들면 보낸 번호는 쓸 수 없어요')).toBeNull(); // 디자인 결정 L2(a)
     await press('새 번호 만들기');
-    await waitFor(() => screen.getByText('123 456'));
+    await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true}));
     expect(issue).toHaveBeenCalledTimes(1);
     expect(screen.getByText('새 번호를 만들었어요')).toBeTruthy();
     expect(screen.getByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeTruthy();
@@ -308,9 +311,9 @@ describe('C3 연결 대기', () => {
       handlers.forEach(h => h('active')); // 포그라운드 복귀 확인이 떠난다(만료 상태로)
     });
     await press('새 번호 만들기');
-    await waitFor(() => screen.getByText('123 456'));
+    await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true}));
     await act(async () => release()); // 옛 확인이 이제 도착
-    expect(screen.getByText('123 456')).toBeTruthy();
+    expect(screen.getByText('123 456', {includeHiddenElements: true})).toBeTruthy();
     expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
   });
 });

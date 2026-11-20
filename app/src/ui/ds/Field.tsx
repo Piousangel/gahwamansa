@@ -48,21 +48,23 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
   }, [error]);
   return (
     <View style={styles.wrap}>
-      <Text role="label" nativeID={`${id}-label`}>
-        {label}
-      </Text>
-      {hint ? (
-        <Text role="sub" tone="muted" testID={`${testID}-hint`}>
-          {hint}
+      {/* D-18 B4(7: 표 B): 보이는 라벨·안내는 입력 칸이 읽기 이름(accessibilityLabel)·힌트로 함께 읽는다 → 따로 초점을 받지 않게 숨긴다(두 번 듣지 않게) */}
+      <View style={styles.wrap} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden testID={`${testID}-visible-label`}>
+        <Text role="label" nativeID={`${id}-label`}>
+          {label}
         </Text>
-      ) : null}
+        {hint ? (
+          <Text role="sub" tone="muted" testID={`${testID}-hint`}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
       <TextInput
         {...roleMark('fieldInput')}
         ref={inputRef}
         testID={testID}
+        // 읽기 이름 = 보이는 라벨(또는 따로 받은 이름). 보이는 라벨은 위에서 읽기에서 숨겼으므로 labelledBy 대신 이 이름 하나로 읽는다
         accessibilityLabel={accessibilityLabel ?? label}
-        // 읽기 이름을 따로 받으면 그것만(labelledBy 가 있으면 보이는 짧은 라벨이 이긴다)
-        accessibilityLabelledBy={accessibilityLabel ? undefined : `${id}-label`}
         accessibilityHint={[hint, error].filter(Boolean).join(' ') || undefined}
         accessibilityState={{disabled: !editable}}
         value={value}
