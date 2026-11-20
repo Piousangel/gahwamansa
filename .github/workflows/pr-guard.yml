@@ -1,8 +1,9 @@
 # PR 가드(11-20 리드 결정): paths 필터 없이 모든 PR 에서 돈다. #133 사고 때 지워진 것은 문서 16개였다(앱 경로 밖).
-# 막지 않는다 — 지운 파일 목록을 Step Summary·경고로만 보인다.
+# 막지 않는다 — 지운 파일 목록·증거 칸·리뷰 인원을 Step Summary·경고로만 보인다(DECISIONS 11-20 운영 규칙).
 name: pr-guard
 on:
   pull_request:
+    types: [opened, edited, synchronize, reopened] # edited: 본문의 '## 증거' 를 채우면 다시 본다
 
 permissions:
   contents: read
@@ -39,4 +40,40 @@ jobs:
           if [ "$count" -gt 0 ]; then
             echo "::warning title=main 파일 삭제 ${count}개::$(printf '%s' "$deleted" | head -20 | tr '\n' ' ')"
             printf '%s\n' "$deleted"
+          fi
+      # 운영 규칙(11-20, 조사 #169): 코드 PR 본문에는 '## 증거'(캡처·녹화, 재현 → 수정 → 같은 재현 통과). 문서만 바꾼 PR(docs/·*.md)은 빼고(리드 확인만),
+      # 위험 영역(삭제·동의·푸시·DB = supabase/migrations·features/account·consent·push)은 '리뷰 2명 필요'를 요약에 적는다. 막지 않는다
+      - name: 증거 칸·리뷰 인원(경고만)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+          code=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' | grep -c . || true)
+          risk=$(printf '%s\n' "$files" | grep -E '^supabase/migrations/|^app/src/features/account/|[Cc]onsent|^app/src/push/|/push|[Pp]ush[A-Z]' | grep -c . || true)
+          # 본문의 '## 증거' 절: 제목 다음 줄부터 다음 '## ' 전까지, 주석(<!-- -->)·빈 줄을 뺀 글자가 있어야 한다
+          evidence=$(printf '%s\n' "$PR_BODY" | tr -d '\r' | awk '/^## 증거[[:space:]]*$/{f=1;next} /^## /{f=0} f' | sed -e 's/<!--.*-->//g' | grep -v -E '^[[:space:]]*$' | grep -c . || true)
+          has_heading=$(printf '%s\n' "$PR_BODY" | tr -d '\r' | grep -c -E '^## 증거[[:space:]]*$' || true)
+          {
+            echo "### PR 가드"
+            if [ "$code" -eq 0 ]; then
+              echo "- 문서만 바꾼 PR: 증거 칸 검사 생략(리드 확인만)"
+            elif [ "$has_heading" -eq 0 ]; then
+              echo "- 본문에 '## 증거' 칸이 없어요(캡처·녹화, 재현 → 수정 → 같은 재현 통과)"
+            elif [ "$evidence" -eq 0 ]; then
+              echo "- '## 증거' 칸이 비어 있어요"
+            else
+              echo "- 증거 칸: 있음(${evidence}줄)"
+            fi
+            if [ "$risk" -gt 0 ]; then
+              echo "- 위험 영역(삭제·동의·푸시·DB)을 건드림: **리뷰 2명 필요**"
+              printf '%s\n' "$files" | grep -E '^supabase/migrations/|^app/src/features/account/|[Cc]onsent|^app/src/push/|/push|[Pp]ush[A-Z]' | head -30 | sed 's/^/  - /'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -gt 0 ] && [ "$evidence" -eq 0 ]; then
+            echo "::warning title=증거 칸::PR 본문 '## 증거' 칸이 없거나 비어 있어요(캡처·녹화, 재현 → 수정 → 같은 재현 통과)"
+          fi
+          if [ "$risk" -gt 0 ]; then
+            echo "::notice title=리뷰 2명::위험 영역(삭제·동의·푸시·DB) 파일 ${risk}개 — 리뷰 2명 필요"
           fi
