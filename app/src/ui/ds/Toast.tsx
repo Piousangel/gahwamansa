@@ -1,8 +1,8 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
-import {Animated, Pressable, StyleSheet, Text as RNText, View} from 'react-native';
+import {Animated, PixelRatio, Pressable, StyleSheet, Text as RNText, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Icon} from '../assets/icons';
-import {announce} from '../a11y';
+import {announce, useScreenReader} from '../a11y';
 import {focusLater, FOCUS_DELAY_MS} from '../screenTitle';
 import {ToastPlacementContext, toastBottom, type ToastPlacement} from '../toastPlacement';
 import {fadeMs, useReduceMotion} from '../motion';
@@ -22,6 +22,24 @@ const actText = (error: boolean) => roleText('buttonPrimary', 'child', error ? '
 
 /** 자녀 토스트 유지 시간(README §13: 6초, 최소 5초). 오류는 자동으로 사라지지 않는다. */
 export const TOAST_MS = 6000;
+/** 화면 읽기가 켜졌을 때(D-17a, 7:90 — 초점을 옮겨도 닿을 시간) */
+export const TOAST_SCREEN_READER_MS = 10000;
+/** 글자 150% 이상일 때(D-17, 1:108·4:204 — 큰 글자에서 읽고 누르기 빠듯) */
+export const TOAST_BIG_TEXT_MS = 8000;
+
+/**
+ * 토스트 표시 시간 계산 한 곳(D-17·D-17a). 우선순위: 화면 읽기 10초 > 글자 150% 이상 8초 > 기본(호출부 durationMs, 없으면 6초).
+ * 응원 되돌리기(기본 4초)처럼 짧게 둔 토스트도 이 규칙으로 늘어난다 — 되돌리기 창 = 표시 시간(U10)이라 함께 늘어난다
+ */
+export function toastDurationMs(base: number, screenReader: boolean, fontScale: number): number {
+  if (screenReader) {
+    return Math.max(base, TOAST_SCREEN_READER_MS);
+  }
+  if (fontScale >= 1.5) {
+    return Math.max(base, TOAST_BIG_TEXT_MS);
+  }
+  return base;
+}
 
 type ToastAction = {label: string; onPress: () => void};
 /** 오류는 "다시 하기"가 필수(리뷰 M3: 자동으로 안 사라지니 닫을 길이 있어야 함). 누르면 토스트를 닫고 부른다 */
@@ -59,6 +77,7 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
   const [toast, setToast] = useState<Shown | null>(null);
   const seq = useRef(0);
   const reduce = useReduceMotion();
+  const screenReader = useScreenReader();
   const opacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   // 지금 보이는 화면의 dock 높이(마지막으로 알린 화면), 열린 시트·대화상자 수
@@ -166,7 +185,7 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
       return cancelFocus;
     }
     const id = toast.id;
-    const t = setTimeout(() => hide(id), toast.durationMs ?? TOAST_MS);
+    const t = setTimeout(() => hide(id), toastDurationMs(toast.durationMs ?? TOAST_MS, screenReader, PixelRatio.getFontScale()));
     return () => {
       clearTimeout(t);
       cancelFocus?.();
