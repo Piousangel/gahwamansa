@@ -910,6 +910,33 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     expect(dock.getByTestId('dock-note')).toBeTruthy();
   });
 
+  test('#203 리뷰: 줄 사이 8 은 \'자녀 + 2열 지정\' Choice 공통(C1·C7 시트·C4 호칭 겹침), 어르신·1열 지정 목록은 그대로', () => {
+    const {AudienceProvider, Choice} = require('../src/ui/ds');
+    const {CHOICE_CHILD_GRID_ROW_GAP} = require('../src/ui/ds/Choice');
+    expect(CHOICE_CHILD_GRID_ROW_GAP).toBe(8);
+    const items = [{key: 'a', label: '엄마'}, {key: 'b', label: '아빠'}];
+    const gapOf = (audience: 'child' | 'elder', columns: 1 | 2) => {
+      const r = render(
+        <AudienceProvider value={audience}>
+          <Choice mode="radio" columns={columns} testID="ch" items={items} value="a" onSelect={() => {}} />
+        </AudienceProvider>,
+      );
+      const st = StyleSheet.flatten(screen.getByTestId('ch').props.style);
+      r.unmount();
+      return st.rowGap;
+    };
+    expect(gapOf('child', 2)).toBe(8);
+    expect(gapOf('child', 1)).toBeUndefined(); // 응원 시트 등 1열 목록은 공통 간격(12)
+    expect(gapOf('elder', 2)).toBeUndefined();
+    // 쓰는 화면이 모두 '자녀 + columns={2}' 인지(새 화면이 2열을 쓰면 여기 목록을 다시 본다)
+    const fs = require('fs');
+    const path = require('path');
+    const users = ['features/child/RelationScreen.tsx', 'features/child/ChildSettings.tsx', 'features/home/TitleDupNotice.tsx'];
+    for (const f of users) {
+      expect(fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')).toMatch(/columns=\{2\}/);
+    }
+  });
+
   test('V9: C1 → C2 없이 바로 C3(스택에 C1 이 남지 않음), 측정 이벤트는 C1 번호 발급 1번 + C3 보내기·복사', async () => {
     const api = createFakeApi({who: 'child'});
     const log = jest.spyOn(api, 'logEvent');
