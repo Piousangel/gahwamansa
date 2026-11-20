@@ -71,6 +71,9 @@ const ITEM_BORDER = 4; // 고른 칸 테두리(가장 굵은 쪽)
 /** 2열 칸은 폭이 좁아 안쪽 여백·✓ 간격을 줄인다(360에서 칸 약 150 → 글 자리 82, 4자 호칭 18px ≈ 71) */
 const GRID_PAD_X = 12;
 const GRID_GAP = 8;
+/** 자녀 호칭 고르기(2열 지정) 줄 사이: 12 → 8(C1 360×640 100%에서 4줄째가 첫 화면에 들게, 디자인 리뷰 11-20 ② — R-12 '요소 사이 8 이상').
+ *  1열로 내려가도(150%↑·꺾임) 같은 값이라 접힘 계산(useFoldGap between)이 하나로 맞는다 */
+export const CHOICE_CHILD_GRID_ROW_GAP = 8;
 const GRID_CHECK_W = 28 + GRID_GAP;
 
 // 선택지(SUMMARY 2-6 C4·Q5): 1열, 같은 면(흰 카드), 테두리 line(3:1), 사물 아이콘만 다르게, 글은 두 줄까지 줄바꿈(말줄임 없음).
@@ -109,7 +112,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
       testID={testID}
       accessibilityRole={mode === 'radio' ? 'radiogroup' : undefined}
       accessibilityLabel={accessibilityLabel}
-      style={[styles.list, two ? styles.grid : null]}
+      style={[styles.list, columns === 2 && a === 'child' ? styles.listChildGrid : null, two ? styles.grid : null]}
       onLayout={columns === 2 ? e => setListW(Math.round(e.nativeEvent.layout.width)) : undefined}>
       {items.map((item, i) => {
         const selected = mode === 'radio' && value === item.key;
@@ -165,6 +168,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
 
 const styles = StyleSheet.create({
   list: {gap: ds.touch.elder.gap, alignSelf: 'stretch'},
+  listChildGrid: {rowGap: CHOICE_CHILD_GRID_ROW_GAP},
   grid: {flexDirection: 'row', flexWrap: 'wrap', columnGap: COL_GAP},
   itemOff: {backgroundColor: c.paperSoft, borderColor: c.lineSoft},
   item: {
