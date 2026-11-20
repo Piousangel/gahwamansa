@@ -1,0 +1,37 @@
+# 위험 영역 경로(리뷰 2명, DECISIONS 11-20·#174): 삭제·동의·푸시·DB·인증·약관·계측·권한.
+# 한 줄에 확장 정규식 하나(grep -E). '#' 로 시작하는 줄과 빈 줄은 무시한다. docs/·*.md 는 세지 않는다(.github/scripts/pr-evidence.sh).
+# PR 템플릿 '## 리뷰' 와 pr-guard 가 이 파일 하나를 본다 — 경로를 더할 때는 여기만 고친다.
+
+# DB·서버
+^supabase/migrations/
+^supabase/down/
+^supabase/config\.toml$
+^supabase/functions/_shared/
+^supabase/seed_terms
+# 삭제·계정(가족 화면의 '그만두기 → 모두 지우기' 입구 포함, #180 재확인 L)
+^app/src/features/account/
+^app/src/features/family/ParentFamilyScreen\.tsx$
+deleteScope
+^supabase/functions/kakao-unlink/
+# 동의·약관
+[Cc]onsent
+[Tt]erms
+legalLinks
+# 푸시
+^app/src/push/
+^supabase/functions/push
+[Pp]ush[A-Z]
+# 인증·세션
+socialAuth
+[Ss]ession
+# 결제 안내
+PaidSheet
+# 계측(이벤트)
+[Ee]vents
+/track\.
+# 권한·개인정보 선언
+PrivacyInfo
+AndroidManifest\.xml$
+# CI 자체와 이 검사(목록·판정 스크립트를 PR 이 고쳐 검사를 약하게 하지 못하게, #180 재확인 M)
+^\.github/workflows/
+^\.github/(risk-paths\.txt|scripts/)
