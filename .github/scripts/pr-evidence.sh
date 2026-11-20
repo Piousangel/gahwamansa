@@ -3,27 +3,32 @@
 #   pr-evidence.sh                    # CI: BASE_SHA·HEAD_SHA·PR_BODY·GITHUB_STEP_SUMMARY 를 env 로
 #   pr-evidence.sh --count-evidence   # 표준 입력의 본문에서 증거 줄 수만(테스트용)
 #   pr-evidence.sh --risk-files       # 표준 입력의 파일 목록 중 위험 영역(코드 파일만)
-#   pr-evidence.sh --test-files       # 표준 입력의 파일 목록 중 검사 파일(app/__tests__·app/e2e·scripts/audit)
+#   pr-evidence.sh --test-files       # 표준 입력의 파일 목록 중 검사 파일(app/__tests__·app/e2e·scripts/audit·supabase/tests·app/__integration__·*.test.ts(x)·*.test.sh)
 #   pr-evidence.sh --has-fail-check   # 표준 입력의 본문 '## 증거' 절에 '실패 확인 … → …' 줄이 있으면 1, 없으면 0
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RISK_FILE="${RISK_FILE:-$HERE/../risk-paths.txt}"
 
+# '## 증거' 절만 꺼낸다. 주석(<!-- -->)을 먼저 지우고, ``` 코드 블록 안의 '## ' 는 절 끝으로 보지 않는다(#210 리뷰 L)
+evidence_section() {
+  tr -d '\r' | perl -0777 -pe 's/<!--.*?-->//gs' |
+    awk '/^```/{if(f)print; c=!c; next} !c && /^## 증거/{f=1;next} !c && /^## /{f=0} f'
+}
 # 본문의 '## 증거' 절에서 실제 내용 줄 수. 주석(<!-- -->, 여러 줄 포함)을 **먼저** 지우고 절을 자른다(리뷰 H). 템플릿의 빈 '- 실패 확인:' 줄은 내용으로 치지 않는다
 count_evidence() {
-  tr -d '\r' | perl -0777 -pe 's/<!--.*?-->//gs' |
-    awk '/^## 증거/{f=1;next} /^## /{f=0} f' |
+  evidence_section |
     grep -v -E '^[[:space:]]*-?[[:space:]]*실패 확인:?[[:space:]]*$' |
     grep -c -v -E '^[[:space:]]*$' || true
 }
 # '## 증거' 절에 '실패 확인' 줄(형식: 실패 확인: 일부러 깨뜨린 변경 → 실패 출력)이 있는가. 헛통과 테스트 방지(DECISIONS 11-20, #163·#205)
+# '실패 확인' 뒤가 '안 함·생략·없음' 이면 인정하지 않는다(#210 리뷰 L)
 has_fail_check() {
-  tr -d '\r' | perl -0777 -pe 's/<!--.*?-->//gs' |
-    awk '/^## 증거/{f=1;next} /^## /{f=0} f' |
-    grep -c -E '실패 확인.*(→|->)' || true
+  evidence_section |
+    grep -E '실패 확인.*(→|->)' |
+    grep -c -v -E '실패 확인[[:space:]]*[:：]?[[:space:]]*(안[[:space:]]*함|생략|없음)' || true
 }
-# 검사를 더하거나 바꾼 파일(테스트·e2e 흐름·감사 스크립트). 문서(.md)는 뺀다
-test_files() { grep -E '^app/__tests__/|^app/e2e/|(^|/)scripts/audit/' | grep -v -E '\.md$' || true; }
+# 검사를 더하거나 바꾼 파일. 문서(.md)는 뺀다(#210 리뷰 M: 서버 테스트·통합 테스트·어디 있든 *.test.ts(x)·*.test.sh 포함)
+test_files() { grep -E '^app/__tests__/|^app/e2e/|(^|/)scripts/audit/|^supabase/tests/|^app/__integration__/|\.test\.(tsx?|sh)$' | grep -v -E '\.md$' || true; }
 # 문서(docs/·*.md)를 뺀 코드 파일
 code_files() { grep -v -E '^docs/|\.md$' || true; }
 risk_patterns() { grep -v -E '^[[:space:]]*(#|$)' "$RISK_FILE"; }
@@ -38,12 +43,14 @@ case "${1:-}" in
 esac
 
 files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+# 지운 파일은 검사 파일 수에서 뺀다(#210 리뷰 L): 테스트를 지우기만 한 PR 은 '실패 확인' 대상이 아니다
+kept="$(git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA")"
 code=$(printf '%s\n' "$files" | code_files | grep -c . || true)
 risky="$(printf '%s\n' "$files" | risk_files)"
 risk=$(printf '%s\n' "$risky" | grep -c . || true)
 has_heading=$(printf '%s\n' "${PR_BODY:-}" | tr -d '\r' | grep -c -E '^## 증거' || true)
 evidence=$(printf '%s\n' "${PR_BODY:-}" | count_evidence)
-tests=$(printf '%s\n' "$files" | test_files | grep -c . || true)
+tests=$(printf '%s\n' "$kept" | test_files | grep -c . || true)
 failcheck=$(printf '%s\n' "${PR_BODY:-}" | has_fail_check)
 {
   echo "### PR 가드"
@@ -74,7 +81,7 @@ if [ "$code" -gt 0 ] && [ "$evidence" -eq 0 ]; then
   echo "::warning title=증거 칸::PR 본문 '## 증거' 칸이 없거나 비어 있어요(캡처·녹화, 재현 → 수정 → 같은 재현 통과)"
 fi
 if [ "$tests" -gt 0 ] && [ "$failcheck" -eq 0 ]; then
-  echo "::warning title=실패 확인::검사 파일(app/__tests__·app/e2e·scripts/audit)을 바꾼 PR 은 '## 증거' 에 '실패 확인: 일부러 깨뜨린 변경 → 실패 출력' 줄이 필요해요(헛통과 방지)"
+  echo "::warning title=실패 확인::검사 파일(app/__tests__·app/e2e·scripts/audit·supabase/tests·app/__integration__·*.test.*)을 바꾼 PR 은 '## 증거' 에 '실패 확인: 일부러 깨뜨린 변경 → 실패 출력' 줄이 필요해요(헛통과 방지)"
 fi
 if [ "$risk" -gt 0 ]; then
   echo "::notice title=리뷰 2명::위험 영역 코드 파일 ${risk}개 — 리뷰 2명 필요"

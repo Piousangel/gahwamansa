@@ -36,6 +36,20 @@ check "화살표(→·->) 없이 '실패 확인' 만 쓰면 0" 0 "$(printf '## �
 check "'## 증거' 밖(검증 절)의 실패 확인은 세지 않음" 0 "$(printf '## 증거\n- 캡처 a.png\n## 검증\n- 실패 확인: a -> b\n' | bash "$S" --has-fail-check)"
 check "ASCII 화살표 -> 도 인정" 1 "$(printf '## 증거\n실패 확인: x -> y 실패\n' | bash "$S" --has-fail-check)"
 
+# #210 리뷰 M: 서버 테스트·통합 테스트·같은 폴더의 *.test.* 도 검사 파일
+check "supabase/tests 는 검사 파일" "supabase/tests/cheers.test.sql" "$(printf 'supabase/tests/cheers.test.sql\n' | bash "$S" --test-files)"
+check "app/__integration__ 는 검사 파일" "app/__integration__/childFlow.test.ts" "$(printf 'app/__integration__/childFlow.test.ts\n' | bash "$S" --test-files)"
+check "다른 폴더의 *.test.tsx 도 검사 파일" "app/src/ui/foo.test.tsx" "$(printf 'app/src/ui/foo.test.tsx\n' | bash "$S" --test-files)"
+check "*.test.sh 도 검사 파일" ".github/scripts/pr-evidence.test.sh" "$(printf '.github/scripts/pr-evidence.test.sh\n' | bash "$S" --test-files)"
+check "검사 아닌 코드(*.ts)는 아님" "" "$(printf 'app/src/ui/foo.ts\n' | bash "$S" --test-files)"
+# #210 리뷰 L: '안 함·생략·없음' 은 인정하지 않음
+check "'실패 확인: 안 함 → 시간 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: 안 함 → 시간 없음\n' | bash "$S" --has-fail-check)"
+check "'실패 확인: 생략 -> 문서' 는 0" 0 "$(printf '## 증거\n- 실패 확인: 생략 -> 문서\n' | bash "$S" --has-fail-check)"
+check "'실패 확인 없음 →' 은 0" 0 "$(printf '## 증거\n실패 확인 없음 → x\n' | bash "$S" --has-fail-check)"
+# #210 리뷰 L: 코드 블록 안의 '## ' 는 절 끝이 아님
+check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b 실패\n## 검증\nx\n' | bash "$S" --has-fail-check)"
+check "코드 블록 밖 '## 검증' 뒤는 절 밖" 0 "$(printf '## 증거\n- 캡처\n## 검증\n- 실패 확인: a → b\n' | bash "$S" --has-fail-check)"
+
 # 끝에서 끝: 검사 파일을 바꾼 PR 에 실패 확인이 없으면 경고가 실제로 뜬다(일부러 넣은 위반)
 tmp="$(mktemp -d)"
 (
@@ -48,6 +62,16 @@ out_no="$(cd "$tmp" && BASE_SHA=$base HEAD_SHA=$head PR_BODY=$'## 증거\n- jest
 out_ok="$(cd "$tmp" && BASE_SHA=$base HEAD_SHA=$head PR_BODY=$'## 증거\n- jest 통과\n- 실패 확인: 기대값 1 → 2 → Expected 1 Received 2' GITHUB_STEP_SUMMARY=/dev/null RISK_FILE="$HERE/../risk-paths.txt" bash "$S")"
 check "끝에서 끝: 실패 확인 없음 → ::warning 실패 확인" 1 "$(printf '%s\n' "$out_no" | grep -c 'title=실패 확인' || true)"
 check "끝에서 끝: 실패 확인 있음 → 경고 없음" 0 "$(printf '%s\n' "$out_ok" | grep -c 'title=실패 확인' || true)"
+# 새 경로(supabase/tests)만 바꾼 PR 도 경고, 테스트를 지우기만 한 PR 은 경고 없음(#210)
+(
+  cd "$tmp" && mkdir -p supabase/tests && echo s > supabase/tests/x.test.sql && git add . && git commit -qm sql &&
+    echo t >> supabase/tests/x.test.sql && git commit -qam sql2 && git rm -q app/__tests__/a.test.ts && git commit -qm del
+) >/dev/null 2>&1
+b2="$(git -C "$tmp" rev-parse HEAD~2)"; h2="$(git -C "$tmp" rev-parse HEAD~1)"; h3="$(git -C "$tmp" rev-parse HEAD)"
+out_sql="$(cd "$tmp" && BASE_SHA=$b2 HEAD_SHA=$h2 PR_BODY=$'## 증거\n- psql 통과' GITHUB_STEP_SUMMARY=/dev/null RISK_FILE="$HERE/../risk-paths.txt" bash "$S")"
+out_del="$(cd "$tmp" && BASE_SHA=$h2 HEAD_SHA=$h3 PR_BODY=$'## 증거\n- 안 쓰는 테스트 삭제' GITHUB_STEP_SUMMARY=/dev/null RISK_FILE="$HERE/../risk-paths.txt" bash "$S")"
+check "끝에서 끝: supabase/tests 만 바꿔도 실패 확인 없으면 경고" 1 "$(printf '%s\n' "$out_sql" | grep -c 'title=실패 확인' || true)"
+check "끝에서 끝: 테스트를 지우기만 하면 경고 없음" 0 "$(printf '%s\n' "$out_del" | grep -c 'title=실패 확인' || true)"
 rm -rf "$tmp"
 
 exit $fail
