@@ -70,6 +70,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const [cardBox, setCardBox] = useState<{y: number; h: number} | null>(null); // 자연 위치(넣은 여백 뺀 값)
   const [photoOffFor, setPhotoOffFor] = useState<string | null>(null);
   const [readH, setReadH] = useState<number | undefined>(undefined);
+  const [doneBox, setDoneBox] = useState<{y: number; h: number} | null>(null);
+  const [romanH, setRomanH] = useState<number | undefined>(undefined);
   const cardPushRef = useRef<number | null>(null);
   // 화면 읽기 켜짐: 자판 입력이 어려운 사용자의 대체 경로라 '넘어갈게요'를 처음부터 또렷하게(명세 P6 9번)
   const reader = useScreenReader();
@@ -226,6 +228,9 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   // 리드 결정(b, 11-20, 시안 변경): 200% 자판 열림에서는 Dock 을 풀고 '다 썼어요'를 입력 칸 바로 아래 본문에. 보이는 창(약 75dp)이 모자라
   //   카드가 '더 있음' 띠에 가렸다(에뮬레이터 실측). 자판이 닫히면 Dock 으로 돌아온다
   const releaseDock = open && large && !error;
+  // #192 리뷰 L1: 200% 자판 열림에서 '다 썼어요' 아래 영문 안내 줄이 자판 경계(첫 화면 끝)에 걸치면 통째로 아래로(R-15, foldPush)
+  const romanBase = doneBox ? doneBox.y + doneBox.h + BODY_GAP : 0;
+  const romanPush = releaseDock && roman && doneBox ? foldPush(viewport, romanBase, [romanH], 0, true) : null;
   const asideSkip = open && !large ? <Button kind="text" size="inline" label={k.skip_short} accessibilityHint={k.skip} disabled={busy} onPress={skip} testID="kb-skip-top" /> : undefined;
 
   return (
@@ -306,12 +311,20 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
         />
       </View>
       {releaseDock ? (
-        <View testID="kb-done-inline">
+        <View
+          testID="kb-done-inline"
+          onLayout={e => {
+            const {y, height} = e.nativeEvent.layout;
+            const next = {y: Math.round(y), h: Math.ceil(height)};
+            setDoneBox(b => (b && b.y === next.y && b.h === next.h ? b : next));
+          }}>
           <Button label={copy.course.next.hangul} buttonRef={doneRef} disabled={!hasText} disabledReason={k.need_one} loading={busy} onPress={pressDone} />
         </View>
       ) : null}
       {roman ? (
-        <Text testID="kb-roman" role="sub">{k.roman_hint}</Text>
+        <View testID="kb-roman-wrap" onLayout={e => setRomanH(Math.ceil(e.nativeEvent.layout.height))} style={romanPush ? {marginTop: romanPush.space} : undefined}>
+          <Text testID="kb-roman" role="sub">{k.roman_hint}</Text>
+        </View>
       ) : null}
       {/* 200% 자판 열림: 넘어가기는 카드 아래 본문(스크롤로 닿음, 시안) */}
       {open && large ? skipNode : null}

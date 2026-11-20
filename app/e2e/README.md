@@ -64,7 +64,7 @@ REDUCE_MOTION=1 app/e2e/run.sh audit/audit-points.yaml   # 애니메이션 0(동
 
 ## 4. 요소 찾기 규칙(testID)
 1. **먼저 사람에게 보이는 글자·화면 읽기 라벨**로 찾는다(TalkBack 이 읽는 것 = 사용자가 보는 것, 라벨 회귀도 함께 잡힘). 정규식이므로 `?`·`.` 등은 `\?` 로. 제목에는 줄바꿈·묶음 문자(NBSP·U+2060)가 섞이므로 띄어쓰기 자리는 `.*` 로(예 `'가족에게 받은.*'`).
-   - 막 켠 에뮬레이터의 시스템 ANR 창은 `common/dismiss-system-dialogs.yaml` 로 닫는다(launchApp 바로 뒤).
+   - 막 켠 에뮬레이터의 시스템 ANR 창("Process system …", "System UI isn't responding")은 `common/dismiss-system-dialogs.yaml` 로 닫는다(launchApp 바로 뒤). 우리 앱 ANR 창은 닫지 않는다.
 2. 글자가 같은 요소가 여럿이거나, 글자가 없는 요소(아이콘·사진·칸), 문구가 자주 바뀌는 곳만 `testID` 를 단다.
 3. 이름: `<화면>-<요소>` 케밥 표기(예 `connect-keypad`, `course-step-photo`). 공용 컴포넌트는 기본 testID 를 갖고 호출부가 덮을 수 있게(`Banner`·`BottomSheet`·`Photo` 방식).
 4. testID 는 화면 읽기에 노출되지 않는다(Android `resource-id`) — 라벨 대신 쓰지 않는다.

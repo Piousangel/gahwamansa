@@ -44,6 +44,46 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
+test('N-01: 계정 지우기 뒤로는 ds BackLink(목적지 \'설정으로\', 알약) — 누르면 설정으로', async () => {
+  await openParentDelete(createFakeApi({consented: true}));
+  const back = screen.getByTestId('back-link');
+  expect(back.props.accessibilityLabel).toBe('설정으로');
+  await act(async () => {
+    fireEvent.press(back);
+  });
+  await waitFor(() => screen.getByTestId('settings-row-delete'));
+});
+
+test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드웨어 뒤로가 모두 화면을 떠나지 않는다(떠나도 요청은 돌아 계정이 지워짐)', async () => {
+  const {BackHandler} = require('react-native');
+  const handlers: (() => boolean)[] = [];
+  const add = BackHandler.addEventListener;
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation(((type: string, h: () => boolean) => {
+    handlers.push(h);
+    return add.call(BackHandler, type, h);
+  }) as never);
+  const api = createFakeApi({deleteScope: 'child'});
+  const del = jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {})); // 끝나지 않는 지우기
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+  await press('계정 지우기');
+  await press('계정 지우기');
+  await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+  // 1) 뒤로 링크: 눌러도 그대로
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('back-link'));
+  });
+  expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+  // 2) 안 지울래요: 비활성
+  expect(screen.getByRole('button', {name: '안 지울래요'})).toBeDisabled();
+  // 3) 하드웨어 뒤로: 이 화면이 삼킨다(true)
+  let consumed = false;
+  await act(async () => {
+    consumed = handlers[handlers.length - 1]() === true; // 가장 나중에 건 것 = 지우기 화면(포커스)
+  });
+  expect(consumed).toBe(true);
+  expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+});
+
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
@@ -100,8 +140,9 @@ test('자녀: 항상 가장 강한 경고, 확인 입력 후에만 삭제, 결�
 
 test('자녀: 내 계정만 삭제된 경우 결과 문구', async () => {
   const api = createFakeApi({deleteScope: 'child'});
-  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
   expect(screen.queryByText('부모님의 기록도 함께 지워져요')).toBeNull();
+  expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy(); // #197: 본문에서 뺀 경고는 빨간 머리글(warn_label)이 한 번 맡는다
   await press('계정 지우기');
   await press('계정 지우기');
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
@@ -112,6 +153,7 @@ test('0049: 가족과 연결하기 전 자녀 계정(scope none)은 호칭 기�
   await openChildDelete(api, '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보, 약관 동의 기록, 알림 받기 정보가 지워져요');
   expect(screen.queryByText(/기록은 남아요/)).toBeNull(); // 틀린 안내 없음
   expect(screen.queryByText(/함께 지워져요/)).toBeNull();
+  expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy(); // #197: 가족 연결 전에도 빨간 머리글은 그려진다
   await press('계정 지우기');
   await press('계정 지우기'); // 마지막 자녀용 '지우기' 입력 없이
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
@@ -127,7 +169,7 @@ test('PR1 리뷰 M2: scope none 이면 호칭(가족 요약)을 묻지 않는다
   screen.unmount();
   const fam = createFakeApi({deleteScope: 'child'});
   const sumFam = jest.spyOn(fam, 'fetchChildSummary');
-  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
   expect(sumFam).toHaveBeenCalled();
 });
 
@@ -283,7 +325,7 @@ describe('#146 리뷰 H1: no_profile 은 지우지 못한 것(로그인 정보 �
     const {ServerError} = require('../src/features/types');
     const api = createFakeApi({deleteScope: 'child'});
     jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
-    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
     await press('계정 지우기');
     await press('계정 지우기');
     await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));

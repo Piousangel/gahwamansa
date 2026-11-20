@@ -62,6 +62,25 @@ test('리드 결정(b): 200% 자판 열림이면 Dock 을 풀고 다 썼어요�
   expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '다 썼어요'})).toBeTruthy();
 });
 
+test('#192 리뷰 L1: 200% 자판 열림에서 다 썼어요 아래 영문 안내가 첫 화면 끝에 걸치면 통째로 아래로', async () => {
+  mockFontScale = 2;
+  const input = await toP6();
+  await openKb(input);
+  await act(async () => {
+    fireEvent.changeText(input, 'a'); // 로마자 → 영문 안내
+  });
+  const wrap = screen.getByTestId('kb-roman-wrap');
+  await act(async () => {
+    // 창 끝 300, '다 썼어요' 묶음은 200~272, 안내(2줄 60)는 288~348 → 걸침
+    fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300 + 24}}});
+    fireEvent(screen.getByTestId('screen-body-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300 + 24}}});
+    fireEvent(screen.getByTestId('kb-done-inline'), 'layout', {nativeEvent: {layout: {x: 0, y: 200, width: 320, height: 72}}});
+    fireEvent(wrap, 'layout', {nativeEvent: {layout: {x: 0, y: 288, width: 320, height: 60}}});
+  });
+  const mt = StyleSheet.flatten(screen.getByTestId('kb-roman-wrap').props.style)?.marginTop ?? 0;
+  expect(mt).toBeGreaterThan(0);
+});
+
 test('100% 자판 열림은 Dock 그대로(결정 b 는 200%에서만)', async () => {
   const input = await toP6();
   await openKb(input);

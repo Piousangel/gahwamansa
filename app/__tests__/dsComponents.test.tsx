@@ -99,6 +99,57 @@ describe('Button', () => {
     expect(onPress).not.toHaveBeenCalled();
     expect(screen.getByText('잠시만요')).toBeTruthy();
   });
+
+  // 계약(#163·#175 에서 더한 prop — 화면 테스트 c0Layout·P2 가 아니라 ds 에서 지킨다)
+  test('accessibilityLabel: 있으면 읽기 이름, 없으면 label, 로딩 중엔 loadingLabel 이 앞선다', () => {
+    const {rerender} = render(<Button label="아니요 · 처음으로" accessibilityLabel="아니요. 처음으로" onPress={noop} testID="p" />);
+    expect(screen.getByTestId('p').props.accessibilityLabel).toBe('아니요. 처음으로');
+    expect(screen.getByText('아니요 · 처음으로')).toBeTruthy(); // 보이는 글은 label 그대로
+    rerender(<Button label="아니요 · 처음으로" accessibilityLabel="아니요. 처음으로" loading loadingLabel="잠시만요" onPress={noop} testID="p" />);
+    expect(screen.getByTestId('p').props.accessibilityLabel).toBe('잠시만요');
+    rerender(<Button label="다 썼어요" onPress={noop} testID="p" />);
+    expect(screen.getByTestId('p').props.accessibilityLabel).toBe('다 썼어요');
+  });
+  test.each(['text', 'secondary'] as const)("align='start'(%s): 왼쪽 정렬·좌우 여백 0, 기본은 가운데", kind => {
+    render(
+      <>
+        <Button kind={kind} label="왼쪽" align="start" onPress={noop} testID="st" />
+        <Button kind={kind} label="가운데" onPress={noop} testID="ce" />
+      </>,
+    );
+    expect(pressStyle('st')).toMatchObject({alignItems: 'flex-start', paddingHorizontal: 0});
+    expect(flat(screen.getByText('왼쪽').props.style).textAlign).toBe('left');
+    expect(pressStyle('ce').alignItems).toBe('center');
+    expect(pressStyle('ce').paddingHorizontal).not.toBe(0);
+    expect(flat(screen.getByText('가운데').props.style).textAlign).toBe('center');
+    if (kind === 'text') {
+      expect(flat(screen.getByText('왼쪽').props.style).textDecorationLine).toBe('underline'); // R-08: 왼쪽 정렬이어도 파랑 글자 링크는 밑줄
+    }
+  });
+  test.each(['elder', 'child'] as const)('%s: even — 보조·위험도 주 버튼과 같은 최소 높이·글자 크기(글자 역할 buttonPrimary), 색·모양만 다르다. text 는 그대로', a => {
+    const wrap = (ui: React.ReactElement) => (a === 'child' ? child(ui) : ui);
+    render(
+      wrap(
+        <>
+          <Button label="좋아요" onPress={noop} even testID="p" />
+          <Button kind="secondary" label="싫어요" onPress={noop} even testID="s" />
+          <Button kind="danger" label="지울래요" onPress={noop} even testID="d" />
+          <Button kind="text" label="나중에" onPress={noop} even testID="tx" />
+          <Button kind="secondary" label="보통 보조" onPress={noop} testID="s0" />
+        </>,
+      ),
+    );
+    const b = t.type.button[a] as unknown as {primary: Spec; secondary: Spec};
+    for (const [id, text] of [['s', '싫어요'], ['d', '지울래요']] as const) {
+      expect([id, pressStyle(id).minHeight]).toEqual([id, pressStyle('p').minHeight]);
+      expect([id, flat(screen.getByText(text).props.style).fontSize]).toEqual([id, b.primary.size]);
+    }
+    expect(flat(screen.getByText('싫어요').props.style).color).toBe(c.action); // 색은 보조 그대로
+    expect(pressStyle('s')).toMatchObject({borderColor: c.action, backgroundColor: c.card});
+    expect(flat(screen.getByText('보통 보조').props.style).fontSize).toBe(b.secondary.size); // even 없으면 보조 크기
+    expect(pressStyle('tx').minHeight).toBe(a === 'elder' ? t.touch.elder.link : t.touch.child.min); // text 는 even 이어도 링크
+    expect(flat(screen.getByText('나중에').props.style).textDecorationLine).toBe('underline');
+  });
 });
 
 describe('SocialButton(브랜드 예외)', () => {
@@ -136,6 +187,38 @@ describe('BackLink', () => {
     render(child(<BackLink to="설정으로" onPress={noop} context="3단계 중 2단계" />));
     expect(pressStyle('back-link').minHeight).toBe(56);
     expect(screen.getByTestId('back-link').props.accessibilityHint).toBe('3단계 중 2단계');
+  });
+  // #198 L: P9·C8 지우는 중에 뒤로를 막는다
+  test.each(['elder', 'child'] as const)('%s disabled: 눌러도 아무 일 없음, 읽기 사용 안 함, 비활성 면·line 테두리, 글자·화살표 disabledInk(파랑 거둠), 크기 그대로', a => {
+    const onPress = jest.fn();
+    const wrap = (ui: React.ReactElement) => (a === 'child' ? child(ui) : ui);
+    render(wrap(<BackLink to="설정으로" onPress={onPress} disabled />));
+    const el = screen.getByTestId('back-link');
+    fireEvent.press(el);
+    expect(onPress).not.toHaveBeenCalled();
+    expect(el.props.accessibilityState).toMatchObject({disabled: true});
+    expect(el.props.accessibilityRole).toBe('link');
+    expect(el.props.accessibilityLabel).toBe('설정으로');
+    expect(pressStyle('back-link')).toMatchObject({backgroundColor: c.disabledBg, borderColor: c.line, minHeight: t.backLink.height[a]});
+    expect(flat(screen.getByText('설정으로').props.style).color).toBe(c.disabledInk);
+    const arrow = screen.getByTestId('back-link-arrow', {includeHiddenElements: true});
+    const strokes: string[] = [];
+    const walk = (n: {props: Record<string, unknown>; children?: unknown[] | null}) => {
+      if (typeof n.props.stroke === 'string') {
+        strokes.push(n.props.stroke);
+      }
+      (n.children ?? []).forEach(k => k && typeof k === 'object' && walk(k as never));
+    };
+    walk(arrow as never);
+    expect(strokes.length).toBeGreaterThan(0);
+    expect(strokes.every(s => s === c.disabledInk)).toBe(true);
+  });
+  test('disabled 없음(기본): 상태 disabled false, 누르면 부른다', () => {
+    const onPress = jest.fn();
+    render(<BackLink to="설정으로" onPress={onPress} />);
+    expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false});
+    fireEvent.press(screen.getByTestId('back-link'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
 
