@@ -7,7 +7,7 @@ import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../.
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
-import {isServerError, OfflineError, type DeleteScope} from '../types';
+import {isServerError, TimeoutError, type DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
@@ -66,6 +66,7 @@ export function DeleteAccountScreen({role}: Props) {
   const dc = copy.delete.child;
   const so = copy.delete.signed_out;
   const sop = copy.delete.signed_out_parent;
+  const tm = copy.delete.timeout;
   const dl = copy.delete.deleting; // 지우는 동안 위험 버튼 글자(진행 표시, #206 후속)
 
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
@@ -122,6 +123,8 @@ export function DeleteAccountScreen({role}: Props) {
   }, [failed]);
   // 앞선 시도가 응답 없이 실패했다(서버에서는 지워졌을 수 있음) — 그 뒤의 scope none 은 '이미 지워진 뒤'일 수 있다
   const unsure = useRef(false);
+  const succeeded = useRef<DeleteScope | null>(null); // 앞선 지우기 요청이 늦게라도 성공한 결과(있으면 지운 것)
+  const [timedOutUi, setTimedOutUi] = useState(false);
   const attempts = useRef(0); // 지우기 시도 번호(늦게 온 성공이 지금 시도 것인지)
   const timedOut = useRef(0); // 시간 초과로 끝낸 시도 번호
   const alive = useRef(true);
@@ -131,7 +134,7 @@ export function DeleteAccountScreen({role}: Props) {
     },
     [],
   );
-  const done = (s: DeleteScope, forceUnsure = false) => {
+  const done = (s: DeleteScope) => {
     clear();
     prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
     // 법률 확인(11-20): 어르신 scope none = 다시 설치한 새 익명 계정(프로필 없음)만 지워졌다 — 옛 기록은 남으므로 '모두 지웠어요'가 아니라 사실 + 문의.
@@ -141,7 +144,7 @@ export function DeleteAccountScreen({role}: Props) {
     const p = previewScope.current;
     const had = p === 'parent' || p === 'family';
     const noneKind: 'none' | 'unsure' | undefined =
-      child || s !== 'none' ? undefined : forceUnsure ? 'unsure' : !unsure.current || p === 'none' ? 'none' : p === null ? 'unsure' : had ? undefined : 'unsure';
+      child || s !== 'none' ? undefined : !unsure.current || p === 'none' ? 'none' : p === null ? 'unsure' : had ? undefined : 'unsure';
     navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title, noneKind}}]}));
   };
 
@@ -151,6 +154,7 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
+    setTimedOutUi(false);
     // #208 리뷰 L: 버튼 글자가 바뀐 것을 화면 읽기에도 한 번. 자녀만 — 어르신은 확인 상자가 닫히며 초점이 이 버튼으로 돌아와 같은 말을 이미 듣는다
     if (child) {
       announce(dl);
@@ -180,6 +184,7 @@ export function DeleteAccountScreen({role}: Props) {
       // #208 재확인 H ③: 시간 초과 뒤 원래 요청이 늦게 성공하면 버리지 않는다 — 화면이 살아 있고 그 뒤 새 시도가 없으면 결과 화면으로
       req.then(
         late => {
+          succeeded.current = late.scope; // 시도 번호와 상관없이 실제로 지운 결과를 기록(#208 재확인 a097c1b M)
           if (alive.current && attempts.current === attempt && timedOut.current === attempt) {
             done(late.scope);
           }
@@ -188,14 +193,16 @@ export function DeleteAccountScreen({role}: Props) {
       );
       const r = await withTimeout(req, DELETE_TIMEOUT_MS, () => {
         timedOut.current = attempt;
-        return new OfflineError('delete_my_account 시간 초과');
+        return new TimeoutError('delete_my_account 시간 초과');
       });
       done(r.scope);
     } catch (e) {
       // #208 재확인 H ②: 앞선 시도가 끊긴 뒤(unsure)의 no_profile 은 '그 시도가 서버에서 지우고 이 기기 로그아웃까지 마친 뒤'일 수 있다.
       //   '지워지지 않았어요'라고 단정하지 않는다 — 어르신은 done_unsure(지웠어요 + 남았으면 문의), 자녀는 지운 뒤 화면
-      if (isServerError(e, 'no_profile') && unsure.current) {
-        done('none', true);
+      // #208 재확인 M(두 리뷰): 끊긴 뒤 no_profile 은 '앞선 요청이 이 기기에서 실제로 성공해 로그아웃까지 돌았을 때'만 지운 것으로 본다(succeeded 기록).
+      //   기록이 없으면(오프라인 실패 뒤 세션만 풀림 등) 지금까지처럼 로그인 풀림 안내(사실) — '지우지 않았는데 지웠다'를 막는다
+      if (isServerError(e, 'no_profile') && succeeded.current) {
+        done(succeeded.current);
         return;
       }
       if (isServerError(e, 'no_profile')) {
@@ -204,7 +211,10 @@ export function DeleteAccountScreen({role}: Props) {
         return;
       }
       unsure.current = true;
-      setFailed(errorMessage(e));
+      // 시간 제한에 걸린 끊김(라이터 #208 delete.timeout): '끊겼어요'·'지워지지 않았어요' 대신 '지워졌는지 알 수 없어요' + 다시 하기
+      const late = e instanceof TimeoutError;
+      setTimedOutUi(late);
+      setFailed(late ? {title: tm.title, body: tm.body, button: tm.button} : errorMessage(e));
     } finally {
       endBusy();
     }
@@ -265,9 +275,11 @@ export function DeleteAccountScreen({role}: Props) {
         // 실패 상자: 색만이 아니라 굵은 외곽선 + 머리글 문구로 구분(명세 §8 danger). 나타날 때 한 번 읽는다
         <View style={styles.box} accessibilityLiveRegion="polite" testID="delete-fail">
           <Text role="heading" tone="danger">
-            {parentSignedOut ? sop.title : signedOut ? so.title : child ? dc.fail : dp.fail_title}
+            {timedOutUi ? tm.title : parentSignedOut ? sop.title : signedOut ? so.title : child ? dc.fail : dp.fail_title}
           </Text>
-          {parentSignedOut ? (
+          {timedOutUi ? (
+            <Text role="body">{tm.body}</Text>
+          ) : parentSignedOut ? (
             <Text role="body">{sop.body}</Text>
           ) : signedOut ? (
             <Text role="body">{so.body}</Text>

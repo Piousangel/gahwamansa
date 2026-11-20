@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {OfflineError, ServerError} from './types';
+import {OfflineError, ServerError, TimeoutError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
 import {settleWithin} from '../lib/timeout';
@@ -163,12 +163,12 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       try {
         res = await (typeof q.abortSignal === 'function' ? q.abortSignal(ctrl.signal) : q);
       } catch (e) {
-        throw ctrl.signal.aborted ? new OfflineError('delete_my_account 시간 초과(요청 끊음)') : e;
+        throw ctrl.signal.aborted ? new TimeoutError('delete_my_account 시간 초과(요청 끊음)') : e;
       } finally {
         clearTimeout(timer);
       }
       if (ctrl.signal.aborted) {
-        throw new OfflineError('delete_my_account 시간 초과(요청 끊음)');
+        throw new TimeoutError('delete_my_account 시간 초과(요청 끊음)');
       }
       const {data, error} = res as {data: {scope: DeleteScope}; error: never};
       if (error) fail('delete_my_account', error);
