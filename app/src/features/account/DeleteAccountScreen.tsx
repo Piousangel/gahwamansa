@@ -57,6 +57,7 @@ export function DeleteAccountScreen({role}: Props) {
   const dc = copy.delete.child;
   const so = copy.delete.signed_out;
   const sop = copy.delete.signed_out_parent;
+  const dl = copy.delete.deleting; // 지우는 동안 위험 버튼 글자(진행 표시, #206 후속)
 
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
   const [scope, setScope] = useState<DeleteScope | null>(null);
@@ -178,12 +179,12 @@ export function DeleteAccountScreen({role}: Props) {
     : signedOut && failed
     ? {label: failed.button, onPress: relogin}
     : failed
-    ? {label: failed.button, onPress: run, loading: busy, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
+    ? {label: failed.button, onPress: run, loading: busy, loadingLabel: dl, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
     : !child
-      ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, buttonRef: yesRef}
+      ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, loadingLabel: dl, buttonRef: yesRef}
       : stage === 1
         ? {label: dc.danger, onPress: () => setStage(2), disabled: scope === null}
-        : {label: dc.danger, onPress: run, disabled: !confirmEnabled, loading: busy};
+        : {label: dc.danger, onPress: run, disabled: !confirmEnabled, loading: busy, loadingLabel: dl};
 
   const heading = !child
     ? dp.title
@@ -200,7 +201,8 @@ export function DeleteAccountScreen({role}: Props) {
       variant="form"
       scrollRef={scrollRef}
       // 뒤로 = ds BackLink(R-14 알약, 목적지 문구 '설정으로' 등 — #194 캡처 뒤 이행, N-01). 돌아갈 화면이 없으면 숨김(옛 BackBar 와 같은 규칙)
-      back={backTo ? {to: backTo, onPress: leave} : undefined}
+      // #206: 지우는 중에는 '사용 안 함'(비활성 모양·읽기). 왜 못 누르는지는 위험 버튼의 진행 글자 '지우고 있어요'가 말한다
+      back={backTo ? {to: backTo, onPress: leave, disabled: busy} : undefined}
       header={heading ? <Heading level={1}>{heading}</Heading> : undefined}
       dock={{
         primary: {label: child ? dc.cancel : dp.cancel, onPress: leave, disabled: busy},

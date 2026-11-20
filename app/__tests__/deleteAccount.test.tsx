@@ -68,6 +68,9 @@ test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드
   await press('계정 지우기');
   await press('계정 지우기');
   await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+  // #206 후속: 뒤로 링크는 '사용 안 함'으로 읽히고(비활성 모양), 진행은 위험 버튼 글자 '지우고 있어요'가 보여 준다
+  expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: true});
+  expect(screen.getByText('지우고 있어요')).toBeTruthy();
   // 1) 뒤로 링크: 눌러도 그대로
   await act(async () => {
     fireEvent.press(screen.getByTestId('back-link'));
@@ -82,6 +85,17 @@ test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드
   });
   expect(consumed).toBe(true);
   expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+});
+
+test('#206 후속: 어르신도 지우는 중에는 뒤로 링크가 사용 안 함, 안 지울래요 비활성, 진행 글자 \'지우고 있어요\'', async () => {
+  const api = createFakeApi({consented: true});
+  jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
+  await openParentDelete(api);
+  expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false}); // 지우기 전에는 누를 수 있다
+  await confirmDeleteAll();
+  await waitFor(() => expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: true}));
+  expect(screen.getByRole('button', {name: '안 지울래요'})).toBeDisabled();
+  expect(screen.getByText('지우고 있어요')).toBeTruthy();
 });
 
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {
