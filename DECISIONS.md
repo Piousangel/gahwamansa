@@ -554,6 +554,11 @@
 - .claude/settings.json(커밋)에 permissions.deny: 비밀 파일 읽기(.env*·config.local.ts·keystore·google-services 등·~/.secrets), git 강제 push(--force-with-lease 포함), 운영(production) 빌드. 운영 DB push는 운영 프로젝트가 생길 때 ref 기준으로 추가. staging 반영은 기존대로 매번 사용자 승인
 - 리뷰 단계: 내부 문서 = 리드 확인만 / 일반 앱 코드 = 독립 리뷰 1 / 위험 영역(데이터 삭제·동의·푸시·결제·DB 마이그레이션) = 독립 리뷰 2. 앱 문구는 라이터 확인 유지
 
+## 2026-11-20 어르신 title 32/44 → 30/42 (리드 결정 (a), Noto 재렌더 #162)
+- 32는 Jua 시절 값. Noto Sans KR 700 32에서 P2·P8 제목이 본문 폭 312를 넘어 2줄(디자인 실측). 30이면 '고른 답을 가족과 나눠요' 296으로 한 줄
+- 전역 변경(모든 어르신 화면 제목) / 버린 안: P2·P8 전용 새 역할 — 역할 늘어나기(패널 5)
+- R-05: title 30/heading 26 = 1.15 < 1.2 → 보완 쌍에 추가(둘 다 700, 위치로 위계: 화면당 1개 H1·맨 위). heading 26 유지(24면 heading/bodyLg 1.09로 악화). 디자인(a7cfb55) 확인
+
 ## 2026-11-20 P6 자판으로 쓰기 v4(2기 레인)
 - 쓰는 중 음절 칸(맞은 칸 채움) 삭제, 본보기 낱말 한 줄(fieldInput 상한 1.5)을 입력 칸 바로 위에(시안 ds4b·r1/7 H). '마칠게요'는 1.5초 비활성 대신 보통 모양 + 누름 무시
 - DsScreen backAside(BackLink 줄 오른쪽 한 요소) 추가 — 자판 열림 100% '넘어갈게요'
