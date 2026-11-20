@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
-import {BackBar} from '../../app/BackBar';
+import {useBackDestination} from '../../app/BackBar';
 import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
@@ -26,6 +26,7 @@ type Props = {role: 'parent' | 'child'};
 // audience: 자녀는 자녀 스택 루트, 어르신은 기본(elder).
 export function DeleteAccountScreen({role}: Props) {
   const navigation = useNavigation();
+  const backTo = useBackDestination();
   const {api, clear} = useSession();
   const [stage, setStage] = useState<1 | 2>(1);
   const [typed, setTyped] = useState('');
@@ -180,12 +181,9 @@ export function DeleteAccountScreen({role}: Props) {
     <DsScreen
       variant="form"
       scrollRef={scrollRef}
-      header={
-        <>
-          <BackBar />
-          {heading ? <Heading level={1}>{heading}</Heading> : null}
-        </>
-      }
+      // 뒤로 = ds BackLink(R-14 알약, 목적지 문구 '설정으로' 등 — #194 캡처 뒤 이행, N-01). 돌아갈 화면이 없으면 숨김(옛 BackBar 와 같은 규칙)
+      back={backTo ? {to: backTo, onPress: () => navigation.goBack()} : undefined}
+      header={heading ? <Heading level={1}>{heading}</Heading> : undefined}
       dock={{
         primary: {label: child ? dc.cancel : dp.cancel, onPress: () => navigation.goBack()},
         secondary: danger

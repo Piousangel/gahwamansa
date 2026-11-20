@@ -44,6 +44,16 @@ test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 �
   await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
 });
 
+test('N-01: 계정 지우기 뒤로는 ds BackLink(목적지 \'설정으로\', 알약) — 누르면 설정으로', async () => {
+  await openParentDelete(createFakeApi({consented: true}));
+  const back = screen.getByTestId('back-link');
+  expect(back.props.accessibilityLabel).toBe('설정으로');
+  await act(async () => {
+    fireEvent.press(back);
+  });
+  await waitFor(() => screen.getByTestId('settings-row-delete'));
+});
+
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
