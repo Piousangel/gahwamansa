@@ -90,6 +90,27 @@ describe('R-04·R-07 집계와 Tag', () => {
   });
 
   // #204 재확인 M·L1·L2
+  test('R-04 역할 표지(#204 L1): 크기·줄 높이가 같은 두 역할(자녀 title 26/36·어르신 heading 26/36)도 표지로 따로 센다. 표지 없는 옛 글자는 값으로 되찾아 하나로 묶인다', () => {
+    expect([t.type.title.child.size, t.type.title.child.lineHeight]).toEqual([t.type.heading.elder.size, t.type.heading.elder.lineHeight]);
+    render(
+      <View>
+        <AudienceProvider value="child">
+          <DsText role="title">자녀 제목</DsText>
+        </AudienceProvider>
+        <Heading level={2}>어르신 섹션</Heading>
+      </View>,
+    );
+    expect(boldRoles(screen.root).sort()).toEqual(['heading', 'title']);
+    // 일부러 표지를 지운 같은 값 두 글자 → 한 이름으로 묶여 1(한계를 고정)
+    render(
+      <View>
+        <Text style={{fontSize: t.type.title.child.size, lineHeight: t.type.title.child.lineHeight, fontWeight: '700'}}>a</Text>
+        <Text style={{fontSize: t.type.heading.elder.size, lineHeight: t.type.heading.elder.lineHeight, fontWeight: '700'}}>b</Text>
+      </View>,
+    );
+    expect(boldRoleCount(screen.root)).toBe(1);
+  });
+
   test('R-04 역할 이름: 제목·주 버튼은 title·button.primary, Tag 는 빠진다', () => {
     render(
       <View>

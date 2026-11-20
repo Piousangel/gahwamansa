@@ -39,8 +39,8 @@ export const R04_EXEMPT = ['Tag'] as const;
 const weightNum = (w: unknown) => (w === 'bold' ? 700 : typeof w === 'string' || typeof w === 'number' ? Number(w) || 400 : 400);
 
 type Spec = {size: number; lineHeight: number};
-/** 글자 크기·줄 높이로 역할 이름을 되찾는다(tokensV4 type 표, 어르신·자녀·버튼 주/보조). 표에 없으면 'size/lineHeight'.
- *  한계: 렌더 트리에는 역할 이름이 없어 값으로 되찾는다 — 두 역할의 크기·줄 높이가 같으면 한 이름(앞 것)으로 묶인다(예: 자녀 title 26/36 = 어르신 heading 26/36, 어르신 body·sub 20/30). 수는 맞고 이름만 앞 것으로 나온다(#204 재확인 L1) */
+/** 역할 표지(dsRole — ds Text·Button·Tag 가 남김)가 없는 글자만 크기·줄 높이로 역할 이름을 되찾는다(tokensV4 type 표). 표에 없으면 'size/lineHeight'.
+ *  한계(표지 없는 옛 글자만): 같은 크기·줄 높이의 두 역할이 하나로 묶여 수가 적게 나올 수 있다(예: 자녀 title 26/36 = 어르신 heading 26/36, 어르신 body·sub 20/30)(#204 L1) */
 function roleName(size: number, lh: unknown): string {
   for (const [name, r] of Object.entries(t.type as unknown as Record<string, Record<string, unknown>>)) {
     for (const a of ['elder', 'child']) {
@@ -82,7 +82,8 @@ export function boldRoles(root: unknown, opts: {exemptTag?: boolean} = {}): stri
       usedTag.add(hp); // 이 Tag 의 면제는 한 번만
       return;
     }
-    names.add(roleName(s.fontSize, s.lineHeight));
+    const mark = n.props.dsRole;
+    names.add(typeof mark === 'string' ? (mark === 'buttonPrimary' ? 'button.primary' : mark === 'buttonSecondary' ? 'button.secondary' : mark) : roleName(s.fontSize, s.lineHeight));
   });
   return [...names];
 }

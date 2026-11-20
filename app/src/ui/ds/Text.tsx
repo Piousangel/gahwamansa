@@ -2,7 +2,7 @@ import React from 'react';
 import {Platform, Text as RNText} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {useScreenTitleRef} from '../screenTitle';
-import {roleText, type TextRole, type TextTone} from './roles';
+import {roleMark, roleText, type TextRole, type TextTone} from './roles';
 import {pickLayout, useAudience, type LayoutOnlyStyle} from './audience';
 
 export type TextProps = {
@@ -36,6 +36,7 @@ export function Text({role, tone = 'default', children, style, accessibilityRole
     <RNText
       ref={titleRef}
       {...koreanTextProps}
+      {...roleMark(role)}
       testID={testID}
       nativeID={nativeID}
       accessibilityRole={accessibilityRole}
