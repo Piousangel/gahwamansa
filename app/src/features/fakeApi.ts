@@ -100,6 +100,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   const baseStreak = opts.streak ?? 0;
   let childFamily = opts.childFamily ?? opts.childLinked ?? false;
   let childLinked = opts.childLinked ?? false;
+  let codeUsed = false; // '123456' 을 이 fake 에서 이미 썼나(서버 used_at)
   // 자녀 가족의 가입 번호: 'live' 살아 있음 / 'expired' 지난 번호만 / null 아직 없음
   let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
@@ -274,10 +275,16 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
     },
     async issueInviteCode() {
       childCode = 'live'; // 새 번호를 받으면 이전 번호는 무효(서버 0018)
+      codeUsed = false; // 새 번호(같은 '123456' 이지만 fake 에서는 새로 발급된 것으로 본다)
       return '123456'; // 어르신 쪽 fake redeem 이 받는 번호와 같게
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
       if (code === '123456') {
+        // 서버 0004: 한 번 쓴 번호는 다시 쓸 수 없다('used'). 속성 테스트(inviteCode.prop)가 찾은 fake 와 서버의 차이(11-20)
+        if (codeUsed) {
+          return {ok: false, reason: 'used'};
+        }
+        codeUsed = true;
         linked = true;
         if (childFamily) {
           childLinked = true;
