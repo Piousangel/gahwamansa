@@ -1,5 +1,5 @@
 import React from 'react';
-import {AccessibilityInfo, Pressable, StyleSheet, Text} from 'react-native';
+import {AccessibilityInfo, PixelRatio, Pressable, StyleSheet, Text} from 'react-native';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {ToastProvider, useToast, TOAST_MS} from '../src/ui/Toast';
 
@@ -8,6 +8,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1); // RN 모의값은 2 — 기본(100%) 시간으로 본다(150%↑는 8초, D-17)
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -75,7 +76,7 @@ describe('Toast(자녀 토스트)', () => {
     fireEvent.press(screen.getByTestId('ok'));
     const t = StyleSheet.flatten(screen.getByText('응원을 보냈어요').props.style);
     expect(t.fontSize).toBe(20);
-    expect(t.fontWeight).toBe('bold');
+    expect(['bold', '700']).toContain(t.fontWeight); // ds Toast(v5)는 숫자 굵기 '700'
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('응원을 보냈어요');
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('toast').props.accessibilityLiveRegion ?? 'none').toBe('none');

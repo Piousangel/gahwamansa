@@ -6,7 +6,7 @@
 -- 반영 순서·명령: docs/team/dev-server-notes.md §18.
 with checks(check_name, ok, detail) as (
   -- 1. 마이그레이션 적용 범위
-  select '마이그레이션 최신 번호', max(version) >= '20261116000051', max(version)
+  select '마이그레이션 최신 번호', max(version) >= '20261116000059', max(version)
     from supabase_migrations.schema_migrations
   union all
   -- 2. 확장

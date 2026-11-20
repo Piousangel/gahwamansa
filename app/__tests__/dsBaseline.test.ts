@@ -78,12 +78,12 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
 // src/ 전체(ui/ 포함)에서 v3 토큰(ui/tokens)과 옛 컴포넌트 5종을 import·re-export 하는 문장 수를 센다. **완료 = 모두 0.**
 // 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
 const LEGACY_BASELINE: Record<string, number> = {
-  v3Tokens: 52, // ui/tokens (N1 −1. P2 동의 −1. P3 코스 홈 −1. #146 C2·C6 −2. 11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
+  v3Tokens: 49, // ui/tokens (N1 −1. P2 동의 −1. P3 코스 홈 −1. #146 C2·C6 −2. 11-20: 화면 이행으로 56. v5 scrim·shadow 생성물로 ds Dialog·Sheet −2, Toast 를 ds 로 −1)
   Screen: 13, // ui/Screen (P3 −1, P2 −1, N1 −1, C4 홈 −1)
   BigButton: 10, // ui/BigButton (P3 −1, P2 −1, N1 −1)
   ChoiceGrid: 0, // ui/ChoiceGrid
   BottomSheet: 1, // ui/BottomSheet
-  Text20: 32, // ui/Text20 (P3 −1, P2 −1, N1 −1)
+  Text20: 31, // ui/Text20 (P3 −1, P2 −1, N1 −1, ui/Toast → ds Toast −1)
 };
 const LEGACY_MODULE: Record<string, string> = {v3Tokens: 'ui/tokens', Screen: 'ui/Screen', BigButton: 'ui/BigButton', ChoiceGrid: 'ui/ChoiceGrid', BottomSheet: 'ui/BottomSheet', Text20: 'ui/Text20'};
 
@@ -174,7 +174,7 @@ test('가로·세로 고정 상자는 height 로 세지 않는다(오탐 제외,
 // #179 리뷰 M1: v3 color.ink(= v5 action 파랑)는 누를 수 있는 것에만 — 쓰는 파일·횟수 화이트리스트(읽는 글은 inkBody·inkTitle)
 const V5_LEFTOVER: Record<string, number> = {
   deprecatedColor: 10, // tokens.ts 7(v3 별칭) + AlbumMount 1 + ChildHome 1 + CourseHome 해님 1(main 병합) — R-23 장식 걷어 내기
-  radiusAlias: 62, // main 병합 뒤 실측(N1 옛 화면 삭제 −1). radius.card·select·chip·childCard·input(4단 별칭)
+  radiusAlias: 61, // main 병합 뒤 실측(N1 옛 화면 삭제 −1, ds Toast childCard → row −1). radius.card·select·chip·childCard·input(4단 별칭)
 };
 const INK_PRESSABLE: Record<string, number> = {
   'app/BackBar.tsx': 1, // 뒤로 바 글자(밑줄)

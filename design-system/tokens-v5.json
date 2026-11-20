@@ -1345,6 +1345,16 @@
         "ratio": 8.28
       },
       {
+        "role": "onAction",
+        "surface": "inkTitle",
+        "ratio": 18.26
+      },
+      {
+        "role": "onAction",
+        "surface": "dangerInk",
+        "ratio": 8.31
+      },
+      {
         "role": "disabledInk",
         "surface": "disabledBg",
         "ratio": 4.81
@@ -1387,6 +1397,11 @@
         "ratio": 3.31
       },
       {
+        "role": "line",
+        "surface": "dangerSoft",
+        "ratio": 3.34
+      },
+      {
         "role": "action",
         "surface": "paper",
         "ratio": 7.56
@@ -1415,6 +1430,11 @@
         "role": "action",
         "surface": "infoSoft",
         "ratio": 6.71
+      },
+      {
+        "role": "action",
+        "surface": "dangerSoft",
+        "ratio": 6.77
       },
       {
         "role": "dangerInk",
@@ -1447,6 +1467,11 @@
         "ratio": 6.73
       },
       {
+        "role": "dangerInk",
+        "surface": "dangerSoft",
+        "ratio": 6.8
+      },
+      {
         "role": "doneInk",
         "surface": "paper",
         "ratio": 8.33
@@ -1475,6 +1500,11 @@
         "role": "doneInk",
         "surface": "infoSoft",
         "ratio": 7.38
+      },
+      {
+        "role": "doneInk",
+        "surface": "dangerSoft",
+        "ratio": 7.46
       },
       {
         "role": "info",
@@ -1507,6 +1537,11 @@
         "ratio": 7.1
       },
       {
+        "role": "info",
+        "surface": "dangerSoft",
+        "ratio": 7.17
+      },
+      {
         "role": "accent",
         "surface": "paper",
         "ratio": 16.69
@@ -1537,6 +1572,11 @@
         "ratio": 14.8
       },
       {
+        "role": "accent",
+        "surface": "dangerSoft",
+        "ratio": 14.95
+      },
+      {
         "role": "signEdge",
         "surface": "paper",
         "ratio": 16.69
@@ -1565,6 +1605,46 @@
         "role": "signEdge",
         "surface": "infoSoft",
         "ratio": 14.8
+      },
+      {
+        "role": "signEdge",
+        "surface": "dangerSoft",
+        "ratio": 14.95
+      },
+      {
+        "role": "danger",
+        "surface": "paper",
+        "ratio": 5.91
+      },
+      {
+        "role": "danger",
+        "surface": "card",
+        "ratio": 6.47
+      },
+      {
+        "role": "danger",
+        "surface": "paperSoft",
+        "ratio": 5.39
+      },
+      {
+        "role": "danger",
+        "surface": "noticeSoft",
+        "ratio": 5.54
+      },
+      {
+        "role": "danger",
+        "surface": "actionSoft",
+        "ratio": 5.35
+      },
+      {
+        "role": "danger",
+        "surface": "infoSoft",
+        "ratio": 5.24
+      },
+      {
+        "role": "danger",
+        "surface": "dangerSoft",
+        "ratio": 5.3
       }
     ],
     "note": "표는 전수 계산값. 화면·컴포넌트가 쓸 수 있는 조합은 allowed 만. disabledInk 는 WCAG 비활성 면제로 4.5 이상만 유지(ratio 5.29)."
@@ -1646,7 +1726,9 @@
         "noticeSoft"
       ],
       "onAction": [
-        "action"
+        "action",
+        "inkTitle",
+        "dangerInk"
       ],
       "signInk": [
         "sign"
@@ -1753,7 +1835,9 @@
         "dangerSoft"
       ],
       "onAction": [
-        "action"
+        "action",
+        "inkTitle",
+        "dangerInk"
       ],
       "signInk": [
         "sign"
@@ -1766,7 +1850,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "action": [
         "paper",
@@ -1774,7 +1859,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "dangerInk": [
         "paper",
@@ -1782,7 +1868,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "doneInk": [
         "paper",
@@ -1790,7 +1877,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "info": [
         "paper",
@@ -1798,7 +1886,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "accent": [
         "paper",
@@ -1806,7 +1895,8 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
       ],
       "signEdge": [
         "paper",
@@ -1814,14 +1904,24 @@
         "paperSoft",
         "noticeSoft",
         "actionSoft",
-        "infoSoft"
+        "infoSoft",
+        "dangerSoft"
+      ],
+      "danger": [
+        "paper",
+        "card",
+        "paperSoft",
+        "noticeSoft",
+        "actionSoft",
+        "infoSoft",
+        "dangerSoft"
       ]
     },
     "rules": "allowed 에 없는 role×surface 조합은 토큰 테스트가 실패시킨다(금지 목록이 아니라 허용 목록). intent 는 allowed 위에 얹는 의미 규칙.",
     "intent": {
       "accent": "화면당 1곳, dangerInk와 같은 화면 금지(대비 1.02)",
       "info": "글자는 infoSoft 띠 위에서 쓰는 것이 기본(7.35). 단독 글자색 금지(면 + 아이콘과 함께)",
-      "onAction": "action 면 위 흰 글자 전용"
+      "onAction": "action 면 위 흰 글자 전용, v5 는 먹(inkTitle) 면의 토스트·Tag 글자와 위험(dangerInk) 면의 Tag danger 글자도"
     }
   },
   "line": {

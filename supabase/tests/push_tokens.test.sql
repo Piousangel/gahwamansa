@@ -27,7 +27,7 @@ grant execute on function pg_temp.tok(int) to public;
 select pg_temp.act_as('70320000-0000-0000-0000-0000000000a1', true);
 select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true}'::jsonb, '어르신이 토큰을 등록한다');
 select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true}'::jsonb, '같은 토큰 재등록은 멱등');
-select is((select count(*)::int from public.device_tokens), 1, '본인 토큰 1개만 보인다');
+select is((select count(*)::int from public.device_tokens), 1, '본인 토큰 1개만 보인다'); -- rls:의도 RLS 확인(본인 토큰만 보임)
 select is(public.register_push_token('short') ->> 'reason', 'invalid_token', '형식이 틀린 토큰은 거부');
 select is(public.register_push_token(pg_temp.tok(2) || ' x') ->> 'reason', 'invalid_token', '공백이 든 토큰은 거부');
 select is(public.register_push_token(pg_temp.tok(2), 'web') ->> 'reason', 'invalid_platform', '플랫폼은 android·ios만');

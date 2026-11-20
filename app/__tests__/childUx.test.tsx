@@ -9,7 +9,8 @@ import {ToastProvider, useToast} from '../src/ui/Toast';
 import {Screen} from '../src/ui/Screen';
 import {BottomSheet} from '../src/ui/BottomSheet';
 import {toastBottom} from '../src/ui/toastPlacement';
-import {cheerUndoMs} from '../src/features/home/useSendCheer';
+import {CHEER_UNDO_MS} from '../src/features/home/useSendCheer';
+import {toastDurationMs, TOAST_MS} from '../src/ui/ds/Toast';
 import {findTitleDup} from '../src/features/home/titleDup';
 import {newConnection, parseSeen} from '../src/features/home/newConnection';
 import {NewConnectionBanner} from '../src/features/home/NewConnectionBanner';
@@ -104,12 +105,50 @@ describe('U2 토스트 자리', () => {
   });
 });
 
+// #199 캡처 L: 글자 200%에서 탭 막대가 커지면(고정 68 보다 큼) 토스트 아래 끝이 막대 위로 겹쳤다 → 막대가 실제 높이를 알린다
+describe('토스트 아래 끝 ≤ 탭 막대 위 끝(200%)', () => {
+  test.each([
+    ['100%', 68],
+    ['200% 막대 키움', 104],
+  ])('%s: 탭 막대 실제 높이 %d 위로 토스트가 뜬다', async (_name, barH) => {
+    jest.useFakeTimers();
+    try {
+      render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      await act(async () => {
+        fireEvent(screen.getByTestId('child-tab-bar'), 'layout', {nativeEvent: {layout: {x: 0, y: 640 - barH, width: 360, height: barH}}});
+      });
+      await press('응원 보내기');
+      await press('늘 고마워요');
+      const layer = StyleSheet.flatten(screen.getByTestId('toast-layer').props.style) as {bottom: number};
+      // 토스트 층의 아래 끝(화면 아래에서 bottom) ≥ 탭 막대 높이 = 토스트 아래 끝이 막대 위 끝보다 위
+      expect(layer.bottom).toBeGreaterThanOrEqual(barH);
+      expect(layer.bottom).toBe(toastBottom({dock: 0, tabOffset: barH, insetBottom: 0}));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('U10 응원 취소', () => {
-  test('되돌리기 가능 시간 = 토스트 표시 시간: 4초, 글자 200%면 6초, 화면 읽기면 10초(D-17a)', () => {
-    expect(cheerUndoMs(false, 1)).toBe(4000);
-    expect(cheerUndoMs(false, 2)).toBe(6000);
-    expect(cheerUndoMs(true, 1)).toBe(10000);
-    expect(cheerUndoMs(true, 2)).toBe(10000);
+  test('토스트 시간 우선순위(ds Toast 한 곳, D-17·D-17a): 화면 읽기 10초 > 글자 150% 이상 8초 > 기본(응원 되돌리기 4초·일반 6초)', () => {
+    expect(CHEER_UNDO_MS).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1)).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1.3)).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1.5)).toBe(8000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 2)).toBe(8000);
+    expect(toastDurationMs(CHEER_UNDO_MS, true, 1)).toBe(10000);
+    expect(toastDurationMs(CHEER_UNDO_MS, true, 2)).toBe(10000); // 화면 읽기가 큰 글자보다 앞
+    expect(toastDurationMs(TOAST_MS, false, 1)).toBe(6000);
+    expect(toastDurationMs(TOAST_MS, false, 2)).toBe(8000);
+  });
+
+  test('D-17: 응원 문장 칸 사이는 8 이상(바로 보내는 표적이 붙어 있지 않게, 7:90)', async () => {
+    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await press('응원 보내기');
+    const list = StyleSheet.flatten(screen.getByTestId('cheer').props.style);
+    expect(list.rowGap ?? list.gap).toBeGreaterThanOrEqual(8);
   });
 
   async function pickCheer(api: ReturnType<typeof createFakeApi>) {
@@ -220,6 +259,28 @@ describe('D-17a 화면 읽기 켜짐: 응원 보냄 토스트 10초 + 초점 되
         jest.advanceTimersByTime(400);
       });
       expect(focusCalls()).toBe(afterExpire + 1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('D-17: 글자 150% 이상이면 응원 되돌리기 토스트가 8초(ds Toast 시간 계산), 화면 읽기는 꺼짐', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+    jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1.5);
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    jest.useFakeTimers();
+    try {
+      await pickCheerSr(api);
+      await act(async () => {
+        jest.advanceTimersByTime(7500); // 기본 4초는 지났지만 아직 되돌릴 수 있다
+      });
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByTestId('toast-action').props.accessibilityState?.disabled).toBe(false);
+      await act(async () => {
+        jest.advanceTimersByTime(700); // 8.2초: 보냄
+      });
+      expect(send).toHaveBeenCalledTimes(1);
     } finally {
       jest.useRealTimers();
     }
@@ -908,6 +969,33 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const dock = within(screen.getByTestId('screen-dock'));
     expect(dock.getByText('지금은 부모님 폰이 안드로이드일 때만 연결돼요')).toBeTruthy();
     expect(dock.getByTestId('dock-note')).toBeTruthy();
+  });
+
+  test('#203 리뷰: 줄 사이 8 은 \'자녀 + 2열 지정\' Choice 공통(C1·C7 시트·C4 호칭 겹침), 어르신·1열 지정 목록은 그대로', () => {
+    const {AudienceProvider, Choice} = require('../src/ui/ds');
+    const {CHOICE_CHILD_GRID_ROW_GAP} = require('../src/ui/ds/Choice');
+    expect(CHOICE_CHILD_GRID_ROW_GAP).toBe(8);
+    const items = [{key: 'a', label: '엄마'}, {key: 'b', label: '아빠'}];
+    const gapOf = (audience: 'child' | 'elder', columns: 1 | 2) => {
+      const r = render(
+        <AudienceProvider value={audience}>
+          <Choice mode="radio" columns={columns} testID="ch" items={items} value="a" onSelect={() => {}} />
+        </AudienceProvider>,
+      );
+      const st = StyleSheet.flatten(screen.getByTestId('ch').props.style);
+      r.unmount();
+      return st.rowGap;
+    };
+    expect(gapOf('child', 2)).toBe(8);
+    expect(gapOf('child', 1)).toBeUndefined(); // 응원 시트 등 1열 목록은 공통 간격(12)
+    expect(gapOf('elder', 2)).toBeUndefined();
+    // 쓰는 화면이 모두 '자녀 + columns={2}' 인지(새 화면이 2열을 쓰면 여기 목록을 다시 본다)
+    const fs = require('fs');
+    const path = require('path');
+    const users = ['features/child/RelationScreen.tsx', 'features/child/ChildSettings.tsx', 'features/home/TitleDupNotice.tsx'];
+    for (const f of users) {
+      expect(fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')).toMatch(/columns=\{2\}/);
+    }
   });
 
   test('V9: C1 → C2 없이 바로 C3(스택에 C1 이 남지 않음), 측정 이벤트는 C1 번호 발급 1번 + C3 보내기·복사', async () => {

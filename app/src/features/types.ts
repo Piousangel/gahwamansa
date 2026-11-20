@@ -74,6 +74,8 @@ export type TodayContent = {
 
 // 인터넷 문제(연결 실패·시간 초과)를 다른 서버 오류와 구분하기 위한 오류
 export class OfflineError extends Error {}
+/** 시간 제한에 걸려 끊은 요청(#208). 끊김(OfflineError)이지만 서버에서는 끝났을 수 있어 화면이 '알 수 없어요'로 구분한다 */
+export class TimeoutError extends OfflineError {}
 export const isOffline = (e: unknown): boolean => e instanceof OfflineError;
 
 // 서버가 응답한 오류. code 는 Postgres 오류 코드(예: P0001 = raise exception, 42501 = 권한 없음),

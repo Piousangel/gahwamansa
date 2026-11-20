@@ -1,8 +1,8 @@
-import React, {useEffect, useId} from 'react';
+import React, {useEffect} from 'react';
 import {announce} from '../a11y';
 import {StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps} from 'react-native';
 import {Text} from './Text';
-import {ds, minTouch, roleText} from './roles';
+import {ds, minTouch, roleText, roleMark} from './roles';
 import {useAudience} from './audience';
 
 export type FieldKind = 'text' | 'email' | 'otp' | 'word';
@@ -39,8 +39,8 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
   const k = KIND[kind];
   // 입력 글자는 fieldInput 역할(상한 1.5, 자판 열림과 상관없이). label·hint 는 각 역할 상한(2.0)
   const r = roleText('fieldInput', a);
-  const id = useId();
-  // 오류가 나타나거나 바뀌면 한 번 읽어 준다(R11, 리뷰 L9). 힌트에도 붙어 다음 포커스 때 다시 읽힌다
+  // 오류는 나타나거나 바뀔 때 한 번만 알린다(R11: announce 한 경로, liveRegion 과 겹치지 않게). 탐색 때는 칸 아래 오류 글이 한 번 읽힌다.
+  // 칸의 accessibilityHint 에는 넣지 않는다(#221 리뷰 L: 힌트·아래 글로 두 번 읽히던 것)
   useEffect(() => {
     if (error) {
       announce(error);
@@ -48,21 +48,24 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
   }, [error]);
   return (
     <View style={styles.wrap}>
-      <Text role="label" nativeID={`${id}-label`}>
-        {label}
-      </Text>
+      {/* D-18 B4(7: 표 B): 보이는 라벨은 입력 칸이 읽기 이름(accessibilityLabel)으로 읽는다 → 라벨만 읽기에서 숨긴다(두 번 듣지 않게).
+          안내(hint) 글은 숨기지 않는다: 형식 예시·해야 할 일이 들어가는 자리라, 끌 수 있는 accessibilityHint 에만 두면 못 듣는 사용자가 생긴다(#221 리뷰 M, WCAG 3.3.2) */}
+      <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden testID={`${testID}-visible-label`}>
+        <Text role="label">
+          {label}
+        </Text>
+      </View>
       {hint ? (
         <Text role="sub" tone="muted" testID={`${testID}-hint`}>
           {hint}
         </Text>
       ) : null}
       <TextInput
+        {...roleMark('fieldInput')}
         ref={inputRef}
         testID={testID}
+        // 읽기 이름 = 보이는 라벨(또는 따로 받은 이름). 보이는 라벨은 위에서 읽기에서 숨겼으므로 labelledBy 대신 이 이름 하나로 읽는다
         accessibilityLabel={accessibilityLabel ?? label}
-        // 읽기 이름을 따로 받으면 그것만(labelledBy 가 있으면 보이는 짧은 라벨이 이긴다)
-        accessibilityLabelledBy={accessibilityLabel ? undefined : `${id}-label`}
-        accessibilityHint={[hint, error].filter(Boolean).join(' ') || undefined}
         accessibilityState={{disabled: !editable}}
         value={value}
         onChangeText={onChangeText}

@@ -82,9 +82,9 @@ export function Dialog({visible, title, body, children, actions, warningLabel, o
       <Animated.View testID="dialog-scrim" style={[styles.scrim, {opacity}]}>
         <View testID={testID ?? 'dialog-card'} role="alertdialog" accessibilityViewIsModal style={styles.card}>
           {warningLabel ? (
-            <View style={styles.chip}>
+            <View testID="dialog-warning" style={styles.chip}>
               <Icon name="icon-warning" size={24} color={color.onAction} />
-              <Text20 weight="bold" style={styles.chipText}>
+              <Text20 testID="dialog-warning-text" weight="bold" style={styles.chipText}>
                 {warningLabel}
               </Text20>
             </View>
@@ -127,11 +127,12 @@ export function Dialog({visible, title, body, children, actions, warningLabel, o
 const styles = StyleSheet.create({
   scrim: {flex: 1, backgroundColor: color.scrim, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32},
   card: {backgroundColor: color.card, borderRadius: radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
+  // 200%(#194 p9-confirm2): 띠가 글자 폭만큼 늘어 카드 안쪽 여백을 넘었다 — 띠는 카드 폭 안(maxWidth 100%), 글자는 줄어 줄바꿈(flexShrink)
   chip: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6,
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', gap: 6,
     backgroundColor: color.dangerInk, borderRadius: radius.chip, paddingHorizontal: 12, paddingVertical: 4,
   },
-  chipText: {color: color.onAction},
+  chipText: {color: color.onAction, flexShrink: 1},
   title: {color: color.inkTitle, fontFamily: font.title},
   // 150%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
   bodyScroll: {flexGrow: 0, flexShrink: 1},

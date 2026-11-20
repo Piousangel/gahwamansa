@@ -34,10 +34,14 @@
 - `set_parent_title(p_title)`(가족 기본 호칭)도 0035부터 겹치면 `duplicate_title`(호칭 없는 어르신이 있고 다른 어르신이 이미 그 호칭일 때). **폐기 예정**: 앱은 `set_parent_title_for`로 옮기고, 빌드 2 첫 서버 묶음에서 제거한다. 호칭 목록은 서버 `parent_titles()`(authenticated 실행 가능)와 같다.
 - 연결(redeem) 때는 기본 호칭이 겹쳐도 막지 않는다. 그래서 child_summary에 같은 title이 둘 보일 수 있다 → 앱은 겹친 어르신에게 호칭 바꾸기를 권한다. 기존 `set_parent_title(p_title)`(가족 기본값)은 그대로.
 
-### send_cheer(p_parent uuid, p_key text) → jsonb  (0020)
+### send_cheer(p_parent uuid, p_key text, p_request_id uuid default null) → jsonb  (0020, 0059 요청 id)
 - 키 4개만: `love_you`·`warm_day`·`thanks_always`·`peaceful_day`(copy-v3-confirmed 6절 확정 4개).
 - `{ok:true, cheer_id}` | `{ok:false, reason:'invalid_key'|'invalid_target'|'disconnected'|'daily_limit'}`.
 - 하루 한도(가정): 같은 자녀→같은 어르신 KST 하루 **2개**. 정책 확정 시 상수만 변경.
+- **0059 재시도 멱등**: 앱은 응원 버튼을 누를 때 uuid를 한 번 만들어 `p_request_id`로 보내고, 시간 초과로 다시 보낼 때 **같은 값**을 쓴다. 같은 자녀의 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`(한도 검사보다 먼저 — 재시도가 `daily_limit`으로 보이지 않음). id를 안 보내면 지금과 같다(하위 호환).
+  - PostgREST로 두 키(`{p_parent, p_key}`)만 보내는 옛 호출: 0059를 올린 임시 스택에서 앱 통합 테스트 `__integration__/cheers.test.ts` 2건 PASS(11-20, #215 리뷰 L1 실증) — 3인자(기본값) 판 하나로 이름 인자 호출이 그대로 풀린다.
+  - **요청 id 계약**(리뷰 L2): id는 버튼 한 번마다 새로 만들고, 같은 시간 초과 재시도 안에서만 다시 쓴다. 같은 id로 **다른 어르신·다른 문장**을 보내면 서버는 처음 응원의 성공을 그대로 돌려준다(조용히 무시, 새 응원 없음) — 앱 버그일 때만 생기므로 지금은 `request_conflict`를 두지 않는다. 응원 행이 31일 파기로 지워진 뒤 같은 id는 새 응원이 된다(한도 2개는 그대로).
+  - 연결이 끊긴 뒤의 재시도(리뷰 L3): 대상 확인(`invalid_target`·`disconnected`)이 재시도 확인보다 앞이라, 첫 요청이 성공한 뒤 어르신 연결이 끊기면 재시도는 `disconnected`로 보인다(응원은 이미 한 번 생김, 드묾). 앱은 이 경우를 "보냈어요"로 볼 필요 없음 — 연결 끊김 상태 화면이 우선.
 - 테이블 직접 insert는 막혔다(0020). 자녀는 읽음 여부(read_at)를 볼 수 없다.
 - **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 이 4개로 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
 ```ts
@@ -286,7 +290,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 함수 | 부르는 쪽 | 의도·안에서 하는 검사 |
 |---|---|---|
 | my_profile_id · my_family_id · my_role · my_consented | RLS 정책 식(authenticated) | 정책이 쿼리 역할 권한으로 부르므로 authenticated 필수. 자기 것만 돌려줌 |
-| create_family | 자녀 가입 직후 | 익명 아님·프로필 없음 |
+| create_family | 자녀 가입 직후 | 익명 아님. 이미 자녀 프로필이 있으면 같은 가족·프로필 반환(0059 재시도), 어르신 프로필이면 already_has_profile |
 | issue_invite_code | 자녀 | child 역할, 같은 가족 대상만 |
 | redeem_invite_code · peek_invite_code | 어르신 기기 | 익명만, 잠금·시도 한도 |
 | discard_anonymous_session | 소셜 로그인 직전 | 프로필 없는 익명 본인 계정만 |
@@ -561,3 +565,60 @@ type UnregisterPushToken = { ok: true; removed: number };
   - (b) **카카오 "연결 끊기 알림"(unlink callback)** 을 받는 Edge Function을 둔다: 사용자가 카카오 계정 설정 > 연결된 서비스 관리에서 우리 앱 연결을 끊으면 카카오가 회원번호와 함께 우리 주소를 부른다 → 서버가 그 회원번호의 인증 계정을 같은 공통 규칙으로 삭제(감사 `delete_user`, 사유 "카카오 연결 끊기 알림"). 삭제 안내 페이지에 "카카오로 가입했다면 카카오 설정에서 연결을 끊으면 계정이 지워져요"를 적을 수 있다. 앱 어드민 키로 요청 출처를 검증(카카오 문서 기준), 회원번호는 로그에 남기지 않는다.
 - 어르신 익명 기기: 메일·회원번호가 없어 **본인 확인 수단이 없다**. 연결된 어르신은 자녀 계정으로 찾는다(자녀 메일로 가족을 찾고, 어르신 프로필은 `admin_delete_account(어르신 profile)` — 요청자가 그 가족의 자녀인지 확인한 뒤). 연결 전 익명 기기는 지울 대상을 특정할 수 없으므로 ①의 90일 자동 정리로 처리하고, 삭제 안내에 그렇게 적는다.
 - 구현 범위(결정 시): 마이그레이션 1(admin_find_user, 출력 열 최소) + ops 스크립트 1 + (b)를 고르면 Edge Function 1·카카오 콘솔 설정(사용자). pgTAP은 "메일·회원번호 전체가 반환값에 없음"을 고정.
+
+## 20. 쓰기 RPC 재시도(같은 요청 두 번) 표 — 앱 fetch 시간 제한(쓰기 15초) 대비(11-20)
+배경: 앱이 쓰기 요청에 시간 제한을 두면, 서버는 처리했는데 응답만 늦은 POST를 사용자가 "다시 하기"로 한 번 더 보낼 수 있다. 앱(`app/src`)이 부르는 쓰기 RPC 전부를 main의 최신 정의로 읽었다(읽기 전용 RPC 제외).
+판정: **멱등** = 두 번째 호출이 상태를 더 바꾸지 않고 같은(또는 같은 뜻의) 답 / **응답만 다름** = 상태는 그대로인데 답이 달라 앱이 실패로 볼 수 있음 / **중복** = 상태가 한 번 더 바뀜.
+
+| RPC(최신 정의) | 두 번째 호출 결과 | 판정 | SQL 근거 |
+|---|---|---|---|
+| `send_cheer`(0020) | **응원 행이 하나 더 생김**(하루 2개 한도까지) → 어르신에게 응원·알림이 두 번 | **중복** | `insert into cheers … values (…, clock_timestamp())` — 중복을 막는 키 없음, 한도 검사(`count >= 2`)만 |
+| `create_family`(0003) | 예외 `already_has_profile` — 첫 요청이 가족을 만들었는데 앱은 실패로 봄 | 응답만 다름 | `if exists (select 1 from profiles where user_id = v_uid) then raise exception 'already_has_profile'` |
+| `delete_my_account`(0049→0054·0058 공통 함수) | 첫 호출이 인증 계정까지 지웠으므로 `my_profile_id()` null → `user_delete_core`가 null(계정 없음) → `{scope:'none'}` | 응답만 다름(상태 그대로) | `if v_me is not null …; v_res := user_delete_core(auth.uid()); … return {scope:'none'}` — JWT는 만료 전까지 유효. 앱 `deleteMyAccount`는 반환값을 쓰지 않아 영향 없음 |
+| `log_event`(0053) | 이벤트 행이 하나 더 | 중복(지표만) | `insert into events …` 키 없음. 기기당 하루 200개 상한만 |
+| `issue_invite_code`(0025) | 앞 번호를 만료시키고 **새 번호** 발급 | 상태 바뀜(무해) | 일반 번호: 같은 가족의 미사용 번호 `expires_at`를 과거로 → 새 번호 insert. 첫 응답을 못 받았으면 앞 번호는 화면에 없었으므로 실제 피해 없음 |
+| `dev_reset_today`(0051) | 지울 것이 없어 0·0, 감사 행 1개 더 | 멱등(감사 행만 +1) | `delete … where session_date = today`, 감사 insert. staging 전용 |
+| `save_answer`(0052) | 같은 답으로 덮어쓰기(`answered_at`만 갱신), 첫 답 알림 큐 없음 | 멱등 | `on conflict (parent_id, question_id, session_date) do update set choice = excluded.choice …`, `returning (xmax = 0)`이 false라 큐 안 넣음 |
+| `record_session_step`(0024) | 단계 합집합·시간 최댓값, `completed_at`은 처음 한 번만 | 멱등 | `completed_steps = array_agg(distinct …)`, `duration_sec = greatest(…)`, `completed_at is null`일 때만 |
+| `start_today`(0024) | 오늘 이미 넘긴 커서는 다시 안 넘김, `advanced=false` | 멱등 | `advance_content_cursor`: `content_seq_date is distinct from today`일 때만 전진, 세션 `on conflict` |
+| `redeem_invite_code`(0028) | 같은 번호를 이미 이 uid가 썼고 프로필이 있으면 같은 가족·프로필로 ok | 멱등(설계됨) | `if exists (… code = p_code and used_by = v_uid and used_at is not null) … return {ok, family_id, profile_id}` — 실패 시도로 세지 않음 |
+| `record_terms_agreement`(0048) | `recorded=false`(새 행 없음) | 멱등 | `on conflict (user_id, terms_version, privacy_version) do nothing` |
+| `give_consent`(0035) | 같은 버전이면 아무것도 안 함 | 멱등 | `if v_prev_at is not null and v_prev_ver is not distinct from p_version then return` |
+| `withdraw_consent`(0019) | 지울 답 없음, 철회 이력은 이미 철회 상태라 안 남김 | 멱등 | `if v_prev_at is not null then insert consent_events …` |
+| `mark_cheers_read`(0020) | 0개 갱신 | 멱등 | `where read_at is null` |
+| `set_parent_title`·`set_parent_title_for`(0035) | 같은 값으로 갱신, 겹침 검사는 자기 자신 제외라 통과 | 멱등 | `update … set parent_title = p_title`, `p.id <> p_parent` |
+| `set_push_enabled`(0037) | 받기 시각 유지 | 멱등 | `push_consented_at = coalesce(push_consented_at, now())` |
+| `register_push_token`(0036) | 같은 토큰 갱신 | 멱등 | `on conflict (token) do update` |
+| `unregister_push_token`(0032) | `removed: 0` | 멱등 | `delete … where token = p_token` |
+| `discard_anonymous_session`(0058) | 계정이 이미 없어 `discarded:false` | 응답만 다름(상태 그대로) | `not exists (select 1 from auth.users where id = v_uid and is_anonymous)` → false. 앱은 이어서 소셜 로그인 |
+
+### 고칠 방향(제안)
+1. **`send_cheer` — 서버 수정 필요(별도 마이그레이션 PR, 리뷰 2명)**: 클라이언트 요청 id.
+   - `send_cheer(p_parent, p_key, p_request_id uuid default null)`. 앱은 사용자가 응원 버튼을 누를 때 uuid를 한 번 만들고, 시간 초과로 다시 보낼 때 **같은 id**를 쓴다.
+   - `cheers.request_id uuid` + 유일 인덱스 `(from_child, request_id) where request_id is not null`. 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`를 돌려준다(한도 검사보다 먼저 확인 — 두 번째 호출이 `daily_limit`으로 실패해 보이지 않게).
+   - id를 안 보내는 옛 앱은 지금과 같다(하위 호환). 앱 줄: U10 대기 뒤 보낼 때 id 생성·재시도 때 재사용.
+2. **`create_family` — 서버 수정(같은 PR)**: 호출자가 이미 **자녀 프로필**을 가졌으면 예외 대신 그 가족·프로필 id를 돌려준다(`{family_id, profile_id}` 같은 모양). 어르신 프로필이면 지금처럼 `already_has_profile`.
+3. **`delete_my_account`·`discard_anonymous_session` — 앱 처리로 충분**: 재시도 응답이 `{scope:'none'}`·`{discarded:false}`여도 상태는 첫 호출대로다. 앱은 삭제 재시도 뒤 응답 값으로 화면을 바꾸지 말고 "지웠어요"로 처리(이미 `deleteMyAccount`는 반환값을 안 씀).
+4. **`log_event` — 앱에서 재시도하지 않기**: 측정은 실패해도 화면을 막지 않는 계약이라(0022) 시간 초과 때 다시 보내지 않는 것이 가장 단순. 서버 키는 넣지 않는다(지표 오차는 작음).
+5. **`issue_invite_code` — 수용**: 재시도로 새 번호가 나와도 앞 번호는 화면에 나온 적이 없다. 다만 앱이 첫 응답을 이미 그렸는데 늦게 실패로 처리하는 구조라면 번호가 바뀐다 → 앱은 번호를 그린 뒤에는 재시도하지 않는다.
+
+## 21. pgTAP 헛통과 전수 점검 — 앱 역할로 표를 직접 세는 단언(11-20, '헛통과 테스트 → 실패 확인' 규칙)
+배경: #218 실패 확인에서 `create_family` 재시도의 가족 수를 앱 역할(authenticated)로 세 RLS 때문에 중복이 안 보여 늘 통과하던 단언을 찾았다(→ `reset role` 뒤에 세도록 고침). 같은 모양을 `supabase/tests` 전체에서 찾았다.
+방법: 줄마다 현재 역할(`pg_temp.act_as`·`set local role`·`reset role`)을 따라가며, 앱 역할(authenticated·anon)에서 `public` 표를 직접 `count(*)`·`exists`로 세는 단언 25개를 뽑았다(함수 반환값을 세는 단언은 제외). "없음(0)"을 기대하는 부작용 확인은 고장을 넣어 실제로 실패하는지 봤다(공유 로컬 DB 한 트랜잭션 → rollback, 고장은 커밋 안 함).
+
+| 분류 | 단언(파일:줄) | 판정 |
+|---|---|---|
+| RLS 확인 자체(앱 역할에서 이렇게 보여야 함) | `rls` 54·55·57·70·74·94·95, `rpc_privacy` 46·47·51·52, `rpc_privacy_review` 31·37, `rpc_cheers` 51, `rpc_redeem` 73, `push_tokens` 30, `security_hardening` 44 (17개) | 의도대로 — `-- rls:의도 RLS 확인` 표시 |
+| 부작용 "없음" 확인 | `rpc_family` 59 '만료된 코드는 정리된다' | **실패 확인: `issue_invite_code`의 만료 코드 삭제를 빼면 → `not ok 11 - 만료된 코드는 정리된다`(have 1, want 0)** — 같은 가족 번호는 RLS로 보여 헛통과 아님 |
+| 부작용 "없음" 확인 | `rpc_privacy` 70 '철회하면 저장된 답이 지워진다' | **실패 확인: `withdraw_consent`의 답 삭제를 빼면 → `not ok 17 - 철회하면 저장된 답이 지워진다`(have 1, want 0)** — 본인 답은 동의 여부와 무관하게 RLS로 보여 헛통과 아님 |
+| 부작용 "N개" 확인(양수 기대) | `rpc_family` 27·28·44·62, `rpc_content` 48, `rpc_redeem` 48 | 빠지면 0이 되어 실패, 같은 가족·본인 범위의 중복도 RLS로 보여 실패 — 헛통과 아님(표시만) |
+| 이미 고침 | `rpc_family` 가족 수(#218, 56c78455) | `reset role` 뒤에 셈. 실패 확인: 재시도 분기가 가족을 새로 만들면 → `not ok 5`(have 2, want 1) |
+
+결론: 이번 점검에서 새 헛통과는 없다(#218의 1건뿐). 고친 테스트 코드 없음 — 표시 주석만 추가.
+
+**결정적 검사(구현)**: `supabase/ops/test-rls-lint.mjs` — 앱 역할 상태에서 `public` 표를 직접 세는 단언에 `reset role`이 앞에 없고 줄 끝 `-- rls:의도` 표시도 없으면 실패. `replay-check.sh`가 스택을 띄우기 전에 먼저 돌린다(바로 실패). 단위 테스트 `node --test supabase/ops/test-rls-lint.test.mjs`(#218 모양을 잡는지 포함).
+- 새 단언을 쓸 때: 서버가 만든·지운 행(부작용)을 세려면 `reset role;` 뒤에서 센다. 앱에서 이렇게 보여야 한다는 RLS 확인이면 줄 끝에 `-- rls:의도 <이유>`.
+- (#219 리뷰 반영) `-- rls:의도` 뒤에 **이유 글이 없으면 위반**(무엇을 확인하는지: 예 `남의 가족 답 0행`). 단언은 세미콜론까지 모아 한 문장으로 보므로 여러 줄 단언도 잡는다. `set role X`(local 없음)와, 이 파일에서 `set role`·`set local role`을 실행하는 pg_temp 도우미(이름 무관)를 부르면 앱 역할로 본다.
+- CI: `.github/workflows/server.yml` pgTAP 잡이 `supabase test db` 전에 `node supabase/ops/test-rls-lint.mjs supabase/tests`를 돈다.
+- (#219 2차 리뷰 L, 넓힘) `count(1)`·`count(열)`도, 스키마를 생략한 `from 표`(함수 호출·`pg_` 카탈로그·그 파일의 임시 표 제외)도, 결과 집합 단언(`results_eq`·`results_ne`·`set_eq`·`set_ne`·`bag_eq`·`bag_ne`·`is_empty`·`isnt_empty`·`row_eq`)과 `isnt`도 대상이다.
+- 남은 한계: pg_temp 도우미 함수 **안에서** 표를 세는 경우(단언은 `pg_temp.f()`만 부름)는 대상 밖 — 그런 도우미는 `reset role` 뒤에서 부른다.

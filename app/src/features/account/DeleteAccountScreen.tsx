@@ -3,18 +3,26 @@ import {StyleSheet, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {useBackAction, useBackDestination} from '../../app/BackBar';
-import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
+import {Dialog, DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
-import {isServerError, type DeleteScope} from '../types';
+import {isServerError, TimeoutError, type DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {prefs} from '../../lib/prefs';
-import {Dialog} from '../../ui/Dialog';
 import {contactMail, openContactMail} from './contactMail';
+import {settleWithin, withTimeout} from '../../lib/timeout';
+import {announce} from '../../ui/a11y';
+
+/** 지우기 화면 안전망 시간 제한(#208 리뷰 H1). 요청 자체는 realApi 가 30초에 끊는다(DELETE_RPC_TIMEOUT_MS, abortSignal).
+ *  화면은 그 30초 + 서버 삭제 뒤 기기 정리(하나당 3초 × 최대 5) + 여유를 기다린 뒤에도 답이 없으면 끊김으로 본다 — 다시 하기, 뒤 문구는 #156 분기(unsure).
+ *  앱 전체 공통 시간 제한은 서버 멱등성 점검 뒤 L4 가 넣는다 — 그때 이 안전망과 겹치지 않게 맞출 것 */
+export const DELETE_TIMEOUT_MS = 50000;
+/** 지우기 전 확인(사전 조회·계정 표)도 화면을 오래 붙잡지 않게 */
+const PREP_TIMEOUT_MS = 5000;
 
 type Props = {role: 'parent' | 'child'};
 
@@ -57,6 +65,8 @@ export function DeleteAccountScreen({role}: Props) {
   const dc = copy.delete.child;
   const so = copy.delete.signed_out;
   const sop = copy.delete.signed_out_parent;
+  const tm = copy.delete.timeout;
+  const dl = copy.delete.deleting; // 지우는 동안 위험 버튼 글자(진행 표시, #206 후속)
 
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
   const [scope, setScope] = useState<DeleteScope | null>(null);
@@ -112,6 +122,17 @@ export function DeleteAccountScreen({role}: Props) {
   }, [failed]);
   // 앞선 시도가 응답 없이 실패했다(서버에서는 지워졌을 수 있음) — 그 뒤의 scope none 은 '이미 지워진 뒤'일 수 있다
   const unsure = useRef(false);
+  const succeeded = useRef<DeleteScope | null>(null); // 앞선 지우기 요청이 늦게라도 성공한 결과(있으면 지운 것)
+  const [timedOutUi, setTimedOutUi] = useState(false);
+  const attempts = useRef(0); // 지우기 시도 번호(늦게 온 성공이 지금 시도 것인지)
+  const timedOut = useRef(0); // 시간 초과로 끝낸 시도 번호
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
+  );
   const done = (s: DeleteScope) => {
     clear();
     prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
@@ -132,29 +153,67 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
+    setTimedOutUi(false);
+    // #208 리뷰 L: 버튼 글자가 바뀐 것을 화면 읽기에도 한 번. 자녀만 — 어르신은 확인 상자가 닫히며 초점이 이 버튼으로 돌아와 같은 말을 이미 듣는다
+    if (child) {
+      announce(dl);
+    }
+    const attempt = ++attempts.current;
     // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로.
     //   앞선 시도가 끊긴 뒤에는 묻지 않는다 — 그 시도가 서버에서 이미 지웠으면 'none'이 와 '가족 기록 없었음'으로 잘못 읽힌다(재확인 M). 모름 = done_unsure
     if (!child && previewScope.current === null && !unsure.current) {
-      await api
-        .deleteScopePreview()
-        .then(r => {
+      await settleWithin(
+        api.deleteScopePreview().then(r => {
           previewScope.current = r.scope;
           setScope(r.scope);
-        })
-        .catch(() => {});
+        }),
+        PREP_TIMEOUT_MS,
+      );
     }
-    const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
+    let tag: string | null = null; // 지운 뒤에는 세션이 없어 먼저 받아 둔다
+    await settleWithin(
+      api.accountTag().then(t => {
+        tag = t;
+      }),
+      PREP_TIMEOUT_MS,
+    );
     try {
-      const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
+      const req = api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
+      // #208 리뷰 H1: 안전망(DELETE_TIMEOUT_MS) 안에 답이 없으면 끊김으로 본다(요청은 서버에서 끝났을 수도 있음 → unsure, 다시 하기 결과는 #156 분기)
+      // #208 재확인 H ③: 시간 초과 뒤 원래 요청이 늦게 성공하면 버리지 않는다 — 화면이 살아 있고 그 뒤 새 시도가 없으면 결과 화면으로
+      req.then(
+        late => {
+          succeeded.current = late.scope; // 시도 번호와 상관없이 실제로 지운 결과를 기록(#208 재확인 a097c1b M)
+          if (alive.current && attempts.current === attempt && timedOut.current === attempt) {
+            done(late.scope);
+          }
+        },
+        () => {},
+      );
+      const r = await withTimeout(req, DELETE_TIMEOUT_MS, () => {
+        timedOut.current = attempt;
+        return new TimeoutError('delete_my_account 시간 초과');
+      });
       done(r.scope);
     } catch (e) {
+      // #208 재확인 H ②: 앞선 시도가 끊긴 뒤(unsure)의 no_profile 은 '그 시도가 서버에서 지우고 이 기기 로그아웃까지 마친 뒤'일 수 있다.
+      //   '지워지지 않았어요'라고 단정하지 않는다 — 어르신은 done_unsure(지웠어요 + 남았으면 문의), 자녀는 지운 뒤 화면
+      // #208 재확인 M(두 리뷰): 끊긴 뒤 no_profile 은 '앞선 요청이 이 기기에서 실제로 성공해 로그아웃까지 돌았을 때'만 지운 것으로 본다(succeeded 기록).
+      //   기록이 없으면(오프라인 실패 뒤 세션만 풀림 등) 지금까지처럼 로그인 풀림 안내(사실) — '지우지 않았는데 지웠다'를 막는다
+      if (isServerError(e, 'no_profile') && succeeded.current) {
+        done(succeeded.current);
+        return;
+      }
       if (isServerError(e, 'no_profile')) {
         setSignedOut(true);
         setFailed({title: so.title, body: so.body, button: so.button});
         return;
       }
       unsure.current = true;
-      setFailed(errorMessage(e));
+      // 시간 제한에 걸린 끊김(라이터 #208 delete.timeout): '끊겼어요'·'지워지지 않았어요' 대신 '지워졌는지 알 수 없어요' + 다시 하기
+      const late = e instanceof TimeoutError;
+      setTimedOutUi(late);
+      setFailed(late ? {title: tm.title, body: tm.body, button: tm.button} : errorMessage(e));
     } finally {
       endBusy();
     }
@@ -178,12 +237,12 @@ export function DeleteAccountScreen({role}: Props) {
     : signedOut && failed
     ? {label: failed.button, onPress: relogin}
     : failed
-    ? {label: failed.button, onPress: run, loading: busy, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
+    ? {label: failed.button, onPress: run, loading: busy, loadingLabel: dl, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
     : !child
-      ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, buttonRef: yesRef}
+      ? {label: dp.yes, onPress: () => setConfirm2(true), loading: busy, loadingLabel: dl, buttonRef: yesRef}
       : stage === 1
         ? {label: dc.danger, onPress: () => setStage(2), disabled: scope === null}
-        : {label: dc.danger, onPress: run, disabled: !confirmEnabled, loading: busy};
+        : {label: dc.danger, onPress: run, disabled: !confirmEnabled, loading: busy, loadingLabel: dl};
 
   const heading = !child
     ? dp.title
@@ -200,7 +259,8 @@ export function DeleteAccountScreen({role}: Props) {
       variant="form"
       scrollRef={scrollRef}
       // 뒤로 = ds BackLink(R-14 알약, 목적지 문구 '설정으로' 등 — #194 캡처 뒤 이행, N-01). 돌아갈 화면이 없으면 숨김(옛 BackBar 와 같은 규칙)
-      back={backTo ? {to: backTo, onPress: leave} : undefined}
+      // #206: 지우는 중에는 '사용 안 함'(비활성 모양·읽기). 왜 못 누르는지는 위험 버튼의 진행 글자 '지우고 있어요'가 말한다
+      back={backTo ? {to: backTo, onPress: leave, disabled: busy} : undefined}
       header={heading ? <Heading level={1}>{heading}</Heading> : undefined}
       dock={{
         primary: {label: child ? dc.cancel : dp.cancel, onPress: leave, disabled: busy},
@@ -214,9 +274,11 @@ export function DeleteAccountScreen({role}: Props) {
         // 실패 상자: 색만이 아니라 굵은 외곽선 + 머리글 문구로 구분(명세 §8 danger). 나타날 때 한 번 읽는다
         <View style={styles.box} accessibilityLiveRegion="polite" testID="delete-fail">
           <Text role="heading" tone="danger">
-            {parentSignedOut ? sop.title : signedOut ? so.title : child ? dc.fail : dp.fail_title}
+            {timedOutUi ? tm.title : parentSignedOut ? sop.title : signedOut ? so.title : child ? dc.fail : dp.fail_title}
           </Text>
-          {parentSignedOut ? (
+          {timedOutUi ? (
+            <Text role="body">{tm.body}</Text>
+          ) : parentSignedOut ? (
             <Text role="body">{sop.body}</Text>
           ) : signedOut ? (
             <Text role="body">{so.body}</Text>
@@ -261,19 +323,17 @@ export function DeleteAccountScreen({role}: Props) {
         <Dialog
           visible={confirm2}
           title={dp.step2_title}
-          warningLabel={dp.step2_body}
-          actions={[
-            {label: dp.cancel, onPress: () => setConfirm2(false)},
-            {
-              label: dp.yes,
-              kind: 'danger',
-              onPress: () => {
-                setConfirm2(false);
-                run();
-              },
+          warning={dp.step2_body}
+          action={{
+            label: dp.yes,
+            kind: 'danger', // 되돌릴 수 없음 → 닫는 쪽('안 지울래요')이 위·주
+            onPress: () => {
+              setConfirm2(false);
+              run();
             },
-          ]}
-          onBack={() => setConfirm2(false)}
+          }}
+          dismiss={{decline: dp.cancel}}
+          onDismiss={() => setConfirm2(false)}
           returnFocusRef={yesRef}
           testID="delete-confirm2"
         />

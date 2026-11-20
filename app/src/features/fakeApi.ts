@@ -346,6 +346,10 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       }
       steps.clear();
       consented = false;
+      // #181 재확인 L: 서버는 계정을 지우면 profiles 행이 없어 같은 uid 라도 'used'(0028 226~231행은 프로필이 있을 때만 ok).
+      // fake 는 지운 뒤 다음 익명 계정으로 바뀐 것으로 본다(me 새 값) + 연결 끊김
+      me = `${me}-after-delete`;
+      linked = false;
       return {scope: opts.deleteScope ?? 'parent'};
     },
     async giveConsent(version: string) {

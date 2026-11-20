@@ -52,6 +52,8 @@ jobs:
           cache: npm
       - name: Supabase CLI(루트 devDependency, 잠금 파일 그대로)
         run: npm ci --no-audit --no-fund
+      - name: pgTAP 헛통과 검사(앱 역할로 표를 직접 세는 단언, dev-server-notes §21)
+        run: node supabase/ops/test-rls-lint.mjs supabase/tests
       - name: 로컬 스택 시작(필요한 것만)
         run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor
       - name: 처음부터 재생 + 시드

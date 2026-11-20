@@ -3,7 +3,7 @@ import {Animated, Easing, StyleSheet, Text as RNText, View} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {useReduceMotion} from '../motion';
 import {useAudience} from './audience';
-import {ds, fontStyle, roleText} from './roles';
+import {ds, fontStyle, roleText, roleMark} from './roles';
 
 /**
  * 팻말(Sign, R-22) — 부모님이 P5 에서 고르신 쪽을 싣는 노랑 판. 낱말(P6)은 싣지 않는다(O-1).
@@ -69,7 +69,7 @@ export function Sign({label, size, state = 'filled', readLabel, testID = 'sign'}
           {transform: [{rotate}]},
         ]}>
         {empty ? null : (
-          <RNText {...koreanTextProps} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, face, styles.label]}>
+          <RNText {...koreanTextProps} {...roleMark(role)} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, face, styles.label]}>
             {keepAllChildren(label)}
           </RNText>
         )}

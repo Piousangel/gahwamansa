@@ -1,6 +1,5 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {Animated, Modal, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
-import {color as v3color} from '../tokens';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
 import {useFadeIn} from '../useFadeIn';
@@ -9,6 +8,7 @@ import {Button} from './Button';
 import {Text} from './Text';
 import {dismissLabel, type Dismiss} from './dismiss';
 import {ds} from './roles';
+import {Tag} from './Tag';
 import {MoreBand} from './MoreBand';
 
 const c = ds.color;
@@ -40,6 +40,8 @@ export type DialogProps = {
   onBack?: () => void;
   /** 닫히면 포커스를 돌려줄 요소(R12). 덮개(사용자가 열지 않음)는 null 을 넘긴다 */
   returnFocusRef: RefObject<unknown> | null;
+  /** 제목 위 위험 띠(예: P9 '되돌릴 수 없어요'). 되돌릴 수 없는 행동(action.kind danger)과 함께만 쓴다. 200%에서 카드 폭 안에서 줄바꿈(#194·#200) */
+  warning?: string;
   /** 대화상자 안 오류 한 줄(모달 위 토스트는 보이지 않는다) */
   error?: string | null;
   testID?: string;
@@ -61,7 +63,7 @@ export function Dialog(props: DialogProps) {
   );
 }
 
-function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
+function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, warning, error, testID = 'ds-dialog'}: DialogProps) {
   const a = useAudience();
   // 글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝으로(버튼 묶음은 스크롤 밖이라 줄이 늘면 닫는 쪽이 잘린다 — #168 접근성 재확인 M). 버튼 힌트는 그대로
   const hintInBody = useWindowDimensions().fontScale >= 1.5 && !!(body || children);
@@ -129,31 +131,31 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
       }}>
       <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
         <View testID={testID} role="alertdialog" accessibilityViewIsModal style={styles.card}>
-          {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게 */}
-          <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={title}>
-            <Text role="title">{title}</Text>
-          </View>
-          {body || children ? (
-            <>
-              <ScrollView
-                testID={`${testID}-scroll`}
-                style={styles.bodyScroll}
-                contentContainerStyle={styles.bodyContent}
-                scrollEventThrottle={64}
-                onLayout={e => measure({view: e.nativeEvent.layout.height})}
-                onContentSizeChange={(_w, h) => measure({content: h})}
-                onScroll={onScroll}
-                onScrollEndDrag={onScroll}
-                onMomentumScrollEnd={onScroll}>
-                {children}
-                {body ? <Text role="bodyLg">{body}</Text> : null}
-                {hintInBody ? hintLine : null}
-              </ScrollView>
-              {/* 200% 등에서 본문이 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
-              {more ? <MoreBand /> : null}
-            </>
-          ) : null}
-          <View accessibilityLiveRegion="polite">
+          {/* 200%·좁은 폭에서 넘치면 띠·제목·본문이 함께 스크롤되고 버튼 묶음만 밖(아래)에 남는다(#217 리뷰 M, 방법 1) */}
+          <ScrollView
+            testID={`${testID}-scroll`}
+            style={styles.bodyScroll}
+            contentContainerStyle={styles.bodyContent}
+            scrollEventThrottle={64}
+            onLayout={e => measure({view: e.nativeEvent.layout.height})}
+            onContentSizeChange={(_w, h) => measure({content: h})}
+            onScroll={onScroll}
+            onScrollEndDrag={onScroll}
+            onMomentumScrollEnd={onScroll}>
+            {warning ? <WarningBand text={warning} testID={`${testID}-warning`} /> : null}
+            {/* 머리글은 바깥 View 하나(포커스 대상). 안 글자는 머리글 역할 없이 — 같은 제목을 두 번 읽지 않게.
+                warning 이 있으면 열릴 때 초점(제목)에서 띠를 먼저 읽는다 — 띠만 따로 두면 화면 읽기 사용자가 듣지 못한 채 위험 버튼에 닿는다(#217 리뷰 M) */}
+            <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={warning ? `${warning}. ${title}` : title}>
+              <Text role="title">{title}</Text>
+            </View>
+            {children}
+            {body ? <Text role="bodyLg">{body}</Text> : null}
+            {hintInBody ? hintLine : null}
+          </ScrollView>
+          {/* 200% 등에서 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
+          {more ? <MoreBand /> : null}
+          {/* 오류가 없으면 칸이 간격을 차지하지 않게 display none(#217 리뷰 L) — 알림 영역(live region)은 그대로 두어 오류가 생길 때 읽힌다 */}
+          <View testID={`${testID}-error-region`} accessibilityLiveRegion="polite" style={error ? null : styles.none}>
             {error ? (
               <Text role="body" tone="danger" testID={`${testID}-error`}>
                 {error}
@@ -166,6 +168,15 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
         </View>
       </Animated.View>
     </Modal>
+  );
+}
+
+// 위험 띠 = ds Tag danger 변형(R-04 예외는 Tag 하나로 덮인다, #217 리뷰 L). 화면 읽기에서는 숨기고 제목 라벨이 함께 읽는다
+function WarningBand({text, testID}: {text: string; testID: string}) {
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" testID={`${testID}-hidden`}>
+      <Tag label={text} tone="danger" icon="icon-warning" testID={testID} />
+    </View>
   );
 }
 
@@ -182,7 +193,8 @@ function Hint({text, testID}: {text: string; testID: string}) {
 
 const styles = StyleSheet.create({
   hint: {textAlign: 'center', marginTop: -4},
-  scrim: {flex: 1, backgroundColor: v3color.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
+  none: {display: 'none'},
+  scrim: {flex: 1, backgroundColor: ds.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
   bodyScroll: {flexGrow: 0, flexShrink: 1},

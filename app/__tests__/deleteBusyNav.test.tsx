@@ -94,7 +94,7 @@ test('자녀: 계정 지우는 중 연결 알림을 눌러도 지우기 화면�
     src.emitOpen({kind: 'parent_connected'});
   });
   await act(async () => {});
-  expect(screen.getByRole('button', {name: '계정 지우기'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: '지우고 있어요'})).toBeTruthy(); // 지우는 중 위험 버튼(#206 후속 진행 글자)
   expect(screen.queryByRole('tab', {name: '앨범'})).toBeNull();
 });
 
@@ -127,8 +127,8 @@ test('자녀: 지우는 중 초대 링크(App Link)를 받아도 화면을 옮�
   await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
   await sendAppLink();
   await act(async () => {});
-  // 설정 화면에도 '내 계정 지우기' 행이 있어 글자 대신 이 화면에만 있는 위험 버튼·경고로 확인
-  expect(screen.getByRole('button', {name: '계정 지우기'})).toBeTruthy();
+  // 설정 화면에도 '내 계정 지우기' 행이 있어 글자 대신 이 화면에만 있는 위험 버튼(지우는 중 글자)·경고로 확인
+  expect(screen.getByRole('button', {name: '지우고 있어요'})).toBeTruthy(); // 지우는 중 위험 버튼(#206 후속 진행 글자)
   expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy();
   expect(screen.queryByText('가족에게 받은 번호를 써 주세요')).toBeNull();
 });

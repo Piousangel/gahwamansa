@@ -124,7 +124,7 @@ test('C0-c 인증번호: BackLink \'이메일 주소로\', 보이는 라벨 \'�
   await press('인증번호 받기');
   await waitFor(() => screen.getByText('메일로 받은 인증번호 6자리를 써 주세요'));
   expect(screen.getByRole('link', {name: '이메일 주소로'})).toBeTruthy();
-  expect(screen.getByText('인증번호')).toBeTruthy();
+  expect(screen.getByText('인증번호', {includeHiddenElements: true})).toBeTruthy(); // 보이는 라벨(읽기에서는 칸 이름으로만 — D-18 B4)
   expect(screen.getByLabelText('인증번호 6자리')).toBeTruthy();
   expect(screen.queryByTestId('screen-dock')).toBeNull();
 });
