@@ -175,7 +175,9 @@ function buildFont(src) {
     }
     roleFace[name] = k;
   }
-  return {bundled: f.bundled === true, body: face('body'), hand: face('hand'), roleFace};
+  // 플랫폼별(#159 리뷰 M1): iOS 는 파일·UIAppFonts 등록이 빌드 2 라 false — 이름만 넣으면 dev 에서 Unrecognized font 오류
+  const b = need(f.bundled, 'font.bundled');
+  return {bundled: {android: b.android === true, ios: b.ios === true}, body: face('body'), hand: face('hand'), roleFace};
 }
 
 function build(src) {

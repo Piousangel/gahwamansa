@@ -7,8 +7,8 @@ const path: {join(...p: string[]): string} = require('path');
 const SRC = JSON.parse(fs.readFileSync(path.join(__dirname, '../../design-system/tokens-v4.json'), 'utf8'));
 
 const font = t.font as unknown as NonNullable<Parameters<typeof fontStyle>[3]>;
-const bundled = {...font, bundled: true};
-const unbundled = {...font, bundled: false};
+const bundled = {...font, bundled: {android: true, ios: true}};
+const unbundled = {...font, bundled: {android: false, ios: false}};
 
 test('Jua 는 어느 역할의 글꼴도 아니다(answer·answerRow 포함, A2 8/8)', () => {
   const faces = Object.entries(SRC.typeRoles).filter(([, d]) => (d as {fontFace?: string}).fontFace === 'Jua');
@@ -28,11 +28,12 @@ test('번들 전(bundled=false)이면 글꼴을 넣지 않는다(시스템 글�
   expect(fontStyle('body', 700, 'android', unbundled)).toEqual({});
 });
 
-test('지금은 번들됨: roleText 가 글꼴을 싣는다(테스트 환경 Platform = ios → 굵기별 이름)', () => {
-  expect(t.font.bundled).toBe(true);
-  expect(roleText('body', 'elder').style.fontFamily).toBe('NotoSansKR-Regular');
-  expect(roleText('title', 'elder').style.fontFamily).toBe('NotoSansKR-Bold');
-  expect(roleText('answer', 'child').style.fontFamily).toBe(t.font.body.faces[String(roleText('answer', 'child').style.fontWeight) as '400' | '700']);
+test('지금: Android 만 번들, iOS 는 빌드 2(#159 M1) — iOS 에 이름만 넣으면 Unrecognized font', () => {
+  expect(t.font.bundled).toEqual({android: true, ios: false});
+  expect(fontStyle('body', 400, 'android')).toEqual({fontFamily: 'notosanskr', fontVariant: ['tabular-nums']});
+  expect(fontStyle('body', 700, 'ios')).toEqual({});
+  // 테스트 환경 Platform.OS = ios → roleText 에 글꼴이 없다
+  expect(roleText('body', 'elder').style.fontFamily).toBeUndefined();
 });
 
 test('Android 글꼴 묶음 XML·파일·등록이 토큰과 같은 이름', () => {

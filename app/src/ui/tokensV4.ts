@@ -284,7 +284,7 @@ export const tokensV4 = {
   fontScaleCap: {body: 2, fixed: 1.5, answer: 1.3},
   minFont: {elder: 20, child: 16},
   font: {
-    bundled: true,
+    bundled: {android: true, ios: false},
     body: {
       family: 'Noto Sans KR',
       android: 'notosanskr',

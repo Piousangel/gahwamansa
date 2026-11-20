@@ -188,7 +188,7 @@
   ],
   "font": {
     "decision": "전문가 리뷰 A2 8/8 + 오너 O-2(2026-11-20): 본문·제목 한 벌 Noto Sans KR 400/700 번들, Jua 폐기. 팻말 손글씨(붓)는 48dp 이상에서만(패널 7). 숫자는 tabular",
-    "bundled": true,
+    "bundled": {"android": true, "ios": false},
     "body": {
       "family": "Noto Sans KR",
       "android": "notosanskr",

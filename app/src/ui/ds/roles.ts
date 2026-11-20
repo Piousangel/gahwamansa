@@ -50,17 +50,17 @@ export function toneColor(role: InnerRole, tone: Tone, a: Audience): string {
 }
 
 type FaceKey = 'body' | 'hand';
-type FontSet = {bundled: boolean; body: {family: string; android: string; faces: Record<string, string>; numerals?: string}; hand: {family: string; android: string; faces: Record<string, string>}};
+type FontSet = {bundled: {android: boolean; ios: boolean}; body: {family: string; android: string; faces: Record<string, string>; numerals?: string}; hand: {family: string; android: string; faces: Record<string, string>}};
 
 /**
  * 글꼴(F-01): 번들됐으면 역할의 글꼴을 고른다.
  * - Android: res/font 의 XML 글꼴 묶음 이름(굵기별 파일을 fontWeight 로 고른다 — MainApplication 이 ReactFontManager 에 등록). 가짜 굵게가 겹치지 않는다
  * - iOS: 굵기별 PostScript 이름
- * - 번들 전(bundled=false)이면 아무것도 넣지 않는다(시스템 글꼴)
+ * - 그 플랫폼에 번들 전(bundled.android/ios=false)이면 아무것도 넣지 않는다(시스템 글꼴). iOS 는 빌드 2 에서 켠다(#159 M1)
  * 숫자는 tabular(body.numerals) — 번호·날짜 자릿수가 흔들리지 않게
  */
 export function fontStyle(face: FaceKey, weight: 400 | 700, os: string = Platform.OS, font: FontSet = t.font as unknown as FontSet): TextStyle {
-  if (!font.bundled) {
+  if (!(os === 'android' ? font.bundled.android : os === 'ios' ? font.bundled.ios : false)) {
     return {};
   }
   const f = font[face];
