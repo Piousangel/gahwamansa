@@ -43,6 +43,57 @@ const openKb = async (input: ReturnType<typeof screen.getByLabelText>) => {
   });
 };
 
+test('리드 결정(b): 200% 자판 열림이면 Dock 을 풀고 다 썼어요는 입력 칸 바로 아래, 자판이 닫히면 Dock 으로 돌아온다', async () => {
+  mockFontScale = 2;
+  const input = await toP6();
+  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '다 썼어요'})).toBeTruthy();
+  await openKb(input);
+  expect(screen.queryByTestId('screen-dock')).toBeNull();
+  const inline = screen.getByTestId('kb-done-inline');
+  expect(within(inline).getByRole('button', {name: '다 썼어요'})).toBeTruthy();
+  // 순서: 카드(입력 칸) → 다 썼어요
+  const ids = screen.root.findAll(n => typeof n.type === 'string' && ['kb-card', 'kb-done-inline'].includes(n.props?.testID)).map(n => n.props.testID);
+  expect([...new Set(ids)]).toEqual(['kb-card', 'kb-done-inline']);
+  await act(async () => {
+    (kbHandlers.keyboardDidHide ?? []).forEach(f => f());
+    fireEvent(input, 'blur');
+  });
+  expect(screen.queryByTestId('kb-done-inline')).toBeNull();
+  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '다 썼어요'})).toBeTruthy();
+});
+
+test('100% 자판 열림은 Dock 그대로(결정 b 는 200%에서만)', async () => {
+  const input = await toP6();
+  await openKb(input);
+  expect(screen.queryByTestId('kb-done-inline')).toBeNull();
+  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '다 썼어요'})).toBeTruthy();
+});
+
+test("자판 '완료' 키 = 다 썼어요(한 글자 이상일 때만)", async () => {
+  const input = await toP6();
+  await openKb(input);
+  await act(async () => {
+    fireEvent(input, 'submitEditing');
+  });
+  expect(screen.queryByText('낱말을 한 번 더 볼까요?')).toBeNull(); // 빈칸이면 아무 일 없음
+  await act(async () => {
+    fireEvent.changeText(input, '가');
+  });
+  await act(async () => {
+    fireEvent(input, 'submitEditing');
+  });
+  await waitFor(() => screen.getByText('낱말을 한 번 더 볼까요?'));
+});
+
+test('입력한 글자 위쪽이 잘리지 않는다 — 입력 칸은 줄높이를 고정하지 않고 세로 가운데(에뮬레이터 200% 실측: 글자 34×1.5=51 > 줄높이 44 라 위가 잘렸다)', async () => {
+  const input = await toP6();
+  const st = StyleSheet.flatten(input.props.style);
+  expect(st.lineHeight).toBeUndefined();
+  expect(st.textAlignVertical).toBe('center');
+  expect(st.includeFontPadding).toBe(false); // 글꼴 여백을 빼야 200% 자판 열림에서 카드·버튼이 통째로 들어온다(#192 디자인 리뷰 M1, 실측)
+  expect(st.fontSize).toBeGreaterThan(0);
+});
+
 test('닫힘: 입력 칸은 비운 한 줄(placeholder·multiline 없음, 높이는 minHeight), 안내는 칸 위 글·읽기는 힌트, 본보기 낱말은 칸 바로 위', async () => {
   const input = await toP6();
   expect(input.props.placeholder).toBeUndefined();
