@@ -102,6 +102,7 @@ test('자녀: 내 계정만 삭제된 경우 결과 문구', async () => {
   const api = createFakeApi({deleteScope: 'child'});
   await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
   expect(screen.queryByText('부모님의 기록도 함께 지워져요')).toBeNull();
+  expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy(); // #197: 본문에서 뺀 경고는 빨간 머리글(warn_label)이 한 번 맡는다
   await press('계정 지우기');
   await press('계정 지우기');
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
@@ -112,6 +113,7 @@ test('0049: 가족과 연결하기 전 자녀 계정(scope none)은 호칭 기�
   await openChildDelete(api, '가족과 연결하기 전이라 지울 가족 기록은 없어요. 로그인 정보, 약관 동의 기록, 알림 받기 정보가 지워져요');
   expect(screen.queryByText(/기록은 남아요/)).toBeNull(); // 틀린 안내 없음
   expect(screen.queryByText(/함께 지워져요/)).toBeNull();
+  expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy(); // #197: 가족 연결 전에도 빨간 머리글은 그려진다
   await press('계정 지우기');
   await press('계정 지우기'); // 마지막 자녀용 '지우기' 입력 없이
   await waitFor(() => screen.getByText('내 계정이 지워졌어요'));
