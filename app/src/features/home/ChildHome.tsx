@@ -124,6 +124,8 @@ export function ChildHome() {
   return (
     <View style={styles.flex}>
       <AudienceProvider value="child">
+      {/* 틀은 step(#207 리뷰): 지금 DsScreen 틀은 step·form·intro 셋뿐이고, 탭 화면에 맞는 list 틀은 빌드 1 끝으로 미뤄져 있다(SUMMARY Q8).
+          step 은 Dock 상한 40%·자판 접힘 정책이 이 화면과 같다(입력 없음 — 접힐 일도 없음). list 틀이 생기면 그리로 옮긴다 */}
       <DsScreen variant="step" header={top} dock={dock} onViewport={emptyFold.onViewport}>
         {error ? (
           <View accessibilityLiveRegion="polite">
