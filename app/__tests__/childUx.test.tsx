@@ -104,6 +104,31 @@ describe('U2 토스트 자리', () => {
   });
 });
 
+// #199 캡처 L: 글자 200%에서 탭 막대가 커지면(고정 68 보다 큼) 토스트 아래 끝이 막대 위로 겹쳤다 → 막대가 실제 높이를 알린다
+describe('토스트 아래 끝 ≤ 탭 막대 위 끝(200%)', () => {
+  test.each([
+    ['100%', 68],
+    ['200% 막대 키움', 104],
+  ])('%s: 탭 막대 실제 높이 %d 위로 토스트가 뜬다', async (_name, barH) => {
+    jest.useFakeTimers();
+    try {
+      render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      await act(async () => {
+        fireEvent(screen.getByTestId('child-tab-bar'), 'layout', {nativeEvent: {layout: {x: 0, y: 640 - barH, width: 360, height: barH}}});
+      });
+      await press('응원 보내기');
+      await press('늘 고마워요');
+      const layer = StyleSheet.flatten(screen.getByTestId('toast-layer').props.style) as {bottom: number};
+      // 토스트 층의 아래 끝(화면 아래에서 bottom) ≥ 탭 막대 높이 = 토스트 아래 끝이 막대 위 끝보다 위
+      expect(layer.bottom).toBeGreaterThanOrEqual(barH);
+      expect(layer.bottom).toBe(toastBottom({dock: 0, tabOffset: barH, insetBottom: 0}));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('U10 응원 취소', () => {
   test('되돌리기 가능 시간 = 토스트 표시 시간: 4초, 글자 200%면 6초, 화면 읽기면 10초(D-17a)', () => {
     expect(cheerUndoMs(false, 1)).toBe(4000);

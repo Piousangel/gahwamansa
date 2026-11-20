@@ -64,10 +64,13 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
   // 지금 보이는 화면의 dock 높이(마지막으로 알린 화면), 열린 시트·대화상자 수
   const [dock, setDock] = useState<{id: object; h: number} | null>(null);
   const [modals, setModals] = useState(0);
+  // 탭 막대 실제 높이(알려 오면 bottomOffset 대신 쓴다)
+  const [tabBar, setTabBar] = useState<number | null>(null);
   const placement = useMemo<ToastPlacement>(
     () => ({
       reportDock: (id, h) => setDock(cur => (h === null ? (cur && cur.id === id ? null : cur) : cur && cur.id === id && cur.h === h ? cur : {id, h})),
       modal: open => setModals(n => Math.max(0, n + (open ? 1 : -1))),
+      reportTabBar: h => setTabBar(cur => (cur === h ? cur : h)),
     }),
     [],
   );
@@ -185,7 +188,7 @@ export function ToastProvider({children, bottomOffset = 0}: {children: React.Rea
         <View
           testID="toast-layer"
           pointerEvents="box-none"
-          style={[styles.layer, {bottom: toastBottom({dock: dock?.h ?? 0, tabOffset: bottomOffset, insetBottom: insets.bottom})}]}>
+          style={[styles.layer, {bottom: toastBottom({dock: dock?.h ?? 0, tabOffset: tabBar ?? bottomOffset, insetBottom: insets.bottom})}]}>
           <Animated.View
             testID="toast"
             style={[styles.toast, error ? styles.errorBox : styles.infoBox, {opacity}]}>
