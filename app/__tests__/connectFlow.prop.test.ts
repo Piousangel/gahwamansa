@@ -10,6 +10,7 @@
 // | failed        | -              | (peek 단계면) peeking | -              | (redeem 단계면) redeeming | - | - | idle(빈) | 같은 단계/빈 | idle |
 // (* 연결 뒤 '다른 번호'는 화면에 없다 — 표에만 남김)
 import fc from 'fast-check';
+import '../testUtils/fcSeed';
 import {connectReducer, initialConnect, shouldAutoCheck, type ConnectEvent, type ConnectState} from '../src/features/link/connectMachine';
 import type {FailReason} from '../src/copy/copy';
 
