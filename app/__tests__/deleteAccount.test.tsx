@@ -2,6 +2,7 @@ import React from 'react';
 import {Linking, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
+import {copy} from '../src/copy/copy';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
@@ -303,9 +304,9 @@ describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 
     const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
     await openParentDelete(noneApi());
     await confirmDeleteAll();
-    await waitFor(() => screen.getByText('이 휴대폰에는 지울 기록이 없었어요'));
+    await waitFor(() => screen.getByText('이 휴대폰의 정보를 지웠어요'));
     expect(screen.queryByText('모두 지웠어요')).toBeNull();
-    expect(screen.getByText('전에 쓰던 기록이 있으면 문의하기로 알려 주세요. 가족 확인 뒤 지워 드려요')).toBeTruthy();
+    expect(screen.getByText(copy.delete.parent.done_none.body)).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: '문의하기'}));
     });
@@ -317,7 +318,7 @@ describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 
   test('문의 주소가 없으면 버튼 없이 "준비하고 있어요" 한 줄', async () => {
     await openParentDelete(noneApi());
     await confirmDeleteAll();
-    await waitFor(() => screen.getByText('이 휴대폰에는 지울 기록이 없었어요'));
+    await waitFor(() => screen.getByText('이 휴대폰의 정보를 지웠어요'));
     expect(screen.getByTestId('delete-done-contact-pending')).toBeTruthy();
     expect(screen.queryByRole('button', {name: '문의하기'})).toBeNull();
   });
