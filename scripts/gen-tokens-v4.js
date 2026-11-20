@@ -214,15 +214,14 @@ function buildRadius(src) {
   }
   return {...r, card: r.row, select: r.row, chip: r.row, childCard: r.row, input: r.sign};
 }
-/** v5 v3Aliases.v4Deprecated 에 적힌 색 이름의 v4 값(장식 걷어 내기 전까지만) */
+/** v5 에서 지운 장식 색(O-8)의 v4 값 — 장식을 걷어 낼 때까지만. tokens-v4.json 을 읽지 않고 값을 여기 고정한다(#179 리뷰 M2).
+ *  지우는 조건: DECISIONS 11-20 'deprecatedColor 제거' — dsBaseline 의 deprecatedColor 사용처가 0 이 되면 이 표와 생성물 항목을 지운다 */
+const V4_DEPRECATED_COLOR = {
+  sun: '#FFC93C', sunRay: '#F59E0B', blush: '#FF9E7A', brandSealDeep: '#C44F2E', brandSeal: '#EE6A44', brandSealGlyph: '#FFFAF3',
+  tape: '#EADBC4', accentSun: '#FFE29A', accentPeach: '#FFD6C2',
+};
 function buildDeprecatedColor(src) {
-  const list = String(src.v3Aliases?.v4Deprecated ?? '');
-  if (!list) {
-    return {};
-  }
-  const v4 = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-system/tokens-v4.json'), 'utf8')).color;
-  const names = ['sun', 'sunRay', 'blush', 'brandSealDeep', 'brandSeal', 'brandSealGlyph', 'tape', 'accentSun', 'accentPeach'];
-  return Object.fromEntries(names.map(n => [n, need(v4[n]?.value ?? v4[n], `v4 color.${n}`)]));
+  return String(src.v3Aliases?.v4Deprecated ?? '') ? {...V4_DEPRECATED_COLOR} : {};
 }
 
 function build(src) {

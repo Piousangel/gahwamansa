@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   cell: {flex: 1, minHeight: size.codeBox, borderWidth: 0, borderBottomWidth: 3, borderColor: color.line, borderRadius: radius.codeCell, backgroundColor: color.paperSoft, alignItems: 'center', justifyContent: 'center'},
   // 지금 쓸 칸: noticeSoft 면 + 테두리 4(action) + 고정 커서 막대(깜박임 없음)
   cellNow: {borderWidth: 3, borderBottomWidth: 3, borderColor: color.action, backgroundColor: color.noticeSoft},
-  cursor: {width: 3, height: 34, backgroundColor: color.ink},
+  cursor: {width: 3, height: 34, backgroundColor: color.inkTitle}, // 커서는 누를 것이 아님(파랑은 누를 것에만)
   cellText: {fontSize: 34, color: color.inkBody, fontWeight: 'bold'},
   row: {flexDirection: 'row', gap: 8, marginBottom: 8},
   // 키 = 볼록(누르는 곳): 흰 면 + 테두리 3(line) + 옅은 그림자, 최소 64(DECISIONS 실기기 규칙, QA P1#9). 눌림은 actionSoft

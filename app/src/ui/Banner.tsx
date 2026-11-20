@@ -22,7 +22,7 @@ export const BANNER_SUCCESS_MS = 6000;
 
 const LOOK: Record<BannerKind, {bg: string; border: string; ink: string; icon: IconName}> = {
   error: {bg: color.dangerSoft, border: color.danger, ink: color.dangerInk, icon: 'icon-warning'},
-  offline: {bg: color.noticeSoft, border: color.ink, ink: color.inkTitle, icon: 'icon-wifi-off'},
+  offline: {bg: color.noticeSoft, border: color.line, ink: color.inkTitle, icon: 'icon-wifi-off'}, // 테두리는 누를 것이 아니라 경계(line 3:1) — 파랑은 누를 것에만(#179 M1)
   success: {bg: color.doneSoft, border: color.done, ink: color.doneInk, icon: 'icon-check'},
   info: {bg: color.noticeSoft, border: color.line, ink: color.inkTitle, icon: 'icon-info'},
 };
