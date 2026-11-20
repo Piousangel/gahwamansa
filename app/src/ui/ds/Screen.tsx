@@ -31,6 +31,8 @@ export type DsScreenProps = {
   variant: ScreenVariant;
   /** 왼쪽 위 뒤로(스택 화면). 자판이 열려도 남는 한 줄 */
   back?: BackLinkProps;
+  /** BackLink 줄 오른쪽(접혀도 남는 한 줄). 예: P6 자판 열림 100% '넘어갈게요'(시안 ds4b, 자판이 열려도 보이게). 줄이 모자라면 아래 줄로 */
+  backAside?: React.ReactNode;
   /** 위 영역(단계 머리·화면 제목). form·step 은 자판이 열리면 접힌다 */
   header?: React.ReactNode;
   /** 접혔을 때 BackLink 가 읽어 주는 단계 정보 */
@@ -68,7 +70,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
+export function DsScreen({variant, back, backAside, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -136,7 +138,16 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
   const top =
     back || header ? (
       <View style={styles.top} testID="ds-screen-top">
-        {back ? <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} /> : null}
+        {back ? (
+          backAside ? (
+            <View style={styles.backRow}>
+              <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} />
+              {backAside}
+            </View>
+          ) : (
+            <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} />
+          )
+        ) : null}
         {collapsed ? null : header}
       </View>
     ) : undefined;
@@ -177,4 +188,5 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
 
 const styles = StyleSheet.create({
   top: {gap: ds.space.group, paddingBottom: ds.space.group},
+  backRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: ds.space.group},
 });

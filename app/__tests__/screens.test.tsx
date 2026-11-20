@@ -53,7 +53,7 @@ test('자판으로 쓰기 화면은 오늘의 단어(keyword)를 음절 칸으�
   await press('정했어요');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText(/^쓸 낱말, 라디오, 세 글자/)); // P6: 음절 칸 카드 한 덩어리 라벨
+  await waitFor(() => screen.getByLabelText('따라 쓸 낱말, 라디오')); // P6 v4: 본보기 낱말 한 줄 라벨(시안 ds4b)
 });
 
 test('콘텐츠가 없으면 이해하기 쉬운 빈 화면을 보여 준다', async () => {
