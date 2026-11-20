@@ -45,7 +45,7 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 -- 1~3. 새 어르신 기기 n1이 유효한 코드로 연결
 select pg_temp.act_as('10000000-0000-0000-0000-0000000000a1', true);
 select is((public.redeem_invite_code('111111')) ->> 'ok', 'true', '유효한 코드로 연결된다');
-select is((select count(*)::int from public.profiles where user_id = '10000000-0000-0000-0000-0000000000a1' and role = 'parent' and family_id = 'f0000000-0000-0000-0000-00000000000f'), 1, '어르신 프로필이 우리 가족에 만들어진다');
+select is((select count(*)::int from public.profiles where user_id = '10000000-0000-0000-0000-0000000000a1' and role = 'parent' and family_id = 'f0000000-0000-0000-0000-00000000000f'), 1, '어르신 프로필이 우리 가족에 만들어진다'); -- rls:의도 양수 기대 — 본인 프로필은 보임
 reset role;
 select is((select used_by from public.invite_codes where code = '111111' and used_at is not null), '10000000-0000-0000-0000-0000000000a1'::uuid, '코드는 사용 처리되고 사용자가 기록된다');
 
@@ -70,7 +70,7 @@ select is((public.redeem_invite_code('444444')) ->> 'ok', 'true', '재연결 코
 reset role;
 select is((select user_id from public.profiles where id = 'b1000000-0000-0000-0000-0000000000a0'), '10000000-0000-0000-0000-0000000000a3'::uuid, '같은 프로필(기록 유지)에 새 기기가 연결된다');
 select pg_temp.act_as('10000000-0000-0000-0000-0000000000a0', true);
-select is((select count(*)::int from public.answers), 0, '이전 기기는 더 이상 가족 데이터를 읽을 수 없다');
+select is((select count(*)::int from public.answers), 0, '이전 기기는 더 이상 가족 데이터를 읽을 수 없다'); -- rls:의도 RLS 확인(이전 기기)
 
 -- 13~15. 공격자: 5번 실패 후 유효한 코드로도 잠금, 코드는 그대로, 실패 기록이 남는다
 select pg_temp.act_as('10000000-0000-0000-0000-0000000000a9', true);

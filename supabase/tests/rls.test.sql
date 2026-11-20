@@ -51,10 +51,10 @@ grant execute on function pg_temp.act_as(uuid, boolean) to public;
 -- ---------- 테스트 ----------
 -- 1~2. 가족A 자녀: 가족A 답변만 보임, 가족B 답변은 0행
 select pg_temp.act_as('a0000000-0000-0000-0000-0000000000c1', false);
-select is((select count(*)::int from public.answers), 0, '자녀A는 답변을 직접 읽지 못한다(child_summary RPC로만 본다)');
-select is((select count(*)::int from public.answers where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 답변이 0행이다');
+select is((select count(*)::int from public.answers), 0, '자녀A는 답변을 직접 읽지 못한다(child_summary RPC로만 본다)'); -- rls:의도 RLS 확인: 자녀 answers 0행
+select is((select count(*)::int from public.answers where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 답변이 0행이다'); -- rls:의도 RLS 확인: 남의 가족 답 0행
 -- 3. 가족B 프로필/권한/응원이 안 보임
-select is((select count(*)::int from public.profiles where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 프로필이 0행이다');
+select is((select count(*)::int from public.profiles where family_id = 'fb000000-0000-0000-0000-000000000001'), 0, '자녀A는 가족B 프로필이 0행이다'); -- rls:의도 RLS 확인: 남의 가족 프로필 0행
 -- 4. 자녀는 답변을 쓸 수 없다
 select throws_ok($$ insert into public.answers (family_id, parent_id, question_id, choice)
   values ('fa000000-0000-0000-0000-000000000001', '1a000000-0000-0000-0000-0000000000a1', 'c0000000-0000-0000-0000-000000000002', 'A') $$,
@@ -67,11 +67,11 @@ select throws_ok($$ insert into public.daily_sessions (family_id, parent_id, ses
 select throws_ok($$ insert into public.content_photos (day_index, image_url, caption, keyword) values (1, 'x', 'x', 'x') $$,
   '42501', null, '콘텐츠 테이블은 쓸 수 없다');
 -- 7. 자녀는 가족 안 코드 목록을 볼 수 있고 시도 기록은 못 본다
-select is((select count(*)::int from public.redeem_attempts), 0, '시도 기록 테이블은 정책이 없어 0행이다');
+select is((select count(*)::int from public.redeem_attempts), 0, '시도 기록 테이블은 정책이 없어 0행이다'); -- rls:의도 RLS 확인(정책 없음)
 
 -- 8~9. 동의한 어르신A: 자기 답변 보임, 새 답변 저장 가능
 select pg_temp.act_as('a0000000-0000-0000-0000-0000000000a1', true);
-select is((select count(*)::int from public.answers), 1, '어르신A는 자기 답변 1건만 본다');
+select is((select count(*)::int from public.answers), 1, '어르신A는 자기 답변 1건만 본다'); -- rls:의도 RLS 확인: 본인 답 1행
 select lives_ok($$ insert into public.answers (family_id, parent_id, question_id, choice)
   values ('fa000000-0000-0000-0000-000000000001', '1a000000-0000-0000-0000-0000000000a1', 'c0000000-0000-0000-0000-000000000002', 'B') $$,
   '동의한 어르신은 답변을 저장할 수 있다');
@@ -91,8 +91,8 @@ select throws_ok($$ insert into public.answers (family_id, parent_id, question_i
 
 -- 13~14. 가족B 자녀: 가족A 권한(entitlements)/응원이 안 보임
 select pg_temp.act_as('b0000000-0000-0000-0000-0000000000c1', false);
-select is((select count(*)::int from public.entitlements where family_id = 'fa000000-0000-0000-0000-000000000001'), 0, '자녀B는 가족A entitlements가 0행이다');
-select is((select count(*)::int from public.cheers), 0, '자녀B는 가족A 응원이 0행이다');
+select is((select count(*)::int from public.entitlements where family_id = 'fa000000-0000-0000-0000-000000000001'), 0, '자녀B는 가족A entitlements가 0행이다'); -- rls:의도 RLS 확인: 남의 가족 권한 0행
+select is((select count(*)::int from public.cheers), 0, '자녀B는 가족A 응원이 0행이다'); -- rls:의도 RLS 확인: 남의 가족 응원 0행
 
 -- 15. anon 롤은 테이블 접근 자체가 막힘
 reset role;

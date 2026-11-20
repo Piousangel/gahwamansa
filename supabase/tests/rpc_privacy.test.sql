@@ -43,13 +43,13 @@ select public.save_answer('7c000000-0000-0000-0000-000000000001', 'A');
 select public.record_session_step('photo', 30);
 
 -- 5~6. 어르신 본인은 자기 답·세션을 계속 읽는다
-select is((select count(*)::int from public.answers), 1, '어르신은 자기 답 1건을 본다');
-select is((select count(*)::int from public.daily_sessions), 1, '어르신은 자기 세션 1건을 본다');
+select is((select count(*)::int from public.answers), 1, '어르신은 자기 답 1건을 본다'); -- rls:의도 RLS 확인: 본인 답 1행
+select is((select count(*)::int from public.daily_sessions), 1, '어르신은 자기 세션 1건을 본다'); -- rls:의도 RLS 확인: 본인 세션 1행
 
 -- 7~13. 자녀: 직접 읽기는 0행, 요약만 보인다
 select pg_temp.act_as('71000000-0000-0000-0000-0000000000c1', false);
-select is((select count(*)::int from public.answers), 0, '자녀는 answers를 직접 읽지 못한다(0행)');
-select is((select count(*)::int from public.daily_sessions), 0, '자녀는 daily_sessions를 직접 읽지 못한다(0행)');
+select is((select count(*)::int from public.answers), 0, '자녀는 answers를 직접 읽지 못한다(0행)'); -- rls:의도 RLS 확인: 자녀 answers 0행
+select is((select count(*)::int from public.daily_sessions), 0, '자녀는 daily_sessions를 직접 읽지 못한다(0행)'); -- rls:의도 RLS 확인: 자녀 sessions 0행
 select is((public.child_summary()) -> 'parents' -> 0 ->> 'shared', 'true', '동의 후에는 shared가 true다');
 select is((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'prompt', '어느 계절이 좋으세요?', '최근 답의 질문 문장이 보인다');
 select is((public.child_summary()) -> 'parents' -> 0 -> 'latest' ->> 'choice_label', '가을', '고른 선택지의 글자가 보인다');
@@ -67,7 +67,7 @@ select throws_like($$ select public.child_summary() $$, '%child_required%', '어
 
 -- 16~19. 철회: 답이 지워지고 자녀 요약이 비며, 철회 후 저장은 거부된다
 select lives_ok($$ select public.withdraw_consent() $$, '어르신이 동의를 철회한다');
-select is((select count(*)::int from public.answers), 0, '철회하면 저장된 답이 지워진다');
+select is((select count(*)::int from public.answers), 0, '철회하면 저장된 답이 지워진다'); -- rls:의도 고장 확인 11-20: 철회 때 안 지우면 have 1 → not ok 17
 select throws_like($$ select public.save_answer('7c000000-0000-0000-0000-000000000001', 'B') $$, '%consent_required%', '철회 후에는 답을 저장할 수 없다');
 select pg_temp.act_as('71000000-0000-0000-0000-0000000000c1', false);
 select is((public.child_summary()) -> 'parents' -> 0 -> 'latest', 'null'::jsonb, '철회 후 자녀 요약의 latest는 null이다');

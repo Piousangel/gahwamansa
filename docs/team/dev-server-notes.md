@@ -601,3 +601,23 @@ type UnregisterPushToken = { ok: true; removed: number };
 3. **`delete_my_account`·`discard_anonymous_session` — 앱 처리로 충분**: 재시도 응답이 `{scope:'none'}`·`{discarded:false}`여도 상태는 첫 호출대로다. 앱은 삭제 재시도 뒤 응답 값으로 화면을 바꾸지 말고 "지웠어요"로 처리(이미 `deleteMyAccount`는 반환값을 안 씀).
 4. **`log_event` — 앱에서 재시도하지 않기**: 측정은 실패해도 화면을 막지 않는 계약이라(0022) 시간 초과 때 다시 보내지 않는 것이 가장 단순. 서버 키는 넣지 않는다(지표 오차는 작음).
 5. **`issue_invite_code` — 수용**: 재시도로 새 번호가 나와도 앞 번호는 화면에 나온 적이 없다. 다만 앱이 첫 응답을 이미 그렸는데 늦게 실패로 처리하는 구조라면 번호가 바뀐다 → 앱은 번호를 그린 뒤에는 재시도하지 않는다.
+
+## 21. pgTAP 헛통과 전수 점검 — 앱 역할로 표를 직접 세는 단언(11-20, '헛통과 테스트 → 실패 확인' 규칙)
+배경: #218 실패 확인에서 `create_family` 재시도의 가족 수를 앱 역할(authenticated)로 세 RLS 때문에 중복이 안 보여 늘 통과하던 단언을 찾았다(→ `reset role` 뒤에 세도록 고침). 같은 모양을 `supabase/tests` 전체에서 찾았다.
+방법: 줄마다 현재 역할(`pg_temp.act_as`·`set local role`·`reset role`)을 따라가며, 앱 역할(authenticated·anon)에서 `public` 표를 직접 `count(*)`·`exists`로 세는 단언 25개를 뽑았다(함수 반환값을 세는 단언은 제외). "없음(0)"을 기대하는 부작용 확인은 고장을 넣어 실제로 실패하는지 봤다(공유 로컬 DB 한 트랜잭션 → rollback, 고장은 커밋 안 함).
+
+| 분류 | 단언(파일:줄) | 판정 |
+|---|---|---|
+| RLS 확인 자체(앱 역할에서 이렇게 보여야 함) | `rls` 54·55·57·70·74·94·95, `rpc_privacy` 46·47·51·52, `rpc_privacy_review` 31·37, `rpc_cheers` 51, `rpc_redeem` 73, `push_tokens` 30, `security_hardening` 44 (17개) | 의도대로 — `-- rls:의도 RLS 확인` 표시 |
+| 부작용 "없음" 확인 | `rpc_family` 59 '만료된 코드는 정리된다' | **실패 확인: `issue_invite_code`의 만료 코드 삭제를 빼면 → `not ok 11 - 만료된 코드는 정리된다`(have 1, want 0)** — 같은 가족 번호는 RLS로 보여 헛통과 아님 |
+| 부작용 "없음" 확인 | `rpc_privacy` 70 '철회하면 저장된 답이 지워진다' | **실패 확인: `withdraw_consent`의 답 삭제를 빼면 → `not ok 17 - 철회하면 저장된 답이 지워진다`(have 1, want 0)** — 본인 답은 동의 여부와 무관하게 RLS로 보여 헛통과 아님 |
+| 부작용 "N개" 확인(양수 기대) | `rpc_family` 27·28·44·62, `rpc_content` 48, `rpc_redeem` 48 | 빠지면 0이 되어 실패, 같은 가족·본인 범위의 중복도 RLS로 보여 실패 — 헛통과 아님(표시만) |
+| 이미 고침 | `rpc_family` 가족 수(#218, 56c78455) | `reset role` 뒤에 셈. 실패 확인: 재시도 분기가 가족을 새로 만들면 → `not ok 5`(have 2, want 1) |
+
+결론: 이번 점검에서 새 헛통과는 없다(#218의 1건뿐). 고친 테스트 코드 없음 — 표시 주석만 추가.
+
+**결정적 검사(구현)**: `supabase/ops/test-rls-lint.mjs` — 앱 역할 상태에서 `public` 표를 직접 세는 단언에 `reset role`이 앞에 없고 줄 끝 `-- rls:의도` 표시도 없으면 실패. `replay-check.sh`가 스택을 띄우기 전에 먼저 돌린다(바로 실패). 단위 테스트 `node --test supabase/ops/test-rls-lint.test.mjs`(#218 모양을 잡는지 포함).
+- 새 단언을 쓸 때: 서버가 만든·지운 행(부작용)을 세려면 `reset role;` 뒤에서 센다. 앱에서 이렇게 보여야 한다는 RLS 확인이면 줄 끝에 `-- rls:의도 <이유>`.
+- (#219 리뷰 반영) `-- rls:의도` 뒤에 **이유 글이 없으면 위반**(무엇을 확인하는지: 예 `남의 가족 답 0행`). 단언은 세미콜론까지 모아 한 문장으로 보므로 여러 줄 단언도 잡는다. `set role X`(local 없음)와, 이 파일에서 `set role`·`set local role`을 실행하는 pg_temp 도우미(이름 무관)를 부르면 앱 역할로 본다.
+- CI: `.github/workflows/server.yml` pgTAP 잡이 `supabase test db` 전에 `node supabase/ops/test-rls-lint.mjs supabase/tests`를 돈다.
+- 남은 한계: pg_temp 도우미 함수 **안에서** 표를 세는 경우(단언은 `pg_temp.f()`만 부름)는 대상 밖 — 그런 도우미는 `reset role` 뒤에서 부른다.
