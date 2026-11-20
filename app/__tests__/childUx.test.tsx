@@ -808,6 +808,14 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
   });
 
+  test('P-12: C1 Dock 에 \'지금은 부모님 폰이 안드로이드일 때만 돼요\' 한 줄(번호 만들기 아래, 보내기 전에 안다)', async () => {
+    render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
+    await waitFor(() => screen.getByTestId('title-group'));
+    const dock = within(screen.getByTestId('screen-dock'));
+    expect(dock.getByText('지금은 부모님 폰이 안드로이드일 때만 돼요')).toBeTruthy();
+    expect(dock.getByTestId('dock-note')).toBeTruthy();
+  });
+
   test('V9: C1 → C2 없이 바로 C3(스택에 C1 이 남지 않음), 측정 이벤트는 C1 번호 발급 1번 + C3 보내기·복사', async () => {
     const api = createFakeApi({who: 'child'});
     const log = jest.spyOn(api, 'logEvent');
