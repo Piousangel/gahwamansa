@@ -113,7 +113,7 @@ test('#208 리뷰 H1: 서버 삭제 뒤 기기 정리(카카오 연결 끊기·�
       .then(r => {
         out = r;
       });
-    const flush = () => new Promise(r => setImmediate(r)); // setImmediate 는 가짜 시계 대상이 아니다(jest.config)
+    const flush = () => new Promise<void>(r => setImmediate(() => r())); // setImmediate 는 가짜 시계 대상이 아니다(jest.config)
     for (let i = 0; i < 10 && out === null; i++) {
       await flush();
       jest.advanceTimersByTime(3000); // 정리 하나당 3초 제한
