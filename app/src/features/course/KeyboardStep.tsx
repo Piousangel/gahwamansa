@@ -223,6 +223,9 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           // 닫힘: 넘어가기는 Dock(넘치면 본문 끝으로, R-12). 자판 열림은 위 줄(100%) 또는 본문(200%)
           secondary: open ? undefined : skipStrong ? {kind: 'secondary', label: k.skip, disabled: busy, testID: 'kb-skip-strong', onPress: skip} : {kind: 'text', label: k.skip, disabled: busy, onPress: skip},
         };
+  // 리드 결정(b, 11-20, 시안 변경): 200% 자판 열림에서는 Dock 을 풀고 '다 썼어요'를 입력 칸 바로 아래 본문에. 보이는 창(약 75dp)이 모자라
+  //   카드가 '더 있음' 띠에 가렸다(에뮬레이터 실측). 자판이 닫히면 Dock 으로 돌아온다
+  const releaseDock = open && large && !error;
   const asideSkip = open && !large ? <Button kind="text" size="inline" label={k.skip_short} accessibilityHint={k.skip} disabled={busy} onPress={skip} testID="kb-skip-top" /> : undefined;
 
   return (
@@ -233,7 +236,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       header={<StepHeader name={copy.course.step.hangul} n={3} />}
       stepInfo={stepA11y(copy.course.step.hangul, 3)}
       onViewport={setViewport}
-      dock={dock}>
+      dock={releaseDock ? undefined : dock}>
       {!error ? null : <StepErrorBanner error={error} />}
       {phase === 'matched' ? (
         // 알림은 announceForAccessibility 1회만(R11). liveRegion 을 같이 두면 두 번 읽힌다
@@ -292,10 +295,21 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           autoCapitalize="none"
           returnKeyType="done"
           blurOnSubmit
+          // 자판 '완료' 키 = '다 썼어요'(한 글자 이상일 때). 리드 결정(b) 확인 항목
+          onSubmitEditing={() => {
+            if (hasText && !busy) {
+              pressDone();
+            }
+          }}
           maxFontSizeMultiplier={ds.type.fieldInput.maxFontScale}
           style={[styles.input, open ? styles.inputOpen : null, inputText, kbOpen ? styles.inputFocused : null]}
         />
       </View>
+      {releaseDock ? (
+        <View testID="kb-done-inline">
+          <Button label={copy.course.next.hangul} buttonRef={doneRef} disabled={!hasText} disabledReason={k.need_one} loading={busy} onPress={pressDone} />
+        </View>
+      ) : null}
       {roman ? (
         <Text testID="kb-roman" role="sub">{k.roman_hint}</Text>
       ) : null}
