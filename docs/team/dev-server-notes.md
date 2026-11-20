@@ -618,4 +618,6 @@ type UnregisterPushToken = { ok: true; removed: number };
 
 **결정적 검사(구현)**: `supabase/ops/test-rls-lint.mjs` — 앱 역할 상태에서 `public` 표를 직접 세는 단언에 `reset role`이 앞에 없고 줄 끝 `-- rls:의도` 표시도 없으면 실패. `replay-check.sh`가 스택을 띄우기 전에 먼저 돌린다(바로 실패). 단위 테스트 `node --test supabase/ops/test-rls-lint.test.mjs`(#218 모양을 잡는지 포함).
 - 새 단언을 쓸 때: 서버가 만든·지운 행(부작용)을 세려면 `reset role;` 뒤에서 센다. 앱에서 이렇게 보여야 한다는 RLS 확인이면 줄 끝에 `-- rls:의도 <이유>`.
-- 한계: 줄 단위 검사라 여러 줄에 걸친 단언(첫 줄에 `select is(`, 다음 줄에 `from public.…`)은 못 잡는다. pg_temp 도우미 함수 안에서 세는 경우도 대상 밖 — 그런 도우미는 `reset role` 뒤에서 부른다.
+- (#219 리뷰 반영) `-- rls:의도` 뒤에 **이유 글이 없으면 위반**(무엇을 확인하는지: 예 `남의 가족 답 0행`). 단언은 세미콜론까지 모아 한 문장으로 보므로 여러 줄 단언도 잡는다. `set role X`(local 없음)와, 이 파일에서 `set role`·`set local role`을 실행하는 pg_temp 도우미(이름 무관)를 부르면 앱 역할로 본다.
+- CI: `.github/workflows/server.yml` pgTAP 잡이 `supabase test db` 전에 `node supabase/ops/test-rls-lint.mjs supabase/tests`를 돈다.
+- 남은 한계: pg_temp 도우미 함수 **안에서** 표를 세는 경우(단언은 `pg_temp.f()`만 부름)는 대상 밖 — 그런 도우미는 `reset role` 뒤에서 부른다.

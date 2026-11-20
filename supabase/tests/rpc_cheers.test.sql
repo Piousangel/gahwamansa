@@ -48,7 +48,7 @@ select is(array(select k from jsonb_object_keys(public.send_cheer('74b00000-0000
 select throws_ok($$ insert into public.cheers (family_id, from_child, to_parent, message_key) values
   ('74f00000-0000-0000-0000-000000000001', '74b00000-0000-0000-0000-0000000000c1', '74b00000-0000-0000-0000-0000000000a1', 'anything') $$,
   '42501', null, '자녀는 응원 테이블에 직접 넣지 못한다(화이트리스트 우회 차단)');
-select is((select count(*)::int from public.cheers), 0, '자녀는 응원 테이블을 직접 읽지 못한다(read_at 비공개 유지)'); -- rls:의도 RLS 확인
+select is((select count(*)::int from public.cheers), 0, '자녀는 응원 테이블을 직접 읽지 못한다(read_at 비공개 유지)'); -- rls:의도 RLS 확인: 자녀 cheers 0행
 select throws_like($$ select public.get_my_cheers() $$, '%parent_required%', '자녀는 응원 읽기를 호출할 수 없다');
 select throws_like($$ select public.mark_cheers_read() $$, '%parent_required%', '자녀는 읽음 처리를 호출할 수 없다');
 
