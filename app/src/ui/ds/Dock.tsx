@@ -32,7 +32,8 @@ type Social<P extends SocialButtonProps['provider']> = Omit<SocialButtonProps, '
 export type SocialGroup = {social: readonly [Social<'kakao'>] | readonly [Social<'kakao'>, Social<'google'>] | readonly [Social<'google'>]};
 export const SOCIAL_GROUP_MAX = ds.dock.socialGroupMax;
 
-export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger'}) | SocialGroup;
+/** kind 'secondary': 할 일이 끝난 화면의 유일한 버튼이 보조 행동일 때(예: P3 다 마친 뒤 '오늘 코스 다시 보기', 시안 ds4b 3/3) */
+export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger' | 'secondary'}) | SocialGroup;
 /** 보조: 기본 외곽선·글자 버튼, 또는 위험 외곽선(계정 지우기처럼 안전한 쪽이 주 버튼일 때) */
 export type DockSecondary = DockAction & {kind?: 'secondary' | 'text' | 'danger'};
 /** 한 줄 안내(글) 또는 글자 링크 하나 */

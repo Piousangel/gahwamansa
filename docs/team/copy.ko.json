@@ -402,7 +402,9 @@
     "declined_banner": "고른 답은 저장되지 않아요",
     "declined_link": "다시 정하기",
     "to_home": "오늘 코스로",
-    "history_link": "지난 날 보기"
+    "history_link": "지난 날 보기",
+    "review_row_hint": "다시 보기",
+    "_status_review_row_hint": "라이터 확인 전(P3 v4 했어요 행 힌트, 시안 aria '…, 했어요, 다시 보기'의 끝말, 2기 레인 11-20)"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",

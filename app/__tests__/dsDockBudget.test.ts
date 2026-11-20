@@ -89,6 +89,20 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
   },
   {
+    name: 'P3 코스 홈(지금 단계 이름)',
+    screen: 'CourseHome',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.step.hangul, onPress: noop}},
+  },
+  {
+    name: 'P3 코스 홈 다 마침(오늘 코스 다시 보기, 보조 + 사진 아이콘)',
+    screen: 'CourseHome',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {kind: 'secondary', label: copy.course.review_link, icon: 'icon-photo', onPress: noop}},
+  },
+  {
     name: 'P7 완료(알겠어요)',
     screen: 'CourseDone',
     variant: 'step',
