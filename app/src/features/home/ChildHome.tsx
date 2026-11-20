@@ -5,8 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {TopBar} from '../../ui/TopBar';
-import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
-import {AudienceProvider, Button, Card, Choice, Heading, Sheet, StateView, Text} from '../../ui/ds';
+import {AudienceProvider, Button, Card, Choice, DsScreen, Heading, Sheet, StateView, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
@@ -23,6 +22,12 @@ import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackOnce} from '../track';
 import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
+
+/** 카드 묶음 안 간격(본문 간격과 같게) */
+const CARD_GAP = 16;
+/** 카드 테이프가 카드 위로 나온 만큼(styles.tape top −10, 카드 marginTop 8 을 빼고 여유 4) */
+const CARD_TAPE_OVER = 6;
 
 /** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
 const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
@@ -58,6 +63,17 @@ export function ChildHome() {
   //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
   const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
+  const cardsFold = useFoldGap(1, CARD_GAP); // 첫 카드도 민다(호칭 겹침 안내 아래에서 걸칠 수 있음, #207 재캡처). 한 화면보다 큰 카드는 foldPush 가 밀지 않는다
+  const cardHs = useRef<number[]>([]);
+  const cardCount = firstDay ? 0 : list.length;
+  const onCardHeight = (i: number, h: number) => {
+    const hs = cardHs.current.slice(0, cardCount);
+    hs[i] = h;
+    cardHs.current = hs;
+    if (hs.length === cardCount && hs.every(x => x !== undefined)) {
+      cardsFold.onHeights(hs);
+    }
+  };
   // N-10(전문가 리뷰 r2 H, 4:201): 200%에서 위 바 + 하단 응원 버튼 + 탭 바 = 화면 51%(R-12 40%). 큰 글자(150% 이상)에서는
   //   응원 버튼을 하단 고정에서 빼 카드 바로 아래 본문으로 둔다(R-12 단서·C3 '큰 글자 = Dock 주 하나' 결정 #83 ②와 같은 방식). 고정 틀 = 위 바 + 탭 바만
   const big = useWindowDimensions().fontScale >= 1.5;
@@ -93,15 +109,15 @@ export function ChildHome() {
   // 받은 요약이 없을 때만 오류 화면. 이미 받은 것이 있으면 그대로 두고 오류 줄만 덧붙인다.
   if (error && !info) {
     return (
-      <Screen top={top}>
-        <AudienceProvider value="child">
+      <AudienceProvider value="child">
+        <DsScreen variant="step" header={top}>
           <StateView testID="child-home-error" kind="error" title={error.title} body={error.body} action={{label: error.button, onPress: load}} />
-        </AudienceProvider>
-      </Screen>
+        </DsScreen>
+      </AudienceProvider>
     );
   }
 
-  // 하단 고정: ds Button(자녀 역할). 옛 Screen 틀(탭 화면 TopBar)은 그대로 — 탭 화면용 DsScreen list 틀은 아직 없다
+  // 본문으로 내려올 때(큰 글자) 쓰는 같은 버튼(ds Button, 자녀 역할)
   const bottom = (
     <AudienceProvider value="child">
       {!info ? (
@@ -114,12 +130,27 @@ export function ChildHome() {
   const hasBottom = (!info || reachable.length > 0) && !big;
   // 큰 글자: 응원 버튼은 첫 카드(첫날이면 안내 한 줄) 바로 다음 — 어르신이 여럿이어도 버튼은 하나라 첫 카드 다음(#167 리뷰 M2)
   const inline = big && hasBottomContent(info, reachable.length) ? <View testID="child-home-cheer-inline">{bottom}</View> : null;
+  // DsScreen 이행(#167 캡처 후속): 하단 고정 = ds Dock 주 버튼. '더 있음'은 겹쳐 그리는 흐림이 아니라 스크롤 영역 밖 띠(R-19)라
+  //   둘째 카드 머리가 흐림 밑에 반쯤 비치던 것이 없어진다. 접힘 기준도 DsScreen onViewport(본문 영역 − 띠) 하나
+  const dock: DockProps | undefined = !hasBottom
+    ? undefined
+    : !info
+      ? {primary: {label: c.cheer.button, onPress: () => {}, disabled: true, disabledReason: h.loading_reason}}
+      : {primary: {label: c.cheer.button, onPress: () => setSheet(true), loading: sending, buttonRef: cheerButton}};
 
   return (
     <View style={styles.flex}>
-      {/* 리뷰 L4: 옛 Screen 의 아래 흐림(SCREEN_FADE_H, 겹쳐 그림)에 걸치면 민다(기준 = 흐림 위), 민 요소는 흐림 밑(창 끝)으로 — 흐림 속에 위 테두리가 비치지 않게 */}
-      <Screen top={top} bottom={hasBottom ? bottom : undefined} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
-        <AudienceProvider value="child">
+      <AudienceProvider value="child">
+      {/* 틀은 step(#207 리뷰): 지금 DsScreen 틀은 step·form·intro 셋뿐이고, 탭 화면에 맞는 list 틀은 빌드 1 끝으로 미뤄져 있다(SUMMARY Q8).
+          step 은 Dock 상한 40%·자판 접힘 정책이 이 화면과 같다(입력 없음 — 접힐 일도 없음). list 틀이 생기면 그리로 옮긴다 */}
+      <DsScreen
+        variant="step"
+        header={top}
+        dock={dock}
+        onViewport={h => {
+          emptyFold.onViewport(h);
+          cardsFold.onViewport(h, h + CARD_TAPE_OVER); // 카드 위 테이프가 카드 밖으로 나와 있어(−10), 민 카드의 테이프가 띠 위로 비치지 않게 그만큼 더
+        }}>
         {error ? (
           <View accessibilityLiveRegion="polite">
             <Text role="body">{error.title}</Text>
@@ -145,19 +176,27 @@ export function ChildHome() {
             {firstDay ? (
               <ChildHomeEmpty fold={emptyFold} action={inline} />
             ) : (
-              list.map((p, i) => (
-                <React.Fragment key={`card-${p.parentId}`}>
-                  <AnswerCard parent={p} withHeader={many} />
-                  {i === 0 ? inline : null}
-                </React.Fragment>
-              ))
+              // R-15(#207 캡처): 200%·130%에서 둘째 카드 머리가 첫 화면 끝(더 있음 띠 위)에 반쯤 걸쳤다 → 카드(첫 카드는 응원 버튼과 한 덩어리)마다
+              //   접힘 밀기. 카드 수가 바뀌므로 높이를 한꺼번에 넘긴다(onHeights)
+              <View style={styles.cards} onLayout={cardsFold.onBlock} testID="child-home-cards">
+                {list.map((p, i) => (
+                  <View
+                    key={`card-${p.parentId}`}
+                    style={[styles.cardItem, cardsFold.gapStyle(i)]}
+                    testID={`child-home-card-item-${i + 1}`}
+                    onLayout={e => onCardHeight(i, e.nativeEvent.layout.height)}>
+                    <AnswerCard parent={p} withHeader={many} />
+                    {i === 0 ? inline : null}
+                  </View>
+                ))}
+              </View>
             )}
           </>
         )}
         {/* 받기 전(로딩)·카드가 없을 때는 본문 끝 */}
         {!info || (!firstDay && list.length === 0) ? inline : null}
-        </AudienceProvider>
-      </Screen>
+      </DsScreen>
+      </AudienceProvider>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
       <AudienceProvider value="child">
         <Sheet visible={sheet} onClose={() => setSheet(false)} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
@@ -229,6 +268,8 @@ function AnswerCard({parent: p, withHeader}: {parent: ChildParent; withHeader: b
 
 const styles = StyleSheet.create({
   flex: {flex: 1},
+  cards: {gap: CARD_GAP, alignSelf: 'stretch'},
+  cardItem: {gap: CARD_GAP, alignSelf: 'stretch'},
   centerText: {textAlign: 'center'},
   plain: {paddingVertical: 32, alignItems: 'center', gap: 8},
   card: {backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, padding: 20, paddingTop: 28, gap: 6, marginTop: 8},
