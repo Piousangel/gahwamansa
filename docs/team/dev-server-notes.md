@@ -512,6 +512,33 @@ type UnregisterPushToken = { ok: true; removed: number };
 - [ ] 심사 접근(§11): 심사 가족 만들기는 반영 뒤, 번호는 기본 꺼짐 확인
 - [ ] 반영 뒤 `remote-checks.sql` + `metrics.sql` ⑧·⑥ 첫날 확인, 06시 점검(§14) 시작
 
+### D. 0057·0058 staging 반영 뒤 확인(11-20 정리, 반영은 사용자 승인 뒤 리드)
+범위: 0057 연결 전·옛 익명 계정 90일 자동 정리, 0058 계정 삭제 때 이용 기록(events device_key) 동반 삭제. main에는 병합됨, staging에는 아직 없음.
+1. **반영 직후 SQL Editor(postgres)에서 `supabase/ops/remote-checks.sql`** — 아래 줄을 본다.
+   - `익명 계정 정리 준비(0057): auth 열·권한` → **true여야 한다**. false면 원인 둘 중 하나:
+     - 함수 소유자(postgres)가 `auth.sessions`·`auth.refresh_tokens`를 읽지 못하거나 `auth.users`를 지우지 못함(hosted 권한 — 로컬에서는 true였지만 hosted는 실측 전)
+     - Supabase Auth 버전 차이로 열 8개(`users.is_anonymous·last_sign_in_at·updated_at`, `sessions.user_id·updated_at·refreshed_at`, `refresh_tokens.user_id·updated_at`) 중 하나가 없음
+     - 어느 쪽이든 정리 단계가 매일 -1로 조용히 멈춘다 → 서버 줄에 알리고, 고칠 때까지 방침 P21 게시를 미룬다.
+   - detail의 "정리 대상 N명": 반영 시점에 이미 90일 넘은 연결 전·옛 익명 계정 수. 하루 200명씩 줄어든다(첫 며칠 클 수 있음).
+   - `익명 계정 정리 진행(0057)`: **반영 첫날은 false일 수 있다**(대상이 있는데 아직 00:10 KST 배치 전). 다음 날 06시 점검에서 다시 보고, 대상이 있는데 이틀째 false면 정리가 멈춘 것.
+   - `마이그레이션 최신 번호` ≥ 0058, `앱 실행 가능 definer` 개수 줄도 true인지.
+2. **Studio 권한 확인(읽기만)** — 위 "준비" 줄이 false일 때 원인을 가르는 데 쓴다:
+   ```sql
+   select has_table_privilege('postgres', 'auth.sessions', 'select') as sessions_read,
+          has_table_privilege('postgres', 'auth.refresh_tokens', 'select') as refresh_read,
+          has_table_privilege('postgres', 'auth.users', 'delete') as users_delete;
+   select table_name, column_name, data_type from information_schema.columns
+    where table_schema = 'auth' and (table_name, column_name) in (('sessions', 'refreshed_at'), ('refresh_tokens', 'user_id'), ('users', 'is_anonymous'));
+   ```
+   - `refreshed_at`이 `timestamp without time zone`이 아니어도 함수는 동작한다(`::timestamp at time zone 'UTC'`로 읽음, 오차는 하루 안 — 90일 기준에 영향 없음).
+   - 읽기 전용 역할(`db query --remote --read-only`)로 remote-checks를 돌려도 이 두 줄은 함수 없이 표만 읽어 그대로 나온다.
+3. **다음 날(첫 00:10 KST 배치 뒤) 06시 점검** — §14-4:
+   - `select count(*) from events where name = 'account_purged' and ts > now() - interval '1 day';`(정리된 수, 대상이 있었다면 0보다 커야 함)
+   - `select count(*), max(failures), max(last_failed_at) from stale_purge_failures;`(0이 정상, 있으면 `last_sqlstate`로 원인)
+   - `select status, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 1;`(배치 자체 성공)
+4. **0058 확인(테스트 계정으로)** — staging 테스트 가족에서 연결 전 계정 하나를 앱에서 지운 뒤(또는 `admin_delete_user`), 그 계정이 남긴 `app_first_open` 같은 이벤트가 없는지: 지우기 **전에** `select count(*) from events where profile_id is null and family_id is null and ts > now() - interval '1 hour';`를 보고, 지운 뒤 다시 본다(줄어야 함). uid·해시를 대장에 옮기지 않는다.
+5. 법률 대조: 반영·확인이 끝나면 P21(방침 4·10절, 삭제 안내 2절 `{연결 전 계정 자동 정리 기간}` = 90일)·P22(방침 4절 이용 기록 행, 삭제 안내 3절)를 법률 줄이 게시 조건 표에서 닫는다.
+
 ## 19. 제안(구현 안 함 — 리드·법률 결정 대기, xhigh·법률 재확인 11-19)
 ### ① 쓰지 않는 연결 전 계정 정리 배치 → **구현(0057, 익명만 90일, 오너 확정 DECISIONS 11-20)**
 - 대상: 익명 + 프로필 없음(가족과 연결하지 않은 어르신 기기, 재연결로 프로필이 새 기기로 옮겨 가 비워진 옛 익명 계정) + 마지막 활동(가입·로그인·사용자 갱신·세션 갱신·리프레시 토큰 갱신 중 가장 늦은 것)이 90일 넘음. 기간은 `stale_anon_days()` 한 곳.
