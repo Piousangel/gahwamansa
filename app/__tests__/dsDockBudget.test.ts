@@ -89,6 +89,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
   },
   {
+    name: 'P2 동의(좋아요 + 싫어요 같은 높이·글자, 넘치면 본문 끝 — N-12·#175)',
+    screen: 'ConsentScreen',
+    variant: 'intro',
+    audience: 'elder',
+    dock: {primary: {label: copy.consent.accept, onPress: noop}, secondary: {label: copy.consent.decline, onPress: noop}, even: true},
+  },
+  {
     name: 'P6 자판으로 쓰기 닫힘(다 썼어요 + 이유 + 오늘은 넘어갈게요 — #104 ①)',
     screen: 'KeyboardStep',
     variant: 'step',

@@ -11,7 +11,8 @@ declare const process: {execPath: string};
 const {spawnSync}: {spawnSync(c: string, a: string[], o: object): {status: number | null; stderr: string; stdout: string}} = require('child_process');
 // 생성기는 저장소 루트 scripts/(앱 babel 밖)라 jest 가 불러오지 않고 node 로 직접 돌린다
 const ROOT = path.join(__dirname, '../..');
-const SRC = path.join(ROOT, 'design-system/tokens-v4.json');
+// 11-20: 원본이 v5(B2 v2 장날 팻말, #151). 생성물 이름(tokensV4)·생성기 이름(gen-tokens-v4)은 그대로
+const SRC = path.join(ROOT, 'design-system/tokens-v5.json');
 import {tokensV4 as t, type Audience} from '../src/ui/tokensV4';
 import {color as v3color} from '../src/ui/tokens';
 import {colorV3toV4, text20SizeToRole, typeScaleV3toV4} from '../src/ui/tokensV4Migration';
@@ -75,7 +76,8 @@ describe('대비(허용 목록 = 화이트리스트)', () => {
         }
         const tones = spec.tone ? [spec.tone] : [spec.primary!.tone, spec.secondary!.tone];
         for (const tone of tones) {
-          const bgs = tone === 'onAction' ? ['action'] : ['paper', 'card'];
+          // 팻말 글자(signInk)는 팻말 면(sign) 위에서만(R-22) — 종이·카드 위에 쓰지 않는다
+          const bgs = tone === 'onAction' ? ['action'] : tone === 'signInk' ? ['sign'] : ['paper', 'card'];
           for (const bg of bgs) {
             if (!allowed(tone, bg, a)) {
               missing.push(`${name}.${a}: ${tone} on ${bg}`);
@@ -153,15 +155,15 @@ describe('글자 역할', () => {
 });
 
 describe('자녀 어르신 답 역할(R-21)', () => {
-  test('answer 40/52, answerRow 26/36 · 자녀 전용 · Jua 강조 · inkTitle', () => {
+  test('answer 40/52, answerRow 26/36 · 자녀 전용 · 700(v5: Jua 폐기 → Noto 700, R-21 굵기 집계 갱신) · inkTitle', () => {
     const ans = t.type.answer as unknown as {child: Spec; elder?: Spec; weight: number; maxFontScale: number};
     const row = t.type.answerRow as unknown as {child: Spec; elder?: Spec; weight: number; maxFontScale: number};
     expect(ans.child).toMatchObject({size: 40, lineHeight: 52});
     expect(row.child).toMatchObject({size: 26, lineHeight: 36});
     expect(ans.elder).toBeUndefined();
     expect(row.elder).toBeUndefined();
-    expect(ans.weight).toBe(400);
-    expect(row.weight).toBe(400);
+    expect(ans.weight).toBe(700);
+    expect(row.weight).toBe(700);
   });
   test('확대 상한: answer 1.3(200%에서 40→52), answerRow 1.5, 호칭 머리글(sub)보다 크다', () => {
     const ans = t.type.answer as unknown as {maxFontScale: number};
@@ -189,9 +191,11 @@ describe('터치·Dock·BackLink 최소값', () => {
 });
 
 describe('v3 별칭·대응표(한 릴리스 병행, Q11)', () => {
-  test('tokens.ts 의 v3 색 이름은 그대로, 값은 v4 와 같다(inkSub 만 v3 와 달라짐 — 접근성 패널 r1, 2026-11-20)', () => {
-    for (const [name, def] of Object.entries(v3.color)) {
-      const want = name === 'inkSub' ? colors.inkSub : def.value;
+  test('tokens.ts 의 v3 색 이름은 그대로, 값은 v5 를 따른다(ink 는 action, v5 에서 지운 장식 색은 deprecatedColor)', () => {
+    const dep = t.deprecatedColor as Record<string, string>;
+    for (const name of Object.keys(v3.color)) {
+      const v5Name = name === 'ink' ? t.v3ColorAlias.ink : name;
+      const want = colors[v5Name] ?? dep[name];
       expect([name, (v3color as Record<string, string>)[name]]).toEqual([name, want]);
     }
   });

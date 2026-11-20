@@ -84,7 +84,12 @@ export type FakeParent = {
 };
 const todayKst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
-export type FakeDevHooks = {resetToday(): void; nextDay(): void};
+export type FakeDevHooks = {
+  resetToday(): void;
+  nextDay(): void;
+  /** 테스트용: 어르신 기기의 계정(익명 uid)을 바꾼다 — 서버 redeem 의 '같은 사람 재시도 = ok, 다른 사람 = used' 를 재현(#181 리뷰 H1) */
+  switchParentAccount(id: string): void;
+};
 
 // in-memory 가짜 구현. '123456' 만 성공, 위 표의 코드는 각 reason, 나머지는 invalid.
 export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHooks} {
@@ -100,6 +105,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   const baseStreak = opts.streak ?? 0;
   let childFamily = opts.childFamily ?? opts.childLinked ?? false;
   let childLinked = opts.childLinked ?? false;
+  // '123456' 을 쓴 계정(서버 invite_codes.used_by). 지금 어르신 기기 계정은 me(서버 auth.uid())
+  let usedBy: string | null = null;
+  let me = 'parent-device-1';
   // 자녀 가족의 가입 번호: 'live' 살아 있음 / 'expired' 지난 번호만 / null 아직 없음
   let childCode: 'live' | 'expired' | null = childFamily && !opts.childCodeNever ? (opts.childCodeExpired ? 'expired' : 'live') : null;
   let emailVerified = opts.who === 'child';
@@ -161,6 +169,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       contentDay += 1;
       steps.clear();
       answered = null;
+    },
+    switchParentAccount(id: string) {
+      me = id;
     },
   };
   return {
@@ -274,10 +285,22 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
     },
     async issueInviteCode() {
       childCode = 'live'; // 새 번호를 받으면 이전 번호는 무효(서버 0018)
+      usedBy = null; // 새 번호(같은 '123456' 이지만 fake 에서는 새로 발급된 것으로 본다). 서버 0018: 새 번호면 이전 번호 무효
       return '123456'; // 어르신 쪽 fake redeem 이 받는 번호와 같게
     },
     async redeemInviteCode(code): Promise<RedeemResult> {
       if (code === '123456') {
+        // 서버 규칙(supabase/migrations/20261116000028_history_peek_notify.sql redeem_invite_code):
+        //  - 226~231행: invite_codes.used_by = auth.uid()(익명 계정 uid — 기기가 아니라 계정)이고 그 uid 의 profiles 행이 있으면 ok(재시도 멱등 — 응답이 끊겨 다시 누른 경우).
+        //    fake 에서 usedBy === me 이면 me 는 이 redeem 으로 프로필을 만든 계정이라 두 조건이 함께 성립한다
+        //  - 250~255행: 다른 계정이 쓴 번호(used_at 있음)면 'used'
+        if (usedBy === me) {
+          return {ok: true, family_id: 'fam-1', profile_id: 'parent-1'};
+        }
+        if (usedBy !== null) {
+          return {ok: false, reason: 'used'};
+        }
+        usedBy = me;
         linked = true;
         if (childFamily) {
           childLinked = true;
@@ -301,6 +324,10 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         throw new OfflineError('offline');
       }
       if (code === '123456') {
+        // 서버 같은 파일 peek_invite_code 157~161행: 쓴 번호는 누가 확인하든 'used'(peek 에는 같은 계정 예외가 없다 — 재시도 멱등은 redeem 에만)
+        if (usedBy !== null) {
+          return {ok: false, reason: 'used'};
+        }
         return {ok: true, parentTitle};
       }
       const reason = FAIL_CODES[code] ?? 'invalid';
@@ -321,7 +348,11 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       consented = false;
       return {scope: opts.deleteScope ?? 'parent'};
     },
-    async giveConsent(_version: string) {
+    async giveConsent(version: string) {
+      // 서버 supabase/migrations/20261116000035_security_followups.sql 29행: 버전 형식 '^v[0-9]{1,3}$' 아니면 invalid_version(#181 리뷰 M1)
+      if (!/^v[0-9]{1,3}$/.test(version)) {
+        throw new ServerError('give_consent', 'invalid_version', 'P0001');
+      }
       consented = true;
     },
     async getWeekStamps() {

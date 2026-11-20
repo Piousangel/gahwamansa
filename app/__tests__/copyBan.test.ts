@@ -29,6 +29,23 @@ test('자녀 화면 문구에 "어르신"이 없다', () => {
   expect(hits).toEqual([]);
 });
 
+// AI 고지 한 줄(P4 사진 아래·P6 사진 띠): 'AI가 만든 그림·실제 장소가 아니에요' — 가운뎃점 둘레 공백 없음(Noto 재렌더 #162, 리드 11-20).
+// 공백이 있으면 Noto 20에서 313.7로 본문 폭 312를 넘어 360×640 100%에서 두 줄이 된다. 법적 문구(두 키)는 그대로
+test("AI 고지 한 줄은 '·' 둘레에 공백을 두지 않는다", () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '../src/features/course');
+  const bad: string[] = [];
+  for (const f of fs.readdirSync(dir) as string[]) {
+    const src: string = fs.readFileSync(path.join(dir, f), 'utf8');
+    if (/ai_photo_label\} · \$\{appCopy\.not_real_place/.test(src)) {
+      bad.push(f);
+    }
+  }
+  expect(bad).toEqual([]);
+  expect(copy.app.not_real_place).toBe('실제 장소가 아니에요');
+});
+
 test('확정 키: 탭 이름, 지우기 확인 단어, AI 표기, 서비스 이름', () => {
   expect(copy.child.tab_album).toBe('앨범');
   expect(copy.child.tab_past).toBe('지난 날');
@@ -48,6 +65,23 @@ test('계정 지우기 로그인 풀림: 어르신용은 로그인 대신 문의
   expect(p.body).toMatch(/가족 확인 뒤/);
   expect(p.body).toMatch(/가족이 대신 문의/);
   expect(copy.delete.signed_out.button).toBe('다시 로그인하기'); // 자녀용은 그대로
+});
+
+test('어르신 지우기 두 갈래(#156 M1·H1·H2, 법률 11-20): 지킬 수 없는 약속·단정을 쓰지 않는다', () => {
+  const d = copy.delete;
+  const elder = [d.parent.done_none, d.parent.done_unsure];
+  for (const x of elder) {
+    const text = `${x.title}${x.body}`;
+    expect(text).not.toMatch(/로그인|서버|@|https?:/); // 어르신 낱말이 아님·주소는 상수에서
+    expect(text).not.toMatch(/가족 확인 뒤 지워 드려요/); // 연결한 적 없는 분에게는 지킬 수 없음(M1)
+    expect(text).not.toMatch(/모든 정보|모두 지웠/); // 서버에 가명 이용 기록이 남는다(법률)
+  }
+  // 리드 11-20: 로그인 풀림 어르신 문구는 한 갈래(signed_out_parent, 문의 가능)만. 연결한 적 없음 전용 키는 두지 않는다
+  expect('signed_out_parent_unlinked' in d).toBe(false);
+  // #157(90일 자동 정리) 병합 전에는 기간을 쓰지 않는다
+  expect(`${d.signed_out_parent.title}${d.signed_out_parent.body}`).not.toMatch(/\d+일|\{기간\}/);
+  // 결과 화면: '지울 기록이 없었어요'(지운 것이 있는데 없다고 함) 금지
+  expect(d.parent.done_none.title).not.toMatch(/없었어요/);
 });
 
 test('호칭은 조사 없이 의/께/뒤 띄어쓰기로만 쓴다', () => {

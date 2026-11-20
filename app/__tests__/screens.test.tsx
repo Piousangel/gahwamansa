@@ -93,11 +93,11 @@ test('콘텐츠 없음 화면에서 다시 보기를 누르면 다시 불러온�
   expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
-test('실제 사진이면 사진 바로 아래 고지 한 줄 "AI가 만든 그림 · 실제 장소가 아니에요"(글자 20, 상한 1.5 — 디자인 #95), 칩 없음', async () => {
+test('실제 사진이면 사진 바로 아래 고지 한 줄 "AI가 만든 그림·실제 장소가 아니에요"(글자 20, 상한 1.5 — 디자인 #95), 칩 없음', async () => {
   await toHome(createFakeApi({realImage: true}));
   await pressCourseNext();
   const line = await waitFor(() => screen.getByTestId('ai-notice'));
-  expect(line).toHaveTextContent('AI가 만든 그림 · 실제 장소가 아니에요');
+  expect(line).toHaveTextContent('AI가 만든 그림·실제 장소가 아니에요');
   expect(StyleSheet.flatten(line.props.style).fontSize).toBeGreaterThanOrEqual(20);
   expect(line.props.maxFontSizeMultiplier).toBe(1.5);
   expect(screen.queryByTestId('photo-ai-chip', {includeHiddenElements: true})).toBeNull();

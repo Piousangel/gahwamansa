@@ -276,12 +276,12 @@ describe('Choice columns(디자인 결정 a)', () => {
 
 describe('어르신 답 역할(디자인 #103 R-21, 자녀 전용)', () => {
   const {roleText} = require('../src/ui/ds/roles');
-  test('answer = 대표 1개 40/52·400·상한 1.3, answerRow = 목록 행 26/36·400·상한 1.5 — 굵기 700 이 아니라 2역할 집계에서 빠진다', () => {
+  test('answer = 대표 1개 40/52·700·상한 1.3, answerRow = 목록 행 26/36·700·상한 1.5 (v5: Jua 폐기 → Noto 700)', () => {
     const a = roleText('answer', 'child');
-    expect(a.style).toMatchObject({fontSize: 40, lineHeight: 52, fontWeight: '400'});
+    expect(a.style).toMatchObject({fontSize: 40, lineHeight: 52, fontWeight: '700'});
     expect(a.maxFontSizeMultiplier).toBe(1.3);
     const r = roleText('answerRow', 'child');
-    expect(r.style).toMatchObject({fontSize: 26, lineHeight: 36, fontWeight: '400'});
+    expect(r.style).toMatchObject({fontSize: 26, lineHeight: 36, fontWeight: '700'});
     expect(r.maxFontSizeMultiplier).toBe(1.5);
   });
   test('어르신 값이 없어도 깨지지 않고 자녀 값(어르신 화면에서는 쓰지 않음)', () => {

@@ -17,17 +17,18 @@ const flat = (s: unknown) => StyleSheet.flatten(s as never) ?? {};
 
 describe('tokens = tokens-v3.json', () => {
   test('색은 v3 역할 값과 같다', () => {
-    // inkSub 만 v4 값(#85592F 5.47 → #544B43 7.70, 접근성 패널 r1 어르신 7:1). 나머지 v3 값은 v4 와 같다
-    const V4_VALUE: Record<string, string> = {inkSub: tokensV4.color.inkSub};
-    for (const [name, def] of Object.entries(v3.color)) {
-      expect([name, (color as Record<string, string>)[name]]).toEqual([name, V4_VALUE[name] ?? def.value]);
+    // v5(11-20, B2 v2): v3 이름은 모두 남고 값은 생성물(v5)을 따른다. tokens-v3.json 은 이름 목록으로만 쓴다
+    for (const name of Object.keys(v3.color)) {
+      expect([name, typeof (color as Record<string, string>)[name]]).toEqual([name, 'string']);
     }
   });
   test('v3 색은 tokensV4 에서 파생된다(원본 하나): 같은 이름은 같은 값, ink 는 v3ColorAlias(action)', () => {
     const c4 = tokensV4.color as Record<string, string>;
+    const dep = tokensV4.deprecatedColor as Record<string, string>;
     for (const name of Object.keys(v3.color)) {
       const v4Name = name === 'ink' ? tokensV4.v3ColorAlias.ink : name;
-      expect([name, (color as Record<string, string>)[name]]).toEqual([name, c4[v4Name]]);
+      // v5 에서 지운 장식 색(O-8)은 deprecatedColor — 화면 레인이 걷어 낼 때까지
+      expect([name, (color as Record<string, string>)[name]]).toEqual([name, c4[v4Name] ?? dep[name]]);
     }
     expect(color.inkBody).toBe(tokensV4.color.inkBody);
   });
@@ -50,7 +51,8 @@ describe('tokens = tokens-v3.json', () => {
     expect(labelLineHeight(20)).toBe(20 + (table.labelExtra as number));
     expect(lineHeightFor(72)).toBe(94); // 큰 글자는 윗획이 잘리지 않게 여유(리뷰 M6)
     expect(space).toMatchObject(omit(v3.space, 'note'));
-    expect(radius).toMatchObject(omit(v3.radius, 'note'));
+    // 반경은 v5 4단을 따른다(v3 이름 별칭) — 값 원본은 생성물
+    expect(radius).toEqual({chip: 6, childCard: 6, input: 3, card: 6, select: 6, sheet: 12, button: 8, keypadKey: 6, codeCell: 6});
     expect(touch).toEqual(omit(v3.touch, 'rule'));
     expect(layout.bodyPadding).toEqual(v3.layout.bodyPadding);
     expect(FONT_SCALE_MAX).toBe(v3.typeScale.fontScaling.maxFontSizeMultiplier);

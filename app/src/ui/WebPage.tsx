@@ -126,7 +126,7 @@ export function WebPage({url, errorText, loadingLabel, externalHosts = [], testI
       )}
       {state === 'loading' ? (
         <View style={styles.loading} pointerEvents="none">
-          <ActivityIndicator color={color.ink} accessibilityLabel={loadingLabel} />
+          <ActivityIndicator color={color.inkSub} accessibilityLabel={loadingLabel} />
         </View>
       ) : null}
     </View>

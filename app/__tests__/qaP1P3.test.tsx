@@ -62,7 +62,7 @@ test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + �
   const key = flat(screen.getByLabelText('숫자 5'));
   expect(key.backgroundColor).toBe(color.card);
   expect(key.borderWidth).toBe(2);
-  expect(key.borderRadius).toBe(14);
+  expect(key.borderRadius).toBe(6); // v5 반경 4단: keypadKey = row(6)
   expect(key.minHeight as number).toBeGreaterThanOrEqual(64);
 });
 
