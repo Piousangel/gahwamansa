@@ -55,6 +55,16 @@ for ok in 'x → FAIL 2건' 'y -> ✕ 1' 'z → TypeError: a' 'w → exit 1' 'v 
   check "표지 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
 done
 check "exit 0 은 실패 표지가 아님" 0 "$(printf '## 증거\n- 실패 확인: a → exit 0\n' | bash "$S" --has-fail-check)"
+# #214 L(두 리뷰): 표지는 화살표 뒤에서만, '실패 확인'·'실패하지'·'… 없음' 속 표지는 빼고, fail·failed 는 대소문자 무관
+check "화살표 앞의 표지만 있으면 0('FAIL 넣음 → 다음 PR')" 0 "$(printf '## 증거\n- 실패 확인: FAIL 넣음 → 다음 PR\n' | bash "$S" --has-fail-check)"
+check "'→ 실패하지 않음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → 실패하지 않음\n' | bash "$S" --has-fail-check)"
+check "'→ 실패 확인 못 함' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → 실패 확인 못 함\n' | bash "$S" --has-fail-check)"
+check "'→ Error 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → Error 없음\n' | bash "$S" --has-fail-check)"
+check "'→ 실패 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → 실패 없음\n' | bash "$S" --has-fail-check)"
+check "'→ Tests: 1 failed' 는 1(소문자 failed)" 1 "$(printf '## 증거\n- 실패 확인: x → Tests: 1 failed\n' | bash "$S" --has-fail-check)"
+check "'→ 2 Failed' 는 1(대문자 섞임)" 1 "$(printf '## 증거\n- 실패 확인: x → 2 Failed\n' | bash "$S" --has-fail-check)"
+check "'→ fail' 는 1" 1 "$(printf '## 증거\n- 실패 확인: x -> fail\n' | bash "$S" --has-fail-check)"
+check "'→ failure' 처럼 낱말 속 fail 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → nofailure\n' | bash "$S" --has-fail-check)"
 # #210 리뷰 L: 코드 블록 안의 '## ' 는 절 끝이 아님
 check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b 실패\n## 검증\nx\n' | bash "$S" --has-fail-check)"
 check "코드 블록 밖 '## 검증' 뒤는 절 밖" 0 "$(printf '## 증거\n- 캡처\n## 검증\n- 실패 확인: a → b\n' | bash "$S" --has-fail-check)"

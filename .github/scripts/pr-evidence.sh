@@ -22,11 +22,19 @@ count_evidence() {
 }
 # '## 증거' 절에 '실패 확인' 줄(형식: 실패 확인: 일부러 깨뜨린 변경 → 실패 출력)이 있는가. 헛통과 테스트 방지(DECISIONS 11-20, #163·#205)
 # '실패 확인' 줄은 **긍정 증거**가 있어야 인정한다(#214 리뷰·리드 결정: 부정 낱말 목록으로 막지 않는다).
-# 화살표(→·->) 뒤에 실패 출력 표지(Expected·Received·FAIL·✕·Error·exit 1~9·'실패')가 있어야 한다. 예: '여백 0 → 8 → Expected 0 Received 8'
-FAIL_MARK='(Expected|Received|FAIL|✕|Error|exit [1-9]|실패)'
+# - 표지는 '실패 확인' 뒤 **첫 화살표(→·->) 다음**에서만 본다(#214 L: 화살표 앞의 표지는 깨뜨린 변경 설명일 뿐)
+# - 표지: Expected·Received·Error·✕·exit 1~9·'실패', fail·failed(대소문자 무관, FAIL 포함)
+# - 표지로 치지 않는 것: '실패 확인'·'실패하지'(않음) 같은 말 속 '실패', 바로 뒤에 '없음' 이 오는 표지(예: 'Error 없음', '실패 없음')
+# 예(인정): '여백 0 → 8 → Expected 0 Received 8', 'x → Tests: 1 failed'
 has_fail_check() {
-  evidence_section |
-    grep -c -E "실패 확인.*(→|->).*$FAIL_MARK" || true
+  evidence_section | perl -CSD -Mutf8 -ne '
+    next unless /실패 확인/;
+    s/^.*?실패 확인//;
+    next unless s/^.*?(?:→|->)//;
+    s/실패\s*확인//g; s/실패하지//g;
+    s/(?:Expected|Received|Error|✕|exit\s*[1-9]|fail(?:ed)?|실패)\s*(?:이|가|은|는)?\s*없음//gi;
+    $n++ if /(?:Expected|Received|Error|✕|exit\s*[1-9]|\bfail(?:ed)?\b|실패)/i;
+    END { print $n + 0, "\n" }'
 }
 # 검사를 더하거나 바꾼 파일. 문서(.md)는 뺀다(#210 리뷰 M: 서버 테스트·통합 테스트·어디 있든 *.test.ts(x)·*.test.sh 포함)
 test_files() { grep -E '^app/__tests__/|^app/e2e/|(^|/)scripts/audit/|^supabase/tests/|^app/__integration__/|\.test\.(tsx?|sh)$' | grep -v -E '\.md$' || true; }
