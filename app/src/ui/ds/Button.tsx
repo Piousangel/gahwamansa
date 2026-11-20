@@ -23,6 +23,8 @@ export type ButtonProps = {
   /** 비활성 이유. 버튼 위 한 줄 + TalkBack 힌트 */
   disabledReason?: string;
   accessibilityHint?: string;
+  /** 대등한 두 답(동의 좋아요·싫어요)일 때 보조도 주 버튼 높이 — 주·보조는 색으로만 나눈다(전문가 리뷰 N-12·7:42: 높이가 다르면 한쪽으로 이끈다) */
+  even?: boolean;
   style?: LayoutOnlyStyle;
   testID?: string;
   buttonRef?: React.Ref<React.ComponentRef<typeof Pressable>>;
@@ -40,13 +42,13 @@ export const PRESSED_LOOK: Record<ButtonKind, {bg: string; ink: Tone}> = {
 
 // v4 Button(SUMMARY 3절): 높이·글자는 kind 와 audience 로만 정해진다(숫자 prop 없음). minHeight 만, 고정 height 없음.
 // 갈색(action)은 누를 것 전용 — 면(주)·테두리(보조)·밑줄(text) 중 하나를 반드시 함께 쓴다.
-export function Button({kind = 'primary', size = 'dock', label, onPress, icon, disabled, loading, loadingLabel, disabledReason, accessibilityHint, style, testID, buttonRef}: ButtonProps) {
+export function Button({kind = 'primary', size = 'dock', label, onPress, icon, disabled, loading, loadingLabel, disabledReason, accessibilityHint, even, style, testID, buttonRef}: ButtonProps) {
   const a = useAudience();
   const blocked = !!disabled || !!loading;
   const shown = loading && loadingLabel ? loadingLabel : label;
   const primary = kind === 'primary';
   const text = roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a);
-  const minHeight = minTouch(primary ? 'primary' : kind === 'text' ? 'link' : 'secondary', a);
+  const minHeight = minTouch(primary || (even && kind !== 'text') ? 'primary' : kind === 'text' ? 'link' : 'secondary', a);
   const ink: Tone = disabled ? 'disabled' : primary ? 'onAction' : kind === 'danger' ? 'danger' : 'action';
   // 눌림 글자(tokens-v4 states.pressed, 디자인 시스템 패널 r1): 보조·text 는 actionSoft 면 위 action 이 6.03 이라 actionPressed(8.15).
   // 위험은 dangerSoft 면 위 dangerInk 가 6.80 이라 면을 card 로 두고(8.31) 테두리를 굵게 한다(안쪽 여백을 같이 줄여 크기는 그대로)

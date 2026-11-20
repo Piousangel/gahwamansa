@@ -89,6 +89,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
   },
   {
+    name: 'P2 동의(좋아요 + 싫어요 같은 높이, 150% 이상은 본문 끝 — N-12)',
+    screen: 'ConsentScreen',
+    variant: 'intro',
+    audience: 'elder',
+    dock: {primary: {label: copy.consent.accept, onPress: noop}, secondary: {label: copy.consent.decline, onPress: noop}, even: true},
+  },
+  {
     name: 'P7 완료(알겠어요)',
     screen: 'CourseDone',
     variant: 'step',

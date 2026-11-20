@@ -80,12 +80,12 @@ test('M3(360 폭 100%): 답 보여 주기 행은 동사 버튼을 다음 줄 전
   expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('column');
 });
 
-test('P2: 넷째 줄은 체크 카드 밖 ⓘ 한 줄', async () => {
+test('P2: 넷째 줄(거절 안내)은 카드 밖 한 줄(v4: 점 머리표, ⓘ 없음)', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
-  expect(screen.getByTestId('consent-info')).toBeTruthy();
+  expect(screen.getByTestId('consent-decline-note')).toBeTruthy();
 });
 
 test('M3: 확인 패널이 열리면 패널 끝까지 보이게 본문을 스크롤한다(하단 고정 돌아가기에 가려지지 않게)', async () => {

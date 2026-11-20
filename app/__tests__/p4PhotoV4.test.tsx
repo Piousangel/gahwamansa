@@ -44,7 +44,7 @@ test('100% 설명 있는 날: 사진 88 → AI 고지 → 설명 → 질문 → 
   await toPhoto();
   expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(88);
   expect(order(['photo-polaroid', 'ai-notice', 'photo-caption', 'recall-questions', 'read-aloud'])).toEqual(['photo-polaroid', 'ai-notice', 'photo-caption', 'recall-questions', 'read-aloud']);
-  expect(screen.getByTestId('ai-notice')).toHaveTextContent('AI가 만든 그림 · 실제 장소가 아니에요');
+  expect(screen.getByTestId('ai-notice')).toHaveTextContent('AI가 만든 그림·실제 장소가 아니에요');
   expect(screen.queryByTestId('photo-ai-chip', {includeHiddenElements: true})).toBeNull();
   expect(screen.getByText(/사진 보기 · 1 \/ 3/)).toBeTruthy();
   const dock = screen.getByTestId('screen-dock');

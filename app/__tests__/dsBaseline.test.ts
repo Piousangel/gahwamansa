@@ -18,6 +18,7 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C2 재연결 번호(CodeShow)·C6 곧 유료 시트(ui/ds, 11-20): text20Size −2
 // 계정 지우기·지운 뒤(어르신·자녀 공용 ui/ds, 11-20): text20Size −8·rnImport −1·fontScale −1·fontSize −1
 // CG 자녀 시작 결정(ds DsScreen·StateView, 11-20): text20Size −2
+// P2 동의 v4(ds DsScreen·Banner, 11-20): text20Size −5·v3Color −3, D-14 v3Tokens·Screen·BigButton·Text20 각 −1
 // C1 호칭(ds Choice 2열·C2 건너뜀) + C4 호칭 겹침 안내(ds Sheet·Choice), 11-20: text20Size −1
 // P7 완료 앨범(ui/ds, 11-20): 165 → 162 (text20Size −2·rnImport −1)
 // C4 홈 나머지(부품 ui/ds, 11-20): 164 → 159 (text20Size −5)
@@ -38,10 +39,10 @@ const BASELINE: Record<string, number> = {
   numberOfLines: 0,
   fontScale: 13,
   placeholder: 0,
-  text20Size: 67,
+  text20Size: 62,
   rnImport: 22,
   ellipsis: 0,
-  v3Color: 27, // #146 C6 PaidSheet −1
+  v3Color: 24, // #146 C6 PaidSheet −1
 };
 
 jest.setTimeout(180000);
@@ -73,12 +74,12 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
 // src/ 전체(ui/ 포함)에서 v3 토큰(ui/tokens)과 옛 컴포넌트 5종을 import·re-export 하는 문장 수를 센다. **완료 = 모두 0.**
 // 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
 const LEGACY_BASELINE: Record<string, number> = {
-  v3Tokens: 55, // ui/tokens (#146 C2·C6 −2. 11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
-  Screen: 17, // ui/Screen
-  BigButton: 13, // ui/BigButton
+  v3Tokens: 54, // ui/tokens (#146 C2·C6 −2. 11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
+  Screen: 16, // ui/Screen
+  BigButton: 12, // ui/BigButton
   ChoiceGrid: 0, // ui/ChoiceGrid
   BottomSheet: 1, // ui/BottomSheet
-  Text20: 35, // ui/Text20
+  Text20: 34, // ui/Text20
 };
 const LEGACY_MODULE: Record<string, string> = {v3Tokens: 'ui/tokens', Screen: 'ui/Screen', BigButton: 'ui/BigButton', ChoiceGrid: 'ui/ChoiceGrid', BottomSheet: 'ui/BottomSheet', Text20: 'ui/Text20'};
 

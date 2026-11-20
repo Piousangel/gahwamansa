@@ -169,7 +169,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
           />
         </View>
       ) : null}
-      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} spill={undock ? 2 : spill} /> : null}
+      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} even={dock.even} spill={undock ? 2 : spill} /> : null}
       {tail}
     </BaseScreen>
   );
