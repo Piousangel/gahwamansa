@@ -34,6 +34,15 @@ test('모양: accent(먹) 면·흰 글자·반경 row(6)·그림자 없음, 부�
   expect(TAG_LOOK).toEqual({bg: t.color.accent, ink: t.color.onAction, radius: t.radius.row});
 });
 
+test('#217 danger 변형: 위험 면(dangerInk)·흰 글자·경고 아이콘(읽지 않음), 대비 7:1 이상, v5 allowed 표에 있음', () => {
+  const {TAG_DANGER_LOOK} = require('../src/ui/ds/Tag');
+  render(<Tag label="되돌릴 수 없어요" tone="danger" icon="icon-warning" testID="tg" />);
+  expect(flat(screen.getByTestId('tg').props.style)).toMatchObject({backgroundColor: t.color.dangerInk, flexDirection: 'row', maxWidth: '100%'});
+  expect(flat(screen.getByTestId('tg-text').props.style)).toMatchObject({color: t.color.onAction, fontWeight: '700'});
+  expect(contrast(TAG_DANGER_LOOK.ink, TAG_DANGER_LOOK.bg)).toBeGreaterThanOrEqual(7);
+  expect(require('../../design-system/tokens-v5.json').allowed.elderText.onAction).toContain('dangerInk');
+});
+
 test('대비: 흰 글자 on accent 면이 어르신 7:1 이상', () => {
   expect(contrast(TAG_LOOK.ink, TAG_LOOK.bg)).toBeGreaterThanOrEqual(7); // 18.26
 });

@@ -3,7 +3,7 @@ import {StyleSheet, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {useBackAction, useBackDestination} from '../../app/BackBar';
-import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
+import {Dialog, DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
@@ -13,7 +13,6 @@ import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {prefs} from '../../lib/prefs';
-import {Dialog} from '../../ui/Dialog';
 import {contactMail, openContactMail} from './contactMail';
 import {settleWithin, withTimeout} from '../../lib/timeout';
 import {announce} from '../../ui/a11y';
@@ -324,19 +323,17 @@ export function DeleteAccountScreen({role}: Props) {
         <Dialog
           visible={confirm2}
           title={dp.step2_title}
-          warningLabel={dp.step2_body}
-          actions={[
-            {label: dp.cancel, onPress: () => setConfirm2(false)},
-            {
-              label: dp.yes,
-              kind: 'danger',
-              onPress: () => {
-                setConfirm2(false);
-                run();
-              },
+          warning={dp.step2_body}
+          action={{
+            label: dp.yes,
+            kind: 'danger', // 되돌릴 수 없음 → 닫는 쪽('안 지울래요')이 위·주
+            onPress: () => {
+              setConfirm2(false);
+              run();
             },
-          ]}
-          onBack={() => setConfirm2(false)}
+          }}
+          dismiss={{decline: dp.cancel}}
+          onDismiss={() => setConfirm2(false)}
           returnFocusRef={yesRef}
           testID="delete-confirm2"
         />
