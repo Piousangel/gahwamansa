@@ -153,8 +153,7 @@ export function DeleteAccountScreen({role}: Props) {
   //   이 화면에서 세션을 지우거나 번호 입력으로 보내지 않는다(그러면 새 빈 계정이 생긴다). 주소가 없으면 버튼 없이 contact_pending 한 줄
   const mail = contactMail();
   const parentSignedOut = signedOut && !child;
-  // signed_out_parent_unlinked(라이터 #177, 버튼 없음)는 '연결한 적 없음이 확실할 때만'(법률). no_profile 은 로그인 정보가 없어 서버에서 확인할 수 없고
-  //   이 기기에도 '연결한 적 있음' 기록이 없다 → 확실한 경우가 지금은 없으므로 늘 signed_out_parent(문의 가능). 근거가 생기면(예: 기기 연결 이력) 여기서 나눈다
+  // 리드 11-20: 로그인이 풀린 어르신은 한 갈래(signed_out_parent, 문의 가능). '연결한 적 없음'은 기기 기록으로 확신할 수 없어(재설치 시 사라짐) 나누지 않는다
   const danger = parentSignedOut
     ? null
     : signedOut && failed
