@@ -1,7 +1,7 @@
 // ui/ds v4 컴포넌트 단위 테스트(SUMMARY 3절 RNTL): 역할 → 크기·색·상한, minHeight(고정 높이 없음), 말줄임 없음, TalkBack 역할·라벨.
 // 값은 tokensV4(생성물)에서 읽어 비교한다 — 원본 값이 바뀌어도 테스트는 고칠 일이 없다.
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {AccessibilityInfo, StyleSheet, View} from 'react-native';
 import {fireEvent, render, screen} from '@testing-library/react-native';
 import {AudienceProvider, BackLink, Banner, Button, Card, Choice, Field, Heading, Section, SocialButton, StateView, Text} from '../src/ui/ds';
 import {BANNER_ACTION, BANNER_LOOK} from '../src/ui/ds/Banner';
@@ -224,20 +224,22 @@ describe('BackLink', () => {
 });
 
 describe('Field(placeholder 없음)', () => {
-  test('label·hint 가 칸 위에 보이고, 칸의 라벨·힌트로 읽힌다. 입력 글자 fieldInput(상한 1.5), label·hint 상한 2', () => {
+  test('label·hint 가 칸 위에 보이고, 라벨은 칸의 읽기 이름으로·안내는 글 그대로 읽힌다. 입력 글자 fieldInput(상한 1.5), label·hint 상한 2', () => {
     render(<Field label="이름" hint={'예: 김영희\n두 줄도 괜찮아요'} value="" onChangeText={noop} />);
     const input = screen.getByTestId('field');
     expect(input.props.placeholder).toBeUndefined();
     expect(input.props.accessibilityLabel).toBe('이름');
-    expect(input.props.accessibilityHint).toContain('예: 김영희');
+    expect(input.props.accessibilityHint).toBeUndefined(); // 안내는 힌트로 다시 읽지 않는다(아래 글로 한 번)
     expect(input.props.maxFontSizeMultiplier).toBe(t.type.fieldInput.maxFontScale);
     expect(flat(input.props.style)).toMatchObject({fontSize: spec('fieldInput', 'elder').size, minHeight: t.touch.elder.primary});
     expect(flat(input.props.style).height).toBeUndefined();
     expect(screen.getByText('이름', {includeHiddenElements: true}).props.maxFontSizeMultiplier).toBe(2);
-    // D-18 B4: 보이는 라벨·안내는 읽기에서 숨김 — 칸의 읽기 이름·힌트로 한 번만 듣는다
+    // D-18 B4: 보이는 라벨만 읽기에서 숨김 — 칸의 읽기 이름으로 한 번만 듣는다
     expect(screen.queryByText('이름')).toBeNull();
-    expect(screen.getByTestId('field-hint', {includeHiddenElements: true}).props.maxFontSizeMultiplier).toBe(2);
-    expect(screen.getByTestId('field-hint', {includeHiddenElements: true}).props.numberOfLines).toBeUndefined();
+    // #221 리뷰 M: 안내 글은 숨기지 않는다(힌트 읽기를 끈 사용자도 듣게). 숨김 없이 잡혀야 한다
+    expect(screen.getByText('예: 김영희\n두 줄도 괜찮아요')).toBeTruthy();
+    expect(screen.getByTestId('field-hint').props.maxFontSizeMultiplier).toBe(2);
+    expect(screen.getByTestId('field-hint').props.numberOfLines).toBeUndefined();
   });
   test('kind: email 자판·자동 대문자 끔, otp 숫자 자판, text 는 여러 줄', () => {
     render(
@@ -251,10 +253,13 @@ describe('Field(placeholder 없음)', () => {
     expect(screen.getByTestId('otp').props.keyboardType).toBe('number-pad');
     expect(screen.getByTestId('tx').props.multiline).toBe(true);
   });
-  test('오류: 문구 + 테두리(색만으로 알리지 않음), 힌트로도 읽힘', () => {
-    render(<Field label="이메일" error="주소를 다시 봐 주세요" value="a" onChangeText={noop} />);
-    expect(screen.getByTestId('field-error')).toBeTruthy();
-    expect(screen.getByTestId('field').props.accessibilityHint).toContain('주소를 다시 봐 주세요');
+  test('오류: 문구 + 테두리(색만으로 알리지 않음). 나타날 때 한 번 알리고, 탐색 때는 아래 글로만 읽힘(힌트에 넣지 않음)', () => {
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    render(<Field label="이메일" hint="예: a@b.kr" error="주소를 다시 봐 주세요" value="a" onChangeText={noop} />);
+    expect(screen.getByTestId('field-error')).toHaveTextContent('주소를 다시 봐 주세요'); // 숨기지 않음(탐색에서 한 번)
+    expect(screen.getByTestId('field').props.accessibilityHint).toBeUndefined(); // #221 리뷰 L: 힌트로 두 번 읽지 않게
+    expect(spy.mock.calls.filter(([m]) => m === '주소를 다시 봐 주세요')).toHaveLength(1);
+    spy.mockRestore();
   });
 });
 
