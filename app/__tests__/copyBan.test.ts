@@ -92,6 +92,13 @@ test("C8: '되돌릴 수 없어요'는 빨간 머리글(warn_label) 한 번만 �
   }
 });
 
+test('지우기 시간 초과(#208): 끊김·실패를 단정하지 않고, 다시 하기가 무엇을 하는지 말한다', () => {
+  const t = copy.delete.timeout;
+  expect(`${t.title}${t.body}`).not.toMatch(/끊겼|지워지지 않았|지웠어요/); // 서버에서 이미 지웠을 수도 있다
+  expect(t.title).toMatch(/알 수 없어요/);
+  expect(t.body).toContain(t.button); // 본문이 부르는 버튼이 실제 버튼 이름
+});
+
 test('호칭은 조사 없이 의/께/뒤 띄어쓰기로만 쓴다', () => {
   const bad = all.filter(([, s]) => /\{호칭\}(은|는|이|가|을|를|과|와)(?![가-힣])/.test(s));
   expect(bad).toEqual([]);
