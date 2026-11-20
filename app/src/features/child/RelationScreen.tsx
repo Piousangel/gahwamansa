@@ -8,7 +8,7 @@ import {isOffline, isServerError, PARENT_TITLES} from '../types';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {track} from '../track';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
-import {ds} from '../../ui/ds/roles';
+import {CHOICE_CHILD_GRID_ROW_GAP} from '../../ui/ds/Choice';
 
 const t = copy.relation;
 
@@ -23,7 +23,7 @@ export function RelationScreen() {
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<string | null>(null);
   // R-15: 1열(200%)로 넘치면 첫 화면 끝에 걸친 줄을 통째로 아래로(+ DsScreen '더 있음' 띠). 2열이면 두 칸 한 줄 단위
-  const fold = useFoldGap(PARENT_TITLES.length, ds.touch.elder.gap);
+  const fold = useFoldGap(PARENT_TITLES.length, CHOICE_CHILD_GRID_ROW_GAP); // Choice 자녀 2열 지정 줄 간격과 같게
 
   const next = async () => {
     if (!beginBusy()) {

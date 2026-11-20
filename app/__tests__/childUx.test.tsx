@@ -879,6 +879,8 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     fireEvent(screen.getByTestId('title-group'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     const group = screen.getByTestId('title-group');
     expect(StyleSheet.flatten(group.props.style).flexDirection).toBe('row'); // 2열(행 우선 — 읽는 순서 = 시선 흐름)
+    expect(StyleSheet.flatten(group.props.style).rowGap).toBe(8); // 디자인 리뷰 11-20 ②: 줄 사이 12 → 8(R-12 8 이상)
+    expect(StyleSheet.flatten(group.props.style).columnGap).toBe(12); // 칸 사이(좌우)는 그대로
     const radios = within(group).getAllByRole('radio');
     expect(radios.map(r => r.props.accessibilityLabel)).toEqual(['엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '부모님']);
     for (const r of radios) {

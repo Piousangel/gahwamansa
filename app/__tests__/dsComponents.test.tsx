@@ -188,6 +188,38 @@ describe('BackLink', () => {
     expect(pressStyle('back-link').minHeight).toBe(56);
     expect(screen.getByTestId('back-link').props.accessibilityHint).toBe('3단계 중 2단계');
   });
+  // #198 L: P9·C8 지우는 중에 뒤로를 막는다
+  test.each(['elder', 'child'] as const)('%s disabled: 눌러도 아무 일 없음, 읽기 사용 안 함, 비활성 면·line 테두리, 글자·화살표 disabledInk(파랑 거둠), 크기 그대로', a => {
+    const onPress = jest.fn();
+    const wrap = (ui: React.ReactElement) => (a === 'child' ? child(ui) : ui);
+    render(wrap(<BackLink to="설정으로" onPress={onPress} disabled />));
+    const el = screen.getByTestId('back-link');
+    fireEvent.press(el);
+    expect(onPress).not.toHaveBeenCalled();
+    expect(el.props.accessibilityState).toMatchObject({disabled: true});
+    expect(el.props.accessibilityRole).toBe('link');
+    expect(el.props.accessibilityLabel).toBe('설정으로');
+    expect(pressStyle('back-link')).toMatchObject({backgroundColor: c.disabledBg, borderColor: c.line, minHeight: t.backLink.height[a]});
+    expect(flat(screen.getByText('설정으로').props.style).color).toBe(c.disabledInk);
+    const arrow = screen.getByTestId('back-link-arrow', {includeHiddenElements: true});
+    const strokes: string[] = [];
+    const walk = (n: {props: Record<string, unknown>; children?: unknown[] | null}) => {
+      if (typeof n.props.stroke === 'string') {
+        strokes.push(n.props.stroke);
+      }
+      (n.children ?? []).forEach(k => k && typeof k === 'object' && walk(k as never));
+    };
+    walk(arrow as never);
+    expect(strokes.length).toBeGreaterThan(0);
+    expect(strokes.every(s => s === c.disabledInk)).toBe(true);
+  });
+  test('disabled 없음(기본): 상태 disabled false, 누르면 부른다', () => {
+    const onPress = jest.fn();
+    render(<BackLink to="설정으로" onPress={onPress} />);
+    expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false});
+    fireEvent.press(screen.getByTestId('back-link'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('Field(placeholder 없음)', () => {
