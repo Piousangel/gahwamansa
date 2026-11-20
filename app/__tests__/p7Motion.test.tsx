@@ -10,6 +10,10 @@ import {createStampFeedback, setStampFeedbackForTest} from '../src/features/cour
 import {P7_T} from '../src/features/course/CourseDone';
 import {kstWeekdayIndex} from '../src/features/course/stamps';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 // P7 완료 앨범(시안 P7_album_ds4 + 디자인 #95): 0~300ms 사진·테이프 페이드 → 300ms 도장 1.3→1(180ms) → 480ms 촉각·소리 1회·눌림 70ms
 // → 520ms 번짐 원 .10→0(420ms) → 700ms 본문 둘째 줄 300ms 페이드. 제목·'알겠어요'는 첫 프레임부터. 동작 줄이기·화면 읽기면 모두 즉시.
@@ -99,6 +103,22 @@ test('연출 중 화면을 떠나도 촉각·소리가 뒤늦게 울리지 않�
   expect(vibrate).not.toHaveBeenCalled();
 });
 
+test('리뷰 L2: 이번 주 도장 응답을 기다리는 동안에도 사진·도장 연출은 시작하고(촉각 1회), 둘째 줄만 응답 뒤에 보인다', async () => {
+  const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question']});
+  const pending: ((w: unknown) => void)[] = []; // 코스 홈(아래 화면)도 같은 때 다시 부른다 → 모두 풀어 준다
+  await toHomeConsented(api);
+  jest.spyOn(api, 'getWeekStamps').mockImplementation(() => new Promise(r => pending.push(r as never)));
+  await pressCourseNext();
+  await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
+  await press('오늘은 넘어갈게요');
+  await waitFor(() => screen.getByTestId('p7-mount'));
+  await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1)); // 응답 없이도 도장이 찍혔다
+  await waitFor(() => expect(opacityOf('p7-seal')).toBe(1));
+  expect(opacityOf('p7-text')).toBe(0); // 둘째 줄은 아직
+  await act(async () => pending.forEach(r => r({weekStart: '2026-11-16', doneDates: []})));
+  await waitFor(() => expect(opacityOf('p7-text')).toBe(1));
+});
+
 test('동작 줄이기: 모두 즉시 끝 상태(번짐 원 없음), 촉각은 유지(움직임이 아님)', async () => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   await finish();
@@ -150,7 +170,7 @@ test('미연결도 같은 연출(기기에 찍힘), 문구 11-7 #19', async () =
 });
 
 describe('P3 단계 체크 모션', () => {
-  test('단계를 마치고 코스 홈이 다시 포커스된 뒤 그 행만 체크 모션, 다음 행은 테이프(처음 열 때는 없음)', async () => {
+  test('단계를 마치고 코스 홈이 다시 포커스된 뒤 그 행만 체크 모션(처음 열 때는 없음, v4 는 테이프 없음)', async () => {
     await toHomeConsented(createFakeApi({linked: true, consented: true}));
     expect(screen.queryByTestId('step-check-anim', {includeHiddenElements: true})).toBeNull();
     expect(screen.queryByTestId('step-tape-anim', {includeHiddenElements: true})).toBeNull();
@@ -159,7 +179,7 @@ describe('P3 단계 체크 모션', () => {
     await press('다 봤어요');
     await waitFor(() => screen.getByTestId('date-line'));
     await waitFor(() => expect(screen.getAllByTestId('step-check-anim', {includeHiddenElements: true})).toHaveLength(1));
-    expect(screen.getAllByTestId('step-tape-anim', {includeHiddenElements: true})).toHaveLength(1);
+    expect(screen.queryByTestId('step-tape-anim', {includeHiddenElements: true})).toBeNull(); // P3 v4: 지금 행 테이프 없음(시안 ds4b)
     expect(vibrate).not.toHaveBeenCalled(); // 단계 체크에는 진동·소리 없음
     expect(play).not.toHaveBeenCalled();
   });
