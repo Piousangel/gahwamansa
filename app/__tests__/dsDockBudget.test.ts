@@ -68,6 +68,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.delete.parent.back, onPress: noop}},
   },
   {
+    name: 'C4 홈(응원 보내기 하나, 150%↑는 본문으로)',
+    screen: 'ChildHome',
+    variant: 'step',
+    audience: 'child',
+    dock: {primary: {label: copy.child.cheer.button, onPress: noop}},
+  },
+  {
     name: 'CG 어르신 폰 막음(알겠어요 하나)',
     screen: 'ChildGate',
     variant: 'form',

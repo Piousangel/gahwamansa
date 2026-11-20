@@ -68,24 +68,27 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
   const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
   await act(async () => {
-    lay('screen-body', 0, 328); // C4 홈은 옛 Screen: 접힘 = 스크롤 창 − 아래 흐림 28 = 300(리뷰 L4)
+    lay('screen-body-area', 0, 324); // C4 홈 DsScreen 이행: 접힘 = 본문 영역 − '더 있음' 띠 24 = 300(겹쳐 그리는 흐림 없음, R-19)
     lay('child-home-empty', 20, 400); // 묶음 위 끝 20, 사이 14
     lay('child-home-empty-line', 0, 112); // 20~132
     lay('child-home-example-1', 0, 120); // 146~266
     lay('child-home-example-2', 0, 120); // 280~400 → 300 에 걸림
     lay('child-home-empty-starter', 0, 90);
   });
-  expect(mt('child-home-example-2')).toBe(328 - 280 + 1); // foldPush 공용 +1(PR 91 L1) // 흐림 위(300)에 걸치면 민다, 민 카드는 흐림 밑 창 끝(328)으로
+  expect(mt('child-home-example-2')).toBe(300 - 280 + 1); // foldPush 공용 +1(PR 91 L1). 민 카드는 접힘(띠 위 끝) 바로 아래로
   expect(mt('child-home-example-1')).toBeUndefined();
-  // 재확인 L6: 위 끝이 흐림 구간(300~328) 안에서 시작하는 요소도 민다(흐림 속에 테두리가 비치지 않게)
+  expect(screen.queryByTestId('screen-more')).toBeNull(); // 옛 Screen 의 겹쳐 그리는 흐림은 없다(DsScreen 은 스크롤 밖 띠)
+  // 흐림이 없어져 '흐림 구간에서 시작하는 요소'(옛 재확인 L6)는 없다: 접힘 아래에서 시작하면 이미 첫 화면 밖이라 밀지 않는다
   await act(async () => {
-    lay('child-home-example-1', 0, 140); // 146~286 → 카드 2 는 300~420: 위 끝이 흐림 구간(300~328) 안
+    lay('child-home-example-1', 0, 160); // 146~306 → 카드 1 이 걸림, 카드 2 는 320~ 접힘 밖
   });
-  expect(mt('child-home-example-2')).toBe(328 - 300 + 1);
+  expect(mt('child-home-example-1')).toBe(300 - 146 + 1);
+  expect(mt('child-home-example-2')).toBeUndefined();
   // 창이 커져 다 들어가면 간격 없음
   await act(async () => {
-    lay('screen-body', 0, 700);
+    lay('screen-body-area', 0, 800);
   });
+  expect(mt('child-home-example-1')).toBeUndefined();
   expect(mt('child-home-example-2')).toBeUndefined();
 });
 
