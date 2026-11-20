@@ -23,7 +23,7 @@ export type ButtonProps = {
   /** 비활성 이유. 버튼 위 한 줄 + TalkBack 힌트 */
   disabledReason?: string;
   accessibilityHint?: string;
-  /** 대등한 두 답(동의 좋아요·싫어요)일 때 보조도 주 버튼 높이 — 주·보조는 색으로만 나눈다(전문가 리뷰 N-12·7:42: 높이가 다르면 한쪽으로 이끈다) */
+  /** 대등한 두 답(동의 좋아요·싫어요)일 때 보조도 주 버튼 높이·글자 크기 — 주·보조는 색·모양으로만 나눈다(전문가 리뷰 N-12·7:42: 높이가 다르면 한쪽으로 이끈다) */
   even?: boolean;
   style?: LayoutOnlyStyle;
   testID?: string;
@@ -47,7 +47,9 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
   const blocked = !!disabled || !!loading;
   const shown = loading && loadingLabel ? loadingLabel : label;
   const primary = kind === 'primary';
-  const text = roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a);
+  // even(대등한 두 답): 보조도 주 버튼 글자 크기 — 높이·글자가 같고 색·모양(면/테두리)만 다르다(#175 리뷰 M1)
+  const textRole = primary || (even && kind !== 'text') ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary';
+  const text = roleText(textRole, a);
   const minHeight = minTouch(primary || (even && kind !== 'text') ? 'primary' : kind === 'text' ? 'link' : 'secondary', a);
   const ink: Tone = disabled ? 'disabled' : primary ? 'onAction' : kind === 'danger' ? 'danger' : 'action';
   // 눌림 글자(tokens-v4 states.pressed, 디자인 시스템 패널 r1): 보조·text 는 actionSoft 면 위 action 이 6.03 이라 actionPressed(8.15).
@@ -87,7 +89,7 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
             <RNText
               {...koreanTextProps}
               maxFontSizeMultiplier={text.maxFontSizeMultiplier}
-              style={[roleText(primary ? 'buttonPrimary' : kind === 'text' ? 'link' : 'buttonSecondary', a, pressedInk(pressed)).style, styles.label, kind === 'text' && !disabled ? styles.underline : null]}>
+              style={[roleText(textRole, a, pressedInk(pressed)).style, styles.label, kind === 'text' && !disabled ? styles.underline : null]}>
               {keepAllChildren(shown)}
             </RNText>
           </View>

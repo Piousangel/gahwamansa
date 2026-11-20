@@ -1,11 +1,10 @@
-// P2 동의 v4(시안 P6_P7_N1_P2_ds4b P2 + 전문가 리뷰 N-12·7:42):
-// - 100%: 카드 안 세 줄은 ✓ 대신 점 머리표(V4), 거절 안내는 카드 밖, 두 버튼은 Dock.
-// - 150% 이상: 점 칸을 빼 전폭, 두 버튼은 본문 끝(다 읽은 뒤에 닿음), 거절 안내는 '싫어요' 바로 아래.
-// - 두 버튼은 같은 높이(주·보조는 색으로만). 문구는 그대로(CONSENT_VERSION·법률 확인 전 버튼 문구).
-// - 읽기 순서(R15): 넷째 줄(거절 안내) → (오류) → 좋아요 (100%), 세 줄 → 좋아요 → 싫어요 → 거절 안내 (150% 이상).
+// P2 동의 v4(시안 P6_P7_N1_P2_ds4b P2 + 전문가 리뷰 N-12·7:42 + #175 리뷰 법률 M1·L, AI 티 M1·M2):
+// - 카드 안 세 줄은 ✓ 대신 점 머리표(V4), 150% 이상은 점 칸 없이 전폭. 안내 두 줄(안심·거절)은 카드 밖, 기본 글자색.
+// - 두 버튼은 본문이 Dock 위 창에 들어가면 Dock, 넘치면 본문 끝(실측). 같은 높이·글자.
+// - 읽기 순서: 세 줄 → 안심 줄 → 거절 안내 → (오류) → 좋아요 → 싫어요. 문구는 그대로(CONSENT_VERSION·법률 확인 전 버튼 문구).
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {render, screen, waitFor, within} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError} from '../src/features/types';
@@ -68,24 +67,64 @@ test('100%: 카드 안 세 줄은 점 머리표(체크 아님), 거절 안내는
   expect(minHeightOf(copy.consent.accept)).toBe(t.touch.elder.primary);
 });
 
-test('200%(N-12): 점 칸 없이 전폭, 버튼은 본문 끝(세 줄 → 좋아요 → 싫어요 → 거절 안내), 같은 높이', async () => {
+// 실측으로 넘침을 만든다: 본문 창(Dock 위) 300, 본문 묶음 900
+async function overflow() {
+  await act(async () => {
+    fireEvent(screen.getByTestId('screen-body-area'), 'layout', {nativeEvent: {layout: {width: 320, height: 300}}});
+    fireEvent(screen.getByTestId('consent-content'), 'layout', {nativeEvent: {layout: {width: 320, height: 900}}});
+  });
+}
+
+const fontSizeOf = (name: string) => {
+  const label = within(screen.getByRole('button', {name})).getByText(name);
+  return StyleSheet.flatten(label.props.style).fontSize;
+};
+
+test('두 버튼은 같은 높이·같은 글자 크기(even) — 주·보조는 색·모양으로만(#175 리뷰 M1)', async () => {
+  await toConsent();
+  expect(minHeightOf(copy.consent.decline)).toBe(minHeightOf(copy.consent.accept));
+  expect(fontSizeOf(copy.consent.decline)).toBe(fontSizeOf(copy.consent.accept));
+});
+
+test('본문이 Dock 위 창에 다 들어가면 Dock 그대로(글자 배율이 아니라 실측, #175 리뷰 M2)', async () => {
+  mockDims = {width: 320, height: 640, scale: 3, fontScale: 2};
+  await toConsent();
+  await act(async () => {
+    fireEvent(screen.getByTestId('screen-body-area'), 'layout', {nativeEvent: {layout: {width: 320, height: 900}}});
+    fireEvent(screen.getByTestId('consent-content'), 'layout', {nativeEvent: {layout: {width: 320, height: 400}}});
+  });
+  expect(screen.getByTestId('screen-dock')).toBeTruthy();
+});
+
+test('넘치면(N-12) 버튼은 본문 끝 — 순서는 세 줄 → 안심 줄 → 거절 안내 → 좋아요 → 싫어요(법률 #175 M1), 200%는 점 칸 없이 전폭', async () => {
   mockDims = {width: 320, height: 640, scale: 3, fontScale: 2};
   await toConsent();
   expect(screen.queryAllByTestId('consent-dot', H)).toHaveLength(0);
   expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
-  expect(screen.queryByTestId('screen-dock')).toBeNull();
+  await overflow();
+  await waitFor(() => expect(screen.queryByTestId('screen-dock')).toBeNull());
   const body = screen.getByTestId('screen-body');
   expect(within(body).getByRole('button', {name: copy.consent.accept})).toBeTruthy();
   const seq = order();
   const iLast = seq.indexOf(copy.consent.body[2]);
+  const iReassure = seq.indexOf(copy.consent.reassure);
+  const iNote = seq.indexOf(NOTE);
   const iYes = seq.indexOf(`[${copy.consent.accept}]`);
   const iNo = seq.indexOf(`[${copy.consent.decline}]`);
-  const iNote = seq.indexOf(NOTE);
   expect(iLast).toBeGreaterThan(-1);
-  expect(iLast).toBeLessThan(iYes);
+  expect(iLast).toBeLessThan(iReassure);
+  expect(iReassure).toBeLessThan(iNote);
+  expect(iNote).toBeLessThan(iYes);
   expect(iYes).toBeLessThan(iNo);
-  expect(iNo).toBeLessThan(iNote);
   expect(minHeightOf(copy.consent.decline)).toBe(minHeightOf(copy.consent.accept));
+  expect(fontSizeOf(copy.consent.decline)).toBe(fontSizeOf(copy.consent.accept));
+});
+
+test('안내 두 줄은 기본 글자색(muted 아님 — 어르신 7:1, 법률 L)', async () => {
+  await toConsent();
+  const ink = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).color;
+  expect(ink('consent-decline-note')).toBe(t.color.inkBody);
+  expect(ink('consent-reassure')).toBe(t.color.inkBody);
 });
 
 test('동의 실패: 오류 띠는 좋아요 앞(읽기 순서 거절 안내 → 오류 → 좋아요), 다시 누를 수 있다', async () => {

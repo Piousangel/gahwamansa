@@ -14,13 +14,26 @@ import {track} from '../track';
 const c = copy.consent;
 
 // P2 동의 v4(시안 P6_P7_N1_P2_ds4b P2 보드 + 전문가 리뷰 N-12·7:42). 문구는 그대로(CONSENT_VERSION 영향 없음, 버튼 문구는 법률 확인 전이라 바꾸지 않음).
-// - 100%: 흰 카드 안 세 줄은 ✓ 대신 점 머리표(V4: 체크박스로 오해 방지), 거절 안내는 카드 아래, 두 버튼은 Dock.
-// - 글자 150% 이상(N-12): 점 칸을 빼 세 줄을 전폭으로, 두 버튼은 본문 끝(다 읽은 뒤에 닿는다), 거절 안내는 '싫어요' 바로 아래 한 줄.
-// - 두 버튼은 같은 높이(even) — 주·보조는 색으로만 나눈다(7:42).
+// - 순서(법률 #175 M1): 세 줄 → 안심 줄 → 거절 안내 → (오류) → 좋아요 → 싫어요. 거부할 권리를 알리는 문장이 동의 버튼보다 먼저.
+// - 두 버튼 자리(#175 리뷰 M2): 본문이 Dock 위 창에 다 들어가면 Dock, 넘치면 본문 끝(다 읽은 뒤에 닿는다, N-12). 기준은 글자 배율이 아니라 실측.
+//   한 번 본문 끝으로 내리면 이 창 크기·배율에서는 그대로 둔다(내린 뒤 창이 넓어져 다시 올라가는 흔들림 방지).
+// - 글자 150% 이상: 점 칸을 빼 세 줄을 전폭으로(N-12). 그 아래는 ✓ 대신 점 머리표(V4: 체크박스로 오해 방지).
+// - 두 버튼은 같은 높이·글자(even) — 주·보조는 색·모양으로만 나눈다(7:42, #175 리뷰 M1). 안내 두 줄은 기본 글자색(어르신 7:1, 법률 L).
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
   const {api, sync, syncError, setConsented} = useSession();
-  const {fontScale} = useWindowDimensions();
+  const {width, height, fontScale} = useWindowDimensions();
   const large = fontScale >= 1.5;
+  // 본문이 Dock 위 창에 다 들어가는가(실측). 창 크기·배율이 바뀌면 다시 잰다
+  const dims = `${width}x${height}@${fontScale}`;
+  const [inlineFor, setInlineFor] = useState<string | null>(null);
+  const inline = inlineFor === dims;
+  const viewport = useRef(0);
+  const content = useRef(0);
+  const judge = () => {
+    if (!inline && viewport.current > 0 && content.current > viewport.current) {
+      setInlineFor(dims);
+    }
+  };
   const [declined, setDeclined] = useState(false);
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
@@ -82,62 +95,67 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
   const back = dest ? {to: dest, onPress: () => navigation.goBack()} : undefined;
   // 오류는 버튼 바로 앞(읽기 순서: 본문 → 오류 → 좋아요)
   const errorBand = shown ? <Banner tone="danger" text={`${shown.title}. ${shown.body}`} testID="consent-error" /> : null;
-  const declineNote = (
-    <Text role="body" tone="muted" testID="consent-decline-note">
-      {c.decline_note}
-    </Text>
-  );
-  const reassure = (
-    <Text role="body" tone="muted" testID="consent-reassure">
-      {c.reassure}
-    </Text>
+  // 안내 두 줄: 기본 글자색(muted 아님 — 어르신 7:1, 법률 L)
+  const notes = (
+    <>
+      <Text role="body" testID="consent-reassure">
+        {c.reassure}
+      </Text>
+      <Text role="body" testID="consent-decline-note">
+        {c.decline_note}
+      </Text>
+    </>
   );
 
   return (
     <DsScreen
       variant="intro"
       back={back}
-      dock={large ? undefined : {primary: {label: c.accept, onPress: accept, disabled: busy}, secondary: {label: c.decline, onPress: decline}, even: true}}
+      onViewport={h => {
+        viewport.current = h;
+        judge();
+      }}
+      dock={inline ? undefined : {primary: {label: c.accept, onPress: accept, disabled: busy}, secondary: {label: c.decline, onPress: decline}, even: true}}
       tail={
-        large ? (
+        inline ? (
           <View style={styles.actions} testID="consent-actions">
-            {errorBand}
             <Button kind="primary" label={c.accept} onPress={accept} disabled={busy} />
             <Button kind="secondary" even label={c.decline} onPress={decline} />
-            {declineNote}
-            {reassure}
           </View>
         ) : null
       }>
-      <Heading level={1}>{c.title}</Heading>
-      <View testID="consent-points" style={styles.card}>
-        {c.body.map(t =>
-          large ? (
-            // 150% 이상: 점 칸 없이 전폭(N-12)
-            <Text key={t} role="bodyLg" testID="consent-point">
-              {t}
-            </Text>
-          ) : (
-            <View key={t} testID="consent-point" style={styles.point}>
-              <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                <Text role="bodyLg" tone="muted" testID="consent-dot">
-                  •
-                </Text>
-              </View>
-              <Text role="bodyLg" style={styles.pointText}>
+      <View
+        testID="consent-content"
+        style={styles.content}
+        onLayout={e => {
+          content.current = Math.round(e.nativeEvent.layout.height);
+          judge();
+        }}>
+        <Heading level={1}>{c.title}</Heading>
+        <View testID="consent-points" style={styles.card}>
+          {c.body.map(t =>
+            large ? (
+              // 150% 이상: 점 칸 없이 전폭(N-12)
+              <Text key={t} role="bodyLg" testID="consent-point">
                 {t}
               </Text>
-            </View>
-          ),
-        )}
+            ) : (
+              <View key={t} testID="consent-point" style={styles.point}>
+                <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                  <Text role="bodyLg" tone="muted" testID="consent-dot">
+                    •
+                  </Text>
+                </View>
+                <Text role="bodyLg" style={styles.pointText}>
+                  {t}
+                </Text>
+              </View>
+            ),
+          )}
+        </View>
+        {notes}
+        {errorBand}
       </View>
-      {large ? null : (
-        <>
-          {declineNote}
-          {reassure}
-          {errorBand}
-        </>
-      )}
     </DsScreen>
   );
 }
@@ -148,4 +166,6 @@ const styles = StyleSheet.create({
   point: {flexDirection: 'row', alignItems: 'flex-start', gap: 12},
   pointText: {flexGrow: 1, flexShrink: 1},
   actions: {gap: ds.touch.elder.gap},
+  // 본문 묶음(재기용 실측). 사이 간격은 DsScreen 본문 간격과 같게
+  content: {gap: ds.space.between.elder},
 });
