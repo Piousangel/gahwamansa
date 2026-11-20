@@ -6,13 +6,38 @@
 -- 지울 범위: 앱 delete_my_account의 연결 전 경로와 같은 공통 함수(user_delete_core) — 토큰, 카카오 해제 큐(익명은 없음), 인증 계정 → 약관 확인 기록(terms_agreements)·
 --   identities·세션 cascade. 기록: 식별자 없는 측정 행 account_purged(props {scope:'stale_anonymous'}, 시 단위 시각) — 탈퇴(account_deleted)와 섞이지 않게 이름을 나눈다.
 -- 실행: 기존 파기 배치 purge_expired_data(cron purge-expired-data, 매일 00:10 KST)의 한 단계. 한 번에 최대 500명.
---   이 단계가 실패해도(예: 원격에서 auth 표 권한 문제) 다른 파기는 계속한다(예외 블록, warning). 결과 키 stale_anonymous(-1 = 이 단계 실패).
---   06시 점검(§14)은 전날 account_purged 수와 이 키를 본다.
+--   이 단계가 실패해도(예: 원격에서 auth 표 권한 문제) 다른 파기는 계속한다(예외 블록, warning). 결과 키 stale_anonymous(-1 = 이 단계 전체 실패).
+--   (리뷰 PR #157 M1) 한 명씩 예외 블록으로 감싸 실패한 사람만 건너뛴다(결과 키 stale_anonymous_failed, warning SQLSTATE만).
+--   실패한 사람은 stale_purge_failures에 횟수를 남기고 다음 실행의 정렬에서 뒤로 보내 맨 앞을 막지 않는다.
+--   (L1) 삭제 직전에 사용자 행을 잠근 채 마지막 활동·프로필을 다시 본다. (L2) 세션 refreshed_at도 활동에 넣는다. (L3) 상수 함수도 서비스 역할 revoke.
+--   06시 점검(§14)은 전날 account_purged 수, 실패 건수(stale_purge_failures)를 본다.
 
 create function public.stale_anon_days() returns int
 language sql immutable set search_path = ''
 as $$ select 90 $$; -- 정리 기간(일, 오너 확정 11-20). 방침·삭제 안내의 {연결 전 계정 자동 정리 기간} = 90일(P21)
-revoke execute on function public.stale_anon_days() from public, anon, authenticated;
+revoke execute on function public.stale_anon_days() from public, anon, authenticated, service_role;
+
+-- 실패 기록(M1): 정리 중 예외가 난 사용자. 인증 계정이 지워지면 함께 지워진다. 앱·anon·서비스 역할 접근 불가.
+create table public.stale_purge_failures (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  failures int not null default 1,
+  last_failed_at timestamptz not null default now(),
+  last_sqlstate text
+);
+alter table public.stale_purge_failures enable row level security; -- 정책 없음 = 클라이언트 전면 거부
+revoke all on public.stale_purge_failures from public, anon, authenticated, service_role;
+
+-- 마지막 활동: 가입·로그인·사용자 갱신·세션(생성·갱신·refreshed_at)·리프레시 토큰 중 가장 늦은 것
+-- refreshed_at은 GoTrue에서 timestamp(시간대 없음, UTC 값) — ::timestamp 후 UTC로 읽어 열 형식이 timestamptz로 바뀌어도 같은 값
+create function public.anon_last_activity(p_user uuid) returns timestamptz
+language sql stable security definer set search_path = ''
+as $$
+  select greatest(u.created_at, u.last_sign_in_at, u.updated_at,
+                  (select max(greatest(s.created_at, s.updated_at, s.refreshed_at::timestamp at time zone 'UTC')) from auth.sessions s where s.user_id = u.id),
+                  (select max(greatest(r.created_at, r.updated_at)) from auth.refresh_tokens r where r.user_id = u.id::text))
+    from auth.users u where u.id = p_user
+$$;
+revoke execute on function public.anon_last_activity(uuid) from public, anon, authenticated, service_role;
 
 -- user_delete_core(0054)에 기록할 이벤트 이름을 받는 판. 1인자 판(앱·관리자 경로)은 그대로 account_deleted.
 create function public.user_delete_core(p_user uuid, p_event text) returns jsonb
@@ -43,34 +68,47 @@ create or replace function public.user_delete_core(p_user uuid) returns jsonb
 language sql security definer set search_path = ''
 as $$ select public.user_delete_core(p_user, 'account_deleted') $$;
 
--- 정리 대상(읽기 전용, 테스트·점검용): 마지막 활동이 기준 시각 - 정리 기간보다 이른 프로필 없는 익명 사용자
+-- 정리 대상(읽기 전용, 테스트·점검용): 프로필 없는 익명 + 마지막 활동이 기준 시각 - 정리 기간보다 이름.
+-- 정렬: 실패 횟수가 적은 사람 먼저(실패한 사람이 맨 앞을 막지 않게, M1), 그다음 오래된 가입 순.
 create function public.stale_anonymous_users(p_now timestamptz default now(), p_limit int default 500) returns setof uuid
 language sql stable security definer set search_path = ''
 as $$
   select u.id
     from auth.users u
+    left join public.stale_purge_failures f on f.user_id = u.id
    where u.is_anonymous
      and not exists (select 1 from public.profiles p where p.user_id = u.id)
-     and greatest(u.created_at, u.last_sign_in_at, u.updated_at,
-                  (select max(coalesce(s.updated_at, s.created_at)) from auth.sessions s where s.user_id = u.id),
-                  (select max(coalesce(r.updated_at, r.created_at)) from auth.refresh_tokens r where r.user_id = u.id::text))
-         < p_now - make_interval(days => public.stale_anon_days())
-   order by u.created_at
+     and public.anon_last_activity(u.id) < p_now - make_interval(days => public.stale_anon_days())
+   order by coalesce(f.failures, 0), u.created_at
    limit greatest(coalesce(p_limit, 0), 0)
 $$;
 revoke execute on function public.stale_anonymous_users(timestamptz, int) from public, anon, authenticated, service_role;
 
-create function public.purge_stale_anonymous(p_now timestamptz default now()) returns int
+-- 한 명씩: 잠근 뒤 다시 확인(L1) → 삭제. 실패는 그 사람만 건너뛰고 기록(M1). {purged, failed}
+create function public.purge_stale_anonymous(p_now timestamptz default now()) returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 declare
   v_uid uuid;
+  v_cut timestamptz := p_now - make_interval(days => public.stale_anon_days());
   n int := 0;
+  n_failed int := 0;
 begin
   for v_uid in select public.stale_anonymous_users(p_now, 500) loop
-    if (public.user_delete_core(v_uid, 'account_purged') ->> 'scope') = 'none' then n := n + 1; end if;
+    begin
+      perform 1 from auth.users where id = v_uid and is_anonymous for update;
+      if found and public.anon_last_activity(v_uid) < v_cut
+         and (public.user_delete_core(v_uid, 'account_purged') ->> 'scope') = 'none' then
+        n := n + 1;
+      end if;
+    exception when others then
+      n_failed := n_failed + 1;
+      raise warning 'stale_anonymous_user_failed: %', sqlstate; -- 사용자 id는 남기지 않는다
+      insert into public.stale_purge_failures as f (user_id, last_sqlstate) values (v_uid, sqlstate)
+      on conflict (user_id) do update set failures = f.failures + 1, last_failed_at = now(), last_sqlstate = excluded.last_sqlstate;
+    end;
   end loop;
-  return n;
+  return jsonb_build_object('purged', n, 'failed', n_failed);
 end $$;
 revoke execute on function public.purge_stale_anonymous(timestamptz) from public, anon, authenticated, service_role;
 
@@ -82,6 +120,8 @@ declare
   v_today date := (p_now at time zone 'Asia/Seoul')::date;
   n_answers int; n_sessions int; n_cheers int; n_codes int; n_attempts int; n_events int; n_queue int; n_push_log int; n_push_runs int; n_tokens int; n_claims int; n_audit int; n_kakao int;
   n_stale int;
+  n_stale_failed int;
+  v_r jsonb;
 begin
   if p_now > now() + interval '1 minute' then raise exception 'future_now'; end if; -- 0043 M1
   delete from public.answers where session_date < v_today - 30;
@@ -117,14 +157,17 @@ begin
   get diagnostics n_kakao = row_count;
   -- 0057: 연결 전·옛 익명 계정(마지막 활동 + stale_anon_days()). 실패해도 위 파기는 유지
   begin
-    n_stale := public.purge_stale_anonymous(p_now);
+    v_r := public.purge_stale_anonymous(p_now);
+    n_stale := (v_r ->> 'purged')::int;
+    n_stale_failed := (v_r ->> 'failed')::int;
   exception when others then
     raise warning 'purge_stale_anonymous_failed: %', sqlstate;
     n_stale := -1;
+    n_stale_failed := null;
   end;
   return jsonb_build_object('answers', n_answers, 'daily_sessions', n_sessions, 'cheers', n_cheers,
                             'invite_codes', n_codes, 'redeem_attempts', n_attempts, 'events', n_events, 'notification_queue', n_queue,
                             'push_log', n_push_log, 'push_runs', n_push_runs,
                             'device_tokens', n_tokens, 'push_claims', n_claims, 'admin_audit', n_audit, 'kakao_unlink_queue', n_kakao,
-                            'stale_anonymous', n_stale);
+                            'stale_anonymous', n_stale, 'stale_anonymous_failed', n_stale_failed);
 end $$;

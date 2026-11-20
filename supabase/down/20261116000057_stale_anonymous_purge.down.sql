@@ -3,4 +3,6 @@
 drop function if exists public.purge_stale_anonymous(timestamptz);
 drop function if exists public.stale_anonymous_users(timestamptz, int);
 drop function if exists public.user_delete_core(uuid, text);
+drop function if exists public.anon_last_activity(uuid);
+drop table if exists public.stale_purge_failures;
 drop function if exists public.stale_anon_days();

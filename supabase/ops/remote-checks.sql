@@ -79,7 +79,7 @@ with checks(check_name, ok, detail) as (
   select '익명 계정 정리 준비(0057): 함수 소유자의 auth 세션 읽기 권한',
          has_table_privilege('postgres', 'auth.sessions', 'select') and has_table_privilege('postgres', 'auth.refresh_tokens', 'select')
            and has_table_privilege('postgres', 'auth.users', 'delete'),
-         '정리 대상(90일 넘은 프로필 없는 익명) ' || (select count(*) from public.stale_anonymous_users(now(), 100000))::text || '명 — 다음 파기 배치(00:10 KST)가 최대 500명씩 지움'
+         '정리 대상(90일 넘은 프로필 없는 익명) ' || (select count(*) from public.stale_anonymous_users(now(), 100000))::text || '명 — 다음 파기 배치(00:10 KST)가 최대 500명씩 지움, 정리 실패 기록 ' || (select count(*) from public.stale_purge_failures)::text || '명(0이 아니면 §14-4)'
   union all
   select '카카오 해제 포기 0건', (select count(*) from public.kakao_unlink_queue where gave_up_at is not null) = 0, null
   union all
