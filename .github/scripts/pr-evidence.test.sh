@@ -46,6 +46,8 @@ check "검사 아닌 코드(*.ts)는 아님" "" "$(printf 'app/src/ui/foo.ts\n' 
 check "'실패 확인: 안 함 → 시간 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: 안 함 → 시간 없음\n' | bash "$S" --has-fail-check)"
 check "'실패 확인: 생략 -> 문서' 는 0" 0 "$(printf '## 증거\n- 실패 확인: 생략 -> 문서\n' | bash "$S" --has-fail-check)"
 check "'실패 확인 없음 →' 은 0" 0 "$(printf '## 증거\n실패 확인 없음 → x\n' | bash "$S" --has-fail-check)"
+check "첫 낱말만 본다: '실패 확인: 없음 처리 0 → 1 로 바꿈 → Expected 0' 은 인정" 1 "$(printf '## 증거\n- 실패 확인: 없음 처리 0 → 1 로 바꿈 → Expected 0 Received 1\n' | bash "$S" --has-fail-check)"
+check "'실패 확인: 생략. → 다음 PR' 은 0" 0 "$(printf '## 증거\n- 실패 확인: 생략. → 다음 PR\n' | bash "$S" --has-fail-check)"
 # #210 리뷰 L: 코드 블록 안의 '## ' 는 절 끝이 아님
 check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b 실패\n## 검증\nx\n' | bash "$S" --has-fail-check)"
 check "코드 블록 밖 '## 검증' 뒤는 절 밖" 0 "$(printf '## 증거\n- 캡처\n## 검증\n- 실패 확인: a → b\n' | bash "$S" --has-fail-check)"

@@ -21,11 +21,11 @@ count_evidence() {
     grep -c -v -E '^[[:space:]]*$' || true
 }
 # '## 증거' 절에 '실패 확인' 줄(형식: 실패 확인: 일부러 깨뜨린 변경 → 실패 출력)이 있는가. 헛통과 테스트 방지(DECISIONS 11-20, #163·#205)
-# '실패 확인' 뒤가 '안 함·생략·없음' 이면 인정하지 않는다(#210 리뷰 L)
+# '실패 확인' 뒤 첫 낱말이 '안 함·생략·없음' 이고 바로 끝·문장부호·화살표면 인정하지 않는다(#210 리뷰 L). '없음 처리 0 → 1' 처럼 낱말이 이어지면 인정
 has_fail_check() {
   evidence_section |
     grep -E '실패 확인.*(→|->)' |
-    grep -c -v -E '실패 확인[[:space:]]*[:：]?[[:space:]]*(안[[:space:]]*함|생략|없음)' || true
+    grep -c -v -E '실패 확인[[:space:]]*[:：]?[[:space:]]*(안[[:space:]]*함|생략|없음)[[:space:]]*($|[.,·(]|→|->)' || true
 }
 # 검사를 더하거나 바꾼 파일. 문서(.md)는 뺀다(#210 리뷰 M: 서버 테스트·통합 테스트·어디 있든 *.test.ts(x)·*.test.sh 포함)
 test_files() { grep -E '^app/__tests__/|^app/e2e/|(^|/)scripts/audit/|^supabase/tests/|^app/__integration__/|\.test\.(tsx?|sh)$' | grep -v -E '\.md$' || true; }
