@@ -1,8 +1,9 @@
 // ds Tag(v5 accent): 먹 면 + 흰 글자 + 글자, 반경 6. 누를 수 없음(파랑·밑줄 없음), 노랑 없음, 그림자 없음, 말줄임 없음.
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {render, screen} from '@testing-library/react-native';
-import {AudienceProvider, Tag, TAG_LOOK} from '../src/ui/ds';
+import {AudienceProvider, Button, Heading, Tag, TAG_LOOK, Text as DsText} from '../src/ui/ds';
+import {accentUse, boldRoleCount, R04_EXEMPT} from '../testUtils/designRules';
 import {tokensV4 as t, type Audience} from '../src/ui/tokensV4';
 
 const flat = (s: unknown) => (StyleSheet.flatten(s as never) ?? {}) as Record<string, unknown>;
@@ -51,4 +52,49 @@ test('읽기: 따로 초점·역할을 받지 않는다(행이 제목과 함께 
   expect(tag.props.accessible).toBeUndefined();
   expect(tag.props.accessibilityRole).toBeUndefined();
   expect(tag.props.onPress).toBeUndefined();
+});
+
+// #204 리뷰: R-04 굵기 집계는 Tag 하나만 이름으로 뺀다(M), R-07 accent 집계는 Tag 를 센다(L2)
+describe('R-04·R-07 집계와 Tag', () => {
+  test('R-04: 어르신 화면 제목·버튼(700 두 역할) + Tag → Tag 는 세지 않아 2. 예외를 끄면 3(일부러 깨뜨린 확인)', () => {
+    render(
+      <View>
+        <Heading level={1}>오늘 코스</Heading>
+        <Tag label="지금 할 차례" />
+        <DsText role="body">본문</DsText>
+        <Button label="사진 보기" onPress={() => {}} />
+      </View>,
+    );
+    expect(boldRoleCount(screen.root)).toBe(2);
+    expect(boldRoleCount(screen.root, {exemptTag: false})).toBe(3);
+    expect(R04_EXEMPT).toEqual(['Tag']); // 예외는 Tag 하나로 한정
+  });
+
+  test('R-04: Tag 밖의 700 글자는 Tag 와 크기가 같아도 센다(예외는 Tag 안 글자만)', () => {
+    render(
+      <View>
+        <Tag label="지금 할 차례" />
+        <Text style={{fontSize: t.type.label.elder.size, fontWeight: '700'}}>굵은 라벨</Text>
+      </View>,
+    );
+    expect(boldRoleCount(screen.root)).toBe(1);
+  });
+
+  test('R-07: Tag 는 accent 1곳으로 센다 — Tag 둘이면 2(화면당 1곳 위반을 잡는다), dangerInk 글자도 본다', () => {
+    render(
+      <View>
+        <Tag label="지금 할 차례" />
+        <Tag label="새로" />
+        <DsText role="body" tone="danger">
+          못 보냈어요
+        </DsText>
+      </View>,
+    );
+    expect(accentUse(screen.root)).toEqual({accent: 2, danger: true});
+  });
+
+  test('R-07: Tag 하나만이면 accent 1, danger 없음', () => {
+    render(<Tag label="지금 할 차례" />);
+    expect(accentUse(screen.root)).toEqual({accent: 1, danger: false});
+  });
 });
