@@ -2,6 +2,7 @@
 -- 보호하는 것: 서버 스위치(server_flags.dev_reset_enabled)가 켜진 DB + 테스터 가족(is_test)의 어르신 본인만,
 --             본인의 오늘(KST) daily_sessions·answers만 지운다(어제 기록·같은 가족 다른 어르신·콘텐츠 커서·응원·이벤트는 그대로), 감사 행.
 --             자녀·프로필 없는 기기·anon은 실행 불가, 스위치 표는 앱·anon·서비스 역할이 읽거나 쓸 수 없다.
+-- (11-20) 감사 행 단언은 이 테스트가 만든 가족·프로필로 한정한다 — DB에 다른 dev_reset_today 감사 행(1년 보관, 지울 수 없음)이 있어도 같은 결과.
 begin;
 select plan(24);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
@@ -63,7 +64,8 @@ select is(public.dev_reset_today(), '{"ok": false, "reason": "not_test_family"}'
 reset role;
 select is((select count(*)::int from public.daily_sessions where parent_id = '70510000-0000-0000-0000-00000000b001')
         + (select count(*)::int from public.answers where parent_id = '70510000-0000-0000-0000-00000000b001'), 2, '거부되면 아무것도 지우지 않는다');
-select is((select count(*)::int from public.admin_audit where action = 'dev_reset_today'), 0, '거부·꺼짐은 감사 행 없음');
+select is((select count(*)::int from public.admin_audit where action = 'dev_reset_today'
+            and target_family in ('70510000-0000-0000-0000-0000000000f1', '70510000-0000-0000-0000-0000000000f2')), 0, '거부·꺼짐은 감사 행 없음');
 
 -- 정상: 본인의 오늘 것만
 select pg_temp.act_as('70510000-0000-0000-0000-0000000000a1', true);
@@ -79,7 +81,8 @@ select ok((select content_seq = 2 and content_seq_date = public.kst_today() from
           '콘텐츠 커서는 그대로(다시 열면 같은 날 콘텐츠)');
 select is((select count(*)::int from public.cheers where to_parent = '70510000-0000-0000-0000-00000000a001')
         + (select count(*)::int from public.events where profile_id = '70510000-0000-0000-0000-00000000a001'), 2, '응원·이벤트는 그대로');
-select is((select jsonb_build_object('op', operator, 't', target_profile, 'f', target_family, 'd', detail) from public.admin_audit where action = 'dev_reset_today'),
+select is((select jsonb_build_object('op', operator, 't', target_profile, 'f', target_family, 'd', detail) from public.admin_audit where action = 'dev_reset_today'
+             and target_profile = '70510000-0000-0000-0000-00000000a001'),
           jsonb_build_object('op', 'self', 't', '70510000-0000-0000-0000-00000000a001', 'f', '70510000-0000-0000-0000-0000000000f1',
                              'd', jsonb_build_object('session_date', public.kst_today(), 'sessions', 1, 'answers', 1)), '감사 행 1개(본인·가족·개수)');
 -- 다시 해도 같은 날 콘텐츠로 시작(start_today는 커서를 다시 넘기지 않는다)
