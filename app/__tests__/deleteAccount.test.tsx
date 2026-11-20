@@ -68,6 +68,9 @@ test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드
   await press('계정 지우기');
   await press('계정 지우기');
   await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+  // #206 후속: 뒤로 링크는 '사용 안 함'으로 읽히고(비활성 모양), 진행은 위험 버튼 글자 '지우고 있어요'가 보여 준다
+  expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: true});
+  expect(screen.getByText('지우고 있어요')).toBeTruthy();
   // 1) 뒤로 링크: 눌러도 그대로
   await act(async () => {
     fireEvent.press(screen.getByTestId('back-link'));
@@ -82,6 +85,150 @@ test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드
   });
   expect(consumed).toBe(true);
   expect(screen.getByText('내 계정 지우기')).toBeTruthy();
+});
+
+test('#206 후속: 어르신도 지우는 중에는 뒤로 링크가 사용 안 함, 안 지울래요 비활성, 진행 글자 \'지우고 있어요\'', async () => {
+  const api = createFakeApi({consented: true});
+  jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
+  await openParentDelete(api);
+  expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false}); // 지우기 전에는 누를 수 있다
+  await confirmDeleteAll();
+  await waitFor(() => expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: true}));
+  expect(screen.getByRole('button', {name: '안 지울래요'})).toBeDisabled();
+  expect(screen.getByText('지우고 있어요')).toBeTruthy();
+});
+
+describe('#208 리뷰 H1: 지우기 화면 안전망 시간 제한(50초, 요청 자체는 realApi 30초) — 연결이 반쯤 끊겨도 화면에 갇히지 않는다', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+  const expectRestored = () => {
+    // M1: 실패 뒤 뒤로 링크·안 지울래요·버튼 글자가 원래대로
+    expect(screen.getByTestId('delete-fail')).toBeTruthy();
+    // 라이터 #208 delete.timeout: 끊김 단정 대신 '알 수 없어요'
+    expect(screen.getByText(copy.delete.timeout.title)).toBeTruthy();
+    expect(screen.getByText(copy.delete.timeout.body)).toBeTruthy();
+    expect(screen.queryByText(/끊겼/)).toBeNull();
+    expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false});
+    expect(screen.getByRole('button', {name: '안 지울래요'})).not.toBeDisabled();
+    expect(screen.queryByText('지우고 있어요')).toBeNull();
+    expect(screen.getByRole('button', {name: '다시 하기'})).not.toBeDisabled();
+  };
+  test('자녀: 응답이 오지 않으면 안전망 시간 뒤 끊김으로 보고 다시 하기', async () => {
+    const api = createFakeApi({deleteScope: 'child'});
+    jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    const say = jest.spyOn(require('react-native').AccessibilityInfo, 'announceForAccessibility');
+    say.mockClear();
+    jest.useFakeTimers();
+    await press('계정 지우기');
+    await press('계정 지우기');
+    expect(screen.getByText('지우고 있어요')).toBeTruthy();
+    expect(say.mock.calls.filter(c => c[0] === '지우고 있어요')).toHaveLength(1); // #208 리뷰 L: 화면 읽기에도 한 번
+    await act(async () => {
+      jest.advanceTimersByTime(49000);
+    });
+    expect(screen.getByText('지우고 있어요')).toBeTruthy(); // 안전망(50초) 전에는 그대로
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
+    expectRestored();
+  });
+  test('#208 재확인 M(두 리뷰): 끊긴 뒤 no_profile 이어도 앞선 요청이 성공한 기록이 없으면 지웠다고 하지 않는다 — 어르신은 \'지울 수 없어요\'(사실)', async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({consented: true});
+    jest
+      .spyOn(api, 'deleteMyAccount')
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openParentDelete(api);
+    jest.useFakeTimers();
+    await confirmDeleteAll();
+    await act(async () => {
+      jest.advanceTimersByTime(50500);
+    });
+    jest.useRealTimers();
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('이 휴대폰에서는 지울 수 없어요'));
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(screen.queryByText(copy.delete.parent.done_unsure.body)).toBeNull();
+  });
+  test('#208 재확인 M(두 리뷰): 앞선 요청이 다시 하기 뒤에 늦게 성공했으면 no_profile 은 그 결과(모두 지웠어요)로', async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({consented: true});
+    let finishFirst: (v: {scope: 'parent'}) => void = () => {};
+    let failSecond: (e: unknown) => void = () => {};
+    jest
+      .spyOn(api, 'deleteMyAccount')
+      .mockImplementationOnce(() => new Promise(r => (finishFirst = r as never)))
+      .mockImplementationOnce(() => new Promise((_, rej) => (failSecond = rej)));
+    await openParentDelete(api);
+    jest.useFakeTimers();
+    await confirmDeleteAll();
+    await act(async () => {
+      jest.advanceTimersByTime(50500);
+    });
+    jest.useRealTimers();
+    await press('다시 하기'); // 두 번째 시도 시작(아직 답 없음)
+    await act(async () => {
+      finishFirst({scope: 'parent'}); // 첫 시도가 늦게 성공(기기 로그아웃까지)
+    });
+    await act(async () => {
+      failSecond(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    });
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test('#208 재확인 H ③: 시간 초과 뒤 원래 요청이 늦게 성공하면(다시 하기 전) 결과 화면으로 넘어간다', async () => {
+    const api = createFakeApi({consented: true});
+    let finish: (v: {scope: 'parent'}) => void = () => {};
+    jest.spyOn(api, 'deleteMyAccount').mockImplementationOnce(() => new Promise(r => (finish = r as never)));
+    await openParentDelete(api);
+    jest.useFakeTimers();
+    await confirmDeleteAll();
+    await act(async () => {
+      jest.advanceTimersByTime(50500);
+    });
+    expect(screen.getByTestId('delete-fail')).toBeTruthy();
+    jest.useRealTimers();
+    await act(async () => {
+      finish({scope: 'parent'});
+    });
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test('#208 재확인 M(두 리뷰): 자녀도 성공 기록이 없으면 끊긴 뒤 no_profile 은 로그인 풀림 안내(지웠다고 하지 않음)', async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({deleteScope: 'child'});
+    jest
+      .spyOn(api, 'deleteMyAccount')
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    jest.useFakeTimers();
+    await press('계정 지우기');
+    await press('계정 지우기');
+    await act(async () => {
+      jest.advanceTimersByTime(50500);
+    });
+    jest.useRealTimers();
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));
+    expect(screen.queryByText('내 계정이 지워졌어요')).toBeNull();
+  });
+  test('어르신: 응답이 오지 않으면 안전망 시간 뒤 끊김으로 보고 다시 하기 → 다시 하기 결과 none 은 #156 분기(조회 parent + 끊김 = 모두 지웠어요)', async () => {
+    const api = createFakeApi({consented: true});
+    jest.spyOn(api, 'deleteMyAccount').mockImplementationOnce(() => new Promise(() => {})).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    jest.useFakeTimers();
+    await confirmDeleteAll();
+    expect(screen.getByText('지우고 있어요')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(50500);
+    });
+    expectRestored();
+    jest.useRealTimers();
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
 });
 
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {

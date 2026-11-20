@@ -1,7 +1,8 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {OfflineError, ServerError} from './types';
+import {OfflineError, ServerError, TimeoutError} from './types';
 import type {SocialAuth} from './socialAuth';
 import {makeNonce, sha256Hex} from '../lib/sha256';
+import {settleWithin} from '../lib/timeout';
 import {parseMarkCheersRead, parseMyCheers} from '../api/contract/cheers';
 import {parseLogEventResult, type EventName, type EventProps} from '../api/contract/events';
 import {clampDays, parseParentHistory} from '../api/contract/history';
@@ -11,7 +12,7 @@ import {clearPushToken, readPushToken} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
-import {parseDeleteScope} from '../api/contract/deleteScope';
+import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -79,6 +80,11 @@ function fail(what: string, error: SbError): never {
 // 서버 RPC/테이블을 그대로 감싼 구현. reason 같은 도메인 실패는 throw 하지 않고 반환값으로 돌려준다.
 // social: 네이티브 소셜 로그인 모듈(테스트에서 바꿔 끼움). 기본값은 필요할 때 불러온다(통합 테스트(node)는 네이티브 모듈 없이 돈다).
 // platform: 이 기기 OS(selectApi 가 Platform.OS 로 넘김, iOS 준비 N3). 통합 테스트(node)는 기본 android
+/** 서버 삭제 뒤 기기 정리 하나당 시간 제한(ms, #208 리뷰 H1) */
+export const CLEANUP_MS = 3000;
+/** 계정 지우기 RPC 시간 제한(ms, #208) — 넘기면 요청을 끊는다 */
+export const DELETE_RPC_TIMEOUT_MS = 30000;
+
 export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform: PushPlatform | null = 'android'): RealApi {
   const socialAuth = (): SocialAuth => social ?? require('./socialAuth').nativeSocialAuth;
   // 어르신 기기: 세션이 없으면 익명 로그인한다. 세션을 "못 읽은" 것과 "없는" 것은 다르므로
@@ -145,33 +151,54 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       return r;
     },
     async deleteMyAccount() {
+      // clearPushToken 은 이 기기 저장소만 지운다(네트워크 없음)
       waiting.length = 0; // 리뷰 L1
-      const {data, error} = await sb.rpc('delete_my_account');
+      // #208 리드 지시: 화면만 풀면 요청은 남는다 → 요청 자체를 RPC_TIMEOUT_MS 에 끊는다(supabase-js abortSignal).
+      //   끊으면 끊김(OfflineError) — 서버에서 끝났을 수도 있어 화면은 unsure(#156 분기·done_unsure)로 간다.
+      //   앱 전체 공통 시간 제한은 서버 멱등성 점검 뒤 L4 가 넣는다 — 그때 이 개별 제한과 겹치지 않게 하나로 합칠 것
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), DELETE_RPC_TIMEOUT_MS);
+      const q = sb.rpc('delete_my_account') as unknown as PromiseLike<{data: unknown; error: unknown}> & {abortSignal?: (s: AbortSignal) => PromiseLike<{data: unknown; error: unknown}>};
+      let res: {data: unknown; error: unknown};
+      try {
+        res = await (typeof q.abortSignal === 'function' ? q.abortSignal(ctrl.signal) : q);
+      } catch (e) {
+        throw ctrl.signal.aborted ? new TimeoutError('delete_my_account 시간 초과(요청 끊음)') : e;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (ctrl.signal.aborted) {
+        throw new TimeoutError('delete_my_account 시간 초과(요청 끊음)');
+      }
+      const {data, error} = res as {data: {scope: DeleteScope}; error: never};
       if (error) fail('delete_my_account', error);
       await clearPushToken(); // 서버가 토큰 행을 함께 지웠다(0032). 이 기기 기억만 지운다
       // 서버가 앱 데이터와 함께 본인 인증 계정(소셜 식별 정보 포함)까지 지웠다(0017). 이 기기의 정리만 남는다.
       // 소셜 SDK 세션: 연결된 방법 전체(providers, 자동 합쳐진 경우 포함)를 정리하고, 카카오는 연결 끊기(unlink, 기기 토큰 기준).
       // 기기 토큰이 없으면 unlink 는 조용히 실패한다 → 서버(Admin 키) unlink 는 설계만(TODO). 실패해도 다음 정리는 계속.
+      // #208 리뷰 H1: 서버 삭제가 끝났으면 사용자는 결과 화면으로 가야 한다 — 기기 정리 하나하나에 짧은 시간 제한(CLEANUP_MS).
+      //   응답하지 않는 SDK(반쯤 끊긴 연결)가 '지우는 중' 화면에 가두지 않게. 늦게 끝나는 정리는 그대로 두고(결과만 안 기다림) 넘어간다
       try {
-        const {data: s} = await sb.auth.getSession();
-        const meta = s.session?.user.app_metadata ?? {};
-        const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+        let list: string[] = [];
+        await settleWithin(
+          sb.auth.getSession().then(({data: s}) => {
+            const meta = s.session?.user.app_metadata ?? {};
+            list = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+          }),
+          CLEANUP_MS,
+        );
         const auth = socialAuth();
         if (list.includes('kakao')) {
-          await auth.unlinkKakao().catch(() => {});
-          await auth.signOut('kakao');
+          await settleWithin(auth.unlinkKakao(), CLEANUP_MS);
+          await settleWithin(auth.signOut('kakao'), CLEANUP_MS);
         }
         if (list.includes('google')) {
-          await auth.signOut('google');
+          await settleWithin(auth.signOut('google'), CLEANUP_MS);
         }
       } catch {
         // 무시(데이터는 이미 지워짐)
       }
-      try {
-        await sb.auth.signOut({scope: 'local'}); // 인증 계정이 이미 없으므로 서버 호출 없이 이 기기 세션만 지운다
-      } catch {
-        // 무시
-      }
+      await settleWithin(sb.auth.signOut({scope: 'local'}), CLEANUP_MS); // 인증 계정이 이미 없으므로 서버 호출 없이 이 기기 세션만 지운다
       return {scope: data.scope};
     },
     async signInWithSocial(provider) {
