@@ -336,7 +336,7 @@ describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 
     expect(screen.queryByText('모두 지웠어요')).toBeNull();
     expect(screen.queryByText(copy.delete.parent.done_none.body)).toBeNull(); // '가족과 나눈 기록은 없었어요'도 단정하지 않는다
     expect(screen.getByRole('button', {name: '문의하기'})).toBeTruthy();
-    expect(preview.mock.calls.length).toBeGreaterThanOrEqual(3); // 처음 + 지우기 전 다시 묻기(두 번 시도마다)
+    expect(preview).toHaveBeenCalledTimes(2); // 처음 + 첫 시도 전 다시 묻기(끊긴 뒤에는 묻지 않음)
   });
   test('#156 리뷰 H: 사전 조회가 처음엔 실패해도 지우기 전에 다시 물어 parent 를 알면, 끊김 뒤 none 은 "모두 지웠어요"(#146 H1)', async () => {
     const api = createFakeApi({consented: true});
@@ -348,6 +348,23 @@ describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 
     await waitFor(() => screen.getByTestId('delete-fail'));
     await press('다시 하기');
     await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test('#156 재확인 M: 조회 두 번 실패 → 첫 시도가 서버에서 지우고 응답만 끊김 → 다시 하기 때는 다시 묻지 않고 done_unsure(\'가족 기록 없었음\'을 말하지 않음)', async () => {
+    const api = createFakeApi({consented: true});
+    const preview = jest
+      .spyOn(api, 'deleteScopePreview')
+      .mockRejectedValueOnce(new OfflineError('x'))
+      .mockRejectedValueOnce(new OfflineError('x'))
+      .mockResolvedValue({scope: 'none'}); // 이미 지워진 뒤라면 none 이 온다
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText(copy.delete.parent.done_unsure.body));
+    expect(screen.queryByText(copy.delete.parent.done_none.body)).toBeNull();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(preview).toHaveBeenCalledTimes(2); // 처음 + 첫 시도 전. 끊긴 뒤에는 묻지 않음
   });
   test('사전 조회를 몰라도 앞선 끊김이 없으면 결과 none 은 이 계정에 가족 기록이 없었다는 뜻 → done_none', async () => {
     const api = createFakeApi({consented: true, failPreview: true});

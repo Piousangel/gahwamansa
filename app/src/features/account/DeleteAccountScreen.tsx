@@ -113,8 +113,9 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
-    // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로
-    if (!child && previewScope.current === null) {
+    // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로.
+    //   앞선 시도가 끊긴 뒤에는 묻지 않는다 — 그 시도가 서버에서 이미 지웠으면 'none'이 와 '가족 기록 없었음'으로 잘못 읽힌다(재확인 M). 모름 = done_unsure
+    if (!child && previewScope.current === null && !unsure.current) {
       await api
         .deleteScopePreview()
         .then(r => {
