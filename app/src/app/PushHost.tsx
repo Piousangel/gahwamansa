@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {AppState} from 'react-native';
 import {parsePushKind, type PushKind} from '../api/contract/push';
 import {isQuietEventFailure} from '../api/contract/events';
@@ -9,6 +9,7 @@ import {ensureChannels, readNotifyPermission} from '../push/notifyNative';
 import {isParentKind, parentStepAfterOpen} from '../push/openRoute';
 import {parentPromptState, registerToken, retryPending} from '../push/pushClient';
 import {configurePush} from '../push/runtime';
+import {N1Prompt} from '../push/N1Prompt';
 import {pickTokenSource, type PushData, type PushTokenSource} from '../push/tokenSource';
 import {handleChildPushOpen} from '../features/home/pushOpen';
 import {useSession} from './session';
@@ -16,19 +17,20 @@ import {useSession} from './session';
 type Role = 'parent' | 'child' | null | 'loading';
 const TAB_ROUTES = ['Album', 'Past']; // 자녀 탭 안 화면(getCurrentRoute 는 가장 안쪽 이름을 준다)
 // 어르신 알림 탭이 끊지 않는 진행 중 화면(리뷰 L6)
-const PARENT_BUSY_ROUTES = ['Connect', 'Consent', 'PushPermission', 'DeleteAccount', 'DeleteDone'];
+const PARENT_BUSY_ROUTES = ['Connect', 'Consent', 'DeleteAccount', 'DeleteDone'];
 const PENDING_TTL_MS = 10 * 60 * 1000;
 type Pending = {data: PushData; kind: PushKind | null; stage: 'open' | 'step'; at: number; tag: string | null | undefined};
 const isChildKind = (k: PushKind) => k === 'parent_connected' || k === 'parent_reconnected' || k === 'parent_first_answer';
 const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().catch(() => null);
 
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.
-// 화면을 그리지 않는다. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
+// 그리는 것은 N1(ds Dialog, P7 뒤 코스 홈 위) 하나뿐. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
 export function PushHost({role, source: given}: {role: Role; source?: PushTokenSource}) {
-  const {api, content, done} = useSession();
-  const courseDone = new Set(done).size >= 3; // 오늘 코스(3단계)를 다 마쳤나 — N1 은 도장 뒤(V1)
+  const {api, content} = useSession();
   const source = useMemo(() => given ?? pickTokenSource(getAppEnv().API_MODE), [given]);
   const deps = useMemo(() => configurePush(api, source), [api, source]);
+  const [ask, setAsk] = useState(0); // N1 을 물을 차례(0 = 아님). P7 뒤 코스 홈에서 '물어야 함'을 확인하면 올린다
+  const n1Open = ask > 0; // N1 이 떠 있는 동안 알림 탭은 미룬다(리뷰 L6)
   const route = useCurrentRouteName();
   const linked = content?.linked ?? false;
 
@@ -130,8 +132,8 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       return;
     }
     if (stage === 'open') {
-      // 리뷰 L6: 연결·동의·N1·지우기처럼 진행 중인 화면은 끊지 않는다(그 화면을 떠나 다른 화면이 되면 처리)
-      if (!route || PARENT_BUSY_ROUTES.includes(route)) {
+      // 리뷰 L6: 연결·동의·N1(떠 있는 동안)·지우기처럼 진행 중인 화면은 끊지 않는다(그 화면을 떠나 다른 화면이 되면 처리)
+      if (!route || PARENT_BUSY_ROUTES.includes(route) || n1Open) {
         return;
       }
       api
@@ -154,62 +156,35 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       }
       setPending(null);
     }
-  }, [pending, role, route, content, api]);
+  }, [pending, role, route, content, api, n1Open]);
 
-  // N1: 연결된 어르신이 오늘 코스를 다 마치고(P7 도장 → '알겠어요') 코스 홈에 왔을 때, 이 계정에서 아직 답하지 않았으면 묻는다.
-  // V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다. 링크 경로의 연결·동의 순서는 그대로.
-  // PR #65 리뷰 L1(리드 결정 11-19): 알림 받기와 답 보여 주기는 별개 동의 — 답 보여 주기에 동의하지 않은 어르신에게도 묻는다.
-  // PR #65 리뷰 L3(리드 결정 11-19): 확인은 '깨어남'(실행·앱이 앞으로 돌아옴)마다 한 번. 확인을 못 했거나(오프라인) 묻기로 했는데
-  //   다른 화면에 있었으면 코스 홈으로 돌아올 때·다음 깨어남에 다시 확인한다. 이 계정에서 이미 답했으면 서버에 묻지도 않는다.
-  //   앞으로 돌아온 깨어남은 AppRoot 가 오늘 상태를 새로 받은 뒤에 센다(자정을 넘겨 돌아왔을 때 어제 '다 마침'으로 묻지 않게).
-  const [wake, setWake] = useState(0);
-  const wakeRef = useRef(0);
-  wakeRef.current = wake;
-  const awaitingFresh = useRef(false);
+  // N1: P7 의 연속(리드 결정 ⓐ, #168 기획 리뷰). 이번 실행에서 P7(CourseDone) → 코스 홈으로 돌아왔을 때만 묻는다.
+  // 앱을 열 때·앞으로 돌아올 때(깨어남)는 묻지 않는다(토스 '진입 즉시 권한 묻기 금지'). 하루 한 번 이하는 pushClient 기억이 지킨다:
+  //   답함(알려 주세요·안 받을게요) → 다시 묻지 않음, 뒤로(답 없이) → 오늘은 넘김(다음 날 P7 뒤에 다시).
+  // V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다 — P7 뒤라 자연히 지켜진다.
+  // PR #65 리뷰 L1: 알림 받기와 답 보여 주기는 별개 동의 — 답 보여 주기에 동의하지 않은 어르신에게도 묻는다.
+  const prevRoute = useRef<string | undefined>(undefined);
+  const [fromP7, setFromP7] = useState(0); // P7 → 코스 홈으로 돌아온 횟수(이번 실행)
   useEffect(() => {
-    if (role !== 'parent') {
+    if (prevRoute.current === 'CourseDone' && route === 'CourseHome') {
+      setFromP7(n => n + 1);
+    }
+    prevRoute.current = route;
+  }, [route]);
+  const handledP7 = useRef(0);
+  useEffect(() => {
+    if (role !== 'parent' || !linked || fromP7 === handledP7.current || route !== 'CourseHome' || pending) {
       return;
     }
-    const sub = AppState.addEventListener('change', s => {
-      if (s === 'active') {
-        awaitingFresh.current = true;
-      }
-    });
-    return () => sub.remove();
-  }, [role]);
-  useEffect(() => {
-    if (awaitingFresh.current && content) {
-      awaitingFresh.current = false;
-      setWake(w => w + 1);
-    }
-  }, [content]);
-  const checkedWake = useRef(-1);
-  const checking = useRef(false);
-  const [settled, setSettled] = useState(0); // 확인 중에 새 깨어남이 오면 끝난 뒤 다시 본다
-  useEffect(() => {
-    if (role !== 'parent' || !linked || !courseDone || route !== 'CourseHome' || pending) {
-      return;
-    }
-    if (checking.current || checkedWake.current === wake) {
-      return;
-    }
-    checking.current = true;
-    checkedWake.current = wake;
+    handledP7.current = fromP7;
     parentPromptState(deps)
       .then(state => {
         if (state === 'ask' && navRef.isReady() && navRef.getCurrentRoute()?.name === 'CourseHome') {
-          navRef.navigate('PushPermission');
-        } else if (state !== 'skip') {
-          checkedWake.current = -1; // 확인 못 함·다른 화면: 코스 홈으로 돌아오거나 다음 깨어남에 다시
+          setAsk(n => n + 1);
         }
       })
-      .finally(() => {
-        checking.current = false;
-        if (checkedWake.current !== -1 && checkedWake.current !== wakeRef.current) {
-          setSettled(n => n + 1);
-        }
-      });
-  }, [role, linked, courseDone, route, pending, deps, wake, settled]);
+      .catch(() => {}); // 확인 못 함(오프라인): 이번에는 묻지 않는다(깨어남에 다시 묻지 않는 결정 — 다음 P7 뒤에)
+  }, [role, linked, fromP7, route, pending, deps]);
 
-  return null;
+  return ask > 0 ? <N1Prompt key={ask} onClose={() => setAsk(0)} /> : null;
 }

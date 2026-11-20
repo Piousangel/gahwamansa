@@ -3,7 +3,7 @@ import {AccessibilityInfo, KeyboardAvoidingView, NativeScrollEvent, NativeSynthe
 import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {color, layout, space} from './tokens';
-import {ScreenTitleContext} from './screenTitle';
+import {registerScreenTitleGetter, ScreenTitleContext} from './screenTitle';
 import {useReportDock} from './toastPlacement';
 
 const FADE_H = 28; // §15: 본문이 넘치면 아래 28 높이 페이드로 "더 있음"
@@ -112,6 +112,7 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
   };
   const registerTop = useRef(registerIn(tops)).current;
   const registerBody = useRef(registerIn(bodies)).current;
+  useEffect(() => registerScreenTitleGetter(() => initialFocusRef?.current ?? tops.current[0] ?? bodies.current[0]), [initialFocusRef]);
   useEffect(() => {
     let alive = true;
     let t: ReturnType<typeof setTimeout> | undefined;

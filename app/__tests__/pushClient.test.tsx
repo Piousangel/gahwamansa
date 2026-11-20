@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {
@@ -30,6 +30,7 @@ import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {copy} from '../src/copy/copy';
 import {press} from '../testUtils/flow';
+import {coverQueue} from '../src/ui/ds/coverQueue';
 // V1(11-19): N1 은 오늘 코스를 다 마친 뒤 코스 홈에서. 바로 N1 을 보려면 다 마친 상태로 시작한다
 const ALL_DONE: ('photo' | 'question' | 'hangul')[] = ['photo', 'question', 'hangul'];
 
@@ -231,124 +232,125 @@ describe('U1 알림 탭 → 오늘 할 단계', () => {
   });
 });
 
+// N1 은 P7 의 연속(리드 결정 ⓐ, #168): 이번 실행에서 P7(CourseDone) → 코스 홈으로 돌아왔을 때만. 앱을 열 때·깨어날 때는 묻지 않는다
+async function renderHome(api: ReturnType<typeof createFakeApi>) {
+  render(<AppRoot api={api} role="parent" restore />);
+  await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+}
+async function backFromP7() {
+  const {navRef} = require('../src/navigation/navRef');
+  await act(async () => {
+    navRef.navigate('CourseDone');
+  });
+  await act(async () => {
+    navRef.navigate('CourseHome'); // P7 '알겠어요'(popTo 코스 홈)와 같은 경로
+  });
+}
+function wakeHandlers() {
+  const handlers: ((s: string) => void)[] = [];
+  jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
+    if (type === 'change') {
+      handlers.push(h);
+    }
+    return {remove: jest.fn()};
+  }) as never);
+  return async () => {
+    await act(async () => {
+      handlers.forEach(h => h('active'));
+    });
+  };
+}
+
 describe('앱 조립(PushHost)', () => {
-  test('N1: 동의한 어르신이 코스 홈에 오면 한 번 → 알려 주세요 → 시스템 창 → 코스 홈으로', async () => {
+  test('N1: P7 뒤 코스 홈에서 한 번 → 알려 주세요(아래 미리 알림 한 줄) → 시스템 창 → 닫힘', async () => {
     setPlatform('android', 34);
     const request = jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const en = jest.spyOn(api, 'setPushEnabled');
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByLabelText(copy.push.permission.title));
-    expect(screen.getByLabelText(copy.push.permission.preview_a11y)).toBeTruthy();
+    await renderHome(api);
+    await backFromP7();
+    await waitFor(() => screen.getByTestId('n1'));
+    // v4(ds Dialog, 시안 P6_P7_N1_P2_ds4b N1): 제목·하루 한 번·안 받아도 그대로, 알림 예시 그림은 없다
+    expect(screen.getByLabelText(copy.push.permission.body)).toBeTruthy();
     expect(screen.getByLabelText(copy.push.permission.optional)).toBeTruthy();
+    expect(screen.queryByLabelText(copy.push.permission.preview_a11y)).toBeNull();
+    expect(within(screen.getByTestId('n1')).getByText(copy.push.permission.system_hint, {includeHiddenElements: true, normalizer: (x: string) => x.replace(/\u2060/g, '').trim()})).toBeTruthy(); // 접근성 M3: 알려 주세요 아래 한 줄
+    expect(screen.getByRole('button', {name: copy.push.permission.yes}).props.accessibilityHint).toBe(copy.push.permission.system_hint);
     await press(copy.push.permission.yes);
-    await waitFor(() => expect(screen.queryByLabelText(copy.push.permission.title)).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
     expect(en).toHaveBeenCalledWith(true);
     expect(request).toHaveBeenCalled();
   });
 
-  test('PR #65 L1: 답 보여 주기에 동의하지 않은 어르신에게도 코스를 마치면 N1 을 띄운다(별개 동의)', async () => {
+  test('리드 ⓐ: 앱을 열 때(코스를 이미 마친 날)·깨어날 때는 묻지 않는다 — 진입 즉시 권한 묻기 금지', async () => {
+    const wake = wakeHandlers();
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
+    const my = jest.spyOn(api, 'myPushSettings');
+    await renderHome(api);
+    await act(async () => {});
+    expect(screen.queryByTestId('n1')).toBeNull();
+    await wake();
+    await act(async () => {});
+    expect(screen.queryByTestId('n1')).toBeNull();
+    expect(my).not.toHaveBeenCalled();
+  });
+
+  test('PR #65 L1: 답 보여 주기에 동의하지 않은 어르신에게도 P7 뒤 N1 을 띄운다(별개 동의)', async () => {
     const api = createFakeApi({linked: true, consented: false, pushEnabled: false, completedSteps: ALL_DONE});
-    render(<AppRoot api={api} role="parent" restore />);
+    await renderHome(api);
+    await backFromP7();
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
   });
 
   test('N1 은 이미 받는 중이면 뜨지 않는다', async () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: true, completedSteps: ALL_DONE});
     const my = jest.spyOn(api, 'myPushSettings');
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await renderHome(api);
+    await backFromP7();
     await waitFor(() => expect(my).toHaveBeenCalled());
     await act(async () => {});
-    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(screen.queryByTestId('n1')).toBeNull();
   });
 
-  test('PR #65 L3: 오프라인으로 확인을 못 하면 앱이 앞으로 돌아와 오늘 상태를 새로 받은 뒤 다시 확인해 띄운다, 답한 뒤에는 서버에도 안 묻는다', async () => {
-    const handlers: ((s: string) => void)[] = [];
-    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
-      if (type === 'change') {
-        handlers.push(h);
-      }
-      return {remove: jest.fn()};
-    }) as never);
-    setPlatform('android', 34);
-    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('denied');
-    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+  test('오프라인으로 확인을 못 하면 이번에는 묻지 않고(깨어남에도 묻지 않음), 다음 P7 뒤에 묻는다. 안 받을게요 뒤에는 다시 묻지 않는다', async () => {
+    const wake = wakeHandlers();
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const real = api.myPushSettings.bind(api);
     const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('screen-dock'), {timeout: 8000});
+    await renderHome(api);
+    await backFromP7();
     await waitFor(() => expect(my).toHaveBeenCalledTimes(1));
     await act(async () => {});
-    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(screen.queryByTestId('n1')).toBeNull();
     my.mockImplementation(real);
-    await act(async () => {
-      handlers.forEach(h => h('active'));
-    });
-    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
+    await wake();
+    await act(async () => {});
+    expect(screen.queryByTestId('n1')).toBeNull();
+    await backFromP7();
+    await waitFor(() => screen.getByTestId('n1'));
     await press(copy.push.permission.no);
-    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
-    // 답한 뒤 앞으로 돌아와도 다시 띄우지 않고, 서버에도 묻지 않는다(이 계정 답 먼저 확인)
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
     const calls = my.mock.calls.length;
-    const sync = jest.spyOn(api, 'getTodayContent');
-    await act(async () => {
-      handlers.forEach(h => h('active'));
-    });
-    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await backFromP7();
     await act(async () => {});
-    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
-    expect(my.mock.calls.length).toBe(calls);
+    expect(screen.queryByTestId('n1')).toBeNull();
+    expect(my.mock.calls.length).toBe(calls); // 이 계정 답을 먼저 보고 서버에도 안 묻는다
   });
 
-  test('PR #65 리뷰: 자정을 넘겨 돌아오면 새로 받은 오늘 상태(아직 안 마침)로 판단해 N1 을 띄우지 않는다', async () => {
-    const handlers: ((s: string) => void)[] = [];
-    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
-      if (type === 'change') {
-        handlers.push(h);
-      }
-      return {remove: jest.fn()};
-    }) as never);
-    const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
-    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValueOnce(new Error('offline'));
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => expect(my).toHaveBeenCalledTimes(1), {timeout: 8000});
-    api.__dev.nextDay(); // 다음 날: 오늘 단계 비어 있음
-    const sync = jest.spyOn(api, 'getTodayContent');
-    await act(async () => {
-      handlers.forEach(h => h('active'));
-    });
-    await waitFor(() => expect(sync).toHaveBeenCalled());
-    await act(async () => {});
-    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
-    expect(my).toHaveBeenCalledTimes(1);
-  });
-
-  test('PR #72 M1: N1 을 뒤로(답 없이) 닫으면 같은 날 앞으로 와도 다시 뜨지 않고, 거절로 기록하지도 않는다', async () => {
-    const handlers: ((s: string) => void)[] = [];
-    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (st: string) => void) => {
-      if (type === 'change') {
-        handlers.push(h);
-      }
-      return {remove: jest.fn()};
-    }) as never);
+  test('PR #72 M1: 뒤로(답 없이) 닫으면 같은 날 P7 뒤에도 다시 뜨지 않고, 거절로 기록하지도 않는다', async () => {
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const en = jest.spyOn(api, 'setPushEnabled');
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}), {timeout: 8000});
-    const {navRef} = require('../src/navigation/navRef');
+    await renderHome(api);
+    await backFromP7();
+    await waitFor(() => screen.getByTestId('n1'));
     await act(async () => {
-      navRef.goBack(); // 하드웨어 뒤로와 같은 경로(beforeRemove)
+      screen.UNSAFE_getByType(RN.Modal).props.onRequestClose(); // 하드웨어 뒤로 = 오늘은 넘김
     });
-    await waitFor(() => expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull());
-    const sync = jest.spyOn(api, 'getTodayContent');
-    await act(async () => {
-      handlers.forEach(h => h('active'));
-    });
-    await waitFor(() => expect(sync).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
+    await backFromP7();
     await act(async () => {});
-    expect(screen.queryByRole('button', {name: copy.push.permission.yes})).toBeNull();
+    expect(screen.queryByTestId('n1')).toBeNull();
     expect(en).not.toHaveBeenCalled(); // 받기 동의도 거절도 보내지 않음
   });
 
@@ -418,19 +420,43 @@ describe('앱 조립(PushHost)', () => {
     await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
     await waitFor(() => expect(screen.queryByTestId('wait-notify')).toBeNull());
   });
-  test('리뷰 L1: 시스템 창이 뜨지 않으면(blocked) N1 이 닫히지 않고 휴대폰 설정 안내', async () => {
+  test('리뷰 L1·#168: 시스템 창이 뜨지 않으면(blocked) 닫지 않고 본문을 안내 한 줄(notice 톤)로, 닫는 말은 닫기(이미 서버 동의·다시 묻지 않음)', async () => {
     setPlatform('android', 34);
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const settings = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
-    render(<AppRoot api={createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE})} role="parent" restore />);
+    await renderHome(createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE}));
+    await backFromP7();
+    await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
+    await press(copy.push.permission.yes);
+    await waitFor(() => screen.getByTestId('n1-system-off'));
+    expect(within(screen.getByTestId('n1-scroll')).getByTestId('n1-system-off')).toBeTruthy(); // 스크롤 안(접근성 M2)
+    expect(screen.queryByLabelText(copy.push.permission.body)).toBeNull(); // 본문을 바꿔 끼움
+    expect(screen.queryByTestId('n1-error')).toBeNull(); // 오류(danger) 줄이 아니다
+    expect(screen.queryByRole('button', {name: copy.push.permission.no})).toBeNull();
+    await press(copy.push.system_off.open_parent);
+    expect(settings).toHaveBeenCalled();
+    await press('닫기');
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
+  });
+
+  test('#168 접근성 M1: 설정에서 켜고 돌아오면 권한을 다시 읽어 알리고 닫는다', async () => {
+    const wake = wakeHandlers();
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
+    const check = jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
+    const say = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    await renderHome(createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE}));
+    await backFromP7();
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
     await press(copy.push.permission.yes);
     await waitFor(() => screen.getByTestId('n1-system-off'));
     await press(copy.push.system_off.open_parent);
-    expect(settings).toHaveBeenCalled();
-    await press(copy.push.permission.no);
-    await waitFor(() => expect(screen.queryByTestId('n1-system-off')).toBeNull());
+    check.mockResolvedValue(true); // 휴대폰 설정에서 켬
+    await wake();
+    await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
+    expect(say).toHaveBeenCalledWith(copy.push.permission.turned_on);
   });
 
   test('리뷰 L2: 자녀는 권한이 이미 허용이어도 누르기 전에는 받기 동의를 보내지 않는다(토큰 등록만)', async () => {
@@ -456,12 +482,21 @@ describe('앱 조립(PushHost)', () => {
     expect(await readPushToken()).toBeNull();
   });
 
+  test('리드 ⓐ: N1 은 덮개 큐를 쓰지 않는다 — 오늘 다른 덮개가 떴어도 P7 뒤에는 묻는다', async () => {
+    expect(await coverQueue.request('other-cover')).toBe(true);
+    coverQueue.release('other-cover');
+    await renderHome(createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE}));
+    await backFromP7();
+    await waitFor(() => screen.getByTestId('n1'));
+  });
+
   test('리뷰 L6: N1 같은 진행 중 화면은 알림 탭이 끊지 않고, 떠난 뒤 처리', async () => {
     const src = createFakeTokenSource();
     setTokenSourceForTest(src);
     const api = createFakeApi({linked: true, consented: true, pushEnabled: false, completedSteps: ALL_DONE});
     const log = jest.spyOn(api, 'logEvent');
-    render(<AppRoot api={api} role="parent" restore />);
+    await renderHome(api);
+    await backFromP7();
     await waitFor(() => screen.getByRole('button', {name: copy.push.permission.yes}));
     await act(async () => {
       src.emitOpen({kind: 'daily'});

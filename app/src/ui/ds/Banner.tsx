@@ -7,7 +7,7 @@ import {Text} from './Text';
 import {ds} from './roles';
 import type {ColorV4} from '../tokensV4';
 
-export type BannerTone = 'info' | 'done' | 'danger' | 'offline';
+export type BannerTone = 'info' | 'done' | 'danger' | 'offline' | 'notice';
 
 /**
  * 띠의 면·글자·아이콘 색 이름. 글자는 모든 면에서 허용되는 inkBody, 뜻은 아이콘·테두리(색만으로 구분하지 않음).
@@ -18,6 +18,8 @@ export const BANNER_LOOK: Record<BannerTone, {surface: ColorV4; text: ColorV4; i
   done: {surface: 'card', text: 'inkBody', icon: 'doneInk', border: 'doneInk', iconName: 'icon-check'},
   danger: {surface: 'card', text: 'inkBody', icon: 'dangerInk', border: 'dangerInk', iconName: 'icon-warning'},
   offline: {surface: 'paperSoft', text: 'inkBody', icon: 'info', border: 'line', iconName: 'icon-wifi-off'},
+  // 상태 안내(내가 잘못한 게 아님): noticeSoft 면 + ⓘ + inkBody. 예: N1 휴대폰 설정에서 알림이 꺼져 있음(#168 디자인)
+  notice: {surface: 'noticeSoft', text: 'inkBody', icon: 'info', border: 'info', iconName: 'icon-info'},
 };
 
 /**
