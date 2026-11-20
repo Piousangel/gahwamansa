@@ -84,6 +84,14 @@ test('어르신 지우기 두 갈래(#156 M1·H1·H2, 법률 11-20): 지킬 수 
   expect(d.parent.done_none.title).not.toMatch(/없었어요/);
 });
 
+test("C8: '되돌릴 수 없어요'는 빨간 머리글(warn_label) 한 번만 — 본문에 겹쳐 쓰지 않는다(라이터 11-20, 어르신 P9 copy 11절 ⑥과 같은 원칙)", () => {
+  const c = copy.delete.child;
+  expect(c.warn_label).toBe('되돌릴 수 없어요');
+  for (const body of [c.keep_body, c.last_body, copy.child.delete_none.body]) {
+    expect(body).not.toMatch(/되돌릴 수 없어요/);
+  }
+});
+
 test('호칭은 조사 없이 의/께/뒤 띄어쓰기로만 쓴다', () => {
   const bad = all.filter(([, s]) => /\{호칭\}(은|는|이|가|을|를|과|와)(?![가-힣])/.test(s));
   expect(bad).toEqual([]);
