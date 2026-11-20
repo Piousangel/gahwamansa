@@ -1,6 +1,6 @@
 import React from 'react';
 import {AppState} from 'react-native';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
@@ -111,7 +111,7 @@ test('포그라운드 재조회 실패는 알리고 다시 할 수 있다(코스
   jest.spyOn(api, 'getTodayContent').mockRejectedValueOnce(new Error('boom'));
   await fire();
   await waitFor(() => screen.getByText('잠깐 문제가 생겼어요'));
-  expect(screen.getByRole('button', {name: '사진 보기'})).toBeTruthy(); // 코스는 유지(주 버튼 = 지금 단계)
+  expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '사진 보기'})).toBeTruthy(); // 코스는 유지(주 버튼 = 지금 단계)
   await press('다시 하기');
   await waitFor(() => expect(screen.queryByText('잠깐 문제가 생겼어요')).toBeNull());
 });
@@ -132,7 +132,7 @@ test('동의 화면에서 서버 확인이 실패하면 알리되 고를 수는 
   render(<AppRoot api={api} role="parent" />);
   jest.spyOn(api, 'getTodayContent').mockRejectedValueOnce(new OfflineError('x'));
   await enterCode('123456'); // 6자리 자동 확인 → P1c 에서 연결하기
-  await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
+  await waitFor(() => screen.getByText(/인터넷이 잠깐 끊겼어요/)); // P2 v4: 오류 띠 한 줄(제목. 본문)
   expect(screen.getByRole('button', {name: '좋아요'})).toBeTruthy();
 });
 

@@ -456,8 +456,8 @@
     },
     "title": {
       "elder": {
-        "size": 32,
-        "lineHeight": 44
+        "size": 30,
+        "lineHeight": 42
       },
       "child": {
         "size": 26,
@@ -683,7 +683,7 @@
   "typeRules": [
     "화면은 역할만 고른다. size·weight·color 숫자 직접 지정 금지",
     "한 화면에 700을 쓰는 역할은 최대 2개. 본문에는 bold를 쓰지 않는다",
-    "인접 단계 크기 비율은 1.2 이상이고 모자라면 굵기·색으로 보완(토큰 테스트). 어르신 표 기준 title 32 / heading 26(1.23) / bodyLg 22(1.18) / body 20(1.10)은 SUMMARY 값이라 굵기(700↔400)·색(inkTitle↔inkBody)으로 보완하는 쌍으로 표시",
+    "인접 단계 크기 비율은 1.2 이상이고 모자라면 굵기·색으로 보완(토큰 테스트). 어르신 표 기준 title 30 / heading 26(1.15) / bodyLg 22(1.18) / body 20(1.10)은 보완하는 쌍으로 표시. heading/bodyLg·bodyLg/body는 굵기(700↔400)·색(inkTitle↔inkBody)으로, title/heading(둘 다 700)은 위치(화면당 1개 H1, 위 영역 맨 위)로 보완. title 32→30은 Noto Sans KR 재렌더(#162, 리드·디자인 11-20): 32에서 P2·P8 제목이 312 폭을 넘어 2줄",
     "빌드 1은 400/700 두 단계. 500은 S25 실측에서 확인될 때만. Pretendard 번들은 빌드 2 실측 뒤",
     "줄높이는 lineHeightTable 유지. 하한은 audience별(어르신 20 / 자녀 16, 16은 sub·약관 줄만)",
     "어르신 본문 20 유지(22는 어르신 실사용 확인 1회 뒤 빌드 2에서 재결정)"
@@ -854,6 +854,11 @@
     "contrast": "design-system/scripts/contrast-v4.py --check 가 OK, 화면·컴포넌트의 role×surface 는 allowed 표에만 있음",
     "ratio": "인접 역할 크기 비율 1.2 이상. 보완 쌍은 ratioCompensatedPairs 에 이름으로 둔 것만 예외",
     "ratioCompensatedPairs": [
+      [
+        "elder",
+        "title",
+        "heading"
+      ],
       [
         "elder",
         "heading",

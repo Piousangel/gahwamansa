@@ -9,6 +9,10 @@ import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {enterCode, press, pressCourseNext} from '../testUtils/flow';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 let mockDims = {width: 411, height: 914, scale: 3, fontScale: 1};
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -35,12 +39,12 @@ async function home(opts: FakeOptions = {}) {
 test('M1(411×914 100%): 이번 주 도장이 0이면 도장 줄을 숨긴다(첫 진입 해님 인사와 겹침 해소)', async () => {
   await home({weekDone: []});
   await waitFor(() => screen.getByTestId('course-steps'));
-  expect(screen.queryByTestId('stamp-day-0')).toBeNull();
+  expect(screen.queryByTestId('course-week')).toBeNull();
 });
 
 test('M1: 찍은 날이 있으면 도장 줄은 그대로', async () => {
   await home({weekDone: [0, 1]});
-  await waitFor(() => screen.getByTestId('stamp-day-0'));
+  await waitFor(() => screen.getByTestId('course-week'));
 });
 
 test('L1: 3/3 인사는 마침표 뒤 줄바꿈', async () => {
@@ -80,12 +84,12 @@ test('M3(360 폭 100%): 답 보여 주기 행은 동사 버튼을 다음 줄 전
   expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('column');
 });
 
-test('P2: 넷째 줄은 체크 카드 밖 ⓘ 한 줄', async () => {
+test('P2: 넷째 줄(거절 안내)은 카드 밖 한 줄(v4: 점 머리표, ⓘ 없음)', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
-  expect(screen.getByTestId('consent-info')).toBeTruthy();
+  expect(screen.getByTestId('consent-decline-note')).toBeTruthy();
 });
 
 test('M3: 확인 패널이 열리면 패널 끝까지 보이게 본문을 스크롤한다(하단 고정 돌아가기에 가려지지 않게)', async () => {

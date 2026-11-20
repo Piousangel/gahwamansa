@@ -6,7 +6,7 @@ import {Screen} from '../src/ui/Screen';
 import {Text20} from '../src/ui/Text20';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press} from '../testUtils/flow';
+import {press, pressCourseNext} from '../testUtils/flow';
 
 const reader = (on: boolean) => jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(on);
 const target = (call: unknown[]) => call[0] as {props: {children?: unknown; testID?: string}};
@@ -82,7 +82,7 @@ test('단계 화면(P4)은 단계 제목 줄(step-header)에 포커스', async (
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
-  await press('사진 보기');
+  await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
   await waitFor(() => expect(focus.mock.calls.some(c => target(c).props.testID === 'step-header')).toBe(true));
 });

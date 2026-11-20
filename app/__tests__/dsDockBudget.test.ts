@@ -75,11 +75,11 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.login.blocked_parent_device.button, onPress: noop}},
   },
   {
-    name: 'C1 호칭 고르기(번호 만들기 하나)',
+    name: 'C1 호칭 고르기(번호 만들기 + 안드로이드 안내 note, P-12)',
     screen: 'RelationScreen',
     variant: 'form',
     audience: 'child',
-    dock: {primary: {label: copy.relation.next, onPress: noop}},
+    dock: {primary: {label: copy.relation.next, onPress: noop}, note: {text: copy.relation.android_only}},
   },
   {
     name: 'C3 연결 기다리는 중(번호 보내기 + 복사하기)',
@@ -87,6 +87,34 @@ const DOCK_CASES: Case[] = [
     variant: 'step',
     audience: 'child',
     dock: {primary: {label: copy.child.wait.resend, onPress: noop}, secondary: {kind: 'text', label: copy.child.wait.copy, onPress: noop}},
+  },
+  {
+    name: 'P2 동의(좋아요 + 싫어요 같은 높이·글자, 넘치면 본문 끝 — N-12·#175)',
+    screen: 'ConsentScreen',
+    variant: 'intro',
+    audience: 'elder',
+    dock: {primary: {label: copy.consent.accept, onPress: noop}, secondary: {label: copy.consent.decline, onPress: noop}, even: true},
+  },
+  {
+    name: 'P6 자판으로 쓰기 닫힘(다 썼어요 + 이유 + 오늘은 넘어갈게요 — #104 ①)',
+    screen: 'KeyboardStep',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.next.hangul, disabled: true, disabledReason: copy.keyboard.need_one, onPress: noop}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+  },
+  {
+    name: 'P3 코스 홈(지금 단계 이름)',
+    screen: 'CourseHome',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.step.hangul, onPress: noop}},
+  },
+  {
+    name: 'P3 코스 홈 다 마침(오늘 코스 다시 보기, 보조 + 사진 아이콘)',
+    screen: 'CourseHome',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {kind: 'secondary', label: copy.course.review_link, icon: 'icon-photo', onPress: noop}},
   },
   {
     name: 'P7 완료(알겠어요)',
