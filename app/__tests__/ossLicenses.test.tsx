@@ -57,6 +57,16 @@ test('합치기: 전문은 id 로 찾고, Android 는 라이선스 이름·주�
   ]);
 });
 
+test('번들 글꼴(F-01): OFL 1.1 행이 있고, 전문에 저작권과 라이선스 원문이 들어 있다', () => {
+  const fonts = ossRows().filter(r => r.key.startsWith('font:'));
+  expect(fonts.map(r => r.name)).toEqual(expect.arrayContaining(['Noto Sans KR (Regular, Bold)', 'Nanum Brush Script']));
+  for (const r of fonts) {
+    expect(r.license).toBe('SIL OFL 1.1');
+    expect(r.text).toMatch(/Copyright|©/);
+    expect(r.text).toContain('SIL OPEN FONT LICENSE Version 1.1');
+  }
+});
+
 test('화면: 안내 한 줄 + 행(이름·라이선스), 누르면 전문을 펼친다', () => {
   const Stack = createNativeStackNavigator();
   render(

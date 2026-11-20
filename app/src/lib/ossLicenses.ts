@@ -13,8 +13,10 @@ export type OssRow = {
 
 type JsList = {packages: {name: string; version: string; license: string; text: string | null}[]; texts: Record<string, string>};
 type AndroidList = {packages: {name: string; version: string; licenses: {name: string; url: string}[]}[]};
+/** 번들 글꼴(F-01). SIL OFL 1.1 은 글꼴과 함께 저작권·라이선스 전문을 배포하라고 한다 — 손으로 관리(src/oss/fonts.json) */
+type FontList = {fonts: {name: string; version: string; license: string; copyright: string; text: string}[]};
 
-export function buildOssRows(js: JsList, android: AndroidList): OssRow[] {
+export function buildOssRows(js: JsList, android: AndroidList, fonts: FontList = {fonts: []}): OssRow[] {
   const rows: OssRow[] = [
     ...js.packages.map(p => ({
       key: `js:${p.name}@${p.version}`,
@@ -32,6 +34,14 @@ export function buildOssRows(js: JsList, android: AndroidList): OssRow[] {
       text: null,
       url: p.licenses.find(l => /^https?:\/\//.test(l.url))?.url ?? null,
     })),
+    ...fonts.fonts.map(f => ({
+      key: `font:${f.name}`,
+      name: f.name,
+      version: f.version,
+      license: f.license,
+      text: `${f.copyright}\n\n${f.text}`,
+      url: null,
+    })),
   ];
   return rows.sort((a, b) => a.name.localeCompare(b.name, 'en') || a.version.localeCompare(b.version, 'en'));
 }
@@ -39,7 +49,7 @@ export function buildOssRows(js: JsList, android: AndroidList): OssRow[] {
 let cache: OssRow[] | null = null;
 export function ossRows(): OssRow[] {
   if (!cache) {
-    cache = buildOssRows(require('../oss/js.generated.json'), require('../oss/android.generated.json'));
+    cache = buildOssRows(require('../oss/js.generated.json'), require('../oss/android.generated.json'), require('../oss/fonts.json'));
   }
   return cache;
 }

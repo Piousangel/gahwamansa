@@ -157,6 +157,27 @@ function parseSurface(s, colors) {
   return name;
 }
 
+function buildFont(src) {
+  const f = need(src.font, 'font');
+  const face = (k) => {
+    const d = need(f[k], `font.${k}`);
+    return {family: need(d.family, `font.${k}.family`), android: need(d.android, `font.${k}.android`), faces: need(d.faces, `font.${k}.faces`), ...(d.numerals ? {numerals: d.numerals} : {}), ...(d.minSize ? {minSize: d.minSize} : {})};
+  };
+  // 역할별 fontFace(없으면 body). 원본에 없는 글꼴 이름을 쓰면 생성이 멈춘다
+  const roleFace = {};
+  for (const [name, def] of Object.entries(src.typeRoles)) {
+    if (name === 'unit') {
+      continue;
+    }
+    const k = def.fontFace ?? 'body';
+    if (!f[k]) {
+      throw new Error(`typeRoles.${name}.fontFace '${k}' 가 font 에 없어요`);
+    }
+    roleFace[name] = k;
+  }
+  return {bundled: f.bundled === true, body: face('body'), hand: face('hand'), roleFace};
+}
+
 function build(src) {
   // contrast-v4.py 와 같은 기준: {value} 가 있는 항목만 색
   const colors = Object.fromEntries(
@@ -180,6 +201,8 @@ function build(src) {
     touch: {elder: src.touch.elder, child: src.touch.child},
     fontScaleCap: {body: src.touch.fontScaleCap.body, fixed: src.touch.fontScaleCap.titleDockNumeral, answer: src.touch.fontScaleCap.answer},
     minFont: {elder: src.typeScaleV3.elder.min, child: src.typeScaleV3.child.min},
+    // 글꼴(F-01): 역할 → fontFace(기본 body) → 굵기별 파일 이름. bundled=false 면 앱은 시스템 글꼴(파일이 들어오면 true)
+    font: buildFont(src),
     dock: {
       maxHeightRatio: src.dock.maxHeightRatio,
       padding: {top: need(src.dock.padding.top, 'dock.padding.top'), bottomMin: parseMaxMin(src.dock.padding.bottom, 'dock.padding.bottom'), x: need(src.dock.padding.x, 'dock.padding.x')},
