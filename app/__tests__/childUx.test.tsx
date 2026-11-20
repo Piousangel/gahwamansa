@@ -900,11 +900,11 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     await waitFor(() => screen.getByText(/자녀 휴대폰이에요/));
   });
 
-  test('P-12: C1 Dock 에 \'지금은 부모님 폰이 안드로이드일 때만 돼요\' 한 줄(번호 만들기 아래, 보내기 전에 안다)', async () => {
+  test('P-12: C1 Dock 에 \'지금은 부모님 폰이 안드로이드일 때만 연결돼요\' 한 줄(번호 만들기 아래, 보내기 전에 안다)', async () => {
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
     const dock = within(screen.getByTestId('screen-dock'));
-    expect(dock.getByText('지금은 부모님 폰이 안드로이드일 때만 돼요')).toBeTruthy();
+    expect(dock.getByText('지금은 부모님 폰이 안드로이드일 때만 연결돼요')).toBeTruthy();
     expect(dock.getByTestId('dock-note')).toBeTruthy();
   });
 
