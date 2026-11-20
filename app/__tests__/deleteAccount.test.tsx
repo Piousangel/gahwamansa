@@ -98,6 +98,55 @@ test('#206 후속: 어르신도 지우는 중에는 뒤로 링크가 사용 안 
   expect(screen.getByText('지우고 있어요')).toBeTruthy();
 });
 
+describe('#208 리뷰 H1: 지우기 요청에 시간 제한(30초) — 연결이 반쯤 끊겨도 화면에 갇히지 않는다', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+  const expectRestored = () => {
+    // M1: 실패 뒤 뒤로 링크·안 지울래요·버튼 글자가 원래대로
+    expect(screen.getByTestId('delete-fail')).toBeTruthy();
+    expect(screen.getByTestId('back-link').props.accessibilityState).toMatchObject({disabled: false});
+    expect(screen.getByRole('button', {name: '안 지울래요'})).not.toBeDisabled();
+    expect(screen.queryByText('지우고 있어요')).toBeNull();
+    expect(screen.getByRole('button', {name: '다시 하기'})).not.toBeDisabled();
+  };
+  test('자녀: 응답이 오지 않으면 30초 뒤 끊김으로 보고 다시 하기', async () => {
+    const api = createFakeApi({deleteScope: 'child'});
+    jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    const say = jest.spyOn(require('react-native').AccessibilityInfo, 'announceForAccessibility');
+    say.mockClear();
+    jest.useFakeTimers();
+    await press('계정 지우기');
+    await press('계정 지우기');
+    expect(screen.getByText('지우고 있어요')).toBeTruthy();
+    expect(say.mock.calls.filter(c => c[0] === '지우고 있어요')).toHaveLength(1); // #208 리뷰 L: 화면 읽기에도 한 번
+    await act(async () => {
+      jest.advanceTimersByTime(29000);
+    });
+    expect(screen.getByText('지우고 있어요')).toBeTruthy(); // 30초 전에는 그대로
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
+    expectRestored();
+  });
+  test('어르신: 응답이 오지 않으면 30초 뒤 끊김으로 보고 다시 하기 → 다시 하기 결과 none 은 #156 분기(조회 parent + 끊김 = 모두 지웠어요)', async () => {
+    const api = createFakeApi({consented: true});
+    jest.spyOn(api, 'deleteMyAccount').mockImplementationOnce(() => new Promise(() => {})).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    jest.useFakeTimers();
+    await confirmDeleteAll();
+    expect(screen.getByText('지우고 있어요')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(30500);
+    });
+    expectRestored();
+    jest.useRealTimers();
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+});
+
 test('어르신: 그만둘래요를 누르면 지우지 않는다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');

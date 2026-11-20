@@ -100,6 +100,31 @@ test('탈퇴: 이메일로 가입 후 구글이 합쳐진 사용자(providers �
   expect(s.unlinkKakao).not.toHaveBeenCalled();
 });
 
+test('#208 리뷰 H1: 서버 삭제 뒤 기기 정리(카카오 연결 끊기·로그아웃)가 응답하지 않아도 결과를 돌려준다(결과 화면으로 가게)', async () => {
+  jest.useFakeTimers();
+  try {
+    const c = sb({session: {user: {id: 'c', app_metadata: {provider: 'kakao', providers: ['kakao']}}}});
+    const hang = () => new Promise<never>(() => {});
+    const s = social({unlinkKakao: jest.fn(hang), signOut: jest.fn(hang)});
+    c.auth.signOut.mockImplementation(hang as never);
+    let out: unknown = null;
+    createRealApi(c as never, s)
+      .deleteMyAccount()
+      .then(r => {
+        out = r;
+      });
+    const flush = () => new Promise(r => setImmediate(r)); // setImmediate 는 가짜 시계 대상이 아니다(jest.config)
+    for (let i = 0; i < 10 && out === null; i++) {
+      await flush();
+      jest.advanceTimersByTime(3000); // 정리 하나당 3초 제한
+      await flush();
+    }
+    expect(out).toEqual({scope: 'child'});
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 // ---- nonce·SHA-256
 test('nonce 는 64자 hex, 로그인마다 다르다', async () => {
   const a = makeNonce();

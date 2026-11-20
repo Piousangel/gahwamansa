@@ -7,7 +7,7 @@ import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../.
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle, Message} from '../../copy/copy';
-import {isServerError, type DeleteScope} from '../types';
+import {isServerError, OfflineError, type DeleteScope} from '../types';
 import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {errorMessage} from '../course/useFinishStep';
@@ -15,6 +15,13 @@ import {useBusyLatch} from '../../ui/useBusyLatch';
 import {prefs} from '../../lib/prefs';
 import {Dialog} from '../../ui/Dialog';
 import {contactMail, openContactMail} from './contactMail';
+import {settleWithin, withTimeout} from '../../lib/timeout';
+import {announce} from '../../ui/a11y';
+
+/** 지우기 요청 시간 제한(#208 리뷰 H1): 넘기면 '응답 끊김'과 같게 — 다시 하기, 뒤 문구는 #156 분기(unsure) */
+export const DELETE_TIMEOUT_MS = 30000;
+/** 지우기 전 확인(사전 조회·계정 표)도 화면을 오래 붙잡지 않게 */
+const PREP_TIMEOUT_MS = 5000;
 
 type Props = {role: 'parent' | 'child'};
 
@@ -133,20 +140,29 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
+    announce(dl); // #208 리뷰 L: 버튼 글자가 바뀐 것을 화면 읽기에도 한 번(어르신·자녀 공통)
     // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로.
     //   앞선 시도가 끊긴 뒤에는 묻지 않는다 — 그 시도가 서버에서 이미 지웠으면 'none'이 와 '가족 기록 없었음'으로 잘못 읽힌다(재확인 M). 모름 = done_unsure
     if (!child && previewScope.current === null && !unsure.current) {
-      await api
-        .deleteScopePreview()
-        .then(r => {
+      await settleWithin(
+        api.deleteScopePreview().then(r => {
           previewScope.current = r.scope;
           setScope(r.scope);
-        })
-        .catch(() => {});
+        }),
+        PREP_TIMEOUT_MS,
+      );
     }
-    const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
+    let tag: string | null = null; // 지운 뒤에는 세션이 없어 먼저 받아 둔다
+    await settleWithin(
+      api.accountTag().then(t => {
+        tag = t;
+      }),
+      PREP_TIMEOUT_MS,
+    );
     try {
-      const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
+      const req = api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
+      // #208 리뷰 H1: 30초 안에 답이 없으면 끊김으로 본다(요청은 서버에서 끝났을 수도 있음 → unsure, 다시 하기 결과는 #156 분기)
+      const r = await withTimeout(req, DELETE_TIMEOUT_MS, () => new OfflineError('delete_my_account 시간 초과'));
       done(r.scope);
     } catch (e) {
       if (isServerError(e, 'no_profile')) {
