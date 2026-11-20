@@ -46,7 +46,7 @@ const Stack = createNativeStackNavigator<ChildParams>();
 const renderTabBar = (props: React.ComponentProps<typeof ChildTabBar>) => <ChildTabBar {...props} />;
 
 // 하단 탭 바(앨범·지난 답): 연결된 뒤에만 보인다(연결 전에는 대기 화면, 탭 바 숨김 — 보드 A §3).
-// 탭 화면 토스트는 탭 바 위에 띄운다(안쪽 Provider 가 바깥 것을 가린다).
+// 탭 화면 토스트는 탭 바 위에 띄운다(안쪽 Provider 가 바깥 것을 가린다). TAB_BAR_H 는 첫 측정 전 기본값 — 탭 막대가 실제 높이를 알리면 그걸 쓴다
 const TAB_BAR_H = 68;
 // N3 앱 안 배너: 탭 화면 위쪽(토스트와 다른 자리). '보기'는 앨범 탭으로
 function Tabs({navigation}: NativeStackScreenProps<ChildParams, 'Tabs'>) {

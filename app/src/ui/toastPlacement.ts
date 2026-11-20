@@ -19,8 +19,17 @@ export function toastBottom(p: {dock: number; tabOffset: number; insetBottom: nu
 export type ToastPlacement = {
   reportDock: (id: object, height: number | null) => void;
   modal: (open: boolean) => void;
+  /** 탭 막대의 실제 높이(안전 영역 포함). 글자 200%에서 막대가 커져도 토스트가 겹치지 않게(#199 캡처 L) */
+  reportTabBar: (height: number | null) => void;
 };
-export const ToastPlacementContext = createContext<ToastPlacement>({reportDock: () => {}, modal: () => {}});
+export const ToastPlacementContext = createContext<ToastPlacement>({reportDock: () => {}, modal: () => {}, reportTabBar: () => {}});
+
+/** 탭 막대용: onLayout 에 걸면 실제 높이를 토스트 자리에 알린다. 사라지면 거둔다 */
+export function useReportTabBar(): (e: {nativeEvent: {layout: {height: number}}}) => void {
+  const {reportTabBar} = useContext(ToastPlacementContext);
+  useEffect(() => () => reportTabBar(null), [reportTabBar]);
+  return e => reportTabBar(Math.ceil(e.nativeEvent.layout.height));
+}
 
 /** Screen 용: 이 화면의 dock 높이를 알린다. 내비게이션 안이면 보일 때(focus)만, 가려지면(blur) 거둔다 */
 export function useReportDock(height: number) {
