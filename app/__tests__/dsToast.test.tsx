@@ -43,12 +43,13 @@ test('옛 경로 ui/Toast 는 ds Toast 를 그대로 내보낸다', () => {
   expect(legacy.TOAST_MS).toBe(dsMod.TOAST_MS);
 });
 
-test('안내 토스트: 먹 면·흰 글자(자녀 heading 20)·v5 반경 row·그림자 dialog, 행동은 밑줄', async () => {
+test('안내 토스트: 먹 면·흰 글자(자녀 heading 20, 확대 1.5까지)·v5 반경 row·그림자 없음(규칙은 시트·대화상자만), 행동은 밑줄', async () => {
   await act(async () => fireEvent.press(screen.getByTestId('info')));
   const box = flat('toast');
   expect(box.backgroundColor).toBe(t.color.inkTitle);
   expect(box.borderRadius).toBe(t.radius.row);
-  expect(box.boxShadow).toBe(t.shadow.dialog);
+  expect(box.boxShadow).toBeUndefined();
+  expect(screen.getByText('복사했어요', H).props.maxFontSizeMultiplier).toBe(1.5);
   expect(textStyle('복사했어요')).toMatchObject({color: t.color.onAction, fontSize: t.type.heading.child.size, fontWeight: '700'});
   expect(textStyle('취소')).toMatchObject({color: t.color.onAction, textDecorationLine: 'underline'});
 });
@@ -57,6 +58,13 @@ test('오류 토스트: dangerSoft 면·danger 3px 테두리·dangerInk 글자',
   await act(async () => fireEvent.press(screen.getByTestId('err')));
   expect(flat('toast')).toMatchObject({backgroundColor: t.color.dangerSoft, borderWidth: 3, borderColor: t.color.danger});
   expect(textStyle('못 보냈어요').color).toBe(t.color.dangerInk);
+});
+
+test('#199 리뷰 M: 토스트가 쓰는 색 조합은 v5 allowed 표에 있다(흰 글자 on 먹, danger 테두리 on dangerSoft)', () => {
+  const a = require('../../design-system/tokens-v5.json').allowed;
+  expect(a.childText.onAction).toContain('inkTitle');
+  expect(a.childText.dangerInk).toContain('dangerSoft');
+  expect(a.nonText.danger).toContain('dangerSoft');
 });
 
 test('ds/Toast 소스는 v3 tokens·Text20 을 가져오지 않는다', () => {

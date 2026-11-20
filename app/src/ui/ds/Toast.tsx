@@ -9,9 +9,15 @@ import {fadeMs, useReduceMotion} from '../motion';
 import {ds, roleText} from './roles';
 
 // ds 토스트(v5 값): 글자는 자녀 heading(20/28·700, 최대 2배), 행동은 자녀 주 버튼 글자(18/26·700, 최대 1.5배)+밑줄.
-// 면은 먹(inkTitle)·흰 글자(onAction), 오류는 dangerSoft·danger 테두리·dangerInk. 그림자 v5 dialog, 반경 v5 row(옛 childCard 별칭과 같은 6)
+// 면은 먹(inkTitle)·흰 글자(onAction 18.26), 오류는 dangerSoft·danger 테두리(nonText)·dangerInk — 둘 다 v5 allowed 표에 있다(#199 리뷰 M).
+// 그림자 없음: v5 그림자 규칙은 시트·대화상자만(#199 리뷰 L). 반경 v5 row(옛 childCard 별칭과 같은 6)
 const c = ds.color;
-const msgText = (error: boolean) => roleText('heading', 'child', error ? 'danger' : 'onAction');
+/** 토스트 글자 확대 상한(#199 리뷰 L): 200%에서 토스트가 화면을 덮지 않게 1.5 */
+export const TOAST_FONT_CAP = 1.5;
+const msgText = (error: boolean) => {
+  const r = roleText('heading', 'child', error ? 'danger' : 'onAction');
+  return {...r, maxFontSizeMultiplier: Math.min(r.maxFontSizeMultiplier, TOAST_FONT_CAP)};
+};
 const actText = (error: boolean) => roleText('buttonPrimary', 'child', error ? 'danger' : 'onAction');
 
 /** 자녀 토스트 유지 시간(README §13: 6초, 최소 5초). 오류는 자동으로 사라지지 않는다. */
@@ -220,7 +226,7 @@ const styles = StyleSheet.create({
   layer: {position: 'absolute', left: 20, right: 20, alignItems: 'stretch'},
   toast: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: ds.touch.child.primary, borderRadius: ds.radius.row,
-    paddingVertical: 8, paddingHorizontal: 14, boxShadow: ds.shadow.dialog,
+    paddingVertical: 8, paddingHorizontal: 14,
   },
   // 안내: 먹 면 + 흰 글자 / 오류: 연빨강 면 + 3px 빨강 테두리 + 아이콘
   infoBox: {backgroundColor: c.inkTitle},
