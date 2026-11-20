@@ -28,6 +28,11 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
 {
   echo "== replay-check $(date '+%Y-%m-%d %H:%M:%S') HEAD=$(git -C "$ROOT" rev-parse --short HEAD)"
   echo "== 마이그레이션 $(ls "$ROOT/supabase/migrations" | wc -l | tr -d ' ')개, 테스트 $(ls "$ROOT/supabase/tests" | wc -l | tr -d ' ')개"
+  # 헛통과 방지(11-20): 앱 역할로 표를 직접 세는 단언은 reset role 뒤로 옮기거나 '-- rls:의도' 표시가 있어야 한다(스택을 띄우기 전에 바로 실패)
+  if ! node "$ROOT/supabase/ops/test-rls-lint.mjs" "$ROOT/supabase/tests"; then
+    echo "== test-rls-lint 실패 — 위 줄을 고친 뒤 다시"
+    exit 1
+  fi
   if ! npx --yes supabase start --workdir "$WORK" \
     -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1; then
     echo "== 임시 스택 시작 실패 — 마지막 출력(키 줄 제외):"

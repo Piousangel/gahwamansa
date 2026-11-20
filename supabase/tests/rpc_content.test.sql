@@ -45,7 +45,7 @@ select is((public.get_today_content()) -> 'photo' -> 'recall_questions', '["r2a"
 select lives_ok($$ select public.save_answer('6c000000-0000-0000-0000-000000000002', 'A') $$, '동의한 어르신은 답을 저장할 수 있다');
 select is((public.get_today_content()) ->> 'answered_choice', 'A', '저장한 답이 오늘 콘텐츠에 보인다');
 select public.save_answer('6c000000-0000-0000-0000-000000000002', 'B');
-select is((select choice::text || ':' || count(*)::text from public.answers where parent_id = '6b000000-0000-0000-0000-0000000000a1' group by choice), 'B:1', '같은 질문에 다시 답하면 한 건이 갱신된다(순환해도 오류 없음)');
+select is((select choice::text || ':' || count(*)::text from public.answers where parent_id = '6b000000-0000-0000-0000-0000000000a1' group by choice), 'B:1', '같은 질문에 다시 답하면 한 건이 갱신된다(순환해도 오류 없음)'); -- rls:의도 양수 기대 — 본인 답은 RLS로 보임, 덮어쓰기 대신 새 행이면 B:1이 깨짐
 
 -- 8~11. 거부: 동의 안 함, 자녀, 잘못된 선택지
 select pg_temp.act_as('61000000-0000-0000-0000-0000000000a2', true);

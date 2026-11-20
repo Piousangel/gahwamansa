@@ -9,7 +9,8 @@ import {ToastProvider, useToast} from '../src/ui/Toast';
 import {Screen} from '../src/ui/Screen';
 import {BottomSheet} from '../src/ui/BottomSheet';
 import {toastBottom} from '../src/ui/toastPlacement';
-import {cheerUndoMs} from '../src/features/home/useSendCheer';
+import {CHEER_UNDO_MS} from '../src/features/home/useSendCheer';
+import {toastDurationMs, TOAST_MS} from '../src/ui/ds/Toast';
 import {findTitleDup} from '../src/features/home/titleDup';
 import {newConnection, parseSeen} from '../src/features/home/newConnection';
 import {NewConnectionBanner} from '../src/features/home/NewConnectionBanner';
@@ -105,11 +106,24 @@ describe('U2 토스트 자리', () => {
 });
 
 describe('U10 응원 취소', () => {
-  test('되돌리기 가능 시간 = 토스트 표시 시간: 4초, 글자 200%면 6초, 화면 읽기면 10초(D-17a)', () => {
-    expect(cheerUndoMs(false, 1)).toBe(4000);
-    expect(cheerUndoMs(false, 2)).toBe(6000);
-    expect(cheerUndoMs(true, 1)).toBe(10000);
-    expect(cheerUndoMs(true, 2)).toBe(10000);
+  test('토스트 시간 우선순위(ds Toast 한 곳, D-17·D-17a): 화면 읽기 10초 > 글자 150% 이상 8초 > 기본(응원 되돌리기 4초·일반 6초)', () => {
+    expect(CHEER_UNDO_MS).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1)).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1.3)).toBe(4000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 1.5)).toBe(8000);
+    expect(toastDurationMs(CHEER_UNDO_MS, false, 2)).toBe(8000);
+    expect(toastDurationMs(CHEER_UNDO_MS, true, 1)).toBe(10000);
+    expect(toastDurationMs(CHEER_UNDO_MS, true, 2)).toBe(10000); // 화면 읽기가 큰 글자보다 앞
+    expect(toastDurationMs(TOAST_MS, false, 1)).toBe(6000);
+    expect(toastDurationMs(TOAST_MS, false, 2)).toBe(8000);
+  });
+
+  test('D-17: 응원 문장 칸 사이는 8 이상(바로 보내는 표적이 붙어 있지 않게, 7:90)', async () => {
+    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await press('응원 보내기');
+    const list = StyleSheet.flatten(screen.getByTestId('cheer').props.style);
+    expect(list.rowGap ?? list.gap).toBeGreaterThanOrEqual(8);
   });
 
   async function pickCheer(api: ReturnType<typeof createFakeApi>) {
@@ -220,6 +234,28 @@ describe('D-17a 화면 읽기 켜짐: 응원 보냄 토스트 10초 + 초점 되
         jest.advanceTimersByTime(400);
       });
       expect(focusCalls()).toBe(afterExpire + 1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('D-17: 글자 150% 이상이면 응원 되돌리기 토스트가 8초(ds Toast 시간 계산), 화면 읽기는 꺼짐', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+    jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1.5);
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    jest.useFakeTimers();
+    try {
+      await pickCheerSr(api);
+      await act(async () => {
+        jest.advanceTimersByTime(7500); // 기본 4초는 지났지만 아직 되돌릴 수 있다
+      });
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByTestId('toast-action').props.accessibilityState?.disabled).toBe(false);
+      await act(async () => {
+        jest.advanceTimersByTime(700); // 8.2초: 보냄
+      });
+      expect(send).toHaveBeenCalledTimes(1);
     } finally {
       jest.useRealTimers();
     }

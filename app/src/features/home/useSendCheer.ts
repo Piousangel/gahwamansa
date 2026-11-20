@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState, type RefObject} from 'react';
-import {AppState, PixelRatio} from 'react-native';
+import {AppState} from 'react-native';
 import {copy, withTitle} from '../../copy/copy';
 import {useToast} from '../../ui/Toast';
 import {useScreenReader} from '../../ui/a11y';
@@ -12,12 +12,9 @@ import {uuidV4} from '../../lib/uuid';
 
 const c = copy.child.cheer;
 
-// 리드 결정(11-18 U10): '되돌리기'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 글자 200% 이상이면 6초.
-// 전문가 리뷰 D-17a(7:90): 화면 읽기가 켜졌으면 10초 + 초점을 '되돌리기'로(Toast focusAction).
-//   되돌리기는 필수 시간 제한이 아니라 보낸 직후의 편의 창이다(되돌리지 않아도 할 일이 막히지 않음) — WCAG 2.2.1 '끄기·연장' 대상이 아니라 닿기 쉽게 늘린 것(#158 리뷰 L)
-export function cheerUndoMs(screenReader: boolean, fontScale: number): number {
-  return screenReader ? 10000 : fontScale >= 2 ? 6000 : 4000;
-}
+// 리드 결정(11-18 U10): '되돌리기'할 수 있는 시간 = 이 토스트 표시 시간. 기본 4초 — 화면 읽기(10초)·큰 글자(8초)로 늘리는 것은
+//   ds Toast 시간 계산 한 곳(toastDurationMs, D-17·D-17a)이 한다
+export const CHEER_UNDO_MS = 4000;
 
 // 응원 보내기(리뷰 M3 + UX U10): 문장을 누르면 확인 없이 "{호칭}께 보냈어요 · 취소" 토스트를 띄우고, 토스트가 떠 있는 동안
 // 기다렸다가 실제로 보낸다(그동안 send_cheer 를 부르지 않아 취소한 응원은 하루 한도에 안 셈). '취소'를 누르면 보내지 않는다.
@@ -100,7 +97,6 @@ export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: Re
         setSending(false);
         deliver(key, targets, new Map(), [], true); // 이 누름의 request id 표(어르신마다 처음 보낼 때 만든다)
       };
-      const ms = cheerUndoMs(screenReader, PixelRatio.getFontScale());
       const refocus = () => {
         if (screenReader && returnFocusRef) {
           focusLater(() => returnFocusRef.current);
@@ -108,7 +104,7 @@ export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: Re
       };
       setSending(true);
       const toastId = show({
-        durationMs: ms,
+        durationMs: CHEER_UNDO_MS,
         focusAction: screenReader, // D-17a: 화면 읽기 사용자는 토스트를 찾아갈 틈이 없다 → 초점을 '되돌리기'로
         onExpire: () => {
           fire(); // 시간 끝·다른 토스트로 바뀜·닫힘 → 보낸다
