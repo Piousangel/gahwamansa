@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
-import {useBackDestination} from '../../app/BackBar';
+import {useBackAction, useBackDestination} from '../../app/BackBar';
 import {DsScreen, Field, Heading, StateView, Text, type ButtonHandle} from '../../ui/ds';
 import type {ScreenScroll} from '../../ui/Screen';
 import {ds} from '../../ui/ds/roles';
@@ -31,6 +31,24 @@ export function DeleteAccountScreen({role}: Props) {
   const [stage, setStage] = useState<1 | 2>(1);
   const [typed, setTyped] = useState('');
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
+  // #198 리뷰 M: 지우는 중에는 떠날 수 없다 — 떠나도 요청은 계속 돌아 계정이 지워지므로, '취소한 줄 알았는데 지워짐'을 막는다.
+  //   하드웨어 뒤로는 삼키고(BackHandler), 스와이프 뒤로(iOS)는 끄고, 뒤로 링크는 눌러도 무시, '안 지울래요'는 비활성.
+  //   usePreventRemove 는 쓰지 않는다 — 지운 뒤 DeleteDone 으로 가는 reset 까지 막는다
+  useBackAction(busy ? noop : undefined);
+  useEffect(() => {
+    navigation.setOptions({gestureEnabled: !busy});
+  }, [navigation, busy]);
+  const leave = () => {
+    if (busy) {
+      return;
+    }
+    // #198 리뷰 L: 스택 아래 화면이 없으면(지금 경로에는 없음 — 늘 설정·연결된 가족에서 push) 설정으로
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.dispatch(CommonActions.navigate({name: 'Settings'}));
+    }
+  };
   const [failed, setFailed] = useState<Message | null>(null);
   const [confirm2, setConfirm2] = useState(false); // 어르신 2단계 확인 상자
   const yesRef = useRef<ButtonHandle>(null);
@@ -182,10 +200,10 @@ export function DeleteAccountScreen({role}: Props) {
       variant="form"
       scrollRef={scrollRef}
       // 뒤로 = ds BackLink(R-14 알약, 목적지 문구 '설정으로' 등 — #194 캡처 뒤 이행, N-01). 돌아갈 화면이 없으면 숨김(옛 BackBar 와 같은 규칙)
-      back={backTo ? {to: backTo, onPress: () => navigation.goBack()} : undefined}
+      back={backTo ? {to: backTo, onPress: leave} : undefined}
       header={heading ? <Heading level={1}>{heading}</Heading> : undefined}
       dock={{
-        primary: {label: child ? dc.cancel : dp.cancel, onPress: () => navigation.goBack()},
+        primary: {label: child ? dc.cancel : dp.cancel, onPress: leave, disabled: busy},
         secondary: danger
           ? {kind: 'danger', ...danger}
           : mail
@@ -268,3 +286,5 @@ const styles = StyleSheet.create({
   // 위험 상자: dangerSoft 면 + dangerInk 굵은 외곽선(색만으로 알리지 않음 — 머리글 문구와 함께)
   box: {borderWidth: 3, borderColor: ds.color.dangerInk, backgroundColor: ds.color.dangerSoft, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 8, alignSelf: 'stretch'},
 });
+
+function noop() {}
