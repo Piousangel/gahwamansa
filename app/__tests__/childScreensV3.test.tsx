@@ -138,6 +138,30 @@ describe('C3 연결 대기', () => {
     expect(mt('wait-step-3')).toBeUndefined();
   });
 
+  test('D-08a(4:198)·Noto 재렌더(#162): 1단계 문장이 2줄(+14)이 되어 둘째 단계가 걸치면 그 단계를 통째로 민다, 1줄이면 간격 없음', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 460); // 접힘 = 460 − 띠 24 = 436
+      lay('wait-steps', 300, 300);
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 32); // 340~372 (지금 글꼴 1줄)
+      lay('wait-step-2', 0, 48); // 384~432 → 접힘 위
+      lay('wait-step-3', 0, 48); // 444~ → 이미 접힘 밖
+    });
+    for (const id of ['wait-steps-title', 'wait-step-1', 'wait-step-2', 'wait-step-3']) {
+      expect(mt(id)).toBeUndefined();
+    }
+    await act(async () => {
+      lay('wait-step-1', 0, 46); // Noto 2줄(+14): 340~386 → 둘째 단계 398~446 이 436 에 걸림
+    });
+    expect(mt('wait-step-2')).toBe(436 - 398 + 1);
+    expect(mt('wait-step-1')).toBeUndefined();
+    expect(mt('wait-steps-title')).toBeUndefined(); // 제목은 1단계와 함께 첫 화면에 남는다
+  });
+
   test('재확인 L9: 첫 단계가 걸치면 묶음 제목과 함께 민다(첫 화면 끝에 제목만 남지 않게)', async () => {
     await openWait(waitApi());
     const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
