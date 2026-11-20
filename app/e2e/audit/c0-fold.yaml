@@ -1,0 +1,20 @@
+# C0a 첫 화면 접힘 경계(#163 리뷰, R-15). 로그인 고르기 첫 화면에서 멈춘다 → run.sh FOLD_CHECK=body 가 fold-check-body.py 로 걸친 글줄을 본다.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 DP_SIZE=360x640 FONT_SCALE=2.0 FOLD_CHECK=body app/e2e/run.sh audit/c0-fold.yaml
+# 주의: clearState 를 쓰지 않는다(c0-fit.yaml 머리 주석).
+appId: com.bumojasik.app.staging
+name: C0a 접힘 경계
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/wait-first-screen.yaml
+- tapOn: '자녀 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '.*Google.*'
+    timeout: 10000
+- waitForAnimationToEnd
+# 출구는 스크롤 없이 첫 화면에(P-13)
+- assertVisible:
+    id: 'parent-exit' # 읽기 이름은 '…않아요. 처음으로'(가운뎃점 없음)라 글자로 찾지 않는다
+- takeScreenshot: c0a-fold-first

@@ -161,4 +161,8 @@ fi
 if [ "${FOLD_CHECK:-0}" = "1" ]; then
   python3 -I "$E2E_DIR/audit/fold-check.py" "$(command -v adb)" || fail "접힘 경계 검사 실패(캡처: $OUT_DIR)"
 fi
+# 본문 글줄판(#163 리뷰, R-15): FOLD_CHECK=body — 첫 화면 끝에 반쯤 걸친 글·버튼이 있으면 실패(audit/c0-fold.yaml 등)
+if [ "${FOLD_CHECK:-0}" = "body" ]; then
+  python3 -I "$E2E_DIR/audit/fold-check-body.py" "$(command -v adb)" || fail "본문 접힘 경계 검사 실패(캡처: $OUT_DIR)"
+fi
 echo "e2e: 통과(앱 ANR·크래시 0). 캡처·보고서: $OUT_DIR"

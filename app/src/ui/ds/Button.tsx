@@ -13,6 +13,10 @@ export type ButtonProps = {
   /** dock: 가로를 채움(Dock·본문 끝 행동). inline: 글자만큼(카드·행 안) */
   size?: 'dock' | 'inline';
   label: string;
+  /** 읽기 이름이 보이는 글과 달라야 할 때만(예: '·' 같은 기호를 읽지 않게, C0a 출구 #163). 없으면 label */
+  accessibilityLabel?: string;
+  /** 글자 정렬. 기본 가운데, start = 왼쪽(본문 글과 같은 줄에 놓이는 글자 링크) */
+  align?: 'center' | 'start';
   onPress: () => void;
   icon?: IconName;
   disabled?: boolean;
@@ -42,7 +46,7 @@ export const PRESSED_LOOK: Record<ButtonKind, {bg: string; ink: Tone}> = {
 
 // v4 Button(SUMMARY 3절): 높이·글자는 kind 와 audience 로만 정해진다(숫자 prop 없음). minHeight 만, 고정 height 없음.
 // 갈색(action)은 누를 것 전용 — 면(주)·테두리(보조)·밑줄(text) 중 하나를 반드시 함께 쓴다.
-export function Button({kind = 'primary', size = 'dock', label, onPress, icon, disabled, loading, loadingLabel, disabledReason, accessibilityHint, even, style, testID, buttonRef}: ButtonProps) {
+export function Button({kind = 'primary', size = 'dock', label, accessibilityLabel, align = 'center', onPress, icon, disabled, loading, loadingLabel, disabledReason, accessibilityHint, even, style, testID, buttonRef}: ButtonProps) {
   const a = useAudience();
   const blocked = !!disabled || !!loading;
   const shown = loading && loadingLabel ? loadingLabel : label;
@@ -69,7 +73,7 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
         ref={buttonRef}
         testID={testID}
         accessibilityRole="button"
-        accessibilityLabel={shown}
+        accessibilityLabel={loading && loadingLabel ? shown : accessibilityLabel ?? shown}
         accessibilityHint={disabled && disabledReason ? disabledReason : accessibilityHint}
         accessibilityState={{disabled: blocked, busy: !!loading}}
         disabled={blocked}
@@ -82,14 +86,15 @@ export function Button({kind = 'primary', size = 'dock', label, onPress, icon, d
           !primary && kind !== 'text' && pressed ? (kind === 'danger' ? styles.dangerPressed : styles.secondaryPressed) : null,
           kind === 'text' && pressed ? styles.secondaryPressed : null,
           disabled ? styles.disabled : null,
+          align === 'start' ? styles.baseStart : null,
         ]}>
         {({pressed}) => (
-          <View style={styles.inner}>
+          <View style={[styles.inner, align === 'start' ? styles.innerStart : null]}>
             {icon ? <Icon name={icon} size={text.icon ?? 32} color={roleText('link', a, pressedInk(pressed)).style.color as string} /> : null}
             <RNText
               {...koreanTextProps}
               maxFontSizeMultiplier={text.maxFontSizeMultiplier}
-              style={[roleText(textRole, a, pressedInk(pressed)).style, styles.label, kind === 'text' && !disabled ? styles.underline : null]}>
+              style={[roleText(textRole, a, pressedInk(pressed)).style, styles.label, align === 'start' ? styles.labelStart : null, kind === 'text' && !disabled ? styles.underline : null]}>
               {keepAllChildren(shown)}
             </RNText>
           </View>
@@ -114,6 +119,10 @@ const styles = StyleSheet.create({
   disabled: {backgroundColor: c.disabledBg, borderWidth: 1.5, borderColor: c.line},
   inner: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 1},
   label: {textAlign: 'center', flexShrink: 1},
+  // align start: 본문 글과 왼쪽 끝을 맞춘다(글자 링크 좌우 여백 8 을 빼서 제목·안내 줄과 같은 선)
+  baseStart: {alignItems: 'flex-start', paddingHorizontal: 0},
+  innerStart: {justifyContent: 'flex-start'},
+  labelStart: {textAlign: 'left'},
   underline: {textDecorationLine: 'underline'},
   reason: {textAlign: 'center', marginBottom: 8},
 });

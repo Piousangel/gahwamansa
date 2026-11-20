@@ -517,6 +517,8 @@
     "preview_lines": ["하루 한 장, 우리 집 앨범", "마음 가는 쪽을 하나 골라요", "최근 한 달 고른 답을 모아 봐요"],
     "parent_exit_note": "부모님은 로그인 없이 가족에게 받은 번호만 쓰면 돼요",
     "parent_exit": "부모님이시면 처음으로",
+    "parent_exit_top": "부모님은 로그인하지 않아요 · 처음으로",
+    "_status_parent_exit_top": "초안(11-20, 전문가 리뷰 P-13 3:81 제안 문장 그대로, 라이터 확인 전): C0a 제목 바로 아래·카카오 버튼 위 한 줄 링크, 어르신 치수(link 64·글자 22, 7:80). 본문 끝 parent_exit_note·parent_exit 는 이 줄로 대체돼 화면에서 뺌(키 삭제는 라이터)",
     "code_label_short": "인증번호",
     "_src_v4": "라이터 묶음 2(PR #46, back_choose·back_email·preview_title·code_label_short, 카드 줄은 스토어 캡션 확정문)·묶음 3(PR #51, parent_exit_note·parent_exit)",
     "code_group_a11y": {
