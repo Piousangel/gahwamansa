@@ -29,6 +29,23 @@ test('자녀 화면 문구에 "어르신"이 없다', () => {
   expect(hits).toEqual([]);
 });
 
+// AI 고지 한 줄(P4 사진 아래·P6 사진 띠): 'AI가 만든 그림·실제 장소가 아니에요' — 가운뎃점 둘레 공백 없음(Noto 재렌더 #162, 리드 11-20).
+// 공백이 있으면 Noto 20에서 313.7로 본문 폭 312를 넘어 360×640 100%에서 두 줄이 된다. 법적 문구(두 키)는 그대로
+test("AI 고지 한 줄은 '·' 둘레에 공백을 두지 않는다", () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '../src/features/course');
+  const bad: string[] = [];
+  for (const f of fs.readdirSync(dir) as string[]) {
+    const src: string = fs.readFileSync(path.join(dir, f), 'utf8');
+    if (/ai_photo_label\} · \$\{appCopy\.not_real_place/.test(src)) {
+      bad.push(f);
+    }
+  }
+  expect(bad).toEqual([]);
+  expect(copy.app.not_real_place).toBe('실제 장소가 아니에요');
+});
+
 test('확정 키: 탭 이름, 지우기 확인 단어, AI 표기, 서비스 이름', () => {
   expect(copy.child.tab_album).toBe('앨범');
   expect(copy.child.tab_past).toBe('지난 날');
