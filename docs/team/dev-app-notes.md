@@ -398,7 +398,7 @@
 - 네이티브 `PushModule`(Kotlin, 새 의존성 없음): 채널 만들기·앱 알림 허용(`areNotificationsEnabled`, 12 이하 앱 단위 끔까지)·채널별 켜짐·채널/앱 알림 설정 열기. JS `src/push/notifyNative.ts`.
 - **채널 3개·잠금 화면 공개(push-events 리뷰 L3 판단)**: id 는 계약 그대로 `daily·cheer·family`(서버 channel_id), 이름·설명 copy `push.channel.*`, 중요도 모두 default(소리는 휴대폰 설정). 잠금 화면: `daily` = PUBLIC(본문은 AI 사진 설명뿐, N1 시안 잠금 화면 그림) / `cheer`·`family` = PRIVATE(응원 문장·호칭이 가족 관계를 드러냄 → 휴대폰 '민감한 내용 숨기기'를 켠 사람에게는 앱 이름만). 채널 중요도·공개는 만든 뒤 앱이 못 바꾼다(사용자 값 유지) — 바꾸려면 새 id 가 필요하고 서버 channel_id 도 함께 바꿔야 한다.
 - 받기 동의(`set_push_enabled(true)`, 0036 받기 시각): 어르신은 **N1 '알려 주세요'를 누를 때**(시스템 창 결과와 별개 — OS 거절이면 토큰이 없어 오지 않음), 자녀는 **알림 권한이 허용됐을 때**(C3 '알림 켜기'로 허용 또는 이미 허용된 기기의 첫 확인, 계정당 한 번 `push_child_on_v1`). 오프라인으로 못 보내면 어르신은 `yes_pending` 으로 기억해 앱 시작·활성 때 다시 보낸다. '괜찮아요'는 서버 호출 없음·다시 묻지 않음(켜기는 P13, AP-06).
-- N1(`src/push/PushPermissionScreen`, ParentStack `PushPermission` 한 줄): 연결·동의한 어르신이 코스 홈에 있고 서버 `my_push_settings().enabled === false` 이고 이 계정에서 답한 적이 없을 때 한 번(`push_prompt_v1`). 서버가 이미 받는 중(재설치)이면 묻지 않는다. 동의 거부 어르신은 N1 없음(일일 알림 대상 아님).
+- N1(`src/push/N1Prompt` — 11-20부터 ds Dialog 덮개, PushHost 가 코스 홈 위에 그림. 이전 `PushPermissionScreen`·`PushPermission` 경로는 삭제): 연결·동의한 어르신이 코스 홈에 있고 서버 `my_push_settings().enabled === false` 이고 이 계정에서 답한 적이 없을 때 한 번(`push_prompt_v1`). 서버가 이미 받는 중(재설치)이면 묻지 않는다. 동의 거부 어르신은 N1 없음(일일 알림 대상 아님).
   - **디자인 확인 필요**: 알림 그림의 시각 '오전 8:00'은 뺐다(실제 발송 09:00, D-07). 그림의 예시 설명은 새 키 `push.permission.preview_caption`('감 익는 마당'), 읽기 `preview_a11y`(copy-v3 10절 #15 확정 문장) — 원본에 append, 라이터 확인 요청.
   - fake API 는 기본 `pushEnabled: true`(다른 화면 테스트·E2E 를 N1 이 가리지 않게). N1 을 보려면 `createFakeApi({pushEnabled: false})`.
 - 토큰: 권한이 허용이고 프로필이 있으면 등록(앱 시작·연결 바뀜·앱 활성·토큰 갱신, 멱등). 성공한 토큰만 `lib/pushToken` 에 둔다 → 로그아웃 때 `realApi.signOut` 이 `unregister_push_token` 먼저(기존). 계정 삭제는 서버가 토큰 행을 지우고 앱은 기기 기억만 지운다. `no_profile` 은 다음 기회에.
@@ -456,7 +456,7 @@
 - L3: 어르신 `yes_pending` 재시도는 서버 값 먼저(true 면 기억만 'yes', null 이면 두고, false 면 'yes_pending' 일 때만 다시). 앱에서 끄면 'off' 라 재시도하지 않는다. 자녀 자동 켜기는 L2 로 없어짐. 서버에 '끈 시각'이 없어 재설치 뒤 "안 켬/껐음" 구분은 못 함 — N1 을 다시 보여 줄 뿐 자동으로 켜지 않는다.
 - L4 방침: 연결 전 어르신도 권한이 있으면 토큰 등록을 부른다(서버가 no_profile 이어도 같은 토큰의 다른 계정 행을 지움, 0036 — 해제 못 한 이전 계정 알림 차단). no_profile 은 정상 결과로 무시하고 기기에 저장하지 않는다(로그아웃 해제 대상 아님).
 - L5: 알림 탭을 받을 때의 계정 가명값을 들고 있다가 처리할 때 다르면 버린다(기기 안 비교만, 서버·이벤트로 보내지 않음 — accountTagGuard 에 PushHost 추가). 10분 넘게 처리 못 한 탭도 버린다.
-- L6: 어르신 알림 탭은 진행 중 화면(Connect·Consent·PushPermission·DeleteAccount·DeleteDone)에서는 기다렸다가 그 화면을 떠난 뒤 처리.
+- L6: 어르신 알림 탭은 진행 중 화면(Connect·Consent·DeleteAccount·DeleteDone)과 N1 덮개가 떠 있는 동안에는 기다렸다가 그 화면을 떠난 뒤 처리.
 - L7: 자녀 기기에 온 어르신 종류는 버림, 역할 고르기 전 탭 버림, blocked N1, L2·L4·L5·L6 화면 테스트 추가.
 
 ### 웹뷰·OSS 리뷰 반영(reviews/2026-11-18-webview-review.md) · 2026-11-18
@@ -641,6 +641,14 @@
 - (11-20 바뀜) cheerSheetV4 흔들림 원인은 첫 테스트가 콜드 스타트(4~6초)를 혼자 떠안는 것(#101 리뷰) → beforeAll 에서 AppRoot 를 한 번 그렸다 내려 미리 치르고, 개별 15초 대기·30초 상한(#77 예외)은 되돌림. 같은 패턴인 파일은 같은 예열을 쓴다.
 - 스위치 색(#100 L2): ui/ds SWITCH_COLORS 하나로 — 끔 트랙 line(흰 면 3.72·종이 3.36, 비텍스트 3:1 이상), 켬 done(7.13). 자녀 FamilyPushRow·어르신 ParentSettings(2곳)·NotifyRows 가 모두 같은 값을 쓴다(이전 lineSoft 1.44 미달).
 - Sheet footer 테스트(#100 L3): 스크롤 밖·띠 다음 맨 아래, 글자 1.0·2.0 모두. 200% 화면은 C7 캡처(저장 버튼 고정)로 확인.
+
+### N1 v4 Dialog — P7의 연속(3기 어르신 레인, 11-20, #168 리뷰 반영)
+- N1 을 화면(스택)에서 ds Dialog 로 옮겼다(시안 P6_P7_N1_P2_ds4b N1 보드). 덮개 큐는 쓰지 않는다(리드 ⓐ).
+- 언제: PushHost 가 이번 실행에서 경로가 CourseDone → CourseHome 으로 바뀐 것을 보고(P7 '알겠어요'·뒤로) 그때만 parentPromptState 를 확인. 앱 시작·깨어남에는 묻지 않는다.
+- 뒤로 = 오늘은 넘김(#72 M1): ds Dialog `onBack`. '안 받을게요' = 거절 기록. 막힘이면 닫는 말 '닫기'(다시 묻지 않음). 글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝.
+- 막힘: 본문을 ds Banner `notice`(noticeSoft·ⓘ·inkBody, 읽기 알림) 한 줄로 바꿔 끼움. AppState active 에서 권한을 다시 읽어 켜졌으면 '알림이 켜졌어요' 알림 후 닫음.
+- ds Dialog: `actionHint`(하는 쪽 아래 한 줄 + 버튼 힌트), 본문 넘침 '더 있음' 띠(MoreBand). 닫힌 뒤 초점: `focusTopScreenTitle()`(ui/screenTitle — Screen 이 맨 위 제목 getter 를 등록).
+- 테스트: 덮개 큐는 jest.after.js 가 테스트마다 빈 기억으로(다른 덮개용).
 
 ### P6 자판으로 쓰기 v4(시안 P6_P7_N1_P2_ds4b) · 11-20
 - DsScreen(step): BackLink '오늘 코스로'(하드웨어 뒤로 같음), 위 영역 단계 제목(자판 열리면 접힘). DsScreen 에 backAside(BackLink 줄 오른쪽) 추가 — 자판 열림 100% '넘어갈게요'.

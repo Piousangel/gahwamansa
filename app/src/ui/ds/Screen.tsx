@@ -117,6 +117,13 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
     const total = content + DOCK_PAD_TOP + dockBottomPad(kb > 0 ? 0 : insets.bottom);
     const level = spillRef.current;
     const next = nextSpill(level, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
+    // even(대등한 두 답, #190 리뷰 L1): 보조만 본문으로 내리면 두 답이 갈라져 한쪽이 먼저 손에 닿는다 → 둘을 함께 본문 끝으로
+    if (dock.even && next >= 2 && !isSocialGroup(dock.primary)) {
+      releasedFor.current.add(condKey);
+      setSpill(2);
+      setUndock(true);
+      return;
+    }
     if (next !== level) {
       setSpill(next);
       return;
@@ -156,6 +163,8 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
     <BaseScreen
       top={top}
       fill={v.fill}
+      // 안전망(#190): fill(intro)이어도 본문이 창보다 길면 스크롤한다. 들어가면 스크롤이 생기지 않는다 — 200%에서 본문 끝 버튼에 닿지 못하던 P2 결함의 재발 방지
+      fillScrollable
       // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}

@@ -88,9 +88,9 @@ test('도장 줄: 7칸, 찍은 날만 ✓, 읽기는 찍은 요일만(개수·�
 test('인장 색은 토큰(brandSeal·brandSealDeep·brandSealGlyph)에서 — 토큰만 바꾸면 바뀐다', () => {
   render(<SealStamp testID="seal" />);
   const xml: string = screen.getByTestId('seal', {includeHiddenElements: true}).props.xml;
-  expect(xml).toContain(tokensV4.color.brandSeal);
-  expect(xml).toContain(tokensV4.color.brandSealDeep);
-  expect(xml).toContain(tokensV4.color.brandSealGlyph);
+  expect(xml).toContain(tokensV4.deprecatedColor.brandSeal);
+  expect(xml).toContain(tokensV4.deprecatedColor.brandSealDeep);
+  expect(xml).toContain(tokensV4.deprecatedColor.brandSealGlyph);
 });
 
 test('리뷰 L3: 도장 줄을 끄면(오너 검토 중) P7 은 3개 묶음(마운트·제목·둘째 줄)이고 접힘 계산도 그대로, P3 에도 없다', async () => {

@@ -109,3 +109,12 @@ select (e.ts at time zone 'Asia/Seoul')::date as d, e.props ->> 'scope' as scope
    and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
  group by 1, 2, 3
  order by 1, 2, 3;
+
+-- ⑩ 연결 전·옛 익명 계정 자동 정리(0057, 90일): 파기 배치가 지운 수(account_purged, 식별자 없음)를 KST 날짜별로. 탈퇴(⑨)와 따로 센다.
+with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to)
+select (e.ts at time zone 'Asia/Seoul')::date as d, count(*) as purged
+  from public.events e, p
+ where e.name = 'account_purged' and e.device_key is null
+   and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
+ group by 1
+ order by 1;

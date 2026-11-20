@@ -95,5 +95,5 @@ const styles = StyleSheet.create({
   caption: {marginTop: 8},
   tape: {position: 'absolute', top: P7_MOUNT.tape.top, left: '50%', marginLeft: -P7_MOUNT.tape.w / 2, transform: [{rotate: P7_MOUNT.tape.tilt}]},
   seal: {position: 'absolute', right: P7_MOUNT.seal.right, width: S, height: S, alignItems: 'center', justifyContent: 'center', transform: [{rotate: P7_MOUNT.seal.tilt}]},
-  ink: {position: 'absolute', backgroundColor: ds.color.brandSealDeep},
+  ink: {position: 'absolute', backgroundColor: ds.deprecatedColor.brandSealDeep},
 });

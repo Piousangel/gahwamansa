@@ -69,17 +69,17 @@ test('계정 지우기 로그인 풀림: 어르신용은 로그인 대신 문의
 
 test('어르신 지우기 두 갈래(#156 M1·H1·H2, 법률 11-20): 지킬 수 없는 약속·단정을 쓰지 않는다', () => {
   const d = copy.delete;
-  const elder = [d.signed_out_parent_unlinked, d.parent.done_none, d.parent.done_unsure];
+  const elder = [d.parent.done_none, d.parent.done_unsure];
   for (const x of elder) {
     const text = `${x.title}${x.body}`;
     expect(text).not.toMatch(/로그인|서버|@|https?:/); // 어르신 낱말이 아님·주소는 상수에서
     expect(text).not.toMatch(/가족 확인 뒤 지워 드려요/); // 연결한 적 없는 분에게는 지킬 수 없음(M1)
     expect(text).not.toMatch(/모든 정보|모두 지웠/); // 서버에 가명 이용 기록이 남는다(법률)
   }
-  // 연결한 적 없음: 문의 버튼 없이, 남는 기록을 말한다(#157 병합 전 기간 기재 금지)
-  expect('button' in d.signed_out_parent_unlinked).toBe(false);
-  expect(d.signed_out_parent_unlinked.body).toMatch(/이름·연락처 없는 기록만 남아요/);
-  expect(d.signed_out_parent_unlinked.body).not.toMatch(/\d+일|\{기간\}/);
+  // 리드 11-20: 로그인 풀림 어르신 문구는 한 갈래(signed_out_parent, 문의 가능)만. 연결한 적 없음 전용 키는 두지 않는다
+  expect('signed_out_parent_unlinked' in d).toBe(false);
+  // #157(90일 자동 정리) 병합 전에는 기간을 쓰지 않는다
+  expect(`${d.signed_out_parent.title}${d.signed_out_parent.body}`).not.toMatch(/\d+일|\{기간\}/);
   // 결과 화면: '지울 기록이 없었어요'(지운 것이 있는데 없다고 함) 금지
   expect(d.parent.done_none.title).not.toMatch(/없었어요/);
 });

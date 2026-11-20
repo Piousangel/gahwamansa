@@ -1,7 +1,7 @@
 // 자녀 UX 승인안(DECISIONS 11-18, ux-improvements-2026-11-18): U2 토스트 자리, U10 응원 취소, U12 C3 공유 뒤 안내,
 // C4 호칭 겹침(시안 C4_title_dup), N3 앱 안 배너(시안 N3_connected), C0 연령 안내
 import React from 'react';
-import {AppState, PixelRatio, Share, StyleSheet, Text} from 'react-native';
+import {AccessibilityInfo, AppState, PixelRatio, Share, StyleSheet, Text} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
@@ -105,10 +105,11 @@ describe('U2 토스트 자리', () => {
 });
 
 describe('U10 응원 취소', () => {
-  test('취소 가능 시간 = 토스트 표시 시간: 4초, 화면 읽기·글자 200%면 6초', () => {
+  test('되돌리기 가능 시간 = 토스트 표시 시간: 4초, 글자 200%면 6초, 화면 읽기면 10초(D-17a)', () => {
     expect(cheerUndoMs(false, 1)).toBe(4000);
-    expect(cheerUndoMs(true, 1)).toBe(6000);
     expect(cheerUndoMs(false, 2)).toBe(6000);
+    expect(cheerUndoMs(true, 1)).toBe(10000);
+    expect(cheerUndoMs(true, 2)).toBe(10000);
   });
 
   async function pickCheer(api: ReturnType<typeof createFakeApi>) {
@@ -169,6 +170,97 @@ describe('U10 응원 취소', () => {
     expect(screen.queryByText('응원을 보내지 않았어요')).toBeNull();
     expect(send).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
+  });
+});
+
+describe('D-17a 화면 읽기 켜짐: 응원 보냄 토스트 10초 + 초점 되돌리기', () => {
+  async function pickCheerSr(api: ReturnType<typeof createFakeApi>) {
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await press('응원 보내기');
+    await press('늘 고마워요');
+  }
+
+  test('화면 읽기 켜짐: 초점이 "되돌리기"로 가고(따로 읽지 않음), 10초 동안 보내지 않는다', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    const focus = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+    const say = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    say.mockClear(); // RN 모의 함수라 앞 테스트의 호출이 남아 있다
+    focus.mockClear();
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    jest.useFakeTimers(); // 10초를 실제로 자지 않는다(다른 U10 테스트와 같게)
+    try {
+      await pickCheerSr(api);
+      const action = screen.getByTestId('toast-action');
+      expect(action.props.accessibilityLabel).toBe('엄마께 보냈어요, 되돌리기'); // 한 번에 문구 + 행동
+      expect(say).not.toHaveBeenCalledWith('엄마께 보냈어요');
+      const focusCalls = () => focus.mock.calls.filter(c => c[1] === 'focus').length;
+      await act(async () => {
+        jest.advanceTimersByTime(400); // 시트가 닫히며 연 버튼(응원 보내기)으로 가는 초점(300ms)
+      });
+      const before = focusCalls();
+      await act(async () => {
+        jest.advanceTimersByTime(300); // 600ms: 토스트 '되돌리기'로(시트 초점보다 뒤라 마지막 초점이 된다)
+      });
+      expect(focusCalls()).toBe(before + 1);
+      expect(focus.mock.calls[focus.mock.calls.length - 1][0]).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(8000); // 8.7초: 아직 되돌릴 수 있다
+      });
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByTestId('toast-action').props.accessibilityState?.disabled).toBe(false);
+      await act(async () => {
+        jest.advanceTimersByTime(1500); // 10.2초: 보냄
+      });
+      expect(send).toHaveBeenCalledTimes(1);
+      // #158 리뷰 M: 토스트가 닫히면 초점을 응원 보내기로(초점을 가진 '되돌리기'가 사라지므로)
+      const afterExpire = focusCalls();
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(focusCalls()).toBe(afterExpire + 1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('#158 리뷰 M: 화면 읽기 켜짐에서 되돌리기를 누르면 보내지 않고, 초점은 응원 보내기로 돌아간다', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    const focus = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const send = jest.spyOn(api, 'sendCheer');
+    jest.useFakeTimers();
+    try {
+      await pickCheerSr(api);
+      await act(async () => {
+        jest.advanceTimersByTime(700);
+      });
+      focus.mockClear();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('toast-action'));
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(focus.mock.calls.filter(c => c[1] === 'focus')).toHaveLength(1);
+      expect(screen.getByText('응원을 보내지 않았어요')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(11000);
+      });
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('화면 읽기 꺼짐: 초점을 옮기지 않고 문구를 한 번 읽고, 라벨은 "되돌리기"', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+    const say = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    say.mockClear();
+    await pickCheerSr(createFakeApi({consented: true, parentTitle: '엄마'}));
+    expect(screen.getByTestId('toast-action').props.accessibilityLabel).toBe('되돌리기');
+    expect(say).toHaveBeenCalledWith('엄마께 보냈어요');
   });
 });
 
@@ -798,7 +890,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const primary = StyleSheet.flatten(screen.getByRole('button', {name: '번호 만들기'}).props.style);
     expect(primary.minHeight).toBe(56);
     const cell = StyleSheet.flatten(within(group).getByRole('radio', {name: '엄마'}).props.style);
-    expect(cell).toMatchObject({borderRadius: 16, borderWidth: 1.5});
+    expect(cell).toMatchObject({borderRadius: 6, borderWidth: 1.5}); // v5 반경 4단: 선택지 6
     screen.unmount();
     dims(2); // 200%: 칸이 좁아 글이 꺾이지 않게 1열
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
