@@ -14,6 +14,7 @@ import {LegalText} from '../../ui/LegalText';
 import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {recordChildTerms} from '../../shared/childTerms';
 import {announce} from '../../ui/a11y';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
 
 const t = copy.login;
 // 시안 C0 v4: '이런 앱이에요' 카드는 키가 큰 화면(760 이상)에서만, 브랜드 심볼·카드는 글자 150% 이상이면 숨긴다
@@ -90,12 +91,14 @@ export function ChildLogin() {
   };
   const toEmail = useCallback(() => navigation.navigate('LoginEmail'), [navigation]);
   const failed = note === t.failed.title;
+  const fold = useFoldGap(2, FOLD_GAP);
 
   return (
     <AudienceProvider value="child">
       <DsScreen
         variant="form"
         back={{to: t.back, onPress: resetRole}}
+        onViewport={fold.onViewport}
         dock={{
           primary: {
             social: [
@@ -109,23 +112,39 @@ export function ChildLogin() {
         <Heading level={1}>{t.choose_title}</Heading>
         {/* P-13(전문가 리뷰 r2 H, 3:81·1:91·7:80): 잘못 들어온 어르신이 노란 카카오 버튼보다 먼저 보는 출구 — 제목 바로 아래 한 줄.
             예전 '출구는 본문 끝'(시안 C0 v4)은 100%에서도 접힘 아래였다. 누르는 사람이 어르신이라 어르신 치수(link 누름 64·글자 22) */}
+        {/* #163 리뷰 M: '·'는 읽지 않게 읽기 이름을 따로(마침표로 끊음), 제목·안내와 같은 왼쪽 정렬 */}
         <AudienceProvider value="elder">
-          <Button kind="text" size="inline" label={t.parent_exit_top} onPress={resetRole} testID="parent-exit" />
+          <Button
+            kind="text"
+            size="inline"
+            align="start"
+            label={t.parent_exit_top}
+            accessibilityLabel={t.parent_exit_top.split(' · ').join('. ')}
+            onPress={resetRole}
+            testID="parent-exit"
+          />
         </AudienceProvider>
-        <Text role="bodyLg">{t.hint}</Text>
-        {!big && height >= PREVIEW_MIN_H ? (
-          <Card tone="notice" testID="login-preview">
-            <Text role="body">{t.preview_title}</Text>
-            {t.preview_lines.map(line => (
-              <Text key={line} role="sub" tone="muted">
-                {line}
-              </Text>
-            ))}
-          </Card>
-        ) : null}
-        <StatusLine testID="login-status" text={busy ? t.signing_in : note} />
-        {failed ? <Text role="body">{t.failed.body}</Text> : null}
-        <LegalAndAge legal={legal} />
+        {/* R-15(#163 리뷰): 첫 화면 끝에 걸치는 묶음(안내 줄·미리보기 / 상태 + 약관)을 통째로 접힘 밖으로(useFoldGap, C1 과 같은 방식) */}
+        <View style={styles.fold} onLayout={fold.onBlock} testID="login-fold">
+          <View style={[styles.foldItem, fold.gapStyle(0)]} onLayout={fold.onItem(0)} testID="login-fold-0">
+            <Text role="bodyLg">{t.hint}</Text>
+            {!big && height >= PREVIEW_MIN_H ? (
+              <Card tone="notice" testID="login-preview">
+                <Text role="body">{t.preview_title}</Text>
+                {t.preview_lines.map(line => (
+                  <Text key={line} role="sub" tone="muted">
+                    {line}
+                  </Text>
+                ))}
+              </Card>
+            ) : null}
+          </View>
+          <View style={[styles.foldItem, fold.gapStyle(1)]} onLayout={fold.onItem(1)} testID="login-fold-1">
+            <StatusLine testID="login-status" text={busy ? t.signing_in : note} />
+            {failed ? <Text role="body">{t.failed.body}</Text> : null}
+            <LegalAndAge legal={legal} />
+          </View>
+        </View>
       </DsScreen>
     </AudienceProvider>
   );
@@ -287,6 +306,11 @@ export function ChildLoginCode() {
   );
 }
 
+/** 본문 요소 간격(옛 Screen bodyPadding.gap 16)과 같게 — 묶음으로 감싸도 간격이 바뀌지 않는다 */
+const FOLD_GAP = 16;
+
 const styles = StyleSheet.create({
   group: {gap: 8, alignSelf: 'stretch'},
+  fold: {gap: FOLD_GAP, alignSelf: 'stretch'},
+  foldItem: {gap: FOLD_GAP, alignSelf: 'stretch'},
 });
