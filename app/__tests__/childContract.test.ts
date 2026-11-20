@@ -81,7 +81,7 @@ test('realApi: child_summary 의 parent_id·title·connected·starter 를 읽고
   ]);
 });
 
-test('realApi: child_answer_history·send_cheer(p_parent, p_key)·set_parent_title_for 호출 모양', async () => {
+test('realApi: child_answer_history·send_cheer(p_parent, p_key, p_request_id)·set_parent_title_for 호출 모양', async () => {
   const rpc = jest.fn((name: string) =>
     Promise.resolve(
       name === 'child_answer_history'
@@ -97,7 +97,9 @@ test('realApi: child_answer_history·send_cheer(p_parent, p_key)·set_parent_tit
     {parentId: 'p1', title: '엄마', shared: true, items: [{answeredDate: '2026-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}]},
   ]);
   expect(await api.sendCheer('p1', 'thanks_always')).toEqual({ok: false, reason: 'daily_limit'});
-  expect(rpc).toHaveBeenCalledWith('send_cheer', {p_parent: 'p1', p_key: 'thanks_always'});
+  expect(rpc).toHaveBeenCalledWith('send_cheer', {p_parent: 'p1', p_key: 'thanks_always', p_request_id: null}); // id 없이 부르면 null(서버 0059 기본값)
+  await api.sendCheer('p1', 'thanks_always', '00000000-0000-4000-8000-000000000001');
+  expect(rpc).toHaveBeenLastCalledWith('send_cheer', {p_parent: 'p1', p_key: 'thanks_always', p_request_id: '00000000-0000-4000-8000-000000000001'});
   await api.setParentTitle('엄마');
   expect(rpc).toHaveBeenLastCalledWith('set_parent_title', {p_title: '엄마'}); // 가족 기본값(기존)
   await api.setParentTitleFor('p1', '아빠');

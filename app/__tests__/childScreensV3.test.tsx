@@ -402,7 +402,7 @@ describe('C4 홈 · 응원', () => {
     expect(within(sheet).queryByText(/건강|전화|듣고 싶어요|천천히/)).toBeNull();
     await press('늘 고마워요');
     await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
-    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
+    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always', expect.stringMatching(/^[0-9a-f-]{36}$/)); // request_id(서버 0059)
     await waitFor(() => screen.getByText('엄마께 보냈어요'));
     expect(screen.queryByTestId('sheet')).toBeNull();
   });

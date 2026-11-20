@@ -161,7 +161,7 @@ describe('U10 응원 취소', () => {
     await act(async () => {
       handlers.forEach(h => h('background'));
     });
-    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
+    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always', expect.stringMatching(/^[0-9a-f-]{36}$/)); // request_id(서버 0059)
     expect(screen.queryByRole('button', {name: '되돌리기'})?.props.accessibilityState?.disabled ?? true).toBe(true); // 보낸 뒤 취소 없음
   });
 
@@ -879,7 +879,7 @@ describe('재검토 R1·R2', () => {
     expect(screen.getByRole('button', {name: '되돌리기'})).toBeTruthy();
     rerender(<Root on={false} />);
     await act(async () => {});
-    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always');
+    expect(send).toHaveBeenCalledWith('parent-1', 'thanks_always', expect.stringMatching(/^[0-9a-f-]{36}$/)); // request_id(서버 0059)
     const undo = screen.queryByRole('button', {name: '되돌리기'});
     expect(undo === null || undo.props.accessibilityState?.disabled === true).toBe(true);
     await act(async () => {
