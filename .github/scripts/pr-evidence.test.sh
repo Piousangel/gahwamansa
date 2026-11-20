@@ -20,4 +20,8 @@ risk="$(printf '%s\n' docs/team/consent-notes.md app/src/features/link/ConsentSc
 check "위험 영역은 코드 파일만(docs·md 제외), 목록 파일의 경로를 잡는다" \
   "app/src/features/link/ConsentScreen.tsx supabase/functions/kakao-unlink/index.ts .github/workflows/app.yml app/src/api/contract/deleteScope.ts " "$risk"
 
+self="$(printf '%s\n' .github/risk-paths.txt .github/scripts/pr-evidence.sh app/src/features/family/ParentFamilyScreen.tsx app/src/ui/foldPush.ts | bash "$S" --risk-files | tr '\n' ' ')"
+check "검사 자신(목록·스크립트)과 가족 화면 지우기 입구도 위험 영역, foldPush 는 아님" \
+  ".github/risk-paths.txt .github/scripts/pr-evidence.sh app/src/features/family/ParentFamilyScreen.tsx " "$self"
+
 exit $fail

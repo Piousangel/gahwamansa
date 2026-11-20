@@ -8,8 +8,9 @@
 ^supabase/config\.toml$
 ^supabase/functions/_shared/
 ^supabase/seed_terms
-# 삭제·계정
+# 삭제·계정(가족 화면의 '그만두기 → 모두 지우기' 입구 포함, #180 재확인 L)
 ^app/src/features/account/
+^app/src/features/family/ParentFamilyScreen\.tsx$
 deleteScope
 ^supabase/functions/kakao-unlink/
 # 동의·약관
@@ -31,5 +32,6 @@ PaidSheet
 # 권한·개인정보 선언
 PrivacyInfo
 AndroidManifest\.xml$
-# CI 자체
+# CI 자체와 이 검사(목록·판정 스크립트를 PR 이 고쳐 검사를 약하게 하지 못하게, #180 재확인 M)
 ^\.github/workflows/
+^\.github/(risk-paths\.txt|scripts/)
