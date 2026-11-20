@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: color.paper, paddingHorizontal: space.screenX},
   close: {position: 'absolute', left: space.screenX, minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', paddingHorizontal: space.sm},
   pressed: {opacity: 0.6},
-  closeText: {color: color.ink},
+  closeText: {color: color.ink, textDecorationLine: 'underline'}, // 누르는 파랑 글자 = 밑줄(R-08)
   photoWrap: {flex: 1, justifyContent: 'center', gap: space.sm},
   photo: {width: '100%', aspectRatio: 272 / 236, backgroundColor: color.paperSoft},
   caption: {textAlign: 'center', color: color.inkTitle},

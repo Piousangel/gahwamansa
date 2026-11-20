@@ -85,6 +85,11 @@ const DS_SYNTAX = [
     selector: "MemberExpression[object.name='color'][property.name=/^(ink|inkSub)$/]",
     message: '[DS:v3Color] v3 색 이름(color.ink·color.inkSub) 금지 — ui/ds Text tone(읽는 글 default=inkBody, 보조 muted=inkSub)·Button(누름 action)으로.',
   },
+  // R-22(v5): 노랑 팻말 토큰(sign·signInk·signEdge)·#FFD43B 은 ui/ds/Sign 안에서만 — 화면은 <Sign> 을 쓴다(소스 전수는 __tests__/signYellow)
+  {
+    selector: "MemberExpression[property.name=/^(sign|signInk|signEdge)$/][object.property.name='color'], Literal[value=/#FFD43B/i]",
+    message: '[DS:sign] 노랑(팻말) 토큰·#FFD43B 직접 금지 — ui/ds Sign 을 쓴다(R-22).',
+  },
   // 리뷰 L4: JSX 속성 색 리터럴(<Icon color="#…">, Svg stroke·fill)
   {
     selector: "JSXAttribute[name.name=/^(color|stroke|fill)$/][value.type='Literal'][value.value=/^(#|rgb)/]",

@@ -11,16 +11,18 @@ import {tokensV4} from './tokensV4';
 //       교체할 때는 font 값만 바꾼다(파일 번들 + 라이선스 확인 후).
 
 const c4 = tokensV4.color;
+// v5 에서 지운 장식 색(O-8·R-23): 화면 레인이 장식을 걷어 낼 때까지만 v4 값(생성물 deprecatedColor)
+const d4 = tokensV4.deprecatedColor;
 const v3 = {
   paper: c4.paper, card: c4.card, paperSoft: c4.paperSoft, paperEdge: c4.paperEdge,
   ink: c4[tokensV4.v3ColorAlias.ink], inkTitle: c4.inkTitle, inkSub: c4.inkSub,
   action: c4.action, actionPressed: c4.actionPressed, actionSoft: c4.actionSoft, noticeSoft: c4.noticeSoft,
   line: c4.line, lineSoft: c4.lineSoft, lineGhost: c4.lineGhost,
-  disabledBg: c4.disabledBg, disabledInk: c4.disabledInk, tape: c4.tape,
+  disabledBg: c4.disabledBg, disabledInk: c4.disabledInk, tape: d4.tape,
   done: c4.done, doneInk: c4.doneInk, doneSoft: c4.doneSoft,
   danger: c4.danger, dangerInk: c4.dangerInk, dangerSoft: c4.dangerSoft,
-  sky: c4.sky, sun: c4.sun, sunRay: c4.sunRay, blush: c4.blush, brandSealDeep: c4.brandSealDeep,
-  accentSun: c4.accentSun, accentPeach: c4.accentPeach, // 첫 화면 소개 아이콘 원(장식)
+  sky: c4.sky, sun: d4.sun, sunRay: d4.sunRay, blush: d4.blush, brandSealDeep: d4.brandSealDeep,
+  accentSun: d4.accentSun, accentPeach: d4.accentPeach, // 첫 화면 소개 아이콘 원(장식)
 } as const;
 
 export const color = {
@@ -86,7 +88,12 @@ export const space = {
   s4: 4, s8: 8, s12: 12, s16: 16, s20: 20, s24: 24, s28: 28, s56: 56,
 } as const;
 
-export const radius = {chip: 12, childCard: 16, input: 16, card: 22, select: 24, sheet: 28, button: 36, keypadKey: 14, codeCell: 12} as const;
+// 반경도 v5 를 따른다(11-20, 4단: 팻말·입력칸 3 / 행·선택지·칩 6 / 버튼 8 / 시트·대화상자 12 — 알약 36·16~28 폐기). 이름은 v3 그대로
+const r5 = tokensV4.radius;
+export const radius = {
+  chip: r5.chip, childCard: r5.childCard, input: r5.input, card: r5.card, select: r5.select,
+  sheet: r5.sheet, button: r5.button, keypadKey: r5.keypadKey, codeCell: r5.codeCell,
+} as const;
 
 export const touch = {
   elderMin: 64, buttonPrimary: 72, buttonSecondary: 64, codeBox: 68, selectCard: 132, iconButton: 64, link: 64,

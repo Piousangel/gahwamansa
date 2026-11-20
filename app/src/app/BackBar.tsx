@@ -21,6 +21,11 @@ export function useBackAction(onBack?: () => void) {
   );
 }
 
+/** 스택에서 뒤로 가면 닿는 화면의 목적지 문구('설정으로' 등). 없으면 null — 화면 안 '돌아가기' 버튼도 같은 말을 쓴다(W-09, #152 리뷰 L) */
+export function useBackDestination(): string | null {
+  return backDestination(useNavigation().getState() as never);
+}
+
 // 상단 뒤로 바(터치 64 이상). 보이는 글 = 목적지('‹ 설정으로'), 화면 읽기는 화살표 없이 같은 말(전문가 리뷰 W-09·R-14, '‹ 이전' 없앰).
 // 목적지: to(onBack 이 스택 밖으로 갈 때 화면이 준다) → course(코스 홈) → 스택 바로 아래 화면(backDestination). 하드웨어 뒤로가기와 같은 동작.
 // onBack 을 주지 않으면 스택에서 뒤로 갈 수 있을 때만 보인다(첫 화면에는 없음). 목적지를 모르면 숨는다('이전'으로 돌아가지 않음).
@@ -50,5 +55,6 @@ const styles = StyleSheet.create({
   // S25 실기기(11-19) '뒤로 링크가 작다' 최소 수정: 누름 영역 64 이상(높이·폭), 글자 본문(22) 이상. 디자인 규칙 v4 결과가 나오면 맞춘다
   bar: {minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center', alignSelf: 'flex-start', paddingRight: 20, paddingVertical: 4},
   pressed: {opacity: 0.6},
-  text: {fontSize: 24, color: color.ink, fontWeight: 'bold'},
+  // R-08(v5): 누르는 파랑 글자는 밑줄·면·아이콘 중 하나와 함께. **임시 조치**: 옛 뒤로 바는 밑줄 — 화면이 ds BackLink(면·아이콘)로 옮겨 가면 이 컴포넌트와 함께 지운다(#179 리뷰 L3)
+  text: {fontSize: 24, color: color.ink, fontWeight: 'bold', textDecorationLine: 'underline'},
 });

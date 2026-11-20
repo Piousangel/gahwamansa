@@ -20,7 +20,7 @@ test('동의 저장이 실패하면 오류 문구를 보여 주고 다시 누를
   await enterCode('123456');
   await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
   await press('좋아요');
-  await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
+  await waitFor(() => screen.getByText(/인터넷이 잠깐 끊겼어요/)); // P2 v4: 오류 띠 한 줄(제목. 본문)
   await press('좋아요');
   await waitFor(() => screen.getByTestId('date-line'));
 });

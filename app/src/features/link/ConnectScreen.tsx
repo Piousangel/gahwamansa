@@ -68,8 +68,10 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const back = fromCourse ? () => navigation.goBack() : resetRole;
   // 뒤로 바 목적지(W-09): 코스 홈에서 왔으면 코스 홈, 아니면 역할 고르기(첫 화면)
   const backTo = fromCourse ? copy.nav.to.CourseHome : copy.login.back;
-  // 번호가 맞으면 스택을 [번호, 동의]로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③)
-  const toConsent = () => navigation.dispatch(CommonActions.reset({index: 1, routes: [{name: 'Connect'}, {name: 'Consent'}]}));
+  // 번호가 맞으면 스택을 [동의] 하나로 정리한다(코스 홈에서 왔어도 미리보기 코스 홈·번호 화면이 뒤에 남지 않게, 리뷰 ③).
+  // 연결된 어르신에게 동의 → 코스 홈은 뿌리 화면: 뒤로는 앱을 나간다. 번호 화면을 뒤에 남기면 뒤로 두 번에 resetRole 이
+  // 기기 도장을 지웠다(네이버 패널 r1/4 재현, 리드 결정 11-20)
+  const toConsent = () => navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'Consent'}]}));
   // 밖에서 들어온 번호: 처음엔 경로 값, 화면이 떠 있는 동안 새 링크가 오면 그 번호(AP-09, 리뷰 H1).
   // initialParams 는 경로를 처음 만들 때만 쓰이므로 링크 저장소를 직접 구독한다. 지금 값(구독 즉시 1회)·지움(visible false)은 무시
   const [prefill, setPrefill] = useState<Prefill | undefined>(route.params?.prefill);
@@ -296,7 +298,8 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const links = (
     <View testID="connect-links" style={styles.links}>
       <TextLink label={copy.connect.no_code_link} touch={64} onPress={() => setHelp(h => !h)} />
-      <TextLink label={copy.connect.view_course} touch={64} onPress={() => (fromCourse ? navigation.popTo('CourseHome') : navigation.navigate('CourseHome'))} />
+      {/* 미연결 '코스 보기'도 코스 홈을 뿌리로(PR #133 리뷰 M1): 뒤로 두 번에 처음 화면으로 가며 기기 도장이 지워지지 않게. 번호는 코스 홈의 띠로 다시 연다 */}
+      <TextLink label={copy.connect.view_course} touch={64} onPress={() => (fromCourse ? navigation.popTo('CourseHome') : navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'CourseHome'}]})))} />
     </View>
   );
 

@@ -23,8 +23,9 @@ type Props = {
 
 export function CodeShow({code, title, lines, shareMessage, sendLabel, primaryLabel, onPrimary, top, onShare}: Props) {
   const shown = formatCode(code);
-  // R-15(#146 리뷰): 200%에서 첫 화면 끝이 번호 카드·안내 줄을 반쯤 가르지 않게, 걸친 요소를 통째로 아래로(+ '더 있음' 띠)
-  const fold = useFoldGap(1 + lines.length, BLOCK_GAP);
+  // R-15(#146 리뷰): 200%에서 첫 화면 끝이 안내 줄을 반쯤 가르지 않게, 걸친 줄을 통째로 아래로(+ '더 있음' 띠)
+  // from 1(#152 리뷰 L): 번호 카드(0)는 이 화면의 핵심이라 밀지 않는다 — 카드가 걸쳐도 첫 화면에 남기고 아래는 스크롤로
+  const fold = useFoldGap(1 + lines.length, BLOCK_GAP, 1);
   const send = () => {
     onShare?.();
     Share.share({message: shareMessage.split('{번호}').join(shown)}).catch(() => {});

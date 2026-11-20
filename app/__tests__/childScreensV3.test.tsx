@@ -138,6 +138,30 @@ describe('C3 연결 대기', () => {
     expect(mt('wait-step-3')).toBeUndefined();
   });
 
+  test('D-08a(4:198)·Noto 재렌더(#162): 1단계 문장이 2줄(+14)이 되어 둘째 단계가 걸치면 그 단계를 통째로 민다, 1줄이면 간격 없음', async () => {
+    await openWait(waitApi());
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 460); // 접힘 = 460 − 띠 24 = 436
+      lay('wait-steps', 300, 300);
+      lay('wait-steps-title', 0, 28); // 300~328
+      lay('wait-step-1', 0, 32); // 340~372 (지금 글꼴 1줄)
+      lay('wait-step-2', 0, 48); // 384~432 → 접힘 위
+      lay('wait-step-3', 0, 48); // 444~ → 이미 접힘 밖
+    });
+    for (const id of ['wait-steps-title', 'wait-step-1', 'wait-step-2', 'wait-step-3']) {
+      expect(mt(id)).toBeUndefined();
+    }
+    await act(async () => {
+      lay('wait-step-1', 0, 46); // Noto 2줄(+14): 340~386 → 둘째 단계 398~446 이 436 에 걸림
+    });
+    expect(mt('wait-step-2')).toBe(436 - 398 + 1);
+    expect(mt('wait-step-1')).toBeUndefined();
+    expect(mt('wait-steps-title')).toBeUndefined(); // 제목은 1단계와 함께 첫 화면에 남는다
+  });
+
   test('재확인 L9: 첫 단계가 걸치면 묶음 제목과 함께 민다(첫 화면 끝에 제목만 남지 않게)', async () => {
     await openWait(waitApi());
     const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
@@ -623,6 +647,36 @@ describe('C7 설정 v2', () => {
     });
     expect(mt('code-show-line-2')).toBe(280 - 256 + 1);
     expect(mt('code-show-line-1')).toBeUndefined();
+  });
+
+  test('#152 리뷰 L: C2 — 번호 카드가 첫 화면 끝에 걸쳐도 카드는 밀지 않는다(from 1)', async () => {
+    await openSettings();
+    await press('새 폰 연결 번호, 엄마 폰을 바꿨을 때 써요');
+    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+    const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+    const {StyleSheet} = require('react-native');
+    const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+    await act(async () => {
+      lay('screen-body-area', 0, 304); // 접힘 = 280
+      lay('code-show-block', 200, 300); // 묶음이 200 에서 시작(제목이 큰 글자로 길 때)
+      lay('code-show-card', 0, 120); // 200~320 → 280 에 걸림
+      lay('code-show-line-1', 0, 104);
+      lay('code-show-line-2', 0, 52);
+    });
+    expect(mt('code-show-card')).toBeUndefined();
+    expect(mt('code-show-line-1')).toBeUndefined();
+    expect(mt('code-show-line-2')).toBeUndefined();
+  });
+
+  test('#152 리뷰 L(W-09): C2 보조 버튼은 돌아갈 화면 이름(설정에서 왔으면 \'설정으로\')', async () => {
+    await openSettings();
+    await press('새 폰 연결 번호, 엄마 폰을 바꿨을 때 써요');
+    await waitFor(() => screen.getByText('번호가 만들어졌어요'));
+    expect(screen.queryByText('연결 기다리기')).toBeNull();
+    const back = screen.getAllByRole('button', {name: '설정으로'});
+    expect(back.length).toBeGreaterThanOrEqual(1);
+    fireEvent.press(back[back.length - 1]); // Dock 보조(위 뒤로 바와 같은 곳)
+    await waitFor(() => screen.getByText('설정'));
   });
 
   test('새 폰 연결 번호 → 그 어르신 재연결 번호 화면', async () => {

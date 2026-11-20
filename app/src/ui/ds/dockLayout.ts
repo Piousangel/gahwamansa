@@ -79,7 +79,7 @@ export function estimateDock(props: DockProps, env: Env, spill: DockSpillLevel =
   }
   if (props.secondary && spill < 2) {
     const k = props.secondary.kind === 'text';
-    parts.push(btn(k ? 'link' : 'buttonSecondary', props.secondary.label, minTouch(k ? 'link' : 'secondary', env.audience)));
+    parts.push(btn(k ? 'link' : props.even ? 'buttonPrimary' : 'buttonSecondary', props.secondary.label, minTouch(k ? 'link' : props.even ? 'primary' : 'secondary', env.audience))); // even: 주 버튼 높이(N-12)
   }
   if (props.note && spill < 1) {
     parts.push(

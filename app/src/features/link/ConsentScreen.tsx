@@ -1,21 +1,39 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Screen} from '../../ui/Screen';
-import {BackBar} from '../../app/BackBar';
-import {Text20} from '../../ui/Text20';
-import {BigButton} from '../../ui/BigButton';
+import {backDestination} from '../../app/backDestination';
+import {Banner, Button, DsScreen, Heading, Text} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
 import {CONSENT_VERSION, copy, Message} from '../../copy/copy';
 import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {track} from '../track';
-import {Icon} from '../../ui/assets/icons';
-import {color, radius, shadow} from '../../ui/tokens';
 
+const c = copy.consent;
+
+// P2 동의 v4(시안 P6_P7_N1_P2_ds4b P2 보드 + 전문가 리뷰 N-12·7:42). 문구는 그대로(CONSENT_VERSION 영향 없음, 버튼 문구는 법률 확인 전이라 바꾸지 않음).
+// - 순서(법률 #175 M1): 세 줄 → 안심 줄 → 거절 안내 → (오류) → 좋아요 → 싫어요. 거부할 권리를 알리는 문장이 동의 버튼보다 먼저.
+// - 두 버튼 자리(#175 리뷰 M2): 본문이 Dock 위 창에 다 들어가면 Dock, 넘치면 본문 끝(다 읽은 뒤에 닿는다, N-12). 기준은 글자 배율이 아니라 실측.
+//   한 번 본문 끝으로 내리면 이 창 크기·배율에서는 그대로 둔다(내린 뒤 창이 넓어져 다시 올라가는 흔들림 방지).
+// - 글자 150% 이상: 점 칸을 빼 세 줄을 전폭으로(N-12). 그 아래는 ✓ 대신 점 머리표(V4: 체크박스로 오해 방지).
+// - 두 버튼은 같은 높이·글자(even) — 주·보조는 색·모양으로만 나눈다(7:42, #175 리뷰 M1). 안내 두 줄은 기본 글자색(어르신 7:1, 법률 L).
 export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams, 'Consent'>) {
   const {api, sync, syncError, setConsented} = useSession();
+  const {width, height, fontScale} = useWindowDimensions();
+  const large = fontScale >= 1.5;
+  // 본문이 Dock 위 창에 다 들어가는가(실측). 창 크기·배율이 바뀌면 다시 잰다
+  const dims = `${width}x${height}@${fontScale}`;
+  const [inlineFor, setInlineFor] = useState<string | null>(null);
+  const inline = inlineFor === dims;
+  const viewport = useRef(0);
+  const content = useRef(0);
+  const judge = () => {
+    if (!inline && viewport.current > 0 && content.current > viewport.current) {
+      setInlineFor(dims);
+    }
+  };
   const [declined, setDeclined] = useState(false);
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [error, setError] = useState<Message | null>(null);
@@ -26,8 +44,8 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
   // 확인이 실패하면 세션의 syncError 로 알리되 고르기는 그대로 할 수 있다.
   useEffect(() => {
     let alive = true;
-    sync().then(c => {
-      if (alive && c?.consented) {
+    sync().then(r => {
+      if (alive && r?.consented) {
         navigation.replace('CourseHome');
       } else if (alive && !shownSent.current) {
         shownSent.current = true;
@@ -64,61 +82,90 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   if (declined) {
     return (
-      <Screen bottom={<BigButton label={copy.consent.declined_button} onPress={() => navigation.replace('CourseHome')} />}>
-        <Text20 size={28} weight="bold">{copy.consent.declined_notice}</Text20>
-        <Text20>{copy.consent.declined_detail}</Text20>
-        <Text20>{copy.consent.declined_reassure}</Text20>
-      </Screen>
+      <DsScreen variant="intro" dock={{primary: {label: c.declined_button, onPress: () => navigation.replace('CourseHome')}}}>
+        <Heading level={1}>{c.declined_notice}</Heading>
+        <Text role="bodyLg">{c.declined_detail}</Text>
+        <Text role="bodyLg">{c.declined_reassure}</Text>
+      </DsScreen>
     );
   }
+
+  // 뒤로: 스택 바로 아래 화면(번호 쓰기 등)이 있을 때만, 목적지 이름으로(W-09)
+  const dest = navigation.canGoBack() ? backDestination(navigation.getState() as never) : null;
+  const back = dest ? {to: dest, onPress: () => navigation.goBack()} : undefined;
+  // 오류는 버튼 바로 앞(읽기 순서: 본문 → 오류 → 좋아요)
+  const errorBand = shown ? <Banner tone="danger" text={`${shown.title}. ${shown.body}`} testID="consent-error" /> : null;
+  // 안내 두 줄: 기본 글자색(muted 아님 — 어르신 7:1, 법률 L)
+  const notes = (
+    <>
+      <Text role="body" testID="consent-reassure">
+        {c.reassure}
+      </Text>
+      <Text role="body" testID="consent-decline-note">
+        {c.decline_note}
+      </Text>
+    </>
+  );
+
   return (
-    <Screen
-      top={<BackBar />}
-      bottom={
-        <>
-          {/* 오류 상자는 하단 버튼 바로 위(디자인 판정: 네 줄로 늘어 본문에 두면 150% 이상에서 화면 밖으로 밀림). 읽기는 본문 다음, 버튼 앞 */}
-          {shown ? (
-            <View testID="consent-error" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
-              <Icon name="icon-warning" size={28} color={color.dangerInk} />
-              <View style={styles.errorText}>
-                <Text20 size={24} weight="bold" style={styles.errorTitle}>{shown.title}</Text20>
-                <Text20>{shown.body}</Text20>
-              </View>
-            </View>
-          ) : null}
-          <BigButton label={copy.consent.accept} disabled={busy} onPress={accept} />
-          <BigButton variant="secondary" label={copy.consent.decline} onPress={decline} />
-        </>
-      }>
-      <Text20 size={32} weight="bold" accessibilityRole="header" style={styles.title}>{copy.consent.title}</Text20>
-      {/* 시안 P2: 흰 카드 안 체크 행. 행 간격 8, 체크 32 는 첫 줄에 맞춤(여러 줄이어도 위 정렬).
-          본문은 Screen 스크롤 영역이라 150% 이상에서 넘치면 아래 흐림이 보이고, 버튼은 하단 고정이라 끝까지 안 읽어도 누를 수 있다 */}
-      <View testID="consent-points" style={styles.card}>
-        {copy.consent.body.map(t => (
-          <View key={t} testID="consent-point" style={styles.point}>
-            <Icon name="icon-check" size={32} color={color.done} />
-            <Text20 size={22} style={styles.pointText}>{t}</Text20>
+    <DsScreen
+      variant="intro"
+      back={back}
+      onViewport={h => {
+        viewport.current = h;
+        judge();
+      }}
+      dock={inline ? undefined : {primary: {label: c.accept, onPress: accept, disabled: busy}, secondary: {label: c.decline, onPress: decline}, even: true}}
+      tail={
+        inline ? (
+          <View style={styles.actions} testID="consent-actions">
+            <Button kind="primary" label={c.accept} onPress={accept} disabled={busy} />
+            <Button kind="secondary" even label={c.decline} onPress={decline} />
           </View>
-        ))}
+        ) : null
+      }>
+      <View
+        testID="consent-content"
+        style={styles.content}
+        onLayout={e => {
+          content.current = Math.round(e.nativeEvent.layout.height);
+          judge();
+        }}>
+        <Heading level={1}>{c.title}</Heading>
+        <View testID="consent-points" style={styles.card}>
+          {c.body.map(t =>
+            large ? (
+              // 150% 이상: 점 칸 없이 전폭(N-12)
+              <Text key={t} role="bodyLg" testID="consent-point">
+                {t}
+              </Text>
+            ) : (
+              <View key={t} testID="consent-point" style={styles.point}>
+                <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                  <Text role="bodyLg" tone="muted" testID="consent-dot">
+                    •
+                  </Text>
+                </View>
+                <Text role="bodyLg" style={styles.pointText}>
+                  {t}
+                </Text>
+              </View>
+            ),
+          )}
+        </View>
+        {notes}
+        {errorBand}
       </View>
-      {/* 싫어요일 때 가족에게 보이는 것(법률 노출 #7, copy 11-19 decline_note): 체크 목록과 성격이 달라 카드 바로 아래 'ⓘ' 한 줄(디자인 판정 M2 ②) */}
-      <View testID="consent-info" style={styles.point}>
-        <Icon name="icon-info" size={28} color={color.inkSub} />
-        <Text20 testID="consent-decline-note" style={styles.infoText}>{copy.consent.decline_note}</Text20>
-      </View>
-      <Text20 size={22} style={styles.sub}>{copy.consent.reassure}</Text20>
-    </Screen>
+    </DsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {color: color.inkTitle},
-  card: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 12, paddingHorizontal: 16, gap: 8, boxShadow: shadow.soft},
-  point: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 60},
-  pointText: {flex: 1, minWidth: 0, color: color.inkTitle},
-  sub: {color: color.inkSub},
-  infoText: {flex: 1, minWidth: 0, color: color.inkSub},
-  error: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: color.card, borderWidth: 4, borderColor: color.danger, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16},
-  errorText: {flex: 1, gap: 6},
-  errorTitle: {color: color.dangerInk},
+  // 흰 카드 + line 1.5(누르는 것 아님 — 시안 P2), 줄 간격 12
+  card: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, padding: 16, gap: 12},
+  point: {flexDirection: 'row', alignItems: 'flex-start', gap: 12},
+  pointText: {flexGrow: 1, flexShrink: 1},
+  actions: {gap: ds.touch.elder.gap},
+  // 본문 묶음(재기용 실측). 사이 간격은 DsScreen 본문 간격과 같게
+  content: {gap: ds.space.between.elder},
 });

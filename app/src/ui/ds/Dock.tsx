@@ -32,7 +32,8 @@ type Social<P extends SocialButtonProps['provider']> = Omit<SocialButtonProps, '
 export type SocialGroup = {social: readonly [Social<'kakao'>] | readonly [Social<'kakao'>, Social<'google'>] | readonly [Social<'google'>]};
 export const SOCIAL_GROUP_MAX = ds.dock.socialGroupMax;
 
-export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger'}) | SocialGroup;
+/** kind 'secondary': 할 일이 끝난 화면의 유일한 버튼이 보조 행동일 때(예: P3 다 마친 뒤 '오늘 코스 다시 보기', 시안 ds4b 3/3) */
+export type DockPrimary = (DockAction & {kind?: 'primary' | 'danger' | 'secondary'}) | SocialGroup;
 /** 보조: 기본 외곽선·글자 버튼, 또는 위험 외곽선(계정 지우기처럼 안전한 쪽이 주 버튼일 때) */
 export type DockSecondary = DockAction & {kind?: 'secondary' | 'text' | 'danger'};
 /** 한 줄 안내(글) 또는 글자 링크 하나 */
@@ -42,6 +43,8 @@ export type DockProps = {
   primary: DockPrimary;
   secondary?: DockSecondary;
   note?: DockNote;
+  /** 주·보조가 대등한 두 답(동의)일 때 보조도 주 버튼 높이(N-12) */
+  even?: boolean;
 };
 
 /** 넘침 단계: 0 = 다 Dock, 1 = note 를 본문 끝으로, 2 = note·보조를 본문 끝으로 */
@@ -64,9 +67,9 @@ function Primary({p}: {p: DockPrimary}) {
   return <Button kind={kind} size="dock" {...rest} />;
 }
 
-function Secondary({s}: {s: DockSecondary}) {
+function Secondary({s, even}: {s: DockSecondary; even?: boolean}) {
   const {kind = 'secondary', ...rest} = s;
-  return <Button kind={kind} size="dock" {...rest} />;
+  return <Button kind={kind} size="dock" even={even} {...rest} />;
 }
 
 export function DockNoteView({note}: {note: DockNote}) {
@@ -81,27 +84,27 @@ export function DockNoteView({note}: {note: DockNote}) {
 }
 
 /** Dock 안쪽(Screen 의 하단 고정 영역에 들어간다). onContentHeight 는 넘침 판단용 자연 높이 */
-export function Dock({primary, secondary, note, spill = 0, onContentHeight}: DockProps & {spill?: DockSpillLevel; /** h = 잰 높이, rendered = 그때 그린 넘침 단계(PR #83 리뷰 L4) */ onContentHeight?: (h: number, rendered: DockSpillLevel) => void}) {
+export function Dock({primary, secondary, note, even, spill = 0, onContentHeight}: DockProps & {spill?: DockSpillLevel; /** h = 잰 높이, rendered = 그때 그린 넘침 단계(PR #83 리뷰 L4) */ onContentHeight?: (h: number, rendered: DockSpillLevel) => void}) {
   return (
     <View
       testID="ds-dock"
       style={styles.dock}
       onLayout={(e: LayoutChangeEvent) => onContentHeight?.(Math.ceil(e.nativeEvent.layout.height), spill)}>
       <Primary p={primary} />
-      {secondary && spill < 2 ? <Secondary s={secondary} /> : null}
+      {secondary && spill < 2 ? <Secondary s={secondary} even={even} /> : null}
       {note && spill < 1 ? <DockNoteView note={note} /> : null}
     </View>
   );
 }
 
 /** 본문 끝으로 보낸 슬롯(보조 → note 순서, 원래 아래 순서 유지) */
-export function DockSpill({secondary, note, spill}: Pick<DockProps, 'secondary' | 'note'> & {spill: DockSpillLevel}) {
+export function DockSpill({secondary, note, even, spill}: Pick<DockProps, 'secondary' | 'note' | 'even'> & {spill: DockSpillLevel}) {
   if (spill === 0) {
     return null;
   }
   return (
     <View testID="dock-spill" style={styles.spill}>
-      {secondary && spill >= 2 ? <Secondary s={secondary} /> : null}
+      {secondary && spill >= 2 ? <Secondary s={secondary} even={even} /> : null}
       {note ? <DockNoteView note={note} /> : null}
     </View>
   );

@@ -81,5 +81,6 @@ const styles = StyleSheet.create({
   future: {borderColor: color.lineSoft},
   past: {width: 36, height: 36, marginVertical: 2},
   day: {color: color.inkSub, fontWeight: 'bold'},
-  dayToday: {color: color.ink, textDecorationLine: 'underline'},
+  // 오늘 요일은 누르는 것이 아니라 표시 — 파랑·밑줄은 누를 것에만(R-08). 오늘은 위 칸의 테두리가 알린다
+  dayToday: {color: color.inkTitle},
 });

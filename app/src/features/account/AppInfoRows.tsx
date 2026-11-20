@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Linking, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Text20} from '../../ui/Text20';
@@ -8,6 +8,7 @@ import {SettingsRow} from '../../ui/SettingsRow';
 import {color, radius} from '../../ui/tokens';
 import {useInAppWeb} from '../../shared/useInAppWeb';
 import {readAppInfo} from '../../lib/appInfo';
+import {openContactMail} from './contactMail';
 import {getAppEnv} from '../../lib/env';
 import {bgmAsset} from '../../lib/bgmAsset';
 import {hasVoiceClips} from '../../audio/voiceClips';
@@ -113,7 +114,7 @@ function ContactRow({mail, dev}: {mail: string | null; dev: boolean}) {
     );
   }
   const open = () => {
-    Linking.openURL(`mailto:${mail}?subject=${encodeURIComponent(ai.contact_request_subject)}`).catch(() => {});
+    openContactMail(mail);
   };
   return (
     <SettingsRow

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./**/.env*)",
+      "Read(./**/config.local.ts)",
+      "Read(./**/*.keystore)",
+      "Read(./**/*.jks)",
+      "Read(./**/google-services.json)",
+      "Read(./**/GoogleService-Info.plist)",
+      "Read(~/.secrets/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(*assembleProductionRelease*)",
+      "Bash(*bundleProductionRelease*)"
+    ]
+  }
+}
