@@ -26,6 +26,8 @@ import {useFoldGap} from '../../ui/ds/useFoldGap';
 
 /** 카드 묶음 안 간격(본문 간격과 같게) */
 const CARD_GAP = 16;
+/** 카드 테이프가 카드 위로 나온 만큼(styles.tape top −10, 카드 marginTop 8 을 빼고 여유 4) */
+const CARD_TAPE_OVER = 6;
 
 /** 응원 문장별 사물 아이콘(시안 C4_cheer_sheet_ds4: 해·찻잔·새싹·쪽지, 하트·이모지 금지 Q5) */
 const CHEER_ICON = {love_you: 'icon-sun', warm_day: 'icon-teacup', thanks_always: 'icon-sprout', peaceful_day: 'icon-note'} as const satisfies Record<(typeof CHILD_CHEER_KEYS)[number], IconName>;
@@ -61,7 +63,7 @@ export function ChildHome() {
   //   리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 옛 계약 호환 가짜 한 분(parentId '')이 생긴다 → 빈 상태 B 의 '보시면 보여요' 약속은 틀리므로 기존 카드
   const firstDay = !!info && info.parents.length > 0 && list.every(p => p.parentId && p.connected && p.shared && !p.latest);
   const emptyFold = useEmptyFold();
-  const cardsFold = useFoldGap(1, CARD_GAP, 1);
+  const cardsFold = useFoldGap(1, CARD_GAP); // 첫 카드도 민다(호칭 겹침 안내 아래에서 걸칠 수 있음, #207 재캡처). 한 화면보다 큰 카드는 foldPush 가 밀지 않는다
   const cardHs = useRef<number[]>([]);
   const cardCount = firstDay ? 0 : list.length;
   const onCardHeight = (i: number, h: number) => {
@@ -147,7 +149,7 @@ export function ChildHome() {
         dock={dock}
         onViewport={h => {
           emptyFold.onViewport(h);
-          cardsFold.onViewport(h);
+          cardsFold.onViewport(h, h + CARD_TAPE_OVER); // 카드 위 테이프가 카드 밖으로 나와 있어(−10), 민 카드의 테이프가 띠 위로 비치지 않게 그만큼 더
         }}>
         {error ? (
           <View accessibilityLiveRegion="polite">
@@ -175,7 +177,7 @@ export function ChildHome() {
               <ChildHomeEmpty fold={emptyFold} action={inline} />
             ) : (
               // R-15(#207 캡처): 200%·130%에서 둘째 카드 머리가 첫 화면 끝(더 있음 띠 위)에 반쯤 걸쳤다 → 카드(첫 카드는 응원 버튼과 한 덩어리)마다
-              //   접힘 밀기. 카드 수가 바뀌므로 높이를 한꺼번에 넘긴다(onHeights). 첫 카드는 밀지 않는다(from 1 — 화면의 주인)
+              //   접힘 밀기. 카드 수가 바뀌므로 높이를 한꺼번에 넘긴다(onHeights)
               <View style={styles.cards} onLayout={cardsFold.onBlock} testID="child-home-cards">
                 {list.map((p, i) => (
                   <View

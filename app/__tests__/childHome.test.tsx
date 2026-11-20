@@ -92,7 +92,7 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
   expect(mt('child-home-example-2')).toBeUndefined();
 });
 
-test('#207 캡처(R-15): 어르신이 둘이면 둘째 카드가 첫 화면 끝에 걸칠 때 통째로 민다, 첫 카드(응원 버튼과 한 덩어리)는 밀지 않는다', async () => {
+test('#207 캡처(R-15): 어르신이 둘이면 둘째 카드가 첫 화면 끝에 걸칠 때 통째로 민다, 첫 카드도 걸치면 민다(응원 버튼과 한 덩어리)', async () => {
   const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
   render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
   await waitFor(() => screen.getByTestId('child-home-cards'));
@@ -104,11 +104,17 @@ test('#207 캡처(R-15): 어르신이 둘이면 둘째 카드가 첫 화면 끝�
     lay('child-home-card-item-1', 0, 300); // 10~310(카드 + 응원 버튼)
     lay('child-home-card-item-2', 0, 260); // 326~586 → 400 에 걸림
   });
-  expect(mt('child-home-card-item-2')).toBe(400 - 326 + 1);
+  expect(mt('child-home-card-item-2')).toBe(400 + 6 - 326 + 1); // 접힘 + 테이프 여유(6)
   expect(mt('child-home-card-item-1')).toBeUndefined();
-  // 첫 카드가 걸쳐도 밀지 않는다(from 1)
+  // 첫 카드도 걸치면 민다(호칭 겹침 안내 아래 — #207 재캡처)
   await act(async () => {
-    lay('child-home-card-item-1', 0, 500); // 10~510 → 걸침
+    lay('child-home-cards', 250, 700);
+    lay('child-home-card-item-1', 0, 300); // 250~550 → 걸침
+  });
+  expect(mt('child-home-card-item-1')).toBe(400 + 6 - 250 + 1);
+  // 한 화면보다 큰 카드는 밀지 않는다(밀어도 또 잘림)
+  await act(async () => {
+    lay('child-home-card-item-1', 0, 450);
   });
   expect(mt('child-home-card-item-1')).toBeUndefined();
 });
