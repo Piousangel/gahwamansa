@@ -18,7 +18,7 @@ const t = copy.push.permission;
  * - '알려 주세요' = 서버 받기 동의 + 시스템 창(아래 '휴대폰이 한 번 더 물어봐요' 미리 알림, 접근성 M3).
  *   창이 뜨지 않으면(blocked) 본문을 안내 한 줄(notice 톤 — 잘못이 아님)로 바꾸고 주 버튼은 '휴대폰 설정 열기'(디자인 #168).
  *   설정에서 켜고 돌아오면 권한을 다시 읽어 '알림이 켜졌어요'를 알리고 닫는다(접근성 M1).
- * - '안 받을게요' = 거절 기록(다시 묻지 않음, 켜기는 P13). blocked 에서는 이미 서버 동의가 남아 있으므로 닫는 말이 '다음에'(ds A5 later).
+ * - '안 받을게요' = 거절 기록(다시 묻지 않음, 켜기는 P13). blocked 에서는 이미 서버 동의가 남아 있고 다시 묻지 않으므로 닫는 말이 '닫기'(ds A5 close — later 는 '나중에 다시 묻는다', #168 접근성 재확인 L).
  * - 안드로이드 뒤로 = 오늘은 넘김(거절 아님, PR #72 M1) — 다음 날 P7 뒤에 다시 묻는다.
  * 닫히면 연 버튼이 없으므로 코스 홈 제목으로 초점(접근성 L2).
  */
@@ -116,7 +116,7 @@ export function N1Prompt({onClose}: {onClose: () => void}) {
       title={t.title}
       action={blocked ? {label: copy.push.system_off.open_parent, onPress: openSettings} : {label: t.yes, onPress: yes, loading: busy, loadingLabel: t.yes}}
       actionHint={blocked ? undefined : t.system_hint}
-      dismiss={blocked ? 'later' : {decline: t.no}}
+      dismiss={blocked ? 'close' : {decline: t.no}}
       onDismiss={no}
       onBack={back}
       returnFocusRef={null}>

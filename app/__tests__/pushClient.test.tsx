@@ -275,7 +275,7 @@ describe('앱 조립(PushHost)', () => {
     expect(screen.getByLabelText(copy.push.permission.body)).toBeTruthy();
     expect(screen.getByLabelText(copy.push.permission.optional)).toBeTruthy();
     expect(screen.queryByLabelText(copy.push.permission.preview_a11y)).toBeNull();
-    expect(within(screen.getByTestId('n1-actions')).getByText(copy.push.permission.system_hint, {includeHiddenElements: true, normalizer: (x: string) => x.replace(/\u2060/g, '').trim()})).toBeTruthy(); // 접근성 M3: 알려 주세요 아래 한 줄
+    expect(within(screen.getByTestId('n1')).getByText(copy.push.permission.system_hint, {includeHiddenElements: true, normalizer: (x: string) => x.replace(/\u2060/g, '').trim()})).toBeTruthy(); // 접근성 M3: 알려 주세요 아래 한 줄
     expect(screen.getByRole('button', {name: copy.push.permission.yes}).props.accessibilityHint).toBe(copy.push.permission.system_hint);
     await press(copy.push.permission.yes);
     await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
@@ -420,7 +420,7 @@ describe('앱 조립(PushHost)', () => {
     await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
     await waitFor(() => expect(screen.queryByTestId('wait-notify')).toBeNull());
   });
-  test('리뷰 L1·#168: 시스템 창이 뜨지 않으면(blocked) 닫지 않고 본문을 안내 한 줄(notice 톤)로, 닫는 말은 다음에(이미 서버 동의)', async () => {
+  test('리뷰 L1·#168: 시스템 창이 뜨지 않으면(blocked) 닫지 않고 본문을 안내 한 줄(notice 톤)로, 닫는 말은 닫기(이미 서버 동의·다시 묻지 않음)', async () => {
     setPlatform('android', 34);
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('never_ask_again');
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
@@ -436,7 +436,7 @@ describe('앱 조립(PushHost)', () => {
     expect(screen.queryByRole('button', {name: copy.push.permission.no})).toBeNull();
     await press(copy.push.system_off.open_parent);
     expect(settings).toHaveBeenCalled();
-    await press('다음에');
+    await press('닫기');
     await waitFor(() => expect(screen.queryByTestId('n1')).toBeNull());
   });
 

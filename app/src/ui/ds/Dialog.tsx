@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
-import {Animated, Modal, ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
+import {Animated, Modal, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
 import {color as v3color} from '../tokens';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
@@ -63,6 +63,9 @@ export function Dialog(props: DialogProps) {
 
 function DialogInner({visible, title, body, children, action, actionHint, dismiss, onDismiss, onBack, returnFocusRef, error, testID = 'ds-dialog'}: DialogProps) {
   const a = useAudience();
+  // 글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝으로(버튼 묶음은 스크롤 밖이라 줄이 늘면 닫는 쪽이 잘린다 — #168 접근성 재확인 M). 버튼 힌트는 그대로
+  const hintInBody = useWindowDimensions().fontScale >= 1.5 && !!(body || children);
+  const hintLine = actionHint && action && !(action.kind === 'danger') ? <Hint key="hint" text={actionHint} testID={`${testID}-action-hint`} /> : null;
   const titleRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef ?? undefined);
   useToastModalGuard(visible);
@@ -144,6 +147,7 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
                 onMomentumScrollEnd={onScroll}>
                 {children}
                 {body ? <Text role="bodyLg">{body}</Text> : null}
+                {hintInBody ? hintLine : null}
               </ScrollView>
               {/* 200% 등에서 본문이 넘치면 '더 있음' 띠(R-19). 끝까지 내리면 사라진다 */}
               {more ? <MoreBand /> : null}
@@ -157,7 +161,7 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
             ) : null}
           </View>
           <View testID={`${testID}-actions`} style={styles.actions}>
-            {danger || !action ? [close, doIt] : [doIt, actionHint ? <Hint key="hint" text={actionHint} testID={`${testID}-action-hint`} /> : null, close]}
+            {danger || !action ? [close, doIt] : [doIt, hintInBody ? null : hintLine, close]}
           </View>
         </View>
       </Animated.View>

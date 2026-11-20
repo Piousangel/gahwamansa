@@ -69,6 +69,19 @@ describe('ds Dialog', () => {
     expect(screen.getByTestId('ds-dialog-action').props.accessibilityHint).toBe('휴대폰이 한 번 더 물어봐요');
   });
 
+  test('글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝(버튼 묶음이 늘어 닫는 쪽이 잘리지 않게), 버튼 힌트는 그대로', () => {
+    const RN = require('react-native');
+    const spy = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 320, height: 640, scale: 3, fontScale: 2});
+    try {
+      render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} actionHint="휴대폰이 한 번 더 물어봐요" dismiss={{decline: '안 받을게요'}} onDismiss={noop} returnFocusRef={null} body="하루 한 번만 알려 드려요" />);
+      expect(within(screen.getByTestId('ds-dialog-scroll')).getByTestId('ds-dialog-action-hint', H)).toBeTruthy();
+      expect(within(screen.getByTestId('ds-dialog-actions')).queryByTestId('ds-dialog-action-hint', H)).toBeNull();
+      expect(screen.getByTestId('ds-dialog-action').props.accessibilityHint).toBe('휴대폰이 한 번 더 물어봐요');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test("200%(fontScale 2.0)에서 본문이 넘치면 '더 있음' 띠(R-19), 버튼은 스크롤 밖이라 잘리지 않는다(#168 접근성 M2·M4)", () => {
     render(
       <Dialog visible title="내일 새 사진이 오면 알려 드릴까요?" action={{label: '알려 주세요', onPress: noop}} dismiss={{decline: '안 받을게요'}} onDismiss={noop} returnFocusRef={null}>

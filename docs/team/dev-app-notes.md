@@ -645,7 +645,7 @@
 ### N1 v4 Dialog — P7의 연속(3기 어르신 레인, 11-20, #168 리뷰 반영)
 - N1 을 화면(스택)에서 ds Dialog 로 옮겼다(시안 P6_P7_N1_P2_ds4b N1 보드). 덮개 큐는 쓰지 않는다(리드 ⓐ).
 - 언제: PushHost 가 이번 실행에서 경로가 CourseDone → CourseHome 으로 바뀐 것을 보고(P7 '알겠어요'·뒤로) 그때만 parentPromptState 를 확인. 앱 시작·깨어남에는 묻지 않는다.
-- 뒤로 = 오늘은 넘김(#72 M1): ds Dialog `onBack`. '안 받을게요' = 거절 기록. 막힘이면 닫는 말 '다음에'.
+- 뒤로 = 오늘은 넘김(#72 M1): ds Dialog `onBack`. '안 받을게요' = 거절 기록. 막힘이면 닫는 말 '닫기'(다시 묻지 않음). 글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝.
 - 막힘: 본문을 ds Banner `notice`(noticeSoft·ⓘ·inkBody, 읽기 알림) 한 줄로 바꿔 끼움. AppState active 에서 권한을 다시 읽어 켜졌으면 '알림이 켜졌어요' 알림 후 닫음.
 - ds Dialog: `actionHint`(하는 쪽 아래 한 줄 + 버튼 힌트), 본문 넘침 '더 있음' 띠(MoreBand). 닫힌 뒤 초점: `focusTopScreenTitle()`(ui/screenTitle — Screen 이 맨 위 제목 getter 를 등록).
 - 테스트: 덮개 큐는 jest.after.js 가 테스트마다 빈 기억으로(다른 덮개용).
