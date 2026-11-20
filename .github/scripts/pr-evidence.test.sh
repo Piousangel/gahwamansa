@@ -34,7 +34,7 @@ filled="$(perl -0777 -pe 's/- 실패 확인: <!--.*?-->/- 실패 확인: 여백 
 check "'실패 확인: 깨뜨린 변경 → 실패 출력' 을 채우면 1" 1 "$(printf '%s\n' "$filled" | bash "$S" --has-fail-check)"
 check "화살표(→·->) 없이 '실패 확인' 만 쓰면 0" 0 "$(printf '## 증거\n- 실패 확인: 했음\n' | bash "$S" --has-fail-check)"
 check "'## 증거' 밖(검증 절)의 실패 확인은 세지 않음" 0 "$(printf '## 증거\n- 캡처 a.png\n## 검증\n- 실패 확인: a -> b\n' | bash "$S" --has-fail-check)"
-check "ASCII 화살표 -> 도 인정" 1 "$(printf '## 증거\n실패 확인: x -> y 실패\n' | bash "$S" --has-fail-check)"
+check "ASCII 화살표 -> 도 인정" 1 "$(printf '## 증거\n실패 확인: x -> y FAIL\n' | bash "$S" --has-fail-check)"
 
 # #210 리뷰 M: 서버 테스트·통합 테스트·같은 폴더의 *.test.* 도 검사 파일
 check "supabase/tests 는 검사 파일" "supabase/tests/cheers.test.sql" "$(printf 'supabase/tests/cheers.test.sql\n' | bash "$S" --test-files)"
@@ -51,7 +51,7 @@ for lie in '안 함 시간 부족 → 다음 PR' '안 했음 → 다음에' '못
   check "거짓 증거 '실패 확인: $lie' 는 0" 0 "$(printf '## 증거\n- 실패 확인: %s\n' "$lie" | bash "$S" --has-fail-check)"
 done
 check "정상: '실패 확인: 없음 처리 0 → 1 Expected 0' 은 1" 1 "$(printf '## 증거\n- 실패 확인: 없음 처리 0 → 1 Expected 0\n' | bash "$S" --has-fail-check)"
-for ok in 'x → FAIL 2건' 'y -> ✕ 1' 'z → TypeError: a' 'w → exit 1' 'v → 2건 실패'; do
+for ok in 'x → FAIL 2건' 'y -> ✕ 1' 'z → TypeError: a' 'w → exit 1' 'v → 2개 실패'; do
   check "표지 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
 done
 check "exit 0 은 실패 표지가 아님" 0 "$(printf '## 증거\n- 실패 확인: a → exit 0\n' | bash "$S" --has-fail-check)"
@@ -63,11 +63,37 @@ check "'→ Error 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → 
 check "'→ 실패 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → 실패 없음\n' | bash "$S" --has-fail-check)"
 check "'→ Tests: 1 failed' 는 1(소문자 failed)" 1 "$(printf '## 증거\n- 실패 확인: x → Tests: 1 failed\n' | bash "$S" --has-fail-check)"
 check "'→ 2 Failed' 는 1(대문자 섞임)" 1 "$(printf '## 증거\n- 실패 확인: x → 2 Failed\n' | bash "$S" --has-fail-check)"
-check "'→ fail' 는 1" 1 "$(printf '## 증거\n- 실패 확인: x -> fail\n' | bash "$S" --has-fail-check)"
+check "'→ fail'(소문자 일상어)는 0(#224 동결)" 0 "$(printf '## 증거\n- 실패 확인: x -> fail\n' | bash "$S" --has-fail-check)"
 check "'→ failure' 처럼 낱말 속 fail 은 0" 0 "$(printf '## 증거\n- 실패 확인: x → nofailure\n' | bash "$S" --has-fail-check)"
 # #210 리뷰 L: 코드 블록 안의 '## ' 는 절 끝이 아님
-check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b 실패\n## 검증\nx\n' | bash "$S" --has-fail-check)"
+check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b FAIL\n## 검증\nx\n' | bash "$S" --has-fail-check)"
 check "코드 블록 밖 '## 검증' 뒤는 절 밖" 0 "$(printf '## 증거\n- 캡처\n## 검증\n- 실패 확인: a → b\n' | bash "$S" --has-fail-check)"
+
+# #224 동결 규칙: 실패가 실제로 일어난 출력 모양만 — 거짓 9줄은 0, 정상 6줄은 1
+while IFS= read -r lie; do
+  check "동결 거짓 '$lie' 는 0" 0 "$(printf '## 증거\n- 실패 확인: %s\n' "$lie" | bash "$S" --has-fail-check)"
+done <<'LIES'
+x → error 처리 안 함
+x → received 없이 넘어감
+x → fail 안 해 봄
+x → 실패
+x → 실패 가능성 있음
+x → Error 없음
+x → FAIL 없음
+x → failed 테스트 없음
+x → exit 0
+LIES
+while IFS= read -r ok; do
+  check "동결 정상 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
+done <<'OKS'
+여백 0 → 8 → Expected 0 Received 8
+x → Tests: 1 failed, 12 passed
+x → FAIL __tests__/a.test.ts
+x → ✕ align start
+x → exit 1
+x → 2개 실패, 되돌린 뒤 통과
+OKS
+check "동결: '실패했' 도 인정" 1 "$(printf '## 증거\n- 실패 확인: x → 테스트가 실패했다\n' | bash "$S" --has-fail-check)"
 
 # 끝에서 끝: 검사 파일을 바꾼 PR 에 실패 확인이 없으면 경고가 실제로 뜬다(일부러 넣은 위반)
 tmp="$(mktemp -d)"
