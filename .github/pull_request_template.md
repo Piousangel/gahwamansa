@@ -14,4 +14,4 @@
 <!-- tsc · eslint · npm test(횟수와 결과) · 빌드. 못 돌린 것은 명시 -->
 
 ## 리뷰
-<!-- 위험 영역(삭제·동의·푸시·DB = supabase/migrations·features/account·consent·push)은 리뷰 2명, 일반 코드 1명, 내부 문서는 리드 확인만 -->
+<!-- 위험 영역(경로 목록: .github/risk-paths.txt — 삭제·동의·푸시·DB·인증·약관·계측·권한)은 리뷰 2명, 일반 코드 1명, 내부 문서는 리드 확인만 -->

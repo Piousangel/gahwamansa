@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0 # base 와 head 의 갈림점을 찾는다
+          persist-credentials: false # 토큰을 작업 폴더에 남기지 않는다(#180 리뷰 L)
       - name: main 에서 지운 파일(경고만)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -38,42 +39,21 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$count" -gt 0 ]; then
-            echo "::warning title=main 파일 삭제 ${count}개::$(printf '%s' "$deleted" | head -20 | tr '\n' ' ')"
+            # 파일 이름이 '::' 로 시작해 워크플로 명령으로 읽히지 않게(#180 리뷰 L): 경고 문구는 %·줄바꿈을 인코딩, 목록은 stop-commands 안에서 출력
+            msg="$(printf '%s' "$deleted" | head -20 | tr '\n' ' ' | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/::/%3A%3A/g')"
+            echo "::warning title=main 파일 삭제 ${count}개::${msg}"
+            token="stop-$(date +%s%N)"
+            echo "::stop-commands::${token}"
             printf '%s\n' "$deleted"
+            echo "::${token}::"
           fi
-      # 운영 규칙(11-20, 조사 #169): 코드 PR 본문에는 '## 증거'(캡처·녹화, 재현 → 수정 → 같은 재현 통과). 문서만 바꾼 PR(docs/·*.md)은 빼고(리드 확인만),
-      # 위험 영역(삭제·동의·푸시·DB = supabase/migrations·features/account·consent·push)은 '리뷰 2명 필요'를 요약에 적는다. 막지 않는다
+      # 운영 규칙(11-20, 조사 #169): 코드 PR 본문에는 '## 증거'. 위험 영역(.github/risk-paths.txt)은 '리뷰 2명 필요'. 막지 않는다.
+      # 판정은 .github/scripts/pr-evidence.sh, 그 판정의 고정 테스트는 pr-evidence.test.sh(먼저 돈다, #180 리뷰)
+      - name: 증거 판정 자체 테스트
+        run: bash .github/scripts/pr-evidence.test.sh
       - name: 증거 칸·리뷰 인원(경고만)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: |
-          files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
-          code=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' | grep -c . || true)
-          risk=$(printf '%s\n' "$files" | grep -E '^supabase/migrations/|^app/src/features/account/|[Cc]onsent|^app/src/push/|/push|[Pp]ush[A-Z]' | grep -c . || true)
-          # 본문의 '## 증거' 절: 제목 다음 줄부터 다음 '## ' 전까지, 주석(<!-- -->)·빈 줄을 뺀 글자가 있어야 한다
-          evidence=$(printf '%s\n' "$PR_BODY" | tr -d '\r' | awk '/^## 증거[[:space:]]*$/{f=1;next} /^## /{f=0} f' | sed -e 's/<!--.*-->//g' | grep -v -E '^[[:space:]]*$' | grep -c . || true)
-          has_heading=$(printf '%s\n' "$PR_BODY" | tr -d '\r' | grep -c -E '^## 증거[[:space:]]*$' || true)
-          {
-            echo "### PR 가드"
-            if [ "$code" -eq 0 ]; then
-              echo "- 문서만 바꾼 PR: 증거 칸 검사 생략(리드 확인만)"
-            elif [ "$has_heading" -eq 0 ]; then
-              echo "- 본문에 '## 증거' 칸이 없어요(캡처·녹화, 재현 → 수정 → 같은 재현 통과)"
-            elif [ "$evidence" -eq 0 ]; then
-              echo "- '## 증거' 칸이 비어 있어요"
-            else
-              echo "- 증거 칸: 있음(${evidence}줄)"
-            fi
-            if [ "$risk" -gt 0 ]; then
-              echo "- 위험 영역(삭제·동의·푸시·DB)을 건드림: **리뷰 2명 필요**"
-              printf '%s\n' "$files" | grep -E '^supabase/migrations/|^app/src/features/account/|[Cc]onsent|^app/src/push/|/push|[Pp]ush[A-Z]' | head -30 | sed 's/^/  - /'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$code" -gt 0 ] && [ "$evidence" -eq 0 ]; then
-            echo "::warning title=증거 칸::PR 본문 '## 증거' 칸이 없거나 비어 있어요(캡처·녹화, 재현 → 수정 → 같은 재현 통과)"
-          fi
-          if [ "$risk" -gt 0 ]; then
-            echo "::notice title=리뷰 2명::위험 영역(삭제·동의·푸시·DB) 파일 ${risk}개 — 리뷰 2명 필요"
-          fi
+        run: bash .github/scripts/pr-evidence.sh
