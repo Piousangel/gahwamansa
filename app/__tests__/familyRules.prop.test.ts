@@ -135,6 +135,15 @@ test('#181 재확인 L: 계정을 지우면 같은 기기라도 새 익명 계�
   await api.deleteMyAccount();
   const r = await api.redeemInviteCode('123456');
   expect(r).toEqual({ok: false, reason: 'used'});
+  expect(await api.whoAmI()).toBe('none'); // #216 L: 연결도 끊김(어르신 연결이 없으면 none)
+});
+
+test('#216 리뷰 L: 자녀가 계정을 지우면 fake 의 어르신 계정·연결은 그대로(자녀 계정만 지움)', async () => {
+  const api = createFakeApi({linked: true, consented: true, who: 'child'});
+  expect(await api.whoAmI()).toBe('child');
+  await api.deleteMyAccount();
+  expect(await api.whoAmI()).toBe('parent'); // 자녀 표시만 풀리고 이 fake 의 어르신 연결은 남는다
+  expect((await api.peekInviteCode('123456')).ok).toBe(true); // 어르신 쪽 번호 상태도 그대로(쓴 사람 없음)
 });
 
 test('답 공유 동의 버전 형식: v + 숫자 1~3자리만(서버 0035 29행), 아니면 invalid_version', async () => {
