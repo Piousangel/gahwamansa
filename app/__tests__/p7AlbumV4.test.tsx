@@ -2,14 +2,19 @@
 // 이번 주 도장 줄은 7칸(찍은 날 ✓ + 읽기는 찍은 요일만), Dock 은 '알겠어요' 하나, 색은 토큰.
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {render, screen, waitFor, within} from '@testing-library/react-native';
+import {act, render, screen, waitFor, within} from '@testing-library/react-native';
+import {AccessibilityInfo} from 'react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, pressCourseNext} from '../testUtils/flow';
 import {P7_MOUNT} from '../src/features/course/AlbumMount';
-import {WeekStampStrip} from '../src/features/course/WeekStampStrip';
+import {WeekStampStrip, setWeekStripForTest} from '../src/features/course/WeekStampStrip';
 import {SealStamp} from '../src/ui/assets/album';
 import {tokensV4} from '../src/ui/tokensV4';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -18,6 +23,8 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
 }));
 afterEach(() => {
   mockFontScale = 1;
+  setWeekStripForTest(null);
+  jest.restoreAllMocks();
 });
 
 async function toDone() {
@@ -70,7 +77,7 @@ test('R-15: 첫 화면 끝이 도장 줄을 가르면 그 줄을 통째로 접�
 
 test('도장 줄: 7칸, 찍은 날만 ✓, 읽기는 찍은 요일만(개수·빈 날 미언급), 색은 토큰', () => {
   render(<WeekStampStrip days={[true, false, true, false, false, false, false]} />);
-  const row = screen.getByTestId('p7-week');
+  const row = screen.getByTestId('week-strip');
   expect(row.props.accessibilityLabel).toBe('이번 주 도장, 월요일, 수요일에 찍었어요');
   expect(screen.getAllByTestId(/^stamp-(on|empty)-\d$/)).toHaveLength(7);
   expect(StyleSheet.flatten(screen.getByTestId('stamp-on-0').props.style)).toMatchObject({backgroundColor: tokensV4.color.actionSoft, borderColor: tokensV4.color.action});
@@ -84,4 +91,42 @@ test('인장 색은 토큰(brandSeal·brandSealDeep·brandSealGlyph)에서 — �
   expect(xml).toContain(tokensV4.color.brandSeal);
   expect(xml).toContain(tokensV4.color.brandSealDeep);
   expect(xml).toContain(tokensV4.color.brandSealGlyph);
+});
+
+test('리뷰 L3: 도장 줄을 끄면(오너 검토 중) P7 은 3개 묶음(마운트·제목·둘째 줄)이고 접힘 계산도 그대로, P3 에도 없다', async () => {
+  setWeekStripForTest(false);
+  mockFontScale = 2;
+  await toDone();
+  expect(screen.queryByTestId('p7-week')).toBeNull();
+  expect(screen.queryByTestId('course-week', {includeHiddenElements: true})).toBeNull();
+  const {fireEvent} = require('@testing-library/react-native');
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+  const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+  await act(async () => {
+    lay('screen-body-area', 0, 504); // 접힘 480
+    lay('p7-stage', 8, 600);
+    lay('p7-item-mount', 0, 300); // 8~308
+    lay('p7-item-title', 0, 132); // 324~456
+    lay('p7-item-text', 0, 64); // 472~536 → 걸림
+  });
+  expect(mt('p7-item-text')).toBeGreaterThanOrEqual(480 - 472);
+  expect(mt('p7-item-title')).toBeUndefined();
+});
+
+test('리뷰 L1: 들어오면 화면 읽기 포커스는 제목(캡션보다 먼저)', async () => {
+  const spy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {});
+  spy.mockClear();
+  await toDone();
+  const title = screen.getByTestId('p7-title');
+  await waitFor(() => expect(spy.mock.calls.some(([node, ev]) => ev === 'focus' && (node as unknown as {props?: {testID?: string}})?.props?.testID === 'p7-title')).toBe(true), {timeout: 2000});
+  expect(title.props.accessibilityRole).toBe('header');
+  expect(title.props.accessibilityLabel).toBe('오늘 코스를 마쳤어요');
+});
+
+test('오너 결정 O-6: 기본값은 도장 줄 꺼짐(P7·P3 모두 없음), 컴포넌트는 남는다', async () => {
+  setWeekStripForO6(null);
+  await toDone();
+  expect(screen.queryByTestId('p7-week')).toBeNull();
+  expect(screen.queryByTestId('course-week', {includeHiddenElements: true})).toBeNull();
+  expect(typeof WeekStampStrip).toBe('function');
 });
