@@ -46,6 +46,15 @@ check "검사 아닌 코드(*.ts)는 아님" "" "$(printf 'app/src/ui/foo.ts\n' 
 check "'실패 확인: 안 함 → 시간 없음' 은 0" 0 "$(printf '## 증거\n- 실패 확인: 안 함 → 시간 없음\n' | bash "$S" --has-fail-check)"
 check "'실패 확인: 생략 -> 문서' 는 0" 0 "$(printf '## 증거\n- 실패 확인: 생략 -> 문서\n' | bash "$S" --has-fail-check)"
 check "'실패 확인 없음 →' 은 0" 0 "$(printf '## 증거\n실패 확인 없음 → x\n' | bash "$S" --has-fail-check)"
+# #214 리뷰: 긍정 증거(화살표 뒤 실패 출력 표지)만 인정 — 거짓 증거 5개는 0, 정상 사례는 1
+for lie in '안 함 시간 부족 → 다음 PR' '안 했음 → 다음에' '못 함 → 시간 없음' '생략 → 문서 PR' '해당 없음 -> 테스트 없음' '생략했어요 → 다음 PR' '안 했어요 → 시간' '생략: 다음 PR → x' '없음 - 문서 → x'; do
+  check "거짓 증거 '실패 확인: $lie' 는 0" 0 "$(printf '## 증거\n- 실패 확인: %s\n' "$lie" | bash "$S" --has-fail-check)"
+done
+check "정상: '실패 확인: 없음 처리 0 → 1 Expected 0' 은 1" 1 "$(printf '## 증거\n- 실패 확인: 없음 처리 0 → 1 Expected 0\n' | bash "$S" --has-fail-check)"
+for ok in 'x → FAIL 2건' 'y -> ✕ 1' 'z → TypeError: a' 'w → exit 1' 'v → 2건 실패'; do
+  check "표지 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
+done
+check "exit 0 은 실패 표지가 아님" 0 "$(printf '## 증거\n- 실패 확인: a → exit 0\n' | bash "$S" --has-fail-check)"
 # #210 리뷰 L: 코드 블록 안의 '## ' 는 절 끝이 아님
 check "코드 블록 안 '## ' 뒤의 실패 확인도 증거 절로 본다" 1 "$(printf '## 증거\n```\n## 출력 제목\nok\n```\n- 실패 확인: a → b 실패\n## 검증\nx\n' | bash "$S" --has-fail-check)"
 check "코드 블록 밖 '## 검증' 뒤는 절 밖" 0 "$(printf '## 증거\n- 캡처\n## 검증\n- 실패 확인: a → b\n' | bash "$S" --has-fail-check)"

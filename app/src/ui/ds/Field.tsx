@@ -2,7 +2,7 @@ import React, {useEffect, useId} from 'react';
 import {announce} from '../a11y';
 import {StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps} from 'react-native';
 import {Text} from './Text';
-import {ds, minTouch, roleText} from './roles';
+import {ds, minTouch, roleText, roleMark} from './roles';
 import {useAudience} from './audience';
 
 export type FieldKind = 'text' | 'email' | 'otp' | 'word';
@@ -57,6 +57,7 @@ export function Field({label, hint, error, kind = 'text', value, onChangeText, o
         </Text>
       ) : null}
       <TextInput
+        {...roleMark('fieldInput')}
         ref={inputRef}
         testID={testID}
         accessibilityLabel={accessibilityLabel ?? label}

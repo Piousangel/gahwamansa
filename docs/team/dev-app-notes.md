@@ -673,3 +673,72 @@
 - (#133 리뷰 반영, 브랜치 다시 만듦) M1: 미연결 코스 보기도 뿌리 reset, resetRole 은 기기 도장을 지우지 않음(회귀 테스트 2개). L1: P3 접힘은 ui/FoldStack(높이를 key 로 기억). H1(지난 PR 이 병합된 변경을 되돌림): 다른 작업 폴더가 공유 origin/main 을 앞당긴 뒤 reset --soft origin/main 으로 커밋해 생긴 일 — 이번에는 실제 기준(9ef9cbd)과의 diff 만 최신 main 에 3-way 로 옮겼다
 - (#138 리뷰 L2) 미연결 기기는 코스 홈이 뿌리라 같은 실행 안에서 처음 화면(역할 선택)으로 돌아갈 길이 없다(앱을 다시 켜면 처음 화면). 의도: 뒤로가기로 데이터를 지우지 않는 쪽을 택함. L3: 처음 화면으로 가도 미연결 도장(날짜만)은 기기에 남는다(받아들임)
 - (O-6, 오너 11-20) 이번 주 도장 7칸 끔: WeekStampStrip 의 SHOW_WEEK_STRIP=false(컴포넌트·테스트용 setWeekStripForTest 는 남김). 줄 동작 테스트는 켜고 시작, 기본 꺼짐은 p7AlbumV4 가 고정.
+
+## 앱 공통 요청 시간 제한 조사 (2026-11-20, L4, #208 H1)
+
+**리드 결정(11-20):** 공통 래퍼로 간다. 구현은 서버 레인이 쓰기 RPC 멱등성 표(특히 send_cheer)를 만든 뒤에 한다.
+
+### 결론
+앱 전체 공통 시간 제한은 가능하다. 한 곳만 바꾸면 되고, 기존 오프라인 처리와 그대로 맞물린다.
+- **권장:** `createSupabase()` 의 `global.fetch` 를 시간 제한 래퍼로 감싼다. 기본은 15초, 예외 경로 몇 개는 길게 둔다.
+- 시간이 다 되면 기존 'offline' 경로(OfflineError → '인터넷이 잠깐 끊겼어요 · 다시 하기')로 떨어진다. 그래서 화면 쪽은 고칠 것이 없다.
+- 단, POST(RPC)는 '서버는 이미 처리했는데 응답만 늦은' 경우가 있다. 이 위험은 RPC마다 멱등성(같은 요청을 다시 보내도 결과가 같은 성질)으로 판단해야 한다(아래 4절).
+
+### 1. 감싸는 방법(확인한 사실)
+- supabase-js 2.119.0 에서 `createClient(url, key, {global: {fetch}})` 의 fetch 하나가 모든 요청에 쓰인다. 이 저장소의 node_modules 를 읽어 확인했다.
+  - PostgREST(rpc·from): `node_modules/@supabase/supabase-js/dist/index.cjs`(SupabaseClient 생성자) 668행 `fetchWithAuth(..., settings.global.fetch)`
+  - Functions(같은 파일 669행)·Storage
+  - Auth(같은 파일 661행): `_initSupabaseAuthClient(..., settings.global.fetch)`. 토큰 갱신·OTP·소셜 로그인 요청도 같은 fetch 를 탄다.
+- RN 0.88.1 은 `AbortController`, `AbortSignal.timeout()`, `AbortSignal.any()` 를 갖고 있다(`react-native/src/private/webapis/dom/abort-api/AbortSignal.js` 69·89행).
+- 래퍼 모양(안):
+  ```ts
+  const timedFetch = (ms: (url: string) => number) => (input: RequestInfo, init?: RequestInit) => {
+    const own = AbortSignal.timeout(ms(String(input)));
+    const signal = init?.signal ? AbortSignal.any([init.signal, own]) : own; // 호출자가 준 abortSignal 도 존중
+    return fetch(input, {...init, signal});
+  };
+  createClient(url, key, {auth: {...}, global: {fetch: timedFetch(pickTimeout)}});
+  ```
+- 개별 요청을 다르게 하려면 PostgREST 빌더의 `.abortSignal(signal)` 을 쓴다(`postgrest-js/dist/index.cjs` 1143행). 자녀 레인의 '계정 삭제 30초'도 이 방식으로 옮길 수 있다.
+- 주의: `fetchWithAuth` 는 fetch 전에 `await getAccessToken()`(세션 읽기·필요하면 토큰 갱신)을 한다. 갱신 요청 자체는 같은 fetch 라 시간 제한이 걸린다. 다만 AsyncStorage 읽기는 시간 제한 밖이다(로컬이라 실제 위험은 낮음).
+
+### 2. 시간이 다 됐을 때 오류가 어떻게 보이나(확인한 사실)
+- postgrest-js 는 fetch 가 throw 하면 결과를 `{error: {message: 'AbortError: …', code: '', …}, status: 0}` 으로 바꾼다(`node_modules/@supabase/postgrest-js/dist/index.cjs` 420~458행, abort 는 재시도하지 않고 바로 실패, 214행).
+- 앱 `realApi.ts` 의 `looksOffline` 은 `!e.code && (e.status === 0 || … || /timed? ?out/)` 이다(28~30행). 그래서 **시간 초과는 OfflineError 로 분류된다.** 화면은 이미 offline 을 '다시 하기'로 처리하므로 새 UI 가 필요 없다.
+- Auth 쪽 오류는 `AuthRetryableFetchError` 로 감싸지고, 같은 함수가 offline 으로 본다.
+
+### 3. RPC별 기본값(제안)
+| 묶음 | 예 | 제안 | 이유 |
+|---|---|---|---|
+| 읽기 | child_summary, preview_content, my_week_stamps, parent_history, peek_invite_code, get_my_cheers, delete_scope_preview | **10초** | 결과가 작다. 화면 첫 그리기를 오래 막지 않는다 |
+| 쓰기(짧음) | save_answer, record_session_step, give_consent, set_parent_title(_for), send_cheer, issue/redeem_invite_code, create_family | **15초** | 서버 처리 한 번 |
+| 계측 | log_event | **5초** | 실패해도 무시(이미 catch) |
+| 계정 삭제 | delete_my_account(+ 카카오 연결 끊기 함수) | **30초**(자녀 레인 값과 맞춤) | 연쇄 삭제·외부 호출 |
+| 인증 | 이메일 인증번호 보내기·확인, 소셜 로그인 교환, 토큰 갱신 | **20초** | 메일 발송·외부 IdP |
+- 고르는 법: 래퍼가 URL 로 판단한다. `/rest/v1/rpc/<이름>`, `/auth/v1/`, `/functions/v1/<이름>` 으로 나뉜다. 표에 없는 것은 기본 15초다.
+
+### 4. 긴 요청·예외
+- **사진:** 앱은 사진을 **올리지 않는다**(realApi 에 storage 업로드 없음). 사진 보기는 RN `Image`·`Image.prefetch`(네이티브 다운로드)라 이 fetch 를 타지 않는다. 그래서 이 래퍼의 예외 대상이 아니다. 네이티브 이미지 다운로드의 시간 제한은 별도다(지금은 OS 기본값).
+- **멱등이 아닌 POST 를 시간 초과 뒤 '다시 하기'로 보내는 위험:**
+  - redeem_invite_code: 같은 계정이 다시 보내면 ok(0028 226~231행) → **안전**.
+  - delete_my_account: 이미 지워졌으면 다시 불러도 '없음'으로 끝나는지 서버 확인이 필요하다 → **확인 필요**.
+  - send_cheer: 서버 하루 한도·중복 키가 있는지 확인이 필요하다. 응답만 늦었는데 다시 하기를 누르면 두 번 보낼 수 있다 → **확인 필요(가장 위험)**.
+  - save_answer·record_session_step: 같은 날 같은 질문 덮어쓰기라면 안전 → **서버 확인**.
+  - log_event: 중복 1건은 허용.
+- **재시도 정책과의 관계:** postgrest-js 는 GET·HEAD 만 자동 재시도하고(3번, 503·520), rpc 는 POST 라 자동 재시도가 없다. 앱의 '다시 하기'는 사람이 누르는 재시도다. 시간 제한을 넣어도 자동 재시도가 늘지는 않는다. 다만 '영영 안 끝남'이 '15초 뒤 다시 하기'로 바뀌어, 사람이 누르는 재시도가 생긴다. 위 멱등성 확인이 필요한 이유다.
+
+### 5. 기존 처리와 맞물리는 점
+- 오프라인 표시(Banner offline·StateView offline·토스트 '다시 하기')는 OfflineError 를 그대로 쓴다. 바꿀 것이 없다.
+- busy 잠금(busyLatch)·로딩 표시는 요청이 끝나야 풀린다. 시간 제한이 생기면 최악의 경우에도 N초 뒤 풀린다. 이것이 개선점이다.
+- 자녀 레인의 '계정 삭제 30초'(#208)는 화면 쪽 Promise.race 로 보인다. 공통 래퍼가 생기면 실제 요청까지 끊기도록 래퍼(또는 `.abortSignal`)로 옮기는 것을 권한다. race 는 화면만 풀고 요청은 계속 남는다.
+
+### 6. 구현할 때(결정 뒤)
+- 변경:
+  - `lib/supabase.ts` 에 래퍼와 표를 둔다.
+  - `realApi.ts` 의 `looksOffline` 에 `AbortError`·`TimeoutError` 를 명시한다(지금도 status 0 으로 잡히지만 의도를 드러내려고).
+- 테스트:
+  - 래퍼 단위 테스트: 가짜 fetch 가 끝나지 않으면 N초 뒤 AbortError, 호출자 signal 도 존중, URL 별 시간.
+  - realApi 통합: 걸린 요청 → OfflineError.
+  - 실패 확인: 시간 제한을 빼면 '끝나지 않음' 테스트가 시간 초과로 실패하는지 본다.
+- 위험 영역: 인증·삭제 경로를 건드리므로 리뷰 2명이 필요하다.
+- 서버 확인 3건(send_cheer·delete_my_account·save_answer 의 재전송 결과)을 먼저 서버 레인에 묻는다.

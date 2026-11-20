@@ -1,11 +1,12 @@
 // ui/ds v4 컴포넌트 단위 테스트(SUMMARY 3절 RNTL): 역할 → 크기·색·상한, minHeight(고정 높이 없음), 말줄임 없음, TalkBack 역할·라벨.
 // 값은 tokensV4(생성물)에서 읽어 비교한다 — 원본 값이 바뀌어도 테스트는 고칠 일이 없다.
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {fireEvent, render, screen} from '@testing-library/react-native';
 import {AudienceProvider, BackLink, Banner, Button, Card, Choice, Field, Heading, Section, SocialButton, StateView, Text} from '../src/ui/ds';
 import {BANNER_ACTION, BANNER_LOOK} from '../src/ui/ds/Banner';
 import {CARD_SURFACE} from '../src/ui/ds/Card';
+import {roleText} from '../src/ui/ds/roles';
 import {tokensV4 as t, type Audience} from '../src/ui/tokensV4';
 
 const flat = (s: unknown) => (StyleSheet.flatten(s as never) ?? {}) as Record<string, unknown>;
@@ -401,5 +402,60 @@ describe('Choice columns 판정 순서(#115 리뷰 L1·L2)', () => {
     fireEvent(screen.getByTestId('choice'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 312, height: 400}}});
     expect(two()).toBe(false);
     jest.restoreAllMocks();
+  });
+});
+
+// #211 L3: 렌더에 남긴 역할 표지(dsRole)가 실제 글자 크기·줄 높이·굵기와 같은지 — 거짓 표지면 R-04 집계가 틀린다
+describe('역할 표지 = 실제 style', () => {
+  type N = {type: unknown; props: Record<string, unknown>};
+  const marked = () =>
+    (screen.root.findAll((n: N) => typeof n.type === 'string' && typeof n.props.dsRole === 'string', {deep: true}) as N[]).map(n => ({role: n.props.dsRole as Parameters<typeof roleText>[0], st: flat(n.props.style)}));
+  const textRoles = ['display', 'title', 'heading', 'bodyLg', 'body', 'sub', 'label', 'numeral', 'hand'] as const;
+  test.each(['elder', 'child'] as const)('%s: ds Text 모든 역할·Button 네 가지(주·보조·글자·even)의 표지가 그 역할의 크기·줄 높이·굵기와 같다', a => {
+    const wrap = (ui: React.ReactElement) => (a === 'child' ? child(ui) : ui);
+    render(
+      wrap(
+        <View>
+          {textRoles.map(r => (
+            <Text key={r} role={r}>
+              {r}
+            </Text>
+          ))}
+          <Button label="주" onPress={noop} />
+          <Button kind="secondary" label="보조" onPress={noop} />
+          <Button kind="text" label="글자" onPress={noop} />
+          <Button kind="secondary" even label="대등" onPress={noop} />
+        </View>,
+      ),
+    );
+    const got = marked();
+    expect(got.length).toBe(textRoles.length + 4);
+    for (const {role, st} of got) {
+      const want = roleText(role, a).style;
+      expect([role, st.fontSize, st.lineHeight, st.fontWeight]).toEqual([role, want.fontSize, want.lineHeight, want.fontWeight]);
+    }
+  });
+  // #214 L2: BackLink·Field 입력·answer·sign 계열도 한 줄씩
+  const one = (ui: React.ReactElement, a: Audience, role: string, weight = true) => {
+    render(<View>{a === 'child' ? child(ui) : ui}</View>);
+    const got = marked().filter(m => m.role === role);
+    expect(got.length).toBe(1);
+    const want = roleText(got[0].role, a).style;
+    const pick = (x: Record<string, unknown>) => (weight ? [x.fontSize, x.lineHeight, x.fontWeight] : [x.fontSize, x.lineHeight]);
+    expect([role, ...pick(got[0].st)]).toEqual([role, ...pick(want as Record<string, unknown>)]);
+    screen.unmount();
+  };
+  test.each(['elder', 'child'] as const)('%s: BackLink(backLink)·Field 입력(fieldInput) 표지 = 실제 style', a => {
+    one(<BackLink to="설정으로" onPress={noop} />, a, 'backLink');
+    one(<Field label="이름" value="" onChangeText={noop} />, a, 'fieldInput');
+  });
+  test('자녀 answer·answerRow 표지 = 실제 style', () => {
+    one(<Text role="answer">가을</Text>, 'child', 'answer');
+    one(<Text role="answerRow">가을</Text>, 'child', 'answerRow');
+  });
+  test.each(['elder', 'child'] as const)('%s: Sign hero(signLabel)·row(signSmall) 표지 = 실제 크기·줄 높이(손글씨면 굵기 400 으로 바뀌어 굵기는 보지 않음)', a => {
+    const {Sign} = require('../src/ui/ds');
+    one(<Sign size="hero" label="가을" readLabel="r" />, a, 'signLabel', false);
+    one(<Sign size="row" label="가을" readLabel="r" />, a, 'signSmall', false);
   });
 });
