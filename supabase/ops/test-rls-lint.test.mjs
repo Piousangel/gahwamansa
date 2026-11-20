@@ -106,3 +106,44 @@ test('결과 집합 단언(results_eq·set_eq·bag_eq·is_empty·isnt·row_eq)�
   ].join('\n');
   assert.deepEqual(lines(lintSql(sql)), [2, 3, 4, 5, 6, 7]);
 });
+
+// ---- #222 리뷰 L(두 리뷰어): 오탐 3·놓침 2를 하나씩 고정 ----
+test('CTE 이름은 표가 아니다(오탐 제외)', () => {
+  const sql = [
+    "select pg_temp.act_as('c1', false);",
+    "select is((with g as (select 1 as x) select count(*)::int from g), 1, 'cte');",
+  ].join('\n');
+  assert.deepEqual(lintSql(sql), []);
+});
+
+test('extract(… from …) 안의 from은 표가 아니다(오탐 제외)', () => {
+  const sql = [
+    "select pg_temp.act_as('c1', false);",
+    "select ok(exists (select 1 where extract(year from current_date) > 2000), 'extract');",
+  ].join('\n');
+  assert.deepEqual(lintSql(sql), []);
+});
+
+test('from public.함수(…)는 함수 호출이라 표가 아니다(오탐 제외)', () => {
+  const sql = [
+    "select pg_temp.act_as('c1', false);",
+    "select is((select count(*)::int from public.child_answer_history_rows()), 0, 'fn');",
+  ].join('\n');
+  assert.deepEqual(lintSql(sql), []);
+});
+
+test('count(distinct 열)도 잡는다(놓침 보강)', () => {
+  const sql = [
+    "select pg_temp.act_as('c1', false);",
+    "select is((select count(distinct family_id)::int from public.profiles), 1, 'distinct');",
+  ].join('\n');
+  assert.deepEqual(lines(lintSql(sql)), [2]);
+});
+
+test('public이 아닌 RLS 스키마(storage)의 표도 잡는다(놓침 보강)', () => {
+  const sql = [
+    "select pg_temp.act_as('c1', false);",
+    "select is((select count(*)::int from storage.objects where bucket_id = 'content-photos'), 0, 'storage');",
+  ].join('\n');
+  assert.deepEqual(lines(lintSql(sql)), [2]);
+});
