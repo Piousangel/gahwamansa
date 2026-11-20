@@ -49,19 +49,20 @@ describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 
     await new Promise<void>(r => setTimeout(() => r(), 30));
     expect(screen.queryByText('안녕하세요, 해님이에요')).toBeNull();
   });
-  test('디자인 판정: 크기 72, 진입 알림(live region) 없음', async () => {
+  test('P3 v4(시안 ds4b): 해님 인사 카드 1개(해님 36 + 인사 + 세 가지를 차례로 해요), 진입 알림(live region) 없음', async () => {
     mockFontScale = 1;
     await home();
-    const bubble = await waitFor(() => screen.getByTestId('first-greeting'));
-    const art = within(bubble).getByTestId('sun-bubble-art', {includeHiddenElements: true});
-    expect(StyleSheet.flatten(art.props.style).width).toBe(72);
-    expect(screen.getByLabelText('안녕하세요, 해님이에요').props.accessibilityLiveRegion).toBeUndefined();
+    const card = await waitFor(() => screen.getByTestId('first-greeting'));
+    expect(within(card).getByTestId('icon-sun', {includeHiddenElements: true}).props.width).toBe(36);
+    expect(card.props.accessibilityLabel).toBe('안녕하세요, 해님이에요, 세 가지를 차례로 해요');
+    expect(card.props.accessibilityLiveRegion).toBeUndefined();
   });
-  test('글자 150% 이상이면 56', async () => {
+  test('글자 150% 이상이면 \'세 가지를 차례로 해요\'는 카드 밖 제목(시안 200% 보드)', async () => {
     mockFontScale = 1.5;
     await home();
-    const bubble = await waitFor(() => screen.getByTestId('first-greeting'));
-    expect(StyleSheet.flatten(within(bubble).getByTestId('sun-bubble-art', {includeHiddenElements: true}).props.style).width).toBe(56);
+    const card = await waitFor(() => screen.getByTestId('first-greeting'));
+    expect(within(card).queryByText('세 가지를 차례로 해요')).toBeNull();
+    expect(screen.getByRole('header', {name: '세 가지를 차례로 해요'})).toBeTruthy();
   });
   test('첫 단계를 시작했다 돌아오면 다시 나오지 않는다(그 방문 동안만)', async () => {
     await home();

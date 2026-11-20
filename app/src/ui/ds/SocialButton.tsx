@@ -4,7 +4,7 @@ import {brand} from '../tokens';
 import {assetRegistry} from '../assets/registry';
 import {KakaoSymbol} from '../assets/kakaoSymbol';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
-import {ds, roleText} from './roles';
+import {roleText} from './roles';
 
 // 타사 로그인 버튼(v4, ui/ 로 이동한 판). 규정: design-system/assets/third-party-login/GUIDELINES.md.
 // 브랜드 예외(R-17 단서, tokens-v4 dock.socialGroup): 색·로고는 각 회사 가이드, 글자 굵기 500(역할 토큰 밖).
@@ -51,8 +51,11 @@ export function SocialButton({provider, label, onPress, disabled, testID}: Socia
   );
 }
 
+// 카카오·구글 공식 가이드 버튼 모서리(12). 우리 반경 4단(v5)과 상관없이 브랜드 가이드를 따른다
+const BRAND_RADIUS = 12;
+
 const styles = StyleSheet.create({
-  base: {minHeight: SOCIAL_MIN_HEIGHT, alignSelf: 'stretch', borderRadius: ds.radius.chip, flexDirection: 'row', alignItems: 'center', paddingVertical: 8},
+  base: {minHeight: SOCIAL_MIN_HEIGHT, alignSelf: 'stretch', borderRadius: BRAND_RADIUS, flexDirection: 'row', alignItems: 'center', paddingVertical: 8},
   kakao: {backgroundColor: brand.kakaoYellow, paddingHorizontal: 16},
   google: {backgroundColor: brand.googleSurface, borderWidth: 1, borderColor: brand.googleBorder, paddingHorizontal: 12},
   off: {opacity: 0.6},

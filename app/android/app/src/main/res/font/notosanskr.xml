@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 본문·제목 글꼴(F-01, 전문가 리뷰 A2·오너 O-2). JS 는 fontFamily 'notosanskr' + fontWeight 400/700 으로 고른다(가짜 굵게 없음).
+     MainApplication 이 ReactFontManager 에 등록. 출처: notofonts/noto-cjk 165c01b Sans/SubsetOTF/KR, SIL OFL 1.1 -->
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font app:fontStyle="normal" app:fontWeight="400" app:font="@font/notosanskr_regular" />
+    <font app:fontStyle="normal" app:fontWeight="700" app:font="@font/notosanskr_bold" />
+</font-family>

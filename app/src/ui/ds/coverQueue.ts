@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 
 /**
  * 덮개(cover) 큐 — 하루 하나(전문가 리뷰 A8 7/8, P-07).
@@ -77,18 +77,39 @@ export const configureCoverQueue = (s: CoverStore) => coverQueue.configure(s);
  */
 export function useCover(id: string, want: boolean, queue = coverQueue) {
   const [visible, setVisible] = useState(false);
+  // 실제로 언마운트될 때만 false(#160 리뷰 M1). effect 가 다시 돌 때의 cleanup(alive=false)과 구분한다
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      queue.release(id);
+    };
+  }, [id, queue]);
   useEffect(() => {
     if (!want) {
       return;
     }
     // 리뷰 L3: 다시 실행돼도(StrictMode 이중 effect 등) 다시 청한다 — 같은 id 가 이미 떠 있으면 큐가 그대로 허락한다
     let alive = true;
-    queue.request(id).then(ok => alive && ok && setVisible(true));
+    queue.request(id).then(ok => {
+      if (!ok) {
+        return;
+      }
+      if (!mounted.current) {
+        // 리뷰 #150 L2: 허락이 오기 전에 화면이 내려갔으면 바로 놓는다(언마운트된 화면이 active 를 붙잡아 다른 덮개를 막지 않게)
+        queue.release(id);
+        return;
+      }
+      // effect 가 다시 돈 것뿐이면(alive=false, 아직 마운트) 놓지 않는다 — 다음 요청이 같은 id 로 허락받아 보인다(#160 M1)
+      if (alive) {
+        setVisible(true);
+      }
+    });
     return () => {
       alive = false;
     };
   }, [want, id, queue]);
-  useEffect(() => () => queue.release(id), [id, queue]);
   const close = useCallback(() => {
     setVisible(false);
     queue.release(id);

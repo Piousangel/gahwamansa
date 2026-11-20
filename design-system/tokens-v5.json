@@ -146,6 +146,37 @@
     "완료 초록(doneInk)·위험 빨강(dangerInk)은 기능 색으로 유지(팔레트 6색 밖, 의미 전용)",
     "장식 폐기: 해님·스티치·테이프·폴라로이드 마운트·家 인장은 쓰지 않는다. 사진은 둘레 장식 없이 사진 그대로"
   ],
+  "font": {
+    "decision": "전문가 리뷰 A2 8/8 + 오너 O-2(2026-11-20): 본문·제목 한 벌 Noto Sans KR 400/700 번들, Jua 폐기. 팻말 손글씨(붓)는 48dp 이상에서만(패널 7). 숫자는 tabular",
+    "bundled": {
+      "android": true,
+      "ios": false
+    },
+    "body": {
+      "family": "Noto Sans KR",
+      "android": "notosanskr",
+      "faces": {
+        "400": "NotoSansKR-Regular",
+        "700": "NotoSansKR-Bold"
+      },
+      "numerals": "tabular-nums",
+      "license": "SIL OFL 1.1",
+      "copyright": "© 2014-2021 Adobe (http://www.adobe.com/). (글꼴 name 표 원문, 라이선스: SIL OFL 1.1)",
+      "source": "https://github.com/notofonts/noto-cjk/tree/165c01b46ea533872e002e0785ff17e44f6d97d8/Sans/SubsetOTF/KR"
+    },
+    "hand": {
+      "family": "Nanum Brush Script",
+      "android": "nanumbrushscript",
+      "faces": {
+        "400": "NanumBrush"
+      },
+      "minSize": 48,
+      "status": "후보(크기 영향 측정 뒤 결정)",
+      "license": "SIL OFL 1.1",
+      "copyright": "Copyright (c) 2010, NHN Corporation (http://www.nhncorp.com), with Reserved Font Name Nanum, Naver Nanum, NanumGothic, Naver NanumGothic, NanumMyeongjo, Naver NanumMyeongjo, NanumBrush, Naver NanumBrush, NanumPen, Naver NanumPen.",
+      "source": "https://github.com/google/fonts/tree/6c41fbc1c32a2a1b8d01e12dcde76e157ae00127/ofl/nanumbrushscript"
+    }
+  },
   "fontCandidate": {
     "status": "v5(11-20): Jua 폐기. 본문·제목 한 벌 번들 = Noto Sans KR(2순위 Pretendard, 숫자 tabular). 팻말 손글씨만 나눔손글씨 붓",
     "body": "Noto Sans KR",
@@ -456,8 +487,8 @@
     },
     "title": {
       "elder": {
-        "size": 32,
-        "lineHeight": 44
+        "size": 30,
+        "lineHeight": 42
       },
       "child": {
         "size": 26,
@@ -629,7 +660,7 @@
       "weight": 400,
       "tone": "inkBody",
       "maxFontScale": 1.5,
-      "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 Jua 입력, 손글씨 아님"
+      "note": "Field 입력 글자(입력칸 안). 상한 1.5는 자판 열림과 상관없이 항상. 어르신 34는 본문 글꼴 입력, 손글씨 아님"
     },
     "answer": {
       "child": {
@@ -683,7 +714,7 @@
   "typeRules": [
     "화면은 역할만 고른다. size·weight·color 숫자 직접 지정 금지",
     "한 화면에 700을 쓰는 역할은 최대 2개. 본문에는 bold를 쓰지 않는다",
-    "인접 단계 크기 비율은 1.2 이상이고 모자라면 굵기·색으로 보완(토큰 테스트). 어르신 표 기준 title 32 / heading 26(1.23) / bodyLg 22(1.18) / body 20(1.10)은 SUMMARY 값이라 굵기(700↔400)·색(inkTitle↔inkBody)으로 보완하는 쌍으로 표시",
+    "인접 단계 크기 비율은 1.2 이상이고 모자라면 굵기·색으로 보완(토큰 테스트). 어르신 표 기준 title 30 / heading 26(1.15) / bodyLg 22(1.18) / body 20(1.10)은 보완하는 쌍으로 표시. heading/bodyLg·bodyLg/body는 굵기(700↔400)·색(inkTitle↔inkBody)으로, title/heading(둘 다 700)은 위치(화면당 1개 H1, 위 영역 맨 위)로 보완. title 32→30은 Noto Sans KR 재렌더(#162, 리드·디자인 11-20): 32에서 P2·P8 제목이 312 폭을 넘어 2줄",
     "빌드 1은 400/700 두 단계. 500은 S25 실측에서 확인될 때만. Pretendard 번들은 빌드 2 실측 뒤",
     "줄높이는 lineHeightTable 유지. 하한은 audience별(어르신 20 / 자녀 16, 16은 sub·약관 줄만)",
     "어르신 본문 20 유지(22는 어르신 실사용 확인 1회 뒤 빌드 2에서 재결정)"
@@ -856,6 +887,11 @@
     "ratioCompensatedPairs": [
       [
         "elder",
+        "title",
+        "heading"
+      ],
+      [
+        "elder",
         "heading",
         "bodyLg"
       ],
@@ -888,7 +924,7 @@
     "generated": "tokens-v4.json과 생성물 일치",
     "fontScale": "fontScale 2.0 Dock 슬롯·상한",
     "roles": "각 role 상한·minHeight 존재",
-    "answerSize": "answerRow(26) > 호칭 머리글(sub 16~20), answer(40) > title(26). 굵기 집계: '700 또는 Jua 강조 글자 3개 이하, 그중 answer는 1개'(R-21)"
+    "answerSize": "answerRow(26) > 호칭 머리글(sub 16~20), answer(40) > title(26). 굵기 집계: '700 강조 글자 3개 이하, 그중 answer는 1개'(R-21)"
   },
   "contrast": {
     "method": "WCAG 2.x 상대휘도 (L1+0.05)/(L2+0.05), design-system/scripts/contrast-v4.py 로 계산",

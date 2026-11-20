@@ -67,7 +67,8 @@ const styles = StyleSheet.create({
   pressed: {backgroundColor: color.paperSoft, borderColor: color.action},
   error: {backgroundColor: color.card, borderColor: color.dangerInk},
   disabled: {backgroundColor: color.disabledBg, borderColor: color.disabledBg},
-  label: {fontSize: 32, lineHeight: Math.round(32 * lineHeight.title), color: color.ink, fontWeight: 'bold', letterSpacing: 0},
+  // #179 M1: 선택지 글자는 읽는 글(inkTitle) — 파랑 on actionSoft 는 6.85 로 어르신 7:1 미달. 누를 수 있음은 카드 테두리·면이 알린다
+  label: {fontSize: 32, lineHeight: Math.round(32 * lineHeight.title), color: color.inkTitle, fontWeight: 'bold', letterSpacing: 0},
   badge: {fontSize: 20, lineHeight: 30, color: color.actionPressed, fontWeight: 'bold'},
   errorText: {fontSize: 20, lineHeight: 30, color: color.dangerInk, fontWeight: 'bold'},
 });

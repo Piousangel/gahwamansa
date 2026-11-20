@@ -118,7 +118,7 @@ export function ParentFamilyScreen() {
             return (
               <View key={m.seq} testID="family-row" style={styles.row} accessible accessibilityLabel={`${f.row}, ${date}`}>
                 <View style={styles.rowIcon}>
-                  <Icon name="icon-family" size={26} color={color.ink} />
+                  <Icon name="icon-family" size={26} color={color.inkTitle} /* 누를 수 없는 행의 장식 아이콘 — 파랑은 누를 것에만(#179 M1) */ />
                 </View>
                 <View style={styles.flex}>
                   <Text20 size={24} weight="bold" style={styles.title}>{f.row}</Text20>

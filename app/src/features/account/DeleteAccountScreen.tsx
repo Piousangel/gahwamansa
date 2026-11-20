@@ -14,6 +14,7 @@ import {errorMessage} from '../course/useFinishStep';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {prefs} from '../../lib/prefs';
 import {Dialog} from '../../ui/Dialog';
+import {contactMail, openContactMail} from './contactMail';
 
 type Props = {role: 'parent' | 'child'};
 
@@ -36,10 +37,14 @@ export function DeleteAccountScreen({role}: Props) {
   const dp = copy.delete.parent;
   const dc = copy.delete.child;
   const so = copy.delete.signed_out;
+  const sop = copy.delete.signed_out_parent;
 
   // 삭제 범위 사전 조회. 실패하면 가장 강한 경고(family)로 대체한다(보수적).
   const [scope, setScope] = useState<DeleteScope | null>(null);
   const [title, setTitle] = useState('부모님');
+  // 사전 조회의 실제 결과(실패면 null). 위 scope 는 화면 경고용이라 실패하면 'family'(가장 강한 경고)로 채우지만,
+  //   지운 뒤 문구 판단(어르신 none)에는 '모름'을 '가족 기록 있음'으로 읽으면 안 된다(#156 리뷰 1·2 H)
+  const previewScope = useRef<DeleteScope | null>(null);
   useEffect(() => {
     let alive = true;
     const loadTitle = () => {
@@ -57,6 +62,7 @@ export function DeleteAccountScreen({role}: Props) {
           return;
         }
         setScope(r.scope);
+        previewScope.current = r.scope;
         // 호칭은 가족이 있을 때만 쓴다(0049 'none' = 가족 연결 전이면 묻지 않는다, PR1 리뷰 M2)
         if (r.scope !== 'none') {
           loadTitle();
@@ -85,10 +91,20 @@ export function DeleteAccountScreen({role}: Props) {
       scrollRef.current?.showRange(0, 1);
     }
   }, [failed]);
+  // 앞선 시도가 응답 없이 실패했다(서버에서는 지워졌을 수 있음) — 그 뒤의 scope none 은 '이미 지워진 뒤'일 수 있다
+  const unsure = useRef(false);
   const done = (s: DeleteScope) => {
     clear();
     prefs().resetFirstGreeting(); // 같은 기기에서 다시 연결하는 계정은 해님 첫 인사를 다시 받는다(리뷰 l2 L3)
-    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title}}]}));
+    // 법률 확인(11-20): 어르신 scope none = 다시 설치한 새 익명 계정(프로필 없음)만 지워졌다 — 옛 기록은 남으므로 '모두 지웠어요'가 아니라 사실 + 문의.
+    //   단, 앞선 시도가 응답만 끊긴 뒤의 none 은 첫 시도에서 이미 지운 것일 수 있다(#146 H1) — 그때만 '모두 지웠어요'
+    //   그 예외는 사전 조회가 실제로 가족 기록 있음(parent·family)을 돌려줬을 때만 — 조회를 모르면(실패) 단정하지 않고 done_unsure(문의 안내)
+    //   나눔(라이터 #177): 사전 조회 none 또는 앞선 끊김 없음 → done_none / 조회 모름 + 앞선 끊김 → done_unsure / 조회 parent·family + 앞선 끊김 → '모두 지웠어요'
+    const p = previewScope.current;
+    const had = p === 'parent' || p === 'family';
+    const noneKind: 'none' | 'unsure' | undefined =
+      child || s !== 'none' ? undefined : !unsure.current || p === 'none' ? 'none' : p === null ? 'unsure' : had ? undefined : 'unsure';
+    navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: 'DeleteDone', params: {scope: s, role, title, noneKind}}]}));
   };
 
   const run = async () => {
@@ -97,6 +113,17 @@ export function DeleteAccountScreen({role}: Props) {
     }
     setFailed(null);
     setSignedOut(false);
+    // 어르신: 사전 조회가 실패했으면 지우기 전에 한 번 더 묻는다(지운 뒤 문구를 사실로 고르려고, #156 리뷰 H). 또 실패하면 모름 그대로.
+    //   앞선 시도가 끊긴 뒤에는 묻지 않는다 — 그 시도가 서버에서 이미 지웠으면 'none'이 와 '가족 기록 없었음'으로 잘못 읽힌다(재확인 M). 모름 = done_unsure
+    if (!child && previewScope.current === null && !unsure.current) {
+      await api
+        .deleteScopePreview()
+        .then(r => {
+          previewScope.current = r.scope;
+          setScope(r.scope);
+        })
+        .catch(() => {});
+    }
     const tag = await api.accountTag().catch(() => null); // 지운 뒤에는 세션이 없어 먼저 받아 둔다
     try {
       const r = await api.deleteMyAccount().finally(() => clearAccountKeys(defaultStore(), tag)); // 재검토 R2: 삭제 뒤 signOut 이 실패해도 정리
@@ -107,6 +134,7 @@ export function DeleteAccountScreen({role}: Props) {
         setFailed({title: so.title, body: so.body, button: so.button});
         return;
       }
+      unsure.current = true;
       setFailed(errorMessage(e));
     } finally {
       endBusy();
@@ -116,12 +144,19 @@ export function DeleteAccountScreen({role}: Props) {
   const confirmEnabled = !busy && (!strong || typed.trim() === dc.type_word);
 
   // 위험 보조 버튼: 어르신은 이 화면이 1단계라 누르면 2단계 상자(되돌릴 수 없어요는 상자에서 한 번만, copy 11절 ⑥). 지우기는 상자 안에서만
-  // 로그인이 풀렸으면 다시 하기가 아니라 다시 로그인(자녀 = 로그인, 어르신 = 번호 입력). 이 기기 세션 정리 후 이동
+  // 로그인이 풀렸으면 다시 하기가 아니라 다시 로그인(자녀만 — 어르신은 위 문의 메일, #153). 이 기기 세션 정리 후 이동
   const relogin = () => {
     clear();
     navigation.dispatch(CommonActions.reset({index: 0, routes: [{name: child ? 'Login' : 'Connect'}]}));
   };
-  const danger = signedOut && failed
+  // #153: 어르신은 익명 계정이라 번호를 다시 쓰면 새 계정이 생기고 옛 계정은 앱에서 지울 수 없다 → 다시 로그인(Connect) 대신 문의 메일.
+  //   이 화면에서 세션을 지우거나 번호 입력으로 보내지 않는다(그러면 새 빈 계정이 생긴다). 주소가 없으면 버튼 없이 contact_pending 한 줄
+  const mail = contactMail();
+  const parentSignedOut = signedOut && !child;
+  // 리드 11-20: 로그인이 풀린 어르신은 한 갈래(signed_out_parent, 문의 가능). '연결한 적 없음'은 기기 기록으로 확신할 수 없어(재설치 시 사라짐) 나누지 않는다
+  const danger = parentSignedOut
+    ? null
+    : signedOut && failed
     ? {label: failed.button, onPress: relogin}
     : failed
     ? {label: failed.button, onPress: run, loading: busy, buttonRef: child ? undefined : yesRef} // L1: 다시 하기도 같은 자리라 포커스 되돌림 ref 유지
@@ -153,15 +188,30 @@ export function DeleteAccountScreen({role}: Props) {
       }
       dock={{
         primary: {label: child ? dc.cancel : dp.cancel, onPress: () => navigation.goBack()},
-        secondary: {kind: 'danger', ...danger},
+        secondary: danger
+          ? {kind: 'danger', ...danger}
+          : mail
+            ? {kind: 'secondary', label: sop.button, onPress: () => openContactMail(mail), testID: 'delete-contact'}
+            : undefined,
       }}>
       {failed ? (
         // 실패 상자: 색만이 아니라 굵은 외곽선 + 머리글 문구로 구분(명세 §8 danger). 나타날 때 한 번 읽는다
         <View style={styles.box} accessibilityLiveRegion="polite" testID="delete-fail">
           <Text role="heading" tone="danger">
-            {signedOut ? so.title : child ? dc.fail : dp.fail_title}
+            {parentSignedOut ? sop.title : signedOut ? so.title : child ? dc.fail : dp.fail_title}
           </Text>
-          {signedOut ? <Text role="body">{so.body}</Text> : child ? null : <Text role="body">{dp.fail_body}</Text>}
+          {parentSignedOut ? (
+            <Text role="body">{sop.body}</Text>
+          ) : signedOut ? (
+            <Text role="body">{so.body}</Text>
+          ) : child ? null : (
+            <Text role="body">{dp.fail_body}</Text>
+          )}
+          {parentSignedOut && !mail ? (
+            <Text role="body" testID="delete-contact-pending">
+              {copy.app_info.contact_pending}
+            </Text>
+          ) : null}
         </View>
       ) : null}
       {!child ? (

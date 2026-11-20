@@ -31,6 +31,8 @@ export type DsScreenProps = {
   variant: ScreenVariant;
   /** 왼쪽 위 뒤로(스택 화면). 자판이 열려도 남는 한 줄 */
   back?: BackLinkProps;
+  /** BackLink 줄 오른쪽(접혀도 남는 한 줄). 예: P6 자판 열림 100% '넘어갈게요'(시안 ds4b, 자판이 열려도 보이게). 줄이 모자라면 아래 줄로 */
+  backAside?: React.ReactNode;
   /** 위 영역(단계 머리·화면 제목). form·step 은 자판이 열리면 접힌다 */
   header?: React.ReactNode;
   /** 접혔을 때 BackLink 가 읽어 주는 단계 정보 */
@@ -68,7 +70,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
+export function DsScreen({variant, back, backAside, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -115,6 +117,13 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
     const total = content + DOCK_PAD_TOP + dockBottomPad(kb > 0 ? 0 : insets.bottom);
     const level = spillRef.current;
     const next = nextSpill(level, total, cap, {secondary: !!dock.secondary, note: !!dock.note});
+    // even(대등한 두 답, #190 리뷰 L1): 보조만 본문으로 내리면 두 답이 갈라져 한쪽이 먼저 손에 닿는다 → 둘을 함께 본문 끝으로
+    if (dock.even && next >= 2 && !isSocialGroup(dock.primary)) {
+      releasedFor.current.add(condKey);
+      setSpill(2);
+      setUndock(true);
+      return;
+    }
     if (next !== level) {
       setSpill(next);
       return;
@@ -136,7 +145,16 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
   const top =
     back || header ? (
       <View style={styles.top} testID="ds-screen-top">
-        {back ? <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} /> : null}
+        {back ? (
+          backAside ? (
+            <View style={styles.backRow}>
+              <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} />
+              {backAside}
+            </View>
+          ) : (
+            <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} />
+          )
+        ) : null}
         {collapsed ? null : header}
       </View>
     ) : undefined;
@@ -145,6 +163,8 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
     <BaseScreen
       top={top}
       fill={v.fill}
+      // 안전망(#190): fill(intro)이어도 본문이 창보다 길면 스크롤한다. 들어가면 스크롤이 생기지 않는다 — 200%에서 본문 끝 버튼에 닿지 못하던 P2 결함의 재발 방지
+      fillScrollable
       // 옛 Screen 은 창 높이 × 비율로 자른다 → 보이는 창 기준 상한과 같아지게 비율을 환산
       dockMaxRatio={height > 0 ? cap / height : ratio}
       scrollRef={scrollRef}
@@ -169,7 +189,7 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
           />
         </View>
       ) : null}
-      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} spill={undock ? 2 : spill} /> : null}
+      {dock ? <DockSpill secondary={dock.secondary} note={dock.note} even={dock.even} spill={undock ? 2 : spill} /> : null}
       {tail}
     </BaseScreen>
   );
@@ -177,4 +197,5 @@ export function DsScreen({variant, back, header, stepInfo, dock, children, tail,
 
 const styles = StyleSheet.create({
   top: {gap: ds.space.group, paddingBottom: ds.space.group},
+  backRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: ds.space.group},
 });

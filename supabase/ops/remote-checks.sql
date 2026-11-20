@@ -75,6 +75,37 @@ with checks(check_name, ok, detail) as (
            || ' ← <ref>.supabase.co 인지 확인'
   union all
   -- 9. 운영 상태
+  -- 0057 연결 전·옛 익명 계정 정리. 읽기 전용 역할로도 돌도록 함수(stale_anonymous_users 등, 실행 권한 회수됨)를 부르지 않고 표만 읽는다(리뷰 #157-2 M1).
+  -- 대상 식은 anon_last_activity()·stale_anon_days()(90)와 같아야 한다 — 바꿀 때 함께.
+  -- (L4) 정리는 GoTrue 내부 열에 기대므로, 열이 바뀌면 단계 전체가 실패(-1, warning만)해 조용히 멈춘다 → 열이 있는지와 권한을 본다.
+  select '익명 계정 정리 준비(0057): auth 열·권한',
+         has_table_privilege('postgres', 'auth.sessions', 'select') and has_table_privilege('postgres', 'auth.refresh_tokens', 'select')
+           and has_table_privilege('postgres', 'auth.users', 'delete')
+           and (select count(*) from information_schema.columns
+                 where (table_schema, table_name, column_name) in (('auth', 'users', 'is_anonymous'), ('auth', 'users', 'last_sign_in_at'), ('auth', 'users', 'updated_at'),
+                                                                   ('auth', 'sessions', 'user_id'), ('auth', 'sessions', 'updated_at'), ('auth', 'sessions', 'refreshed_at'),
+                                                                   ('auth', 'refresh_tokens', 'user_id'), ('auth', 'refresh_tokens', 'updated_at'))) = 8,
+         '정리 대상(90일 넘은 프로필 없는 익명) ' || (select count(*) from auth.users u
+             where u.is_anonymous
+               and not exists (select 1 from public.profiles p where p.user_id = u.id)
+               and greatest(u.created_at, u.last_sign_in_at, u.updated_at,
+                            (select max(greatest(s.created_at, s.updated_at, s.refreshed_at::timestamp at time zone 'UTC')) from auth.sessions s where s.user_id = u.id),
+                            (select max(greatest(r.created_at, r.updated_at)) from auth.refresh_tokens r where r.user_id = u.id::text))
+                   < now() - interval '90 days')::text
+           || '명, 정리 실패 기록 ' || (select count(*) from public.stale_purge_failures)::text || '명(0이 아니면 §14-4). false면 Supabase Auth 업그레이드로 열이 바뀐 것 — 서버 줄에 알림'
+  union all
+  -- (L4) 대상이 있는데 최근 2일 정리 기록(account_purged)이 없으면 정리가 멈춘 것(단계 전체 실패 -1은 로그 warning뿐이라 여기서 잡는다)
+  select '익명 계정 정리 진행(0057): 대상이 있으면 최근 2일 안에 정리 기록',
+         (select count(*) from auth.users u
+             where u.is_anonymous
+               and not exists (select 1 from public.profiles p where p.user_id = u.id)
+               and greatest(u.created_at, u.last_sign_in_at, u.updated_at,
+                            (select max(greatest(s.created_at, s.updated_at, s.refreshed_at::timestamp at time zone 'UTC')) from auth.sessions s where s.user_id = u.id),
+                            (select max(greatest(r.created_at, r.updated_at)) from auth.refresh_tokens r where r.user_id = u.id::text))
+                   < now() - interval '90 days') = 0
+           or exists (select 1 from public.events where name = 'account_purged' and ts > now() - interval '2 days'),
+         '반영 첫날은 false일 수 있음(00:10 KST 배치 뒤 다시). 계속 false면 Postgres 로그 purge_stale_anonymous_failed 확인'
+  union all
   select '카카오 해제 포기 0건', (select count(*) from public.kakao_unlink_queue where gave_up_at is not null) = 0, null
   union all
   -- 첫 답 알림(0052): 선점(claimed) 뒤 Edge 결과 기록(push_record)이 1시간 넘게 없으면 실제 도달 여부를 모른다(평생 1회라 다시 안 감).

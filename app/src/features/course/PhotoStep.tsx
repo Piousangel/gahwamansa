@@ -105,7 +105,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     : error
       ? stepErrorDock(error, go)
       : {primary: {label: copy.course.next.photo, loading: busy, onPress: go}};
-  const aiNotice = `${appCopy.ai_photo_label} · ${appCopy.not_real_place}`;
+  const aiNotice = `${appCopy.ai_photo_label}·${appCopy.not_real_place}`; // 가운뎃점 둘레 공백 없음(Noto 재렌더 #162, 리드 11-20: 360 폭 한 줄)
   const pendingText = imageFailed ? appCopy.photo_load_failed : appCopy.photo_placeholder;
   const caption = photo.caption ? <Text key="caption" testID="photo-caption" role="label">{photo.caption}</Text> : null;
   return (

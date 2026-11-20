@@ -1,7 +1,7 @@
 // D-04: v4 대화상자 + 덮개 큐(하루 하나, A8). 닫는 말은 세 갈래(A5·W-09)
 import React from 'react';
-import {act, fireEvent, render, renderHook, screen} from '@testing-library/react-native';
-import {AudienceProvider, Dialog} from '../src/ui/ds';
+import {act, fireEvent, render, renderHook, screen, within} from '@testing-library/react-native';
+import {AudienceProvider, Dialog, Text} from '../src/ui/ds';
 import {createCoverQueue, useCover, type CoverStore} from '../src/ui/ds/coverQueue';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 
@@ -41,6 +41,70 @@ describe('ds Dialog', () => {
     rerender(<Dialog visible title="t" action={{label: '보내기', onPress: noop}} dismiss="close" onDismiss={onDismiss} returnFocusRef={null} />);
     act(() => modal().props.onRequestClose());
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  test('onBack 이 있으면 안드로이드 뒤로는 그쪽(닫는 쪽 버튼과 뜻이 다를 때, N1: 뒤로 = 오늘은 넘김)', () => {
+    const onDismiss = jest.fn();
+    const onBack = jest.fn();
+    render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} dismiss={{decline: '안 받을게요'}} onDismiss={onDismiss} onBack={onBack} returnFocusRef={null} />);
+    act(() => screen.UNSAFE_getByType(require('react-native').Modal).props.onRequestClose());
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  test('actionHint: 하는 쪽 버튼 바로 아래 한 줄 + 버튼 힌트(N1 #168 접근성 M3)', () => {
+    render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} actionHint="휴대폰이 한 번 더 물어봐요" dismiss="close" onDismiss={noop} returnFocusRef={null} />);
+    const actions = screen.getByTestId('ds-dialog-actions');
+    const ids: string[] = [];
+    const walk = (n: {props?: {testID?: string}; children?: unknown[]}) => {
+      if (n.props?.testID) {
+        ids.push(n.props.testID);
+      }
+      (n.children ?? []).forEach(c => c && typeof c === 'object' && walk(c as never));
+    };
+    walk(actions as never);
+    expect(ids.indexOf('ds-dialog-action')).toBeLessThan(ids.indexOf('ds-dialog-action-hint'));
+    expect(ids.indexOf('ds-dialog-action-hint')).toBeLessThan(ids.indexOf('ds-dialog-dismiss'));
+    expect(within(actions).getByTestId('ds-dialog-action-hint', H)).toBeTruthy();
+    expect(screen.getByTestId('ds-dialog-action').props.accessibilityHint).toBe('휴대폰이 한 번 더 물어봐요');
+  });
+
+  test('글자 150% 이상이면 미리 알림 줄은 본문 스크롤 끝(버튼 묶음이 늘어 닫는 쪽이 잘리지 않게), 버튼 힌트는 그대로', () => {
+    const RN = require('react-native');
+    const spy = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 320, height: 640, scale: 3, fontScale: 2});
+    try {
+      render(<Dialog visible title="t" action={{label: '알려 주세요', onPress: noop}} actionHint="휴대폰이 한 번 더 물어봐요" dismiss={{decline: '안 받을게요'}} onDismiss={noop} returnFocusRef={null} body="하루 한 번만 알려 드려요" />);
+      expect(within(screen.getByTestId('ds-dialog-scroll')).getByTestId('ds-dialog-action-hint', H)).toBeTruthy();
+      expect(within(screen.getByTestId('ds-dialog-actions')).queryByTestId('ds-dialog-action-hint', H)).toBeNull();
+      expect(screen.getByTestId('ds-dialog-action').props.accessibilityHint).toBe('휴대폰이 한 번 더 물어봐요');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("200%(fontScale 2.0)에서 본문이 넘치면 '더 있음' 띠(R-19), 버튼은 스크롤 밖이라 잘리지 않는다(#168 접근성 M2·M4)", () => {
+    render(
+      <Dialog visible title="내일 새 사진이 오면 알려 드릴까요?" action={{label: '알려 주세요', onPress: noop}} dismiss={{decline: '안 받을게요'}} onDismiss={noop} returnFocusRef={null}>
+        <Text role="bodyLg" testID="long">
+          {'하루 한 번만 알려 드려요. '.repeat(20)}
+        </Text>
+      </Dialog>,
+    );
+    const scroll = screen.getByTestId('ds-dialog-scroll');
+    expect(within(scroll).getByTestId('long')).toBeTruthy();
+    expect(within(scroll).queryByTestId('ds-dialog-actions')).toBeNull();
+    expect(screen.queryByTestId('more-band', H)).toBeNull();
+    act(() => {
+      fireEvent(scroll, 'layout', {nativeEvent: {layout: {width: 280, height: 200}}});
+      fireEvent(scroll, 'contentSizeChange', 280, 800);
+    });
+    expect(screen.getByTestId('more-band', H)).toBeTruthy();
+    act(() => {
+      fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {y: 600}, contentSize: {height: 800, width: 280}, layoutMeasurement: {height: 200, width: 280}}});
+    });
+    expect(screen.queryByTestId('more-band', H)).toBeNull();
+    expect(screen.getByTestId('ds-dialog-action')).toBeTruthy();
+    expect(screen.getByTestId('ds-dialog-dismiss')).toBeTruthy();
   });
 
   test('오류 한 줄은 대화상자 안(모달 위 토스트는 안 보인다), 자녀 audience 를 그대로 넘긴다', () => {
@@ -148,4 +212,35 @@ describe('덮개 큐 경합·고장(PR #148 리뷰 M1·L2·L3)', () => {
     });
     expect(h.result.current.visible).toBe(true);
   });
+});
+
+test('리뷰 #150 L2: 허락이 오기 전에 언마운트되면 active 를 놓는다(다음 날 다른 덮개가 막히지 않음)', async () => {
+  let open: () => void = () => {};
+  const gate = new Promise<void>(r => (open = r));
+  let now = new Date('2026-11-20T01:00:00Z');
+  const q = createCoverQueue({store: {load: () => gate.then(() => null), save: async () => {}}, now: () => now});
+  const h = renderHook(() => useCover('push', true, q));
+  h.unmount(); // 읽기가 끝나기 전에 화면이 내려감
+  await act(async () => {
+    open();
+    await gate;
+    await new Promise<void>(r => setTimeout(() => r(), 0));
+  });
+  now = new Date('2026-11-21T01:00:00Z'); // 앱을 끄지 않은 채 다음 날
+  expect(await q.request('other')).toBe(true); // 수정 전: 내려간 화면의 'push' 가 active 로 남아 false
+});
+
+test('리뷰 #160 M1: effect 가 다시 돌아도(원함 꺼졌다 켜짐) 첫 허락을 놓지 않아 그날 덮개가 뜬다', async () => {
+  let open: () => void = () => {};
+  const gate = new Promise<void>(r => (open = r));
+  const q = createCoverQueue({store: {load: () => gate.then(() => null), save: async () => {}}, now: () => new Date('2026-11-20T01:00:00Z')});
+  const h = renderHook(({w}: {w: boolean}) => useCover('push', w, q), {initialProps: {w: true}});
+  h.rerender({w: false}); // 첫 요청의 effect 가 정리됨(alive=false) — 화면은 그대로
+  h.rerender({w: true}); // 다시 청함
+  await act(async () => {
+    open();
+    await gate;
+    await new Promise<void>(r => setTimeout(() => r(), 0));
+  });
+  expect(h.result.current.visible).toBe(true); // 수정 전: 첫 허락을 '내려간 화면'으로 보고 놓아 둘째 요청이 하루 하나에 걸려 false
 });

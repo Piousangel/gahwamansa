@@ -11,7 +11,7 @@
 | R-02 | 화면은 역할(role·tone)만 고른다. hex 색·fontSize·fontWeight·lineHeight 숫자 리터럴 금지 | lint: `no-restricted-syntax`(features/·app/) → 처음엔 warn, AU-10에 error | DS 레인 |
 | R-03 | RN의 Text·TextInput·Pressable 직접 import 금지(공통 컴포넌트만) | lint: `no-restricted-imports` | DS 레인 |
 | R-04 | 한 화면에 700 굵기를 쓰는 역할은 **어르신 화면 2개 이하, 자녀 화면 3개 이하(제목·버튼·answer)**, 본문은 400. v4의 '2개'는 Jua 서체 강조(answer)를 따로 셌기 때문이며, Jua 폐기(A2)로 answer가 Noto Sans KR 700이 되었다. 어르신 화면에는 answer가 없으므로 2개를 그대로 유지하고(리드 결정 11-20), 자녀 화면만 answer 1개를 더해 3개다 | 렌더: 화면 트리에서 role별 weight 집계(audience별 상한) | 화면 레인 |
-| R-05 | 인접 역할 크기 비율 1.2 이상. 보완 쌍(`tests.ratioCompensatedPairs`)만 굵기·색으로 보완 | 토큰 | DS 레인 |
+| R-05 | 인접 역할 크기 비율 1.2 이상. 보완 쌍(`tests.ratioCompensatedPairs`)만 굵기·색으로 보완. 어르신 title 30/heading 26(1.15)은 위치(화면당 1개 H1, 맨 위)로 보완하는 쌍(11-20 Noto 재렌더 #162, title 32→30) | 토큰 | DS 레인 |
 | R-06 | 누를 수 있는 것은 면·밑줄·아이콘 중 하나를 반드시 함께 쓴다. action 글자색은 누르는 것에만 | 렌더: Button·Link·BackLink·ListRow 컴포넌트 계약 테스트 | DS 레인 |
 | R-07 | accent는 화면당 1곳이고 dangerInk와 같은 화면에 쓰지 않는다 | 렌더: 화면 렌더에서 accent·danger 톤 개수 | 화면 레인 |
 | R-08 | info 글자는 infoSoft 띠 위(7.10)에서, 면 + ⓘ 아이콘과 함께 쓴다(단독 글자색 금지). **v5: 누르는 파랑(action)과 정보 시멘트(info)는 명도 대비가 1.06이라 색만으로 구분되지 않는다 → info 글자에는 밑줄을 쓰지 않고, 누르는 파랑 글자는 밑줄·면(버튼·알약)·아이콘 중 하나를 반드시 함께 쓴다.** | 토큰(allowed) + 렌더(Banner 계약, 링크 밑줄/면/아이콘 있음·info 밑줄 없음). **렌더 테스트는 L4에 넘길 항목** | DS 레인(L4) |

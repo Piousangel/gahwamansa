@@ -1,12 +1,24 @@
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {Linking, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
+import {copy} from '../src/copy/copy';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {confirmDeleteAll, press, pressLast, toHomeConsented} from '../testUtils/flow';
 import {warmAppRoot} from '../testUtils/warm';
+
+// 문의 메일 주소(앱 정보 CONTACT_EMAIL): 기본은 없음, 어르신 문의 안내 테스트만 넣는다(contactRow.test 와 같은 방식)
+let mockMail: string | null = null;
+jest.mock('../src/lib/appInfo', () => {
+  const actual = jest.requireActual('../src/lib/appInfo');
+  return {...actual, readAppInfo: () => ({...actual.readAppInfo(), contactEmail: mockMail})};
+});
+afterEach(() => {
+  mockMail = null;
+});
+const MAILTO = `mailto:help@example.test?subject=${encodeURIComponent('[가화만사성] 내 정보 보기·지우기 요청')}`;
 
 // 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
 beforeAll(warmAppRoot);
@@ -233,17 +245,139 @@ describe('#146 리뷰 H1: no_profile 은 지우지 못한 것(로그인 정보 �
     await press('다시 하기');
     await waitFor(() => screen.getByText('모두 지웠어요'));
   });
-  test('no_profile → 다시 해도 no_profile: 지웠다고 하지 않고 "로그인이 풀려 지워지지 않았어요" + 다시 로그인하기(번호 입력으로)', async () => {
+  test('#153 어르신 no_profile: 지웠다고 하지 않고 "이 휴대폰에서는 지울 수 없어요" + 문의하기(메일), 세션·화면은 그대로', async () => {
+    mockMail = 'help@example.test';
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
     const {ServerError} = require('../src/features/types');
     const api = createFakeApi({consented: true});
     jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
     await openParentDelete(api);
     await confirmDeleteAll();
+    await waitFor(() => screen.getByText('이 휴대폰에서는 지울 수 없어요'));
+    expect(screen.getByText('문의하기로 알려 주시면 가족 확인 뒤 지워 드려요. 가족이 대신 문의해도 돼요')).toBeTruthy();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(screen.queryByText(/로그인/)).toBeNull(); // 어르신 화면 낱말이 아니다(writer 1-2)
+    expect(screen.queryByRole('button', {name: '다시 로그인하기'})).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: '문의하기'}));
+    });
+    expect(open).toHaveBeenCalledWith(MAILTO);
+    // 번호 입력으로 보내지 않는다(새 익명 계정이 생기면 안 됨) — 계정 지우기 화면 그대로
+    expect(screen.queryByText('가족에게 받은 번호를 써 주세요')).toBeNull();
+    expect(screen.getByText('이 휴대폰에서는 지울 수 없어요')).toBeTruthy();
+    open.mockRestore();
+  });
+  test('#153 어르신 no_profile + 문의 주소 없음: 문의하기 버튼 없이 "준비하고 있어요" 한 줄', async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({consented: true});
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText('이 휴대폰에서는 지울 수 없어요'));
+    expect(screen.getByTestId('delete-contact-pending')).toBeTruthy();
+    expect(screen.getByText('문의 메일 주소를 준비하고 있어요')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: '문의하기'})).toBeNull();
+    expect(screen.queryByRole('button', {name: '다시 로그인하기'})).toBeNull();
+  });
+  test('자녀 no_profile: "로그인이 풀려 지워지지 않았어요" + 다시 로그인하기(로그인 화면으로)', async () => {
+    const {ServerError} = require('../src/features/types');
+    const api = createFakeApi({deleteScope: 'child'});
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요. 되돌릴 수 없어요');
+    await press('계정 지우기');
+    await press('계정 지우기');
     await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));
     expect(screen.getByText('다시 로그인한 뒤 해 주세요')).toBeTruthy();
-    expect(screen.queryByText('모두 지웠어요')).toBeNull();
     await press('다시 로그인하기');
-    await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
+    await waitFor(() => screen.getByText('로그인하고 시작해요'));
+  });
+});
+
+describe('법률 확인 11-20: 어르신 scope none(다시 설치한 새 익명 계정만 지워짐)', () => {
+  const noneApi = () => {
+    const api = createFakeApi({consented: true});
+    jest.spyOn(api, 'deleteMyAccount').mockResolvedValue({scope: 'none'});
+    return api;
+  };
+  test('"모두 지웠어요" 대신 사실 문구 + 문의하기(메일)', async () => {
+    mockMail = 'help@example.test';
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
+    await openParentDelete(noneApi());
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText('이 휴대폰의 정보를 지웠어요'));
     expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(screen.getByText(copy.delete.parent.done_none.body)).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: '문의하기'}));
+    });
+    expect(open).toHaveBeenCalledWith(MAILTO);
+    open.mockRestore();
+    await pressLast('처음으로');
+    await waitFor(() => screen.getByText('가족에게 받은 번호를 써 주세요'));
+  });
+  test('문의 주소가 없으면 버튼 없이 "준비하고 있어요" 한 줄', async () => {
+    await openParentDelete(noneApi());
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText('이 휴대폰의 정보를 지웠어요'));
+    expect(screen.getByTestId('delete-done-contact-pending')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: '문의하기'})).toBeNull();
+  });
+  test('#156 리뷰 H(재현 고정): 사전 조회 실패 + 첫 시도 끊김 + 다시 하기 none → done_unsure(단정하지 않음) + 문의하기', async () => {
+    mockMail = 'help@example.test';
+    const api = createFakeApi({consented: true, failPreview: true});
+    const preview = jest.spyOn(api, 'deleteScopePreview');
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText(copy.delete.parent.done_unsure.body));
+    expect(screen.getByText(copy.delete.parent.done_unsure.title)).toBeTruthy();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(screen.queryByText(copy.delete.parent.done_none.body)).toBeNull(); // '가족과 나눈 기록은 없었어요'도 단정하지 않는다
+    expect(screen.getByRole('button', {name: '문의하기'})).toBeTruthy();
+    expect(preview).toHaveBeenCalledTimes(2); // 처음 + 첫 시도 전 다시 묻기(끊긴 뒤에는 묻지 않음)
+  });
+  test('#156 리뷰 H: 사전 조회가 처음엔 실패해도 지우기 전에 다시 물어 parent 를 알면, 끊김 뒤 none 은 "모두 지웠어요"(#146 H1)', async () => {
+    const api = createFakeApi({consented: true});
+    const real = api.deleteScopePreview.bind(api);
+    jest.spyOn(api, 'deleteScopePreview').mockRejectedValueOnce(new OfflineError('x')).mockImplementation(real);
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+  });
+  test('#156 재확인 M: 조회 두 번 실패 → 첫 시도가 서버에서 지우고 응답만 끊김 → 다시 하기 때는 다시 묻지 않고 done_unsure(\'가족 기록 없었음\'을 말하지 않음)', async () => {
+    const api = createFakeApi({consented: true});
+    const preview = jest
+      .spyOn(api, 'deleteScopePreview')
+      .mockRejectedValueOnce(new OfflineError('x'))
+      .mockRejectedValueOnce(new OfflineError('x'))
+      .mockResolvedValue({scope: 'none'}); // 이미 지워진 뒤라면 none 이 온다
+    jest.spyOn(api, 'deleteMyAccount').mockRejectedValueOnce(new OfflineError('응답 끊김')).mockResolvedValueOnce({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByTestId('delete-fail'));
+    await press('다시 하기');
+    await waitFor(() => screen.getByText(copy.delete.parent.done_unsure.body));
+    expect(screen.queryByText(copy.delete.parent.done_none.body)).toBeNull();
+    expect(screen.queryByText('모두 지웠어요')).toBeNull();
+    expect(preview).toHaveBeenCalledTimes(2); // 처음 + 첫 시도 전. 끊긴 뒤에는 묻지 않음
+  });
+  test('사전 조회를 몰라도 앞선 끊김이 없으면 결과 none 은 이 계정에 가족 기록이 없었다는 뜻 → done_none', async () => {
+    const api = createFakeApi({consented: true, failPreview: true});
+    jest.spyOn(api, 'deleteMyAccount').mockResolvedValue({scope: 'none'});
+    await openParentDelete(api);
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText(copy.delete.parent.done_none.body));
+  });
+  test('어르신 scope parent 는 그대로 "모두 지웠어요"(문의 줄 없음)', async () => {
+    mockMail = 'help@example.test';
+    await openParentDelete(createFakeApi({consented: true}));
+    await confirmDeleteAll();
+    await waitFor(() => screen.getByText('모두 지웠어요'));
+    expect(screen.queryByRole('button', {name: '문의하기'})).toBeNull();
   });
 });

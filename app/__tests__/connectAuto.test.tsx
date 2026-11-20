@@ -152,6 +152,23 @@ test('연결 중 인터넷이 끊기면 다시 하기로 같은 번호를 다시
   expect(redeem).toHaveBeenCalledTimes(2);
 });
 
+test('#181 리뷰 H1: 서버는 번호를 썼는데 응답이 끊김 → 다시 하기는 같은 계정의 재시도라 연결된다(서버 0028 226~231행 멱등)', async () => {
+  const api = createFakeApi();
+  const real = api.redeemInviteCode.bind(api);
+  const redeem = jest.spyOn(api, 'redeemInviteCode').mockImplementationOnce(async code => {
+    await real(code); // 서버에서는 연결이 끝남(used_by = 이 계정)
+    throw new (require('../src/features/types').OfflineError)('응답이 끊김');
+  });
+  render(<AppRoot api={api} role="parent" />);
+  await typeCode('123456');
+  await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
+  await press('이 번호로 연결하기');
+  await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
+  await press('다시 하기');
+  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요')); // 'used' 로 막히지 않는다
+  expect(redeem).toHaveBeenCalledTimes(2);
+});
+
 test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번호 값 없음), 손 입력은 채움 이벤트 없음', async () => {
   const api = createFakeApi();
   const log = jest.spyOn(api, 'logEvent');

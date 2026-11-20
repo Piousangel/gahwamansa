@@ -5,6 +5,7 @@ import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.common.assets.ReactFontManager
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.bumojasik.app.haptic.HapticPackage
 import com.bumojasik.app.invite.InvitePackage
@@ -32,6 +33,9 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // 번들 글꼴(F-01): XML 글꼴 묶음을 이름으로 등록 → JS fontFamily 'notosanskr' + fontWeight 로 굵기 파일을 고른다(ds/roles fontStyle)
+    ReactFontManager.getInstance().addCustomFont(this, "notosanskr", R.font.notosanskr)
+    ReactFontManager.getInstance().addCustomFont(this, "nanumbrushscript", R.font.nanumbrushscript)
     loadReactNative(this)
   }
 }

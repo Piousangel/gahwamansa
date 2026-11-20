@@ -78,7 +78,9 @@ export function RelationScreen() {
           </>
         }
         onViewport={fold.onViewport}
-        dock={{primary: {label: t.next, onPress: next, loading: busy}}}
+        // P-12(전문가 리뷰 r2 H, 3:85): 아이폰 부모님은 링크를 연 뒤에야 '준비 중'을 안다 → 번호를 만들기 전에 한 줄(iOS 출시 때 뺀다).
+        //   Dock note 라 늘 보이고, 200%에서 넘치면 DsScreen 이 본문 끝으로 보낸다(R-12)
+        dock={{primary: {label: t.next, onPress: next, loading: busy}, note: {text: t.android_only}}}
       >
         <View onLayout={fold.onBlock}>
           <Choice

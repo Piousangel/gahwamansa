@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   title: {color: color.inkTitle},
   labelWrap: {alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: TAPE_PAD_X - 6}, // 테이프가 왼쪽 −6 에서 시작하므로 글자는 테이프 안쪽 12
   tape: {position: 'absolute', left: -6, top: 0, transform: [{rotate: '-2deg'}]},
-  nowLabel: {color: color.actionPressed},
+  nowLabel: {color: color.inkTitle}, // '지금 할 차례' 는 누를 것이 아님 — 파랑은 누를 것에만(R-08, #179 M1). v5 Tag(accent 먹 면)는 화면 레인 몫
   doneLabel: {color: color.doneInk, fontWeight: 'bold'},
   waitLabel: {color: color.inkSub},
   status: {flexDirection: 'row', alignItems: 'center', gap: 6},

@@ -19,14 +19,14 @@ test('P3#1 위 줄: 날짜 + 오른쪽 설정 링크(64 터치), 본문에 큰 �
   await toHomeConsented(createFakeApi({consented: true}));
   const settings = screen.getByRole('button', {name: '설정'});
   expect(flat(settings).minHeight).toBeGreaterThanOrEqual(64);
-  expect(screen.getAllByTestId('big-button')).toHaveLength(1); // 주 버튼 하나만
+  expect(within(screen.getByTestId('screen-dock')).getAllByRole('button')).toHaveLength(1); // 주 버튼 하나만
   await press('설정');
   await waitFor(() => screen.getByText('가족에게 답 보여 주기'));
 });
 
-test('P3#2 스티치 2곳(날짜 아래, 하단 버튼 위), P3#9 주 버튼은 지금 단계 이름(시안 copy 10절, QA 11-17)', async () => {
+test('P3 v4: 스티치는 화면당 1곳(시안 ds4b), P3#9 주 버튼은 지금 단계 이름(시안 copy 10절, QA 11-17)', async () => {
   await toHomeConsented(createFakeApi({consented: true}));
-  expect(screen.getAllByTestId('stitch', {includeHiddenElements: true})).toHaveLength(2);
+  expect(screen.getAllByTestId('stitch', {includeHiddenElements: true})).toHaveLength(1);
   expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '사진 보기'})).toBeTruthy();
 });
 
@@ -62,7 +62,7 @@ test('P1#8 지금 칸은 noticeSoft 면 + 커서 막대, P1#9 키는 흰 면 + �
   const key = flat(screen.getByLabelText('숫자 5'));
   expect(key.backgroundColor).toBe(color.card);
   expect(key.borderWidth).toBe(2);
-  expect(key.borderRadius).toBe(14);
+  expect(key.borderRadius).toBe(6); // v5 반경 4단: keypadKey = row(6)
   expect(key.minHeight as number).toBeGreaterThanOrEqual(64);
 });
 

@@ -2,6 +2,10 @@ import {screen, waitFor} from '@testing-library/react-native';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {kstWeekdayIndex} from '../src/features/course/stamps';
+import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+// 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
+beforeEach(() => setWeekStripForO6(true));
+afterEach(() => setWeekStripForO6(null));
 
 // P7 코스 완료(시안 P7_done). 마지막 단계(자판으로 쓰기)를 마치면 한 번 보이고, 알겠어요 → 코스 홈.
 async function finishCourse(opts: FakeOptions = {}, prepare?: (api: ReturnType<typeof createFakeApi>) => void) {

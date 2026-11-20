@@ -5,7 +5,7 @@ import React from 'react';
 import {Keyboard, StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, within} from '@testing-library/react-native';
 import {AudienceProvider, BackLink, Banner, Button, Card, Choice, DsScreen, Field, Heading, Section, SocialButton, StateView, Text, type DockProps} from '../src/ui/ds';
-import {INTRO_DOCK_RATIO, dockRatioFor} from '../src/ui/ds/Screen';
+import {INTRO_DOCK_RATIO, VARIANT, dockRatioFor, type ScreenVariant} from '../src/ui/ds/Screen';
 import {dockCap, estimateLines, nextSpill, planDock} from '../src/ui/ds/dockLayout';
 import {MORE_BAND_H} from '../src/ui/ds/MoreBand';
 
@@ -143,6 +143,45 @@ describe('DsScreen', () => {
     // 문서 순서(앞에서부터 찾은 차례)로 비교
     const order = screen.root.findAll(n => typeof n.type === 'string' && (n.props.testID === 'dock-spill' || n.props.testID === 'tail')).map(n => n.props.testID);
     expect(order).toEqual(['dock-spill', 'tail']);
+  });
+
+  // 결정적 검사(#190, 리드 11-20): 어떤 틀이든 글자 200%에서 본문이 창보다 길면 스크롤로 닿아야 한다. 스크롤을 막는 틀이 다시 생기면 여기서 실패한다
+  test.each(Object.keys(VARIANT) as ScreenVariant[])('틀 %s: fontScale 2.0에서 본문이 창보다 길면 스크롤된다(+ 더 있음 띠)', variant => {
+    const RN = require('react-native');
+    const spy = jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 320, height: 640, scale: 3, fontScale: 2});
+    try {
+      render(
+        <DsScreen variant={variant} dock={{primary: {label: '다음', onPress: noop}}}>
+          <Text role="body">{'긴 본문 '.repeat(200)}</Text>
+        </DsScreen>,
+      );
+      const body = screen.getByTestId('screen-body');
+      act(() => {
+        fireEvent(body, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 320, height: 300}}});
+        fireEvent(body, 'contentSizeChange', 320, 1200);
+      });
+      expect(body.props.scrollEnabled).not.toBe(false);
+      expect(screen.getByTestId('more-band', {includeHiddenElements: true})).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('#190 리뷰 L1: even 두 버튼은 따로 내리지 않는다 — 보조가 넘치면 둘이 함께 본문 끝(Dock 에는 아무것도 남지 않음)', () => {
+    const even = {primary: {label: '좋아요', onPress: noop}, secondary: {label: '싫어요', onPress: noop}, even: true} as const;
+    render(
+      <DsScreen variant="step" dock={even}>
+        <Text role="body">본문</Text>
+      </DsScreen>,
+    );
+    const dockNow = () => screen.queryByTestId('ds-dock');
+    expect(within(dockNow()!).getByText('좋아요')).toBeTruthy();
+    expect(within(dockNow()!).getByText('싫어요')).toBeTruthy();
+    act(() => fireEvent(screen.getByTestId('ds-dock'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: W, height: 400}}}));
+    expect(dockNow()).toBeNull();
+    const body = screen.getByTestId('screen-body');
+    expect(within(body).getByText('좋아요')).toBeTruthy();
+    expect(within(body).getByText('싫어요')).toBeTruthy();
   });
 
   test('Dock 이 상한(640×40%=256)을 넘으면 note → 보조 순으로 본문 끝으로 보낸다', () => {

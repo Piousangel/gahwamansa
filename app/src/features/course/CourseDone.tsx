@@ -4,7 +4,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useBackAction} from '../../app/BackBar';
 import {useSession} from '../../app/session';
-import {DsScreen, Heading, Text} from '../../ui/ds';
+import {DsScreen, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {copy} from '../../copy/copy';
@@ -14,14 +14,13 @@ import {useMotionMode} from '../../ui/motion';
 import {newStampFeedback} from './stampFeedback';
 import {prefs} from '../../lib/prefs';
 import {Dialog} from '../../ui/Dialog';
+import {focusLater} from '../../ui/screenTitle';
 import {useCourseBgm} from './useCourseBgm';
 import {AlbumMount, type MountMotion} from './AlbumMount';
-import {WeekStampStrip} from './WeekStampStrip';
+import {WeekStampStrip, showWeekStrip} from './WeekStampStrip';
 
 const d = copy.done;
 const WEEK_WAIT_MS = 1500;
-/** 이번 주 도장 줄(7칸). 오너가 '7칸 도장 줄 삭제'를 검토 중 — 빼기로 하면 false 한 곳(컴포넌트는 WeekStampStrip 하나) */
-const SHOW_WEEK_STRIP = true;
 
 // 타임라인(시안 P7_album_ds4 주석, 새 모션 없음 = opacity·scale 만):
 // 0~300ms 사진 마운트·테이프 페이드 → 300ms 도장 scale 1.3→1(180ms) → 480ms 닿음(촉각·소리 1회) + 눌림 scaleY .94 70ms 뒤 복원
@@ -30,7 +29,9 @@ export const P7_T = {mountFade: 300, stampAt: 300, land: 180, squash: 70, inkAt:
 const INK_FROM = 0.1; // 번짐 원 투명도(축하 효과로 보이지 않게, PR #80 리뷰 L1)
 // 이징(시안 CSS cubic-bezier 그대로)
 const EASE = {land: Easing.bezier(0.3, 0, 0.8, 0.15), squash: Easing.bezier(0.2, 0.8, 0.2, 1)};
-const BODY_GAP = 16; // 본문 간격(시안 data-body gap 16)
+const BODY_GAP = 16;
+const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0, easing?: (x: number) => number) =>
+  Animated.timing(val, {toValue, duration, delay, easing, useNativeDriver: true}); // 본문 간격(시안 data-body gap 16)
 
 // P7 코스 완료(시안 P7_album_ds4 + 디자인 #95). 3/3을 마친 직후 한 번, '알겠어요'(·뒤로가기)로 코스 홈으로.
 // - 앨범 물건 하나: 사진 마운트 + 테이프 + 큰 인장 '家'. 캡션 두 줄은 AI 고지(법무). 제목·'알겠어요'는 첫 프레임부터 보인다(감사 M9).
@@ -64,6 +65,8 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const {fontScale} = useWindowDimensions();
   const large = fontScale >= 1.5;
 
+  const titleNode = useRef<unknown>(null);
+  useEffect(() => focusLater(() => titleNode.current), []);
   const feedback = useRef(newStampFeedback()).current;
   const [phase, setPhase] = useState<'wait' | 'run' | 'done'>('wait');
   const v = useRef({
@@ -79,45 +82,41 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   const running = useRef<Animated.CompositeAnimation[]>([]);
   const alive = useRef(true);
 
+  // 연출은 동작 줄이기 판정(mode)만 정해지면 시작한다. 이번 주 도장 응답(week)이 필요한 것은 둘째 줄뿐이라
+  // 둘째 줄 페이드만 따로 기다린다(PR #108 리뷰 L2 — 응답을 기다리는 동안 사진·도장까지 투명하지 않게)
+  const startedAt = useRef(0);
   useEffect(() => {
-    if (mode === null || week === undefined || phase !== 'wait') {
+    if (mode === null || phase !== 'wait') {
       return;
     }
     setPhase('run');
+    startedAt.current = Date.now();
     if (mode === 'reduce') {
       // 모두 즉시 끝 상태(시안 '동작 줄이기: 도장·번짐·페이드 없음')
       v.mount.setValue(1);
       v.sealOpacity.setValue(1);
       v.sealScale.setValue(1);
-      v.text.setValue(1);
       feedback.fire();
       setPhase('done');
       return;
     }
-    const t = (val: Animated.Value, toValue: number, duration: number, delay = 0, easing?: (x: number) => number) =>
-      Animated.timing(val, {toValue, duration, delay, easing, useNativeDriver: true});
     const all = Animated.parallel([
-      t(v.mount, 1, P7_T.mountFade),
-      Animated.parallel([t(v.sealScale, 1, P7_T.land, P7_T.stampAt, EASE.land), t(v.sealOpacity, 1, P7_T.land, P7_T.stampAt, EASE.land)]),
+      tween(v.mount, 1, P7_T.mountFade),
+      Animated.parallel([tween(v.sealScale, 1, P7_T.land, P7_T.stampAt, EASE.land), tween(v.sealOpacity, 1, P7_T.land, P7_T.stampAt, EASE.land)]),
       Animated.sequence([
         Animated.delay(P7_T.stampAt + P7_T.land),
-        t(v.squash, 0.94, P7_T.squash, 0, EASE.squash),
-        t(v.squash, 1, P7_T.squash, 0, EASE.squash),
+        tween(v.squash, 0.94, P7_T.squash, 0, EASE.squash),
+        tween(v.squash, 1, P7_T.squash, 0, EASE.squash),
       ]),
       Animated.sequence([
         Animated.delay(P7_T.inkAt),
-        Animated.parallel([
-          Animated.sequence([t(v.inkOpacity, INK_FROM, 0), t(v.inkOpacity, 0, P7_T.ink)]),
-          t(v.inkScale, 1.15, P7_T.ink),
-        ]),
+        Animated.parallel([Animated.sequence([tween(v.inkOpacity, INK_FROM, 0), tween(v.inkOpacity, 0, P7_T.ink)]), tween(v.inkScale, 1.15, P7_T.ink)]),
       ]),
-      t(v.text, 1, P7_T.text, P7_T.textAt),
     ]);
     running.current.push(all);
     all.start(() => {
       if (alive.current) {
-        // 끝(또는 중간에 멈춤)이면 끝 상태로 맞춘다 — 문구·도장이 투명으로 남지 않게(네이티브 드라이버 값과 JS 값도 같아진다)
-        v.text.setValue(1);
+        // 끝(또는 중간에 멈춤)이면 끝 상태로 맞춘다 — 도장이 투명으로 남지 않게(네이티브 드라이버 값과 JS 값도 같아진다)
         v.mount.setValue(1);
         v.sealOpacity.setValue(1);
         v.sealScale.setValue(1);
@@ -128,7 +127,30 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     });
     // 촉각·소리는 애니메이션 끝 콜백이 아니라 타임라인 시각으로(프레임이 밀려도 도장이 닿는 때와 같게)
     timers.current.push(setTimeout(() => alive.current && feedback.fire(), P7_T.stampAt + P7_T.land));
-  }, [mode, week, phase, feedback, v]);
+  }, [mode, phase, feedback, v]);
+  // 둘째 줄: 연출 시작 뒤 700ms(시안)와 응답 도착 중 늦은 때 300ms 페이드. 동작 줄이기면 응답이 오는 즉시
+  const textStarted = useRef(false);
+  const [, setTextShown] = useState(false);
+  useEffect(() => {
+    if (mode === null || week === undefined || phase === 'wait' || textStarted.current) {
+      return;
+    }
+    textStarted.current = true;
+    if (mode === 'reduce') {
+      v.text.setValue(1);
+      setTextShown(true);
+      return;
+    }
+    const wait = Math.max(0, P7_T.textAt - (Date.now() - startedAt.current));
+    const a = tween(v.text, 1, P7_T.text, wait);
+    running.current.push(a);
+    a.start(() => {
+      if (alive.current) {
+        v.text.setValue(1);
+        setTextShown(true); // 끝 상태를 한 번 그린다(JS 값과 화면 일치)
+      }
+    });
+  }, [mode, week, phase, v]);
 
   useEffect(() => {
     alive.current = true;
@@ -174,11 +196,22 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       : !linked
         ? d.unlinked_body.replace('. ', '.\n')
         : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
-  const strip = SHOW_WEEK_STRIP && days ? <WeekStampStrip key="week" days={days} /> : null;
+  const strip = showWeekStrip() && days ? <WeekStampStrip key="week" testID="p7-week" days={days} /> : null;
   // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
   const items: React.ReactNode[] = [
     <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} />,
-    <Heading key="title" level={1} style={styles.center} testID="p7-title">{d.title}</Heading>,
+    // 화면 제목: 들어오면 화면 읽기 포커스를 여기로(캡션보다 먼저, PR #108 리뷰 L1)
+    <View
+      key="title"
+      testID="p7-title"
+      ref={n => {
+        titleNode.current = n;
+      }}
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={d.title}>
+      <Text role="title" style={styles.center}>{d.title}</Text>
+    </View>,
     ...(strip ? [strip] : []),
     <Animated.View key="text" testID="p7-text" style={{opacity: v.text}} accessibilityLiveRegion="polite">
       {body ? <Text role="bodyLg" style={styles.center}>{body}</Text> : null}
