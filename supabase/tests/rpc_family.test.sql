@@ -29,6 +29,7 @@ select is((select count(*)::int from public.entitlements where plan_id = 'premiu
 -- 4. 같은 자녀가 다시 부르면 새로 만들지 않고 같은 가족을 돌려준다(0059 재시도 멱등, 이전: already_has_profile)
 -- (#215 리뷰 L4) 호출과 개수 세기를 다른 문장으로 나눈다 — 한 문장 안에서는 함수가 새로 만든 행이 스냅샷에 보이지 않는다
 select ok((public.create_family() ->> 'family_id') is not null, '이미 자녀 프로필이 있으면 가족 id를 돌려준다(예외 아님)');
+reset role; -- 개수는 RLS 없이 센다(앱 역할로 세면 자기 프로필이 없는 새 가족이 안 보여 중복이 생겨도 1로 보인다 — 실패 확인 중 발견)
 select is((select count(*)::int from public.families where created_by = 'd0000000-0000-0000-0000-0000000000c1'), 1, '다시 불러도 가족은 하나뿐(새로 만들지 않음)');
 -- 5. 익명(어르신 기기)은 가족을 만들 수 없다
 select pg_temp.act_as('d0000000-0000-0000-0000-0000000000a1', true);
