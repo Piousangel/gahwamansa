@@ -51,7 +51,8 @@ describe('tokens = tokens-v3.json', () => {
     expect(labelLineHeight(20)).toBe(20 + (table.labelExtra as number));
     expect(lineHeightFor(72)).toBe(94); // 큰 글자는 윗획이 잘리지 않게 여유(리뷰 M6)
     expect(space).toMatchObject(omit(v3.space, 'note'));
-    expect(radius).toMatchObject(omit(v3.radius, 'note'));
+    // 반경은 v5 4단을 따른다(v3 이름 별칭) — 값 원본은 생성물
+    expect(radius).toEqual({chip: 6, childCard: 6, input: 3, card: 6, select: 6, sheet: 12, button: 8, keypadKey: 6, codeCell: 6});
     expect(touch).toEqual(omit(v3.touch, 'rule'));
     expect(layout.bodyPadding).toEqual(v3.layout.bodyPadding);
     expect(FONT_SCALE_MAX).toBe(v3.typeScale.fontScaling.maxFontSizeMultiplier);

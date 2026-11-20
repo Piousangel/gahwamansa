@@ -88,7 +88,12 @@ export const space = {
   s4: 4, s8: 8, s12: 12, s16: 16, s20: 20, s24: 24, s28: 28, s56: 56,
 } as const;
 
-export const radius = {chip: 12, childCard: 16, input: 16, card: 22, select: 24, sheet: 28, button: 36, keypadKey: 14, codeCell: 12} as const;
+// 반경도 v5 를 따른다(11-20, 4단: 팻말·입력칸 3 / 행·선택지·칩 6 / 버튼 8 / 시트·대화상자 12 — 알약 36·16~28 폐기). 이름은 v3 그대로
+const r5 = tokensV4.radius;
+export const radius = {
+  chip: r5.chip, childCard: r5.childCard, input: r5.input, card: r5.card, select: r5.select,
+  sheet: r5.sheet, button: r5.button, keypadKey: r5.keypadKey, codeCell: r5.codeCell,
+} as const;
 
 export const touch = {
   elderMin: 64, buttonPrimary: 72, buttonSecondary: 64, codeBox: 68, selectCard: 132, iconButton: 64, link: 64,
