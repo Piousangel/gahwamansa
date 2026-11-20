@@ -522,6 +522,11 @@
 - R-15 접힘 경계는 화면 공용 `ui/FoldStack`으로: 접힘에 걸치는 첫 요소를 통째로 아래로 민다(P1 CodeInput 규칙 일반화). 계산은 `ui/ds/foldPush` 하나를 FoldStack·useFoldGap(자녀)이 함께 쓴다(#91 리뷰 L1: 큰 요소는 밀지 않음, 첫 요소는 allowFirst, from·glue). 묶음 안 줄 단위가 필요한 요소(P5 선택지 2장)는 `split`으로 카드마다 / 버린 안: 화면마다 공간 단계(p5Space) — 기기·문구마다 표를 다시 짜야 해서
 - (디자인 11-20, 전문가 리뷰 A2 8/8) Jua 폐기. 본문·제목 한 벌 번들, 1순위 Noto Sans KR(2순위 Pretendard). 숫자는 tabular(Noto 기본, Pretendard는 fontVariant 필수). 비교 렌더 docs/design/font-compare/FONT-COMPARE.png(앱 글꼴 아님 표기): 200%에서 이 문장은 Noto 5줄/Pretendard 4줄, 실기기 줄바꿈 부담이 크면 font.body 한 곳만 바꿔 Pretendard로. tokens-v4 answer·answerRow의 fontFace Jua 삭제는 글꼴 번들 뒤(5:101)
 
+## 2026-11-20 P3 코스 홈 v4 · 연결 뒤 뿌리 화면(2기 레인)
+- 연결된 어르신에게 코스 홈은 뿌리 화면: 번호 확인 뒤 스택을 [동의] 하나로 정리(뒤로 = 앱 나감). 이전 [번호, 코스 홈]은 뒤로 두 번에 resetRole 이 기기 도장을 지웠다(네이버 패널 r1/4, 리드 결정)
+- P3 했어요 행은 완료 전에도 눌러 그 단계 다시 보기(리드 결정: 시안 1:1). 진행 문구·지금 행 테이프 삭제(시안 ds4b)
+- ui/ds 에 ListRow(목록 행) 추가, Dock 주 슬롯 kind 'secondary'(끝난 화면의 유일한 보조 행동)·buttonRef 허용
+- (#133 리뷰 M1) 미연결 '코스 보기'도 코스 홈을 뿌리로 reset. 처음 화면으로(resetRole)는 데이터를 지우지 않는다 — 뒤로가기로 닿는 길이라. 기기 도장을 지우는 것은 '모두 지우기'(clear)뿐
 ## 2026-11-20 Expo 전환하지 않음(오너)
 - RN CLI 유지, 출시 우선. Expo(EAS Build·Update)는 빌드 1 출시 뒤 iOS 착수 시점에 bare 방식으로 다시 검토
 
@@ -548,6 +553,15 @@
 ## 2026-11-20 저장소 거부 규칙·위험도별 리뷰 (오너 승인, 조사 #172 Lydia Hallie 강의)
 - .claude/settings.json(커밋)에 permissions.deny: 비밀 파일 읽기(.env*·config.local.ts·keystore·google-services 등·~/.secrets), git 강제 push(--force-with-lease 포함), 운영(production) 빌드. 운영 DB push는 운영 프로젝트가 생길 때 ref 기준으로 추가. staging 반영은 기존대로 매번 사용자 승인
 - 리뷰 단계: 내부 문서 = 리드 확인만 / 일반 앱 코드 = 독립 리뷰 1 / 위험 영역(데이터 삭제·동의·푸시·결제·DB 마이그레이션) = 독립 리뷰 2. 앱 문구는 라이터 확인 유지
+
+## 2026-11-20 어르신 title 32/44 → 30/42 (리드 결정 (a), Noto 재렌더 #162)
+- 32는 Jua 시절 값. Noto Sans KR 700 32에서 P2·P8 제목이 본문 폭 312를 넘어 2줄(디자인 실측). 30이면 '고른 답을 가족과 나눠요' 296으로 한 줄
+- 전역 변경(모든 어르신 화면 제목) / 버린 안: P2·P8 전용 새 역할 — 역할 늘어나기(패널 5)
+- R-05: title 30/heading 26 = 1.15 < 1.2 → 보완 쌍에 추가(둘 다 700, 위치로 위계: 화면당 1개 H1·맨 위). heading 26 유지(24면 heading/bodyLg 1.09로 악화). 디자인(a7cfb55) 확인
+
+## 2026-11-20 N1 알림 묻기 = P7의 연속(리드, #168 기획 리뷰)
+- N1은 덮개 큐(하루 하나)에서 제외. 이번 실행에서 P7 '알겠어요' 뒤에만, 그날 최대 1회. 앱 진입·깨어남 시 묻지 않음(토스 '진입 즉시 권한 묻기 금지'). 해님 인사·P8 등 다른 덮개가 N1을 밀어내 '영영 안 뜸'이 되지 않게
+- 측정 E5 push_prompt_shown은 O-5 서버 반영과 함께(비공개 테스트 14일 전)
 
 ## 2026-11-20 P2 동의 v4(3기 어르신 레인, N-12·7:42)
 - 시안 P6_P7_N1_P2_ds4b P2: ✓ 대신 점 머리표(V4). 문구·CONSENT_VERSION·버튼 문구(법률 확인 전) 그대로
