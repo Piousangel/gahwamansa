@@ -65,7 +65,10 @@ reset role;
 select is((select count(*)::int from public.daily_sessions where parent_id = '70510000-0000-0000-0000-00000000b001')
         + (select count(*)::int from public.answers where parent_id = '70510000-0000-0000-0000-00000000b001'), 2, '거부되면 아무것도 지우지 않는다');
 select is((select count(*)::int from public.admin_audit where action = 'dev_reset_today'
-            and target_family in ('70510000-0000-0000-0000-0000000000f1', '70510000-0000-0000-0000-0000000000f2')), 0, '거부·꺼짐은 감사 행 없음');
+            and (target_family in ('70510000-0000-0000-0000-0000000000f1', '70510000-0000-0000-0000-0000000000f2')
+                 or target_profile in ('70510000-0000-0000-0000-00000000a001', '70510000-0000-0000-0000-00000000a002',
+                                       '70510000-0000-0000-0000-00000000b001'))), 0,
+          '거부·꺼짐은 감사 행 없음(가족 값이 비어 있는 감사 행이 생겨도 프로필로 잡는다)');
 
 -- 정상: 본인의 오늘 것만
 select pg_temp.act_as('70510000-0000-0000-0000-0000000000a1', true);
