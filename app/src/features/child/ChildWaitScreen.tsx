@@ -188,13 +188,16 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           <Card tone="outlined" testID="wait-code">
             <Text role="body">{w.code_label}</Text>
             {/* 리뷰 L6: 번호와 기한을 한 덩어리로 읽는다(복사하기는 Dock) */}
-            <View accessible accessibilityLabel={`${copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}, ${until}`} style={styles.group}>
-              <Text role="display" testID="wait-code-number">
-                {formatCode(code.code)}
-              </Text>
-              <Text role="sub" tone="muted">
-                {until}
-              </Text>
+            <View accessible accessibilityLabel={`${copy.code.show_a11y.split('{앞}, {뒤}').join(codeA11y(code.code))}, ${until}`} style={styles.group} testID="wait-code-group">
+              {/* D-18 B3: 묶음이 번호·기한을 한 번에 읽는다 → 안쪽 '123 456'이 따로 초점을 받아 수로 또 읽히지 않게 숨긴다 */}
+              <View style={styles.group} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden testID="wait-code-visible">
+                <Text role="display" testID="wait-code-number">
+                  {formatCode(code.code)}
+                </Text>
+                <Text role="sub" tone="muted">
+                  {until}
+                </Text>
+              </View>
             </View>
             {renewed ? <Text role="body">{copy.code.old_invalid}</Text> : null}
             {/* UX U12(11-9): 공유 창에서 돌아오면 안내 한 줄(보냈는지는 앱이 알 수 없어 단정하지 않음) */}
