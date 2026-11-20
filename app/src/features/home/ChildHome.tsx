@@ -47,7 +47,7 @@ export function ChildHome() {
   const cheerButton = useRef<React.ComponentRef<typeof import('react-native').Pressable>>(null); // 시트가 닫히면 화면 읽기 포커스를 이 버튼으로(PR #93 M1)
   const [making, setMaking] = useState(false);
   const {show} = useToast();
-  const {send, sending} = useSendCheer(api, load);
+  const {send, sending} = useSendCheer(api, load, cheerButton); // 토스트가 닫히면 초점을 응원 보내기로(#158 리뷰 M)
   useBootLoading(loading && !info && !error); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
 
   const list = info ? cards(info) : [];

@@ -47,7 +47,7 @@ export const tokensV4 = {
     title: {
       weight: 700,
       maxFontScale: 1.5,
-      elder: {size: 32, lineHeight: 44, tone: 'inkTitle'},
+      elder: {size: 30, lineHeight: 42, tone: 'inkTitle'},
       child: {size: 26, lineHeight: 36, tone: 'inkTitle'},
     },
     heading: {
@@ -343,6 +343,7 @@ export const tokensV4 = {
     socialGroupMax: 3,
   },
   ratioCompensatedPairs: [
+    ['elder', 'title', 'heading'],
     ['elder', 'heading', 'bodyLg'],
     ['elder', 'bodyLg', 'body'],
     ['child', 'heading', 'bodyLg'],

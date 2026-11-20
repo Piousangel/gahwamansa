@@ -21,6 +21,11 @@ export function useBackAction(onBack?: () => void) {
   );
 }
 
+/** 스택에서 뒤로 가면 닿는 화면의 목적지 문구('설정으로' 등). 없으면 null — 화면 안 '돌아가기' 버튼도 같은 말을 쓴다(W-09, #152 리뷰 L) */
+export function useBackDestination(): string | null {
+  return backDestination(useNavigation().getState() as never);
+}
+
 // 상단 뒤로 바(터치 64 이상). 보이는 글 = 목적지('‹ 설정으로'), 화면 읽기는 화살표 없이 같은 말(전문가 리뷰 W-09·R-14, '‹ 이전' 없앰).
 // 목적지: to(onBack 이 스택 밖으로 갈 때 화면이 준다) → course(코스 홈) → 스택 바로 아래 화면(backDestination). 하드웨어 뒤로가기와 같은 동작.
 // onBack 을 주지 않으면 스택에서 뒤로 갈 수 있을 때만 보인다(첫 화면에는 없음). 목적지를 모르면 숨는다('이전'으로 돌아가지 않음).

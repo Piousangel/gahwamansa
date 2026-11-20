@@ -7,7 +7,7 @@ import {AudienceProvider, BackLink, Banner, Button, Text} from '../src/ui/ds';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press} from '../testUtils/flow';
+import {press, pressCourseNext} from '../testUtils/flow';
 
 type Node = {type: unknown; props: Record<string, unknown>; parent: Node | null; children: unknown[]};
 // 누르는 파랑: action·actionPressed(눌림)(#179 리뷰 M3)
@@ -111,7 +111,7 @@ test('대표 화면(첫 화면·코스 홈·P4·P1·설정·자녀 홈): 파랑 
   render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   look('코스 홈');
-  await press('사진 보기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   look('P4');
   screen.unmount();

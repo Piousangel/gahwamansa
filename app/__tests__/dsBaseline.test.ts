@@ -13,11 +13,14 @@ const {ESLint}: {
 } = require('eslint');
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
 
+// P6 자판으로 쓰기 v4(ui/ds, 11-20): fontSize −1·fontWeight −1·fontScale −1·text20Size −3
+// P3 코스 홈 v4(ui/ds, 11-20): text20Size −6·rnImport −1·fontScale −1
 // 기준선(2026-11-19, ds/v4-lint, main #35 병합 + push/ 화면 포함). 종류별 위반 수 — 합계 193(height 12건은 모두 width 와 함께라 fixedBox 로 옮김)
 // v3Color 새 종류(디자인 시스템 패널 r1, 11-20): color.ink·color.inkSub 참조 28(features·app·push). 값은 v4 로 옮겼고(inkSub 7.70) 이름은 화면 이행 때 tone 으로
 // C2 재연결 번호(CodeShow)·C6 곧 유료 시트(ui/ds, 11-20): text20Size −2
 // 계정 지우기·지운 뒤(어르신·자녀 공용 ui/ds, 11-20): text20Size −8·rnImport −1·fontScale −1·fontSize −1
 // CG 자녀 시작 결정(ds DsScreen·StateView, 11-20): text20Size −2
+// P2 동의 v4(ds DsScreen·Banner, 11-20): text20Size −5·v3Color −3, D-14 v3Tokens·Screen·BigButton·Text20 각 −1
 // C1 호칭(ds Choice 2열·C2 건너뜀) + C4 호칭 겹침 안내(ds Sheet·Choice), 11-20: text20Size −1
 // P7 완료 앨범(ui/ds, 11-20): 165 → 162 (text20Size −2·rnImport −1)
 // C4 홈 나머지(부품 ui/ds, 11-20): 164 → 159 (text20Size −5)
@@ -29,19 +32,19 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 // L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
 const BASELINE: Record<string, number> = {
-  fontSize: 6,
-  fontWeight: 6,
+  fontSize: 5,
+  fontWeight: 5,
   lineHeight: 2,
   color: 0,
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
   fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
-  fontScale: 13,
+  fontScale: 11,
   placeholder: 0,
-  text20Size: 67,
-  rnImport: 22,
+  text20Size: 53,
+  rnImport: 21,
   ellipsis: 0,
-  v3Color: 25, // #146 C6 PaidSheet −1, #179 M1: StampRow·ParentFamilyScreen 읽는 글 −2
+  v3Color: 22, // #146 C6 PaidSheet −1, #179 M1: 읽는 글 파랑 걷기(main 병합 뒤 실측)
   sign: 0, // R-22 v5: 화면은 Sign 컴포넌트로만 노랑
 };
 
@@ -74,12 +77,12 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
 // src/ 전체(ui/ 포함)에서 v3 토큰(ui/tokens)과 옛 컴포넌트 5종을 import·re-export 하는 문장 수를 센다. **완료 = 모두 0.**
 // 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
 const LEGACY_BASELINE: Record<string, number> = {
-  v3Tokens: 55, // ui/tokens (#146 C2·C6 −2. 11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
-  Screen: 17, // ui/Screen
-  BigButton: 13, // ui/BigButton
+  v3Tokens: 53, // ui/tokens (P2 동의 −1. P3 코스 홈 −1. #146 C2·C6 −2. 11-20: 화면 이행으로 56, ds Dialog +1: scrim 이 tokensV4 생성물에 아직 없다 — Sheet 와 같이 v3 color.scrim, 생성기가 shadow·scrim 을 내보내면 둘 다 뺀다)
+  Screen: 15, // ui/Screen (P3 −1, P2 −1)
+  BigButton: 11, // ui/BigButton (P3 −1, P2 −1)
   ChoiceGrid: 0, // ui/ChoiceGrid
   BottomSheet: 1, // ui/BottomSheet
-  Text20: 35, // ui/Text20
+  Text20: 33, // ui/Text20 (P3 −1, P2 −1)
 };
 const LEGACY_MODULE: Record<string, string> = {v3Tokens: 'ui/tokens', Screen: 'ui/Screen', BigButton: 'ui/BigButton', ChoiceGrid: 'ui/ChoiceGrid', BottomSheet: 'ui/BottomSheet', Text20: 'ui/Text20'};
 
@@ -169,8 +172,8 @@ test('가로·세로 고정 상자는 height 로 세지 않는다(오탐 제외,
 // #179 리뷰 M2: v5 이행 잔재가 줄기만 하게 — 쓰는 곳 수 기준선(늘면 실패, 줄면 숫자를 내린다). 0 이 되면 생성기의 표와 별칭을 지운다(DECISIONS 11-20)
 // #179 리뷰 M1: v3 color.ink(= v5 action 파랑)는 누를 수 있는 것에만 — 쓰는 파일·횟수 화이트리스트(읽는 글은 inkBody·inkTitle)
 const V5_LEFTOVER: Record<string, number> = {
-  deprecatedColor: 9, // tokens.ts 7(v3 별칭) + AlbumMount 1 + ChildHome 1 — R-23 장식 걷어 내기
-  radiusAlias: 59, // radius.card·select·chip·childCard·input(4단 별칭)
+  deprecatedColor: 10, // tokens.ts 7(v3 별칭) + AlbumMount 1 + ChildHome 1 + CourseHome 해님 1(main 병합) — R-23 장식 걷어 내기
+  radiusAlias: 63, // main 병합 뒤 실측. radius.card·select·chip·childCard·input(4단 별칭)
 };
 const INK_PRESSABLE: Record<string, number> = {
   'app/BackBar.tsx': 1, // 뒤로 바 글자(밑줄)

@@ -1,8 +1,9 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState, type RefObject} from 'react';
 import {AppState, PixelRatio} from 'react-native';
 import {copy, withTitle} from '../../copy/copy';
 import {useToast} from '../../ui/Toast';
 import {useScreenReader} from '../../ui/a11y';
+import {focusLater} from '../../ui/screenTitle';
 import {CheerKey, ChildParent, isOffline} from '../types';
 import type {Api} from '../types';
 import {CheerResultRow, summarizeCheer} from './cheerLogic';
@@ -10,9 +11,11 @@ import {track} from '../track';
 
 const c = copy.child.cheer;
 
-// 리드 결정(11-18 U10): '취소'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 화면 읽기가 켜졌거나 글자 200% 이상이면 6초
+// 리드 결정(11-18 U10): '되돌리기'할 수 있는 시간 = 이 토스트 표시 시간. 4초, 글자 200% 이상이면 6초.
+// 전문가 리뷰 D-17a(7:90): 화면 읽기가 켜졌으면 10초 + 초점을 '되돌리기'로(Toast focusAction).
+//   되돌리기는 필수 시간 제한이 아니라 보낸 직후의 편의 창이다(되돌리지 않아도 할 일이 막히지 않음) — WCAG 2.2.1 '끄기·연장' 대상이 아니라 닿기 쉽게 늘린 것(#158 리뷰 L)
 export function cheerUndoMs(screenReader: boolean, fontScale: number): number {
-  return screenReader || fontScale >= 2 ? 6000 : 4000;
+  return screenReader ? 10000 : fontScale >= 2 ? 6000 : 4000;
 }
 
 // 응원 보내기(리뷰 M3 + UX U10): 문장을 누르면 확인 없이 "{호칭}께 보냈어요 · 취소" 토스트를 띄우고, 토스트가 떠 있는 동안
@@ -22,7 +25,9 @@ export function cheerUndoMs(screenReader: boolean, fontScale: number): number {
 // 리뷰 L1(수용): 대기 중 앱을 강제 종료하면 백그라운드 전환에서 보내기를 시작하지만, 응답 전에 프로세스가 죽으면 그 응원은 사라질 수 있다.
 // 보낼 때는 연결된 어르신 한 분씩, 분마다 결과를 따로 받는다(한 분 실패가 다른 분 성공을 지우지 않음).
 // "다시 하기"는 이번에 이미 받은 분을 건너뛴다(하루 한도를 중복으로 쓰지 않게). 기다리는 중·보내는 중에는 다시 누르기 무시.
-export function useSendCheer(api: Api, onReload: () => void) {
+// returnFocusRef: 화면 읽기가 켜진 채 '되돌리기' 토스트가 닫히면(시간 끝·되돌리기) 초점을 돌려줄 곳 = 응원 보내기 버튼(#158 리뷰 M —
+//   초점을 가진 토스트 버튼이 사라지면 TalkBack 초점이 화면 처음으로 튄다)
+export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: RefObject<unknown>) {
   const {show, hide} = useToast();
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
@@ -88,10 +93,19 @@ export function useSendCheer(api: Api, onReload: () => void) {
         deliver(key, targets, [], true);
       };
       const ms = cheerUndoMs(screenReader, PixelRatio.getFontScale());
+      const refocus = () => {
+        if (screenReader && returnFocusRef) {
+          focusLater(() => returnFocusRef.current);
+        }
+      };
       setSending(true);
       const toastId = show({
         durationMs: ms,
-        onExpire: fire, // 시간 끝·다른 토스트로 바뀜·닫힘 → 보낸다
+        focusAction: screenReader, // D-17a: 화면 읽기 사용자는 토스트를 찾아갈 틈이 없다 → 초점을 '되돌리기'로
+        onExpire: () => {
+          fire(); // 시간 끝·다른 토스트로 바뀜·닫힘 → 보낸다
+          refocus();
+        },
         text: withTitle(c.sent, targets.map(p => p.title).join('·')),
         action: {
           label: c.undo,
@@ -103,12 +117,13 @@ export function useSendCheer(api: Api, onReload: () => void) {
             pending.current = null;
             setSending(false);
             show({text: c.undone});
+            refocus();
           },
         },
       });
       pending.current = {fire, toastId};
     },
-    [deliver, show, screenReader],
+    [deliver, show, screenReader, returnFocusRef],
   );
 
   // 앱이 백그라운드로 가면 기다리던 응원을 바로 보낸다(리드 결정 11-18)

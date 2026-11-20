@@ -7,7 +7,7 @@ import {AudienceProvider, Sign} from '../src/ui/ds';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press} from '../testUtils/flow';
+import {press, pressCourseNext} from '../testUtils/flow';
 
 const fs: {readFileSync(p: string, e: string): string; readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]} = require('fs');
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
@@ -100,7 +100,7 @@ test('② 렌더: 첫 화면·코스 홈·P4·설정·자녀 홈에 Sign 밖 노
   render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   look('코스 홈');
-  await press('사진 보기');
+  await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   look('P4');
   screen.unmount();

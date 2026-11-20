@@ -9,7 +9,7 @@ type LintResult = {messages: LintMessage[]};
 const {ESLint}: {ESLint: new (o: {cwd: string}) => {lintFiles(p: string[]): Promise<LintResult[]>}} = require('eslint');
 const path: {join(...p: string[]): string} = require('path');
 
-const BASELINE = {app: 58, crossFeature: 6, uiDeps: 1}; // app 59→58: CG v4 가 app/BackBar 대신 DsScreen back; // app 61→59: C1 v4 가 app/ChildStack 타입·app/BackBar 대신 CommonActions·DsScreen back; // crossFeature 7→6: C0 v4 가 link/TextLink 대신 ui/ds Button; // app 59→61: features/account/FamilyPreview 의 session·BackBar(PR #11 리뷰 L1 권고, AU-10 에서 ui/shared 로 옮길 대상)
+const BASELINE = {app: 58, crossFeature: 5, uiDeps: 1}; // crossFeature 6→5: P3 v4 가 link/TextLink 대신 ui/ds Button; // app 59→58: CG v4 가 app/BackBar 대신 DsScreen back; // app 61→59: C1 v4 가 app/ChildStack 타입·app/BackBar 대신 CommonActions·DsScreen back; // crossFeature 7→6: C0 v4 가 link/TextLink 대신 ui/ds Button; // app 59→61: features/account/FamilyPreview 의 session·BackBar(PR #11 리뷰 L1 권고, AU-10 에서 ui/shared 로 옮길 대상)
 
 jest.setTimeout(120000);
 
