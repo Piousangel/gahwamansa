@@ -22,7 +22,8 @@ tags:
 - assertVisible: '.*Google.*'
 # 출구(P-13, 전문가 리뷰 r2 H): 제목 바로 아래 한 줄 — 스크롤 없이 첫 화면에서 보여야 한다(모든 배율)
 # 첫 화면 끝 걸침(R-15, #163 리뷰)은 좌표로만 볼 수 있어 audit/c0-fold.yaml + FOLD_CHECK=body 로 따로 본다(이 흐름은 C0b·C0c 까지 이어져 첫 화면에서 멈추지 않음)
-- assertVisible: '부모님은 로그인하지 않아요 · 처음으로'
+- assertVisible:
+    id: 'parent-exit'
 - takeScreenshot: c0a-exit
 # C0 v4: 로그인 고르기(C0-a) → 이메일(C0-b) → 인증번호(C0-c). 200%에서는 이메일 링크가 본문 끝이라 아래로 스크롤해 찾는다(fake API 기준, P-13 뒤 출구는 제목 아래)
 - scrollUntilVisible:

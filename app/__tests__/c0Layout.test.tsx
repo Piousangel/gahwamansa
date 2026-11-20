@@ -52,6 +52,9 @@ test('P-13: 부모님 출구는 제목 바로 다음(안내·약관보다 앞), 
   expect(order).toEqual(['로그인하고 시작해요', '부모님은 로그인하지 않아요 · 처음으로', '가족 연결 번호를 만들 때 필요해요']);
   const exit = screen.getByTestId('parent-exit');
   expect(exit.props.accessibilityLabel).toBe('부모님은 로그인하지 않아요. 처음으로'); // #163 리뷰 M: '·'는 읽지 않는다
+  // #163 재확인 L: 문구(copy)가 바뀌어도 읽기 이름에 가운뎃점이 남지 않는다(copy 값으로 다시 확인)
+  expect(require('../src/copy/copy').copy.login.parent_exit_top.split(' · ').join('. ')).not.toMatch(/·/);
+  expect(exit.props.accessibilityLabel).not.toMatch(/·/);
   expect(StyleSheet.flatten(within(exit).getByText('부모님은 로그인하지 않아요 · 처음으로').props.style).textAlign).toBe('left'); // 제목·안내와 같은 왼쪽 정렬
   expect(StyleSheet.flatten(exit.props.style).minHeight).toBeGreaterThanOrEqual(64);
   expect(StyleSheet.flatten(within(exit).getByText('부모님은 로그인하지 않아요 · 처음으로').props.style).fontSize).toBeGreaterThanOrEqual(20);

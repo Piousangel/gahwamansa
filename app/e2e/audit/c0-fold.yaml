@@ -15,5 +15,6 @@ tags:
     timeout: 10000
 - waitForAnimationToEnd
 # 출구는 스크롤 없이 첫 화면에(P-13)
-- assertVisible: '부모님은 로그인하지 않아요 · 처음으로'
+- assertVisible:
+    id: 'parent-exit' # 읽기 이름은 '…않아요. 처음으로'(가운뎃점 없음)라 글자로 찾지 않는다
 - takeScreenshot: c0a-fold-first
