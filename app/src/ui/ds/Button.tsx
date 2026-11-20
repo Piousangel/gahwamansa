@@ -2,7 +2,7 @@ import React from 'react';
 import {Pressable, StyleSheet, Text as RNText, View} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {Icon, type IconName} from '../assets/icons';
-import {ds, minTouch, roleText, type Tone} from './roles';
+import {ds, minTouch, roleMark, roleText, type Tone} from './roles';
 import {pickLayout, useAudience, type LayoutOnlyStyle} from './audience';
 
 export type ButtonKind = 'primary' | 'secondary' | 'text' | 'danger';
@@ -93,6 +93,7 @@ export function Button({kind = 'primary', size = 'dock', label, accessibilityLab
             {icon ? <Icon name={icon} size={text.icon ?? 32} color={roleText('link', a, pressedInk(pressed)).style.color as string} /> : null}
             <RNText
               {...koreanTextProps}
+              {...roleMark(textRole)}
               maxFontSizeMultiplier={text.maxFontSizeMultiplier}
               style={[roleText(textRole, a, pressedInk(pressed)).style, styles.label, align === 'start' ? styles.labelStart : null, kind === 'text' && !disabled ? styles.underline : null]}>
               {keepAllChildren(shown)}

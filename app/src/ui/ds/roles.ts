@@ -75,6 +75,9 @@ const roleFace = (role: InnerRole): FaceKey => {
   return ((t.font.roleFace as Record<string, string>)[key] ?? 'body') as FaceKey;
 };
 
+/** 렌더 트리에 역할 이름 표지를 남긴다(디자인 규칙 렌더 검사 R-04 가 값이 아니라 이름으로 센다, #204 L1). 네이티브는 모르는 속성이라 무시한다 */
+export const roleMark = (role: InnerRole): Record<string, string> => ({dsRole: role});
+
 /** 역할의 글자 스타일 + 확대 상한. 굵기는 400/700 두 단계(빌드 1) */
 export function roleText(role: InnerRole, a: Audience, tone: Tone = 'default'): {style: TextStyle; maxFontSizeMultiplier: number; icon?: number} {
   const {s, weight, cap} = spec(role, a);

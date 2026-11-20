@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, Text as RNText, View} from 'react-native';
 import {keepAllChildren, koreanTextProps} from '../koreanText';
 import {useAudience} from './audience';
-import {ds, fontStyle, roleText} from './roles';
+import {ds, fontStyle, roleMark, roleText} from './roles';
 
 export type TagProps = {
   /** 보이는 글(예: '지금 할 차례'). 색이 아니라 글자로 뜻을 전한다 */
@@ -28,7 +28,7 @@ export function Tag({label, testID}: TagProps) {
   const r = roleText('label', a);
   return (
     <View testID={testID} nativeID={TAG_NATIVE_ID} style={styles.tag}>
-      <RNText {...koreanTextProps} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, fontStyle('body', 700), styles.text]}>
+      <RNText {...koreanTextProps} {...roleMark('label')} maxFontSizeMultiplier={r.maxFontSizeMultiplier} style={[r.style, fontStyle('body', 700), styles.text]}>
         {keepAllChildren(label)}
       </RNText>
     </View>
