@@ -120,6 +120,17 @@ test('넘치면(N-12) 버튼은 본문 끝 — 순서는 세 줄 → 안심 줄 
   expect(fontSizeOf(copy.consent.decline)).toBe(fontSizeOf(copy.consent.accept));
 });
 
+test('본문은 스크롤된다 — 넘쳐 버튼이 본문 끝으로 가도 닿는다(에뮬레이터 320×640 200% 재현: intro 틀은 스크롤을 막아 버튼에 닿지 못했다)', async () => {
+  mockDims = {width: 320, height: 640, scale: 3, fontScale: 2};
+  await toConsent();
+  await overflow();
+  await waitFor(() => expect(screen.queryByTestId('screen-dock')).toBeNull());
+  expect(screen.getByTestId('screen-body').props.scrollEnabled).not.toBe(false);
+  await press(copy.consent.decline);
+  await waitFor(() => screen.getByText(copy.consent.declined_notice));
+  expect(screen.getByTestId('screen-body').props.scrollEnabled).not.toBe(false);
+});
+
 test('안내 두 줄은 기본 글자색(muted 아님 — 어르신 7:1, 법률 L)', async () => {
   await toConsent();
   const ink = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).color;
