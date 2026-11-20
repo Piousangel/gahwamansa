@@ -82,7 +82,7 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
 
   if (declined) {
     return (
-      <DsScreen variant="intro" dock={{primary: {label: c.declined_button, onPress: () => navigation.replace('CourseHome')}}}>
+      <DsScreen variant="step" dock={{primary: {label: c.declined_button, onPress: () => navigation.replace('CourseHome')}}}>
         <Heading level={1}>{c.declined_notice}</Heading>
         <Text role="bodyLg">{c.declined_detail}</Text>
         <Text role="bodyLg">{c.declined_reassure}</Text>
@@ -108,8 +108,9 @@ export function ConsentScreen({navigation}: NativeStackScreenProps<ParentParams,
   );
 
   return (
+    // 틀은 step(본문 스크롤). intro 는 한 화면 구성이라 스크롤을 막는다 — 200%에서 본문 끝으로 내린 버튼에 닿지 못했다(에뮬레이터 320×640 200% 실측, 11-20)
     <DsScreen
-      variant="intro"
+      variant="step"
       back={back}
       onViewport={h => {
         viewport.current = h;
