@@ -2,7 +2,7 @@
 -- 보호하는 것: 연결 전 계정 삭제(앱·관리자·0057 자동 정리), 연결된 계정 삭제(연결 전에 쌓인 기록 포함), 가족 전체 삭제 때 어르신 익명 계정 기록,
 --             다른 사람의 이벤트는 남음, 탈퇴·정리 기록(account_deleted·account_purged, 식별자 없음)은 남음.
 begin;
-select plan(14);
+select plan(15);
 delete from public.events where name in ('account_deleted', 'account_purged');
 
 insert into auth.users (id, aud, role, is_anonymous, created_at, last_sign_in_at) values
@@ -101,12 +101,26 @@ reset role;
 select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000a3') + (select count(*)::int from auth.users where id = '70580000-0000-0000-0000-0000000000a3'), 0,
           '심사 어르신 정리: 인증 계정과 이용 기록이 함께 지워진다');
 
--- 결정적 검사(리뷰 #178, 리드 결정): 인증 계정을 지우는 public 함수는 공통 함수 둘뿐 — 새 삭제 경로가 생기면 여기서 걸린다
-select is((select array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text)
-             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-            where n.nspname = 'public' and p.prokind = 'f' and pg_get_functiondef(p.oid) ~* 'delete\s+from\s+auth\.users'),
-          array['account_delete_core(uuid)', 'user_delete_core(uuid,text)'],
-          'auth.users를 지우는 public 함수는 account_delete_core·user_delete_core(uuid, text)뿐');
+-- 결정적 검사(리뷰 #178, 리드 결정): 인증 계정을 지우는 public 함수는 공통 함수 둘뿐 — 새 삭제 경로가 생기면 여기서 걸린다.
+-- 적용 뒤 실제 함수 정의(pg_get_functiondef)를 본다(옛 정의가 남은 마이그레이션 파일을 grep하지 않음). 잡는 형태(재확인 L1):
+--   delete/truncate + auth.users — 따옴표 식별자("auth"."users"·auth."users"), only, 공백·줄바꿈 포함
+--   동적 SQL: 본문에 execute가 있고 auth·users 낱말이 함께 나오면(문자열 조립 format('... %I.%I', 'auth', 'users') 등) 의심 → 같은 허용 목록 밖이면 실패
+create function pg_temp.auth_user_deleters() returns text[] language sql as $$
+  select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text), '{}')
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind = 'f'
+     and (pg_get_functiondef(p.oid) ~* '(delete\s+from|truncate(\s+table)?)\s+(only\s+)?"?auth"?\s*\.\s*"?users"?'
+          or (pg_get_functiondef(p.oid) ~* '\mexecute\M' and pg_get_functiondef(p.oid) ~* '\mauth\M' and pg_get_functiondef(p.oid) ~* '\musers\M'))
+$$;
+select is(pg_temp.auth_user_deleters(), array['account_delete_core(uuid)', 'user_delete_core(uuid,text)'],
+          'auth.users를 지우는 public 함수는 account_delete_core·user_delete_core(uuid, text)뿐(동적 SQL·따옴표 식별자 포함)');
+-- 검사가 실제로 잡는지: 일부러 위반 함수 셋을 만들어 본다(끝의 rollback으로 사라짐)
+create function public.t0058_bad_quoted() returns void language plpgsql as $f$ begin delete from "auth"."users" where false; end $f$;
+create function public.t0058_bad_dynamic() returns void language plpgsql as $f$ begin execute format('delete from %I.%I where false', 'auth', 'users'); end $f$;
+create function public.t0058_bad_truncate() returns void language plpgsql as $f$ begin if false then truncate only auth . users; end if; end $f$;
+select ok(pg_temp.auth_user_deleters() @> array['t0058_bad_dynamic()', 't0058_bad_quoted()', 't0058_bad_truncate()'],
+          '따옴표 식별자·동적 SQL·truncate로 auth.users를 지우는 함수도 검사가 잡는다');
+drop function public.t0058_bad_quoted(), public.t0058_bad_dynamic(), public.t0058_bad_truncate();
 
 -- 남는 것
 select is(pg_temp.left_for('70580000-0000-0000-0000-0000000000b9'), 1, '다른 사람의 이벤트는 남는다');
