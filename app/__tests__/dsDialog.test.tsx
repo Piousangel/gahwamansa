@@ -165,3 +165,18 @@ test('리뷰 #150 L2: 허락이 오기 전에 언마운트되면 active 를 놓�
   now = new Date('2026-11-21T01:00:00Z'); // 앱을 끄지 않은 채 다음 날
   expect(await q.request('other')).toBe(true); // 수정 전: 내려간 화면의 'push' 가 active 로 남아 false
 });
+
+test('리뷰 #160 M1: effect 가 다시 돌아도(원함 꺼졌다 켜짐) 첫 허락을 놓지 않아 그날 덮개가 뜬다', async () => {
+  let open: () => void = () => {};
+  const gate = new Promise<void>(r => (open = r));
+  const q = createCoverQueue({store: {load: () => gate.then(() => null), save: async () => {}}, now: () => new Date('2026-11-20T01:00:00Z')});
+  const h = renderHook(({w}: {w: boolean}) => useCover('push', w, q), {initialProps: {w: true}});
+  h.rerender({w: false}); // 첫 요청의 effect 가 정리됨(alive=false) — 화면은 그대로
+  h.rerender({w: true}); // 다시 청함
+  await act(async () => {
+    open();
+    await gate;
+    await new Promise<void>(r => setTimeout(() => r(), 0));
+  });
+  expect(h.result.current.visible).toBe(true); // 수정 전: 첫 허락을 '내려간 화면'으로 보고 놓아 둘째 요청이 하루 하나에 걸려 false
+});
