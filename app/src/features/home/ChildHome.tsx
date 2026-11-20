@@ -5,8 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
 import {TopBar} from '../../ui/TopBar';
-import {Screen, SCREEN_FADE_H} from '../../ui/Screen';
-import {AudienceProvider, Button, Card, Choice, Heading, Sheet, StateView, Text} from '../../ui/ds';
+import {AudienceProvider, Button, Card, Choice, DsScreen, Heading, Sheet, StateView, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import type {IconName} from '../../ui/assets/icons';
 import {useToast} from '../../ui/Toast';
@@ -93,15 +92,15 @@ export function ChildHome() {
   // 받은 요약이 없을 때만 오류 화면. 이미 받은 것이 있으면 그대로 두고 오류 줄만 덧붙인다.
   if (error && !info) {
     return (
-      <Screen top={top}>
-        <AudienceProvider value="child">
+      <AudienceProvider value="child">
+        <DsScreen variant="step" header={top}>
           <StateView testID="child-home-error" kind="error" title={error.title} body={error.body} action={{label: error.button, onPress: load}} />
-        </AudienceProvider>
-      </Screen>
+        </DsScreen>
+      </AudienceProvider>
     );
   }
 
-  // 하단 고정: ds Button(자녀 역할). 옛 Screen 틀(탭 화면 TopBar)은 그대로 — 탭 화면용 DsScreen list 틀은 아직 없다
+  // 본문으로 내려올 때(큰 글자) 쓰는 같은 버튼(ds Button, 자녀 역할)
   const bottom = (
     <AudienceProvider value="child">
       {!info ? (
@@ -114,12 +113,18 @@ export function ChildHome() {
   const hasBottom = (!info || reachable.length > 0) && !big;
   // 큰 글자: 응원 버튼은 첫 카드(첫날이면 안내 한 줄) 바로 다음 — 어르신이 여럿이어도 버튼은 하나라 첫 카드 다음(#167 리뷰 M2)
   const inline = big && hasBottomContent(info, reachable.length) ? <View testID="child-home-cheer-inline">{bottom}</View> : null;
+  // DsScreen 이행(#167 캡처 후속): 하단 고정 = ds Dock 주 버튼. '더 있음'은 겹쳐 그리는 흐림이 아니라 스크롤 영역 밖 띠(R-19)라
+  //   둘째 카드 머리가 흐림 밑에 반쯤 비치던 것이 없어진다. 접힘 기준도 DsScreen onViewport(본문 영역 − 띠) 하나
+  const dock: DockProps | undefined = !hasBottom
+    ? undefined
+    : !info
+      ? {primary: {label: c.cheer.button, onPress: () => {}, disabled: true, disabledReason: h.loading_reason}}
+      : {primary: {label: c.cheer.button, onPress: () => setSheet(true), loading: sending, buttonRef: cheerButton}};
 
   return (
     <View style={styles.flex}>
-      {/* 리뷰 L4: 옛 Screen 의 아래 흐림(SCREEN_FADE_H, 겹쳐 그림)에 걸치면 민다(기준 = 흐림 위), 민 요소는 흐림 밑(창 끝)으로 — 흐림 속에 위 테두리가 비치지 않게 */}
-      <Screen top={top} bottom={hasBottom ? bottom : undefined} onViewport={h => emptyFold.onViewport(h - SCREEN_FADE_H, h)}>
-        <AudienceProvider value="child">
+      <AudienceProvider value="child">
+      <DsScreen variant="step" header={top} dock={dock} onViewport={emptyFold.onViewport}>
         {error ? (
           <View accessibilityLiveRegion="polite">
             <Text role="body">{error.title}</Text>
@@ -156,8 +161,8 @@ export function ChildHome() {
         )}
         {/* 받기 전(로딩)·카드가 없을 때는 본문 끝 */}
         {!info || (!firstDay && list.length === 0) ? inline : null}
-        </AudienceProvider>
-      </Screen>
+      </DsScreen>
+      </AudienceProvider>
       {/* 응원 시트 v4(시안 child/C4_cheer_sheet_ds4 #40): ds Sheet + Choice(action) 1열. 확정 문구 4개, 누르면 바로 보낸다 */}
       <AudienceProvider value="child">
         <Sheet visible={sheet} onClose={() => setSheet(false)} title={c.cheer.title} sub={c.cheer.hint} returnFocusRef={cheerButton} testID="sheet">
