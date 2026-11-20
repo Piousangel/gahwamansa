@@ -101,7 +101,7 @@ test('#104 ②: 사진 띠가 입력 칸을 첫 화면 밖으로 밀면 그 크�
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
-  expect(screen.getByTestId('kb-photo')).toHaveTextContent('AI가 만든 그림 · 실제 장소가 아니에요'); // 리드 결정: 사진이 나오는 곳은 병기 한 줄
+  expect(screen.getByTestId('kb-photo')).toHaveTextContent('AI가 만든 그림·실제 장소가 아니에요'); // 리드 결정(가운뎃점 둘레 공백 없음 — Noto 재렌더 #162): 사진이 나오는 곳은 병기 한 줄
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
   await act(async () => {
     lay('screen-body-area', 0, 424); // 접힘 = 424 − 띠 24 = 400
