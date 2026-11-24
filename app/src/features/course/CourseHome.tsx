@@ -3,7 +3,7 @@ import {Animated, StyleSheet, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Button, DsScreen, Heading, ListRow, Text, type DockProps} from '../../ui/ds';
+import {Button, DsScreen, Heading, ListRow, SettingsLink, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {prefs} from '../../lib/prefs';
 import {Icon} from '../../ui/assets/icons';
@@ -75,10 +75,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       <View style={styles.headLinks}>
         {/* 시안: 음악은 소리가 날 때만 '음악 끄기'(켜기는 설정) */}
         {music.available && music.enabled ? <Button kind="text" size="inline" label={copy.bgm.toggle_off} onPress={() => music.setEnabled(false)} /> : null}
-        <Button
-          kind="text"
-          size="inline"
+        {/* 설정: 톱니 + 글자, 자녀 상단 바와 같은 SettingsLink(오너 S25 P-3) */}
+        <SettingsLink
           label={copy.settings.open}
+          testID="course-settings"
           buttonRef={bind('settings')}
           onPress={() => {
             mark('settings');

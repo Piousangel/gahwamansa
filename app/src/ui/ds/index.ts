@@ -15,7 +15,7 @@ export {DsScreen, type DsScreenProps, type ScreenVariant} from './Screen';
 export type {TextRole, TextTone, Audience} from './roles';
 export {MoreBand, MORE_BAND_H} from './MoreBand';
 export {SWITCH_COLORS} from './switchColors';
-export {Sheet, SHEET_MAX_RATIO, type SheetProps} from './Sheet';
+export {Sheet, SHEET_MAX_RATIO, SHEET_HANDLE_TEXT, type SheetProps, type SnapPoint} from './Sheet';
 export {ListRow, type ListRowTone} from './ListRow';
 export {dismissLabel, DECLINE_FORM, DISMISS_TEXT, type Dismiss} from './dismiss';
 export {Dialog, type DialogProps, type DialogAction} from './Dialog';
@@ -23,4 +23,5 @@ export {useCover, configureCoverQueue, createCoverQueue, coverQueue, type CoverS
 export {Sign, type SignProps} from './Sign';
 export {SignPair, SIGN_PAIR_STACK_SCALE, type SignPairProps} from './SignPair';
 export {ToastProvider, useToast, TOAST_MS, type ToastOptions} from './Toast';
+export {SettingsLink} from './SettingsLink';
 export {Tag, TAG_LOOK, type TagProps} from './Tag'; // 면제 표지는 내보내지 않는다(R-04, #204)

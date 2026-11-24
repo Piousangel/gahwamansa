@@ -10,7 +10,6 @@ import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
 import {press, pressBackLink, pressCourseNext} from '../testUtils/flow';
-import {P4_LAYOUT} from '../src/features/course/PhotoStep';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
@@ -83,15 +82,18 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 날)·80(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
+// 첫 화면 보장(360×640·100%에서 질문 첫 문장이 첫 화면)은 p4PhotoV4 '#234 M2' 테스트가 레이아웃 실측을 흉내 내 직접 단언한다(#234 리뷰 M2:
+// 여기 있던 photoFrame 재계산 비교는 동어반복이라 바꿈). 이 스모크는 기기 배율과 상관없이 '잘라 내지 않는다'만 본다.
+test('오너 S25 11-24: 사진 틀은 콘텐츠 사진 비율(1152×928) — 옛 고정 높이(124/88/80) 띠가 아니다(contain 은 p4PhotoV4 가 확인)', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
-  const {fontScale} = require('react-native').Dimensions.get('window');
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? P4_LAYOUT.photo.large : P4_LAYOUT.photo.withCaption); // fake 콘텐츠는 설명 있음
+  const st = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style);
+  expect([124, 88, 80]).not.toContain(st.height);
+  expect(st.width / st.height).toBeCloseTo(1152 / 928, 1);
 });
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
