@@ -10,14 +10,34 @@
 import {Image, Platform} from 'react-native';
 import type {Ringer} from '../lib/audioPolicy';
 import {splitSentences} from './readText';
+import {toSpoken} from './spokenText';
 import {ringerFromNative, type ClipPlayer, type SfxName, type SoundHandle, type TtsEngine, type Unsubscribe} from './audioCore';
 
 /**
- * 읽어 주기 말 빠르기(리뷰 M4). 같은 숫자라도 플랫폼마다 뜻이 다르다: Android TextToSpeech 는 1.0 = 보통,
- * iOS AVSpeechUtterance 는 기본 0.5 = 보통. 스파이크 6절 1번 후보(0.9~1.0)의 조금 느린 쪽. 실기기 QA-04 1번에서 확정(가정값).
+ * 기기 TTS 말하기 기본값 — **바꿀 때는 여기 한 곳만**(P-2, 근거·출처는 docs/team/dev/2026-11-24-tts-reading.md 3절).
+ * - rate: 같은 숫자라도 플랫폼마다 뜻이 다르다(리뷰 M4). Android TextToSpeech 1.0 = 보통, iOS AVSpeechUtterance 기본 0.5 = 보통.
+ *   보통보다 약 10% 느리게 둔다. 고령 청자는 조금 느린 말에서 이해가 좋아지지만, 많이 늦추면 오히려 떨어지고
+ *   (Lessa & Costa 2022 PMC9442445, 합성음 속도 연구) 같은 시간을 '문장 경계 쉼'으로 주는 쪽이 효과가 크다
+ *   (Wingfield 외 1999 Psychology and Aging: 무작위 위치 쉼은 효과 거의 없음, 언어 경계 쉼은 회상 개선). → 속도는 유지, 쉼을 더한다.
+ * - pitch: 1.0 유지. 높낮이를 낮춰 노인성 난청에 유리하다는 직접 근거를 찾지 못했고(난청은 1~3kHz 자음 단서 손실이 핵심),
+ *   기기 TTS 의 pitch 는 음색(포먼트)까지 같이 옮겨 부자연스러워진다.
+ * - sentencePauseMs: 문장(줄바꿈 포함)이 끝난 뒤 다음 문장을 넣기 전 기다리는 시간. 엔진의 문장 끝 틈(대략 0.1~0.3초)에 더해진다.
+ *   한 글자씩 읽기(spokenText)에서는 글자 사이 쉼이 된다. 라이브러리가 SSML·무음 발화를 열어 주지 않아 JS 에서 기다린다.
+ * 모두 가정값: 오너 S25 듣기(문서 6절)와 QA-04 에서 확정한다.
  */
-export const TTS_RATE = {android: 0.9, ios: 0.45} as const;
-const ttsOptions = () => ({language: 'ko-KR', rate: Platform.OS === 'ios' ? TTS_RATE.ios : TTS_RATE.android, pitch: 1.0, ducking: true});
+export const TTS_TUNING = {
+  rate: {android: 0.9, ios: 0.45},
+  pitch: 1.0,
+  sentencePauseMs: 400,
+} as const;
+/** 호환용(테스트·개발자 메뉴): TTS_TUNING.rate */
+export const TTS_RATE = TTS_TUNING.rate;
+const ttsOptions = () => ({
+  language: 'ko-KR',
+  rate: Platform.OS === 'ios' ? TTS_TUNING.rate.ios : TTS_TUNING.rate.android,
+  pitch: TTS_TUNING.pitch,
+  ducking: true,
+});
 
 /** react-native-sound 카테고리: Android 미디어 스트림, iOS 무음 스위치를 따르는 Ambient(D-40) */
 export const soundCategory = (): 'Playback' | 'Ambient' => (Platform.OS === 'android' ? 'Playback' : 'Ambient');
@@ -306,9 +326,14 @@ async function preferGoogleEngine(Speech: SpeechModule): Promise<void> {
  * - '끝남'은 마지막 문장 끝·멈춤·실패에 알린다(중간 문장 끝에 덕킹이 풀리거나 버튼이 기본으로 돌아가지 않게).
  * - 보이스를 넣어 실패하면 보이스 없이(엔진 기본) 다시 읽고, 그 뒤로는 보이스를 쓰지 않는다.
  *   Android 라이브러리는 없는 보이스 이름을 오류 없이 무시하므로 이 경로는 주로 iOS·기타 실패용이다(리뷰 L2).
- * 미리 생성 음성(voiceClips)이 있는 문장은 audioCore 가 파일로 읽어 이 엔진을 거치지 않는다.
+ * - 읽기용 문장(P-2): 넣기 전에 spokenText.toSpoken 으로 숫자·날짜·기호·영문 약어를 읽는 말로 바꾸고, 그 결과로 문장을 나눈다.
+ * - 문장 사이 쉼(P-2): sentencePauseMs 가 있으면 앞 문장이 끝난 뒤 그만큼 기다렸다 다음 문장을 넣는다.
+ *   기다리는 사이 멈춤·새 읽기가 오면 차례 번호(turn)가 바뀌어 넣지 않는다. 마지막 문장 끝은 기다리지 않고 바로 끝남.
+ *   기본 0(테스트·단독 사용), 앱 인스턴스(instance.ts)가 TTS_TUNING.sentencePauseMs 를 넘긴다.
+ * 미리 생성 음성(voiceClips)이 있는 문장은 audioCore 가 파일로 읽어 이 엔진을 거치지 않는다(파일 키는 바꾸기 전 원문).
  */
-export function createTtsEngine(): TtsEngine | null {
+export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngine | null {
+  const pauseMs = opts.sentencePauseMs ?? 0;
   let Speech: SpeechModule;
   try {
     Speech = require('@mhpdev/react-native-speech').default;
@@ -367,12 +392,22 @@ export function createTtsEngine(): TtsEngine | null {
       return;
     }
     const t = turn;
-    put(s).catch(() => {
-      if (t === turn) {
-        queue = [];
-        fireDone();
+    const go = () => {
+      if (t !== turn) {
+        return; // 쉬는 사이 멈췄거나 새 읽기가 시작됨
       }
-    });
+      put(s).catch(() => {
+        if (t === turn) {
+          queue = [];
+          fireDone();
+        }
+      });
+    };
+    if (pauseMs > 0) {
+      setTimeout(go, pauseMs);
+    } else {
+      go();
+    }
   };
   try {
     Speech.onStart(() => startListeners.forEach(l => l()));
@@ -403,7 +438,7 @@ export function createTtsEngine(): TtsEngine | null {
     },
     speak: async text => {
       await prepare();
-      const parts = splitSentences(text);
+      const parts = splitSentences(toSpoken(text));
       const list = parts.length > 0 ? parts : [text];
       turn += 1;
       queue = list.slice(1);
