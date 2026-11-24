@@ -22,17 +22,19 @@ test('다음 테스트: 같은 모의를 spyOn 하면 호출 기록이 비어 �
   expect(spy).not.toHaveBeenCalled();
 });
 
-// 재발 방지 2(DV-1): 예열 훅은 전역 hook 제한(20초)이 아니라 WARM_TIMEOUT_MS 로 — 캐시 없는 첫 변환·로드가 부하에서 20초를 넘겼다.
-// 예열 훅에 두 번째 인자(제한) 없이 쓰면 여기서 그 파일 이름으로 실패한다.
-test('예열(warmAppRoot)을 쓰는 모든 테스트 파일은 beforeAll(warmAppRoot, WARM_TIMEOUT_MS)', () => {
-  const fs: {readdirSync(d: string): string[]; readFileSync(p: string, e: 'utf8'): string} = require('fs');
-  const dir: string = __dirname;
-  const bad = fs
-    .readdirSync(dir)
-    .filter(f => /\.test\.tsx?$/.test(f))
-    .filter(f => {
-      const src = fs.readFileSync(`${dir}/${f}`, 'utf8');
-      return /beforeAll\(\s*warmAppRoot\s*\)/.test(src);
-    });
+// 재발 방지 2(DV-1, QA-2 M1 #245 후속): 예열 등록은 testUtils/warm 의 setupWarmAppRoot() 하나로만(안에서 beforeAll + 예열 전용 제한).
+// 캐시 없는 첫 로드가 부하에서 전역 hook 제한 20초를 넘겼다. 예전 검사는 정규식 한 꼴만 막아 '() => 예열()'·'예열, 20000' 이 지나갔다 →
+// 꼴을 고르지 않고, 테스트 파일이 예열 함수나 제한 값을 이름으로 쓰기만 해도 실패한다(직접 등록할 길 자체를 막음).
+test('테스트 파일은 예열 함수를 직접 부르지 않는다 — setupWarmAppRoot() 만', () => {
+  const fs: {readdirSync(d: string): string[]; readFileSync(p: string, e: 'utf8'): string; existsSync(p: string): boolean} = require('fs');
+  const banned = new RegExp('\\b(' + ['warm' + 'AppRoot', 'WARM_' + 'TIMEOUT_MS'].join('|') + ')\\b');
+  const dirs = [__dirname, `${__dirname}/../__integration__`].filter(d => fs.existsSync(d));
+  const bad = dirs.flatMap(dir =>
+    fs
+      .readdirSync(dir)
+      .filter(f => /\.(test|spec)\.[jt]sx?$/.test(f))
+      .filter(f => banned.test(fs.readFileSync(`${dir}/${f}`, 'utf8')))
+      .map(f => `${dir.endsWith('__integration__') ? '__integration__/' : ''}${f}`),
+  );
   expect(bad).toEqual([]);
 });

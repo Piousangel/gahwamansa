@@ -5,11 +5,11 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {stackScreenOptions, backGestureOptions} from '../src/navigation/stackOptions';
 import {press} from '../testUtils/flow';
-import {warmAppRoot, WARM_TIMEOUT_MS} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 
 // DV-1(2026-11-25): 파일의 첫 테스트가 콜드 스타트(첫 변환·로드)를 혼자 떠안아 부하 때 'Unable to find an element with testID: date-line'
 // (waitFor 10초 초과)로 실패했다 → 파일 시작 때 예열(testUtils/warm). 이 파일은 시작 링크·스플래시를 검사하지 않는다
-beforeAll(warmAppRoot, WARM_TIMEOUT_MS);
+setupWarmAppRoot();
 
 // 자녀 C4(child_summary.latest)·C5(child_answer_history) 와 같은 값 — fake 는 자녀·어르신이 같은 상태를 본다(0050 parent_preview_child_view)
 const LATEST = {prompt: null, choiceLabel: '가을', answeredDate: '2025-11-16'};

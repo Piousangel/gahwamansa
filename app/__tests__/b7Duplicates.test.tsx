@@ -6,10 +6,10 @@ import {render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, type FakeOptions} from '../src/features/fakeApi';
 import {enterCode, press, toHomeConsented, typeCode} from '../testUtils/flow';
-import {warmAppRoot, WARM_TIMEOUT_MS} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 리뷰 #149 L2: 첫 AppRoot 렌더(콜드 스타트)를 미리 치른다. 첫 실행 상태를 검사하는 파일이 아니라 안전
-beforeAll(warmAppRoot, WARM_TIMEOUT_MS);
+setupWarmAppRoot();
 
 const count = (name: string) =>
   [...screen.queryAllByRole('button', {name}), ...screen.queryAllByRole('link', {name})].filter(n => n.props.accessibilityLabel === name).length;
