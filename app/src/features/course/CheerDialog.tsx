@@ -8,7 +8,10 @@ import {isCheerKey, type MyCheers} from '../../api/contract/cheers';
 import type {Api} from '../types';
 
 // P8 응원 도착(시안 P8_cheer): 코스 홈을 열면 안 읽은 응원(get_my_cheers)을 대화상자(U0 Dialog)로 한 번 보여 준다.
-// - 서버 확정 키(api/contract/cheers.ts) 4개만 보여 준다. 모르는 키만 온 묶음은 조용히 읽음 처리.
+// - 아는 키(api/contract/cheers.ts)는 그 문장, 모르는 키(빈 키 포함)는 기본 줄 하나로 보여 준다.
+//   서버가 이 앱보다 먼저 새 키를 열어도 한마디를 놓치지 않게(DECISIONS 11-24 키 확대 배포 순서 ①). 모르는 키의 원래 문장은 보이지 않는다.
+//   모르는 키만: copy.cheer.unknown(제목과 겹치지 않는 말, 개수는 제목이 말함). 아는 키와 섞임: copy.cheer.unknown_more('그 밖에 {n}개 더').
+//   제목 개수는 받은 한마디 전체.
 // - 바깥을 눌러도 닫히지 않고 "알겠어요"(·안드로이드 뒤로)로만 닫힌다 = 읽음 처리.
 // - 닫히면 포커스를 코스 홈 제목으로 돌려준다(R12, returnFocusRef). 그러려면 닫힌 뒤에도 Dialog 를 visible=false 로 남겨 둔다.
 // - 받아 오지 못하면 조용히 아무것도 하지 않는다(장식이라 코스를 막지 않음).
@@ -32,11 +35,6 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
         if (!alive) {
           return;
         }
-        if (r.cheers.length > 0 && !r.cheers.some(c => isCheerKey(c.message_key))) {
-          // 보여 줄 수 없는 키만 왔으면 조용히 읽음 처리(매번 다시 받지 않게)
-          api.markCheersRead(r.cheers.map(c => c.id)).catch(() => {});
-          return;
-        }
         setBatch(r.cheers);
         setOpen(r.cheers.length > 0);
       })
@@ -46,19 +44,22 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
     };
   }, [api, enabled]);
 
-  const lines = batch.flatMap(c => (isCheerKey(c.message_key) ? [copy.cheers[c.message_key]] : []));
+  const known = batch.flatMap(c => (isCheerKey(c.message_key) ? [copy.cheers[c.message_key]] : []));
+  const unknown = batch.length - known.length;
+  const extra = unknown === 0 ? [] : known.length === 0 ? [copy.cheer.unknown] : [copy.cheer.unknown_more.split('{n}').join(String(unknown))];
+  const lines = [...known, ...extra];
   const close = () => {
     setOpen(false);
     if (audio().isSpeaking()) {
       audio().stopSpeaking(); // 대화상자를 닫으면 읽기도 멈춘다
     }
-    // 확인한 묶음 전체(모르는 키 포함). 그 사이 새로 온 응원은 다음에 보인다. 실패하면 다음에 다시 보인다
+    // 본 뒤에만 읽음 처리: 확인한 묶음 전체(모르는 키 포함). 그 사이 새로 온 응원은 다음에 보인다. 실패하면 다음에 다시 보인다
     api.markCheersRead(batch.map(c => c.id)).catch(() => {});
   };
-  if (lines.length === 0) {
+  if (batch.length === 0) {
     return null;
   }
-  const title = lines.length === 1 ? copy.cheer.title : copy.cheer.title_many.split('{n}').join(String(lines.length));
+  const title = batch.length === 1 ? copy.cheer.title : copy.cheer.title_many.split('{n}').join(String(batch.length));
   return (
     <Dialog
       visible={open && focused}
@@ -68,7 +69,7 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
       onDismiss={close}
       returnFocusRef={returnFocusRef ?? null}
       testID="cheer-dialog">
-      {/* AP-03 읽어 주기: 응원 문장 바로 아래 */}
+      {/* AP-03 읽어 주기: 응원 문장 위(ds Dialog 는 children 을 body 앞에 그림, 이행 전과 같은 배치) */}
       <ReadAloud text={ttsText.cheer(lines)} />
     </Dialog>
   );
