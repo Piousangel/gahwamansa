@@ -334,6 +334,14 @@ async function preferGoogleEngine(Speech: SpeechModule): Promise<void> {
  */
 export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngine | null {
   const pauseMs = opts.sentencePauseMs ?? 0;
+  // 문장 사이 쉼 타이머(하나뿐). 새 읽기·멈춤이면 지운다(#238 리뷰 L5: 차례 번호로도 막히지만 남겨 두지 않는다)
+  let pauseTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearPause = () => {
+    if (pauseTimer !== null) {
+      clearTimeout(pauseTimer);
+      pauseTimer = null;
+    }
+  };
   let Speech: SpeechModule;
   try {
     Speech = require('@mhpdev/react-native-speech').default;
@@ -393,6 +401,7 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
     }
     const t = turn;
     const go = () => {
+      pauseTimer = null;
       if (t !== turn) {
         return; // 쉬는 사이 멈췄거나 새 읽기가 시작됨
       }
@@ -404,7 +413,8 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
       });
     };
     if (pauseMs > 0) {
-      setTimeout(go, pauseMs);
+      clearPause();
+      pauseTimer = setTimeout(go, pauseMs);
     } else {
       go();
     }
@@ -441,6 +451,7 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
       const parts = splitSentences(toSpoken(text));
       const list = parts.length > 0 ? parts : [text];
       turn += 1;
+      clearPause();
       queue = list.slice(1);
       try {
         await put(list[0]);
@@ -451,6 +462,7 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
     },
     stop: async () => {
       turn += 1;
+      clearPause();
       queue = []; // 멈춤 표시: 다음 문장을 넣지 않는다
       const wasPutting = inflight;
       await Speech.stop();

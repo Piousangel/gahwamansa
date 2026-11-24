@@ -325,6 +325,31 @@ describe('기기 TTS 개선(DECISIONS 11-19 V13a)', () => {
     }
   });
 
+  test('쉬는 사이 새로 읽으면 이전 글의 다음 문장이 끼어들지 않고, 기다리던 타이머는 지운다(#238 리뷰 L4·L5)', async () => {
+    jest.useFakeTimers();
+    try {
+      const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+      const {tts, h} = engineWithEvents({sentencePauseMs: TTS_TUNING.sentencePauseMs});
+      await tts.speak('하나. 둘.');
+      h.onFinish(); // '둘.'을 기다리는 중
+      expect(jest.getTimerCount()).toBe(1);
+      await tts.speak('셋. 넷.'); // 쉬는 사이 새 읽기
+      expect(jest.getTimerCount()).toBe(0); // 이전 글의 타이머를 지움
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs * 2);
+      expect(speak.mock.calls.map(c => c[0])).toEqual(['하나.', '셋.']); // '둘.'은 넣지 않음
+      h.onFinish();
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs);
+      expect(speak.mock.calls.map(c => c[0])).toEqual(['하나.', '셋.', '넷.']);
+      h.onFinish();
+      await tts.speak('다섯. 여섯.');
+      h.onFinish();
+      await tts.stop(); // 쉬는 사이 멈춤도 타이머를 지움
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('말 빠르기·높낮이·쉼 기본값은 한 곳(TTS_TUNING)에서, 근거 범위 안', () => {
     expect(TTS_RATE).toBe(TTS_TUNING.rate);
     expect(TTS_TUNING.pitch).toBe(1);

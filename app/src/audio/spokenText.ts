@@ -62,29 +62,26 @@ export function nativeNumber(n: number): string | null {
   return NATIVE_TENS[Math.floor(n / 10)] + NATIVE_ONES[n % 10];
 }
 
-/** 소수까지: 1.5 → 일 점 오(소수 자리는 숫자 하나씩) */
-function sinoDecimal(s: string): string {
-  const [int, frac] = s.split('.');
-  const head = sinoNumber(Number(int));
-  if (!frac) {
-    return head;
-  }
-  return `${head} 점 ${Array.from(frac).map(d => (d === '0' ? '영' : SINO[Number(d)])).join('')}`;
-}
-
 /** 달 이름: 6월 유월, 10월 시월 */
 const month = (m: number): string => (m === 6 ? '유' : m === 10 ? '시' : sinoNumber(m)) + '월';
+/** 숫자를 한 자씩(기념일의 날: 25 → 이오) */
+const digitsEach = (d: string): string => Array.from(d).map(x => (x === '0' ? '영' : SINO[Number(x)])).join('');
 
-// 고유어로 세는 말(긴 것 먼저). '분'(시간)·'대'(20대)·'번'(버스 번호)처럼 한자어로 읽는 쓰임이 더 흔한 것은 넣지 않거나 따로 둔다.
-const NATIVE_COUNTERS = '시간|번째|마리|사람|그릇|가지|켤레|송이|군데|시|개|살|명|잔|장|권|벌|달|곳|번';
-// 숫자 뒤 단위 → 읽는 말(뒤에 영문이 이어지면 단위가 아님)
+// 고유어로 세는 말. '분'(시간)·'대'(20대)는 한자어가 흔해 넣지 않는다. '번'은 횟수(세 번)·번호(1번 버스)가 애매해 넣지 않는다(번째만).
+const NATIVE_COUNTERS = '시간|번째|마리|사람|그릇|가지|켤레|송이|군데|시|개|살|명|잔|장|권|벌|달|곳';
+// 세는 말·달 뒤의 낱말 경계: 글 끝·한글 아닌 글자, 또는 조사(뒤에 한글이 더 이어지지 않을 때). '3달러'·'2개국어'·'10시대'는 경계가 아니다
+const PARTICLES = '에서는|에서도|에서|에는|에도|에게|부터|까지|마다|밖에|만에|만큼|이나|이에요|예요|이요|이고|이면|으로|쯤에|쯤|째|씩|에|은|는|이|가|을|를|의|도|만|과|와|나|로|요|엔|반';
+const BOUNDARY = `(?=$|[^가-힣]|(?:${PARTICLES})(?![가-힣]))`;
+// 숫자 뒤 단위 → 읽는 말(뒤에 영문이 이어지면 단위가 아님). 숫자는 그대로 둔다(엔진이 읽는다)
 const UNITS: Record<string, string> = {
   km: '킬로미터', kg: '킬로그램', cm: '센티미터', mm: '밀리미터', ml: '밀리리터', mL: '밀리리터',
   m: '미터', g: '그램', L: '리터', '%': '퍼센트', '℃': '도', '°C': '도', '°': '도',
 };
 const UNIT_RE = 'km|kg|cm|mm|mL|ml|°C|℃|°|%|m|g|L';
+// 기념일 마침표 꼴(6.25 전쟁)은 이 낱말이 뒤따를 때만(그 밖의 8.15 는 소수일 수 있어 그대로)
+const ANNIVERSARY_NEXT = '전쟁|사변|동란|운동|혁명|의거|항쟁|민주|광복|해방|사태|선언|절';
 
-// 영문 대문자 약어는 한 글자씩(Wolters 2007: 낯선 낱말일수록 어르신 청취가 떨어진다 → 엔진마다 다른 읽기를 하나로)
+// 영문 대문자 약어(2~4자)는 한 글자씩(Wolters 2007: 낯선 낱말일수록 어르신 청취가 떨어진다 → 엔진마다 다른 읽기를 하나로)
 const LETTERS: Record<string, string> = {
   A: '에이', B: '비', C: '씨', D: '디', E: '이', F: '에프', G: '지', H: '에이치', I: '아이', J: '제이', K: '케이', L: '엘', M: '엠',
   N: '엔', O: '오', P: '피', Q: '큐', R: '알', S: '에스', T: '티', U: '유', V: '브이', W: '더블유', X: '엑스', Y: '와이', Z: '제트',
@@ -95,62 +92,78 @@ const WORDS: Record<string, string> = {Google: '구글', Lyria: '리리아'};
 const WEEKDAY = '월화수목금토일';
 
 /**
- * 읽기용 문장으로 바꾼다. 순서가 뜻을 가진다: 날짜 → 범위 → 세는 말 → 단위 → 남은 숫자 → 영문 → 괄호·기호 → 한 글자씩 → 정리.
- * 두 번 돌려도 결과가 같다(대체 경로가 이미 바뀐 글을 다시 넘겨도 안전).
+ * 읽기용 문장으로 바꾼다. 원칙(리드, #238 리뷰): **확실한 꼴만 바꾸고, 애매하면 원문 그대로 엔진에 맡긴다**(틀리게 바꾸는 것이 안 바꾸는 것보다 나쁘다).
+ * 그래서 숫자는 읽기가 갈리는 곳(달 이름·세는 말 앞 고유어·기념일·시각·영하·개월)만 말로 바꾸고, 나머지 숫자(해·날·소수·전화번호·분수)는 그대로 둔다.
+ * 순서: 날짜 → 기념일 → 시각·영하 → 범위 → 세는 말 → 단위 → 영문 → 괄호·기호 → 한 글자씩 → 정리. 두 번 돌려도 결과가 같다.
  */
 export function toSpoken(text: string): string {
   let s = text.normalize('NFC');
 
-  // 1. 날짜(M/D 꼴은 분수 1/2 와 헷갈려 다루지 않는다)
-  s = s.replace(/(\d{4})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})\.?/g, (all, y, m, d) =>
-    validDate(+m, +d) ? `${y}년 ${m}월 ${d}일` : all,
+  // 1. 날짜: YYYY.M.D·YYYY-M-D 만(M/D 는 분수와 헷갈려 다루지 않는다). 앞뒤가 숫자·붙임표면 전화번호 등이라 그대로
+  s = s.replace(/(^|[^\d-])(\d{4})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})\.?(?![\d-])/g, (all, pre, y, m, d) =>
+    validDate(+m, +d) ? `${pre}${y}년 ${+m}월 ${+d}일` : all,
   );
   s = s.replace(new RegExp(`\\s*\\(\\s*([${WEEKDAY}])(?:요일)?\\s*\\)`, 'g'), ' $1요일');
-  s = s.replace(/(\d+)\s*개월/g, (_, n) => `${sinoNumber(+n)} 개월`);
-  s = s.replace(/(\d+)\s*월/g, (_, n) => month(+n));
+  s = s.replace(/(^|[^\d])([1-9]\d*)\s*개월/g, (_, pre, n) => `${pre}${sinoNumber(+n)} 개월`);
+  s = s.replace(new RegExp(`(^|[^\\d.])(\\d{1,2})월${BOUNDARY}`, 'g'), (all, pre, n) => (+n >= 1 && +n <= 12 && n[0] !== '0' ? pre + month(+n) : all));
 
-  // 2. 큰 수 쉼표(1,000) 지우기, 가운뎃점 사이 숫자(3·1절)는 붙여 읽기
+  // 2. 큰 수 쉼표(1,000) 지우기
   s = s.replace(/(\d),(?=\d{3}(?!\d))/g, '$1');
-  s = s.replace(/(\d+)\s*[·ㆍ・]\s*(\d+)/g, (_, a, b) => sinoNumber(+a) + sinoNumber(+b));
+  // 3. 기념일: 달(1~9)·날 꼴의 가운뎃점(6·25, 3·1절), 또는 '전쟁' 등이 뒤따르는 마침표(6.25 전쟁) → 달은 수, 날은 한 자씩(육이오).
+  //    10월 이상(10·26)·그 밖의 마침표(8.15)는 읽기가 갈려 그대로
+  const anniversary = (all: string, pre: string, m: string, d: string) => (+d >= 1 && +d <= 31 ? pre + sinoNumber(+m) + digitsEach(d) : all);
+  s = s.replace(/(^|[^\d.·ㆍ・])([1-9])\s*[·ㆍ・]\s*(\d{1,2})(?![\d·ㆍ・])/g, anniversary);
+  s = s.replace(new RegExp(`(^|[^\\d.])([1-9])\\.(\\d{1,2})(?=\\s*(?:${ANNIVERSARY_NEXT}))`, 'g'), anniversary);
 
-  // 3. 범위(3~5개 → 3개에서 5개: 세는 말을 양쪽에 붙여 아래 규칙이 각각 읽게)
-  s = s.replace(new RegExp(`(\\d+)\\s*[~∼～]\\s*(\\d+)\\s*(${NATIVE_COUNTERS}|${UNIT_RE})?`, 'g'), (_, a, b, c = '') => `${a}${c}에서 ${b}${c}`);
+  // 4. 시각 10:30 → 열 시 30분(1~12시만, 분은 숫자 그대로), 영하 -3도 → 영하 3도
+  s = s.replace(/(^|[^\d:])(\d{1,2}):([0-5]\d)(?![\d:])/g, (all, pre, h, m) => {
+    const native = +h >= 1 && +h <= 12 && h[0] !== '0' ? nativeNumber(+h) : null;
+    return native ? `${pre}${native} 시${+m > 0 ? ` ${+m}분` : ''}` : all;
+  });
+  s = s.replace(/(^|[^\dA-Za-z.-])-(\d+(?:\.\d+)?)\s*(?:℃|°C|°|도)/g, '$1영하 $2도');
 
-  // 4. 세는 말 앞은 고유어(1~99). 시는 12 이하만, 번째의 1은 '첫'
-  s = s.replace(new RegExp(`(\\d+)\\s*(${NATIVE_COUNTERS})`, 'g'), (_, num, c) => {
+  // 5. 범위 → '에서'. 숫자~숫자+세는 말·단위는 양쪽에 붙여(3~5개 → 3개에서 5개) 아래 규칙이 각각 읽게.
+  //    세는 말이 붙은 범위(3시~5시, 오전 9시~오후 6시)는 물결만 '에서'로
+  s = s.replace(
+    new RegExp(`(\\d+(?:\\.\\d+)?)\\s*[~∼～]\\s*(\\d+(?:\\.\\d+)?)\\s*(?:(${NATIVE_COUNTERS})${BOUNDARY}|(${UNIT_RE})(?![A-Za-z]))?`, 'g'),
+    (_, a, b, c, u) => {
+      const tail = c ?? u ?? '';
+      return `${a}${tail}에서 ${b}${tail}`;
+    },
+  );
+  s = s.replace(/(\d[^\s~∼～]*)\s*[~∼～]\s*(?=\S*\d|오전|오후)/g, '$1에서 ');
+
+  // 6. 세는 말 앞은 고유어(1~99, 0으로 시작하지 않음, 뒤가 낱말 경계일 때만). 시는 12 이하만, 번째의 1은 '첫'. 아니면 그대로
+  s = s.replace(new RegExp(`(^|[^\\d.,:])([1-9]\\d?)\\s*(${NATIVE_COUNTERS})${BOUNDARY}`, 'g'), (all, pre, num, c) => {
     const n = Number(num);
     if (c === '번째' && n === 1) {
-      return '첫 번째';
+      return `${pre}첫 번째`;
     }
     const native = c === '시' && n > 12 ? null : nativeNumber(n);
-    return `${native ?? sinoNumber(n)} ${c}`;
+    return native ? `${pre}${native} ${c}` : all;
   });
 
-  // 5. 단위
-  s = s.replace(new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${UNIT_RE})(?![A-Za-z])`, 'g'), (_, num, u) => `${sinoDecimal(num)} ${UNITS[u]}`);
+  // 7. 단위 기호 → 말(숫자는 그대로)
+  s = s.replace(new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${UNIT_RE})(?![A-Za-z])`, 'g'), (_, num, u) => `${num} ${UNITS[u]}`);
 
-  // 6. 남은 숫자는 한자어(소수 포함)
-  s = s.replace(/\d+(?:\.\d+)?/g, num => sinoDecimal(num));
+  // 8. 영문: 아는 이름 → 한글, 대문자 약어 2~4자 → 한 글자씩. 한 글자(A4 의 A)·5자 이상(COVID)·소문자가 섞인 낱말은 엔진에 맡긴다
+  s = s.replace(/[A-Za-z]+/g, w => WORDS[w] ?? (/^[A-Z]{2,4}$/.test(w) ? Array.from(w).map(ch => LETTERS[ch]).join('') : w));
 
-  // 7. 영문: 아는 이름 → 한글, 대문자 약어(1~5자, A4 의 A 포함) → 한 글자씩. 소문자가 섞인 낱말은 엔진에 맡긴다.
-  //    낱말 사이 붙임표(COVID-19)는 띄어 읽는다
-  s = s.replace(/[A-Za-z]+/g, w => WORDS[w] ?? (/^[A-Z]{1,5}$/.test(w) ? Array.from(w).map(ch => LETTERS[ch]).join('') : w));
-  s = s.replace(/([0-9A-Za-z가-힣])-(?=[0-9A-Za-z가-힣])/g, '$1 ');
-
-  // 8. 따옴표·꺾쇠는 지운다(읽을 말이 아님)
+  // 9. 따옴표·꺾쇠는 지운다(읽을 말이 아님)
   s = s.replace(/["“”‘’'「」『』《》〈〉<>]/g, '');
-  // 9. 괄호: 앞에 짧은 쉼. 뒤에 한글(조사)이 바로 붙으면 그대로 잇고, 아니면 뒤에도 쉼
+  // 10. 괄호: 앞에 짧은 쉼. 뒤에 한글(조사)이 바로 붙으면 그대로 잇고, 아니면 뒤에도 쉼
   s = s.replace(/\s*[([{]\s*([^()[\]{}]*?)\s*[)\]}](?=([가-힣])?)/g, (_, inner, next) => (next ? `, ${inner}` : `, ${inner},`));
-  // 10. 가운뎃점·빗금·화살표 → 쉼표, 그리고(&)
-  s = s.replace(/\s*[·ㆍ・‧∙/→⇒]\s*/g, ', ');
+  // 11. 가운뎃점·화살표 → 쉼표(숫자 사이 가운뎃점은 그대로: 10·26), 한글 사이 빗금 → 쉼표(1/2·A/S 는 그대로), 그리고(&)
+  s = s.replace(/\s*[·ㆍ・‧∙→⇒]\s*/g, (m: string, at: number, all: string) => (/\d/.test(all[at - 1] ?? '') && /\d/.test(all[at + m.length] ?? '') ? m : ', '));
+  s = s.replace(/([가-힣])\s*\/\s*(?=[가-힣])/g, '$1, ');
   s = s.replace(/\s*&\s*/g, ' 그리고 ');
-  // 11. 말줄임표: 뒤가 공백·끝이면 마침표(문장 쉼), 문장 안이면 쉼표
+  // 12. 말줄임표: 뒤가 공백·끝이면 마침표(문장 쉼), 문장 안이면 쉼표
   s = s.replace(/(?:…|⋯|\.{2,})+(\s|$)/g, '.$1');
   s = s.replace(/\s*(?:…|⋯|\.{2,})+\s*/g, ', ');
-  // 12. 읽지 않는 기호
+  // 13. 읽지 않는 기호
   s = s.replace(/[~∼～★☆♥♡❤●○◎◇◆□■△▲▽▼▶▷◀◁※#*_|^=+@]/g, ' ');
 
-  // 13. 한 글자씩(copy tts.read.word '{낱말}. 한 글자씩, {글자들}.'): 글자마다 따로 말해 글자 사이를 문장 쉼으로(따라 쓰기)
+  // 14. 한 글자씩(copy tts.read.word '{낱말}. 한 글자씩, {글자들}.'): 글자마다 따로 말해 글자 사이를 문장 쉼으로(따라 쓰기)
   s = s.replace(/글자씩\s*,\s*([가-힣](?:\s*,\s*[가-힣])*)\s*\.?(?![가-힣])/g, (_, list: string) =>
     `글자씩.\n${list.split(/\s*,\s*/).join('.\n')}.`,
   );
