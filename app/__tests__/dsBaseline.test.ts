@@ -32,7 +32,8 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C3 v4(연결 기다리는 중, 11-19): 177 → 170 (fixedBox −1·text20Size −6)
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 // L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
-// P4 사진 원본 비율(오너 S25 11-24): fixedBox 10 → 11 — 사진 틀(이미지, R-09 허용) features/course/photoFrame.ts
+// P4 사진 원본 비율(오너 S25 11-24, #234): fixedBox 10 → 11 — features/course/photoFrame.ts 가 계산한 사진 틀 {width, height} 1건.
+// 글자 상자가 아니라 이미지 틀이라 R-09(글자 상자는 고정 높이 금지, minHeight 로)의 예외에 해당
 const BASELINE: Record<string, number> = {
   fontSize: 5,
   fontWeight: 5,

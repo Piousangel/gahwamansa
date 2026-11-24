@@ -3,11 +3,11 @@ import {Image, Pressable, StyleSheet, useWindowDimensions, View} from 'react-nat
 import {StepHeader} from './StepHeader';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
-import {Button, DsScreen, Text, type DockProps} from '../../ui/ds';
+import {Button, DsScreen, Text, useAudience, type DockProps} from '../../ui/ds';
 import {AiNotice} from '../../ui/AiNotice';
 import {FoldStack} from '../../ui/FoldStack';
-import {layout, shadow} from '../../ui/tokens';
-import {ds} from '../../ui/ds/roles';
+import {shadow} from '../../ui/tokens';
+import {ds, roleText} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {Icon} from '../../ui/assets/icons';
 import {useSession} from '../../app/session';
@@ -21,7 +21,8 @@ import {track} from '../track';
 import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
 import {focusLater} from '../../ui/screenTitle';
-import {photoAspect, photoFrame} from './photoFrame';
+import {photoFit, photoFrame} from './photoFrame';
+import {usePhotoLoad} from './usePhotoLoad';
 
 // review: 코스를 다 마친 뒤 '오늘 코스 다시 보기'(시안 P3 v4 B, 기능 회의 B2). 보기 전용 — 기록 호출 없음, 하단은 '돌아가기'.
 export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
@@ -32,13 +33,13 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const {finish, error, busy} = useFinishStep();
   const errorTop = useErrorTop(error);
   useStepStarted('photo', review); // AC-05
-  const [imageFailed, setImageFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false); // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음)
   const [zoom, setZoom] = useState(false);
   const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글에 옅은 하늘 면
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
   const {api, content} = useSession();
+  // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음). 상태는 사진 주소에 묶임(#234 L2)
+  const {aspect, loaded, failed: imageFailed, onLoad, onError} = usePhotoLoad(content?.photo?.image_url);
   // B1 첫 안내(DZ-06): 크게 보기를 한 번 열 때까지, 열지 않아도 P4 세 번째 방문까지만. 시간으로 사라지지 않는다.
   // 방문은 진행 모드 첫 진입만 센다(같은 날 다시 들어온 것·보기 전용은 세지 않음, 리뷰 L3)
   useEffect(() => {
@@ -54,14 +55,34 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     };
   }, [review]);
   // 사진은 둘레 카드 없이 본문 폭을 채우고 원본 비율 그대로(photoFrame). 오너 S25 11-24: 옛 고정 높이(124/88/80) + cover 는
-  // 사진을 가로 띠처럼 잘랐다. 긴 사진은 창 높이 60%로 막고 폭을 같은 비율로 줄인다. 글자 크기로 사진을 줄이지 않는다(200%는 본문 스크롤).
-  // 큰 글자에서는 사진 설명 줄을 '읽어 주세요' 아래로 미룬다
+  // 사진을 가로 띠처럼 잘랐다. 높이 상한 = 창 높이 45%, 그리고 글자 150% 미만에서는 '질문 첫 문장까지 첫 화면'(fit, viewport 실측).
+  // 단 fit 은 바닥(폭 50%·160 중 큰 값) 아래로 내리지 않는다 — 작은 화면에서 바닥에 닿으면 사진을 우선하고 질문은 접힘 아래로 간다.
+  // 200%는 사진을 줄이지 않고 본문 스크롤(질문 첫 문장 보장 없음). 큰 글자에서는 사진 설명 줄을 '읽어 주세요' 아래로 미룬다
   const {fontScale, width: winW, height: winH} = useWindowDimensions();
   const large = fontScale >= 1.5;
-  const [boxW, setBoxW] = useState(0); // 사진 칸(본문) 폭 — 그리기 전에는 창 폭에서 본문 여백을 뺀 값으로 어림
-  const [aspect, setAspect] = useState<number | null>(null);
-  const frame = photoFrame(boxW || Math.max(0, winW - layout.bodyPadding.x * 2), aspect, winH);
+  const audience = useAudience();
+  const gap = large ? P4_LAYOUT.gap.large : P4_LAYOUT.gap.base;
+  const [boxW, setBoxW] = useState(0); // 사진 칸(본문) 폭 — 그리기 전에는 창 폭에서 본문 좌우 여백을 뺀 값으로 어림
   const [viewport, setViewport] = useState(0); // R-15: 접힘에 걸치는 요소는 통째로 아래로(FoldStack)
+  // 첫 화면 맞춤 실측(사진 위 끝·AI 고지·질문 첫 문장 높이). 모두 사진 높이와 무관한 값이고 같으면 setState 하지 않는다 — 측정 → 줄임 → 재측정 반복·튐 없음.
+  // 질문은 문장마다 접힘 단위라(R-15, 걸치면 통째로 밀림) 첫 줄이 아니라 첫 문장 전체 높이를 남긴다. 아직 못 쟀으면 한 줄 높이로 어림
+  const [measure, setMeasure] = useState<{photoTop: number; notice: number; q0: number | null} | null>(null);
+  const onMeasure = useCallback(
+    (top: number, h: Readonly<Record<string, number>>) => {
+      if (h.header === undefined) {
+        return;
+      }
+      const above = ['error', 'header'].filter(k => h[k] !== undefined);
+      const photoTop = top + above.reduce((y, k) => y + h[k], 0) + gap * above.length;
+      const notice = h.ai ?? 0;
+      const q0 = h.q0 ?? null;
+      setMeasure(prev => (prev && prev.photoTop === photoTop && prev.notice === notice && prev.q0 === q0 ? prev : {photoTop, notice, q0}));
+    },
+    [gap],
+  );
+  const oneLine = Number(roleText('bodyLg', audience).style.lineHeight ?? 0) * fontScale; // 글자 확대만큼 줄 높이도 커진다
+  const fitH = !large && measure ? photoFit(viewport, measure.photoTop, gap, measure.notice, measure.q0 ?? oneLine) : undefined;
+  const frame = photoFrame(boxW || Math.max(0, winW - ds.space.screenX[audience] * 2), aspect, winH, fitH);
   // 100%라도 질문이 길어 '읽어 주세요'가 첫 화면에 못 들면 설명 줄을 읽어 주세요 아래로(200% 순서, 시안 '질문·읽어 주세요가 첫 화면')
   // 정한 순서는 그 화면 크기·배율에서만 유지(창이 바뀌면 다시 잰다)
   const fit = `${viewport}|${large}`;
@@ -102,7 +123,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const readable = read.allowed && photo.recall_questions.length > 0;
   // 시안 P4_photo_ds4c(사진 중심 안): 위 BackLink '오늘 코스로'(U-8: 하단 링크 없음), 단계 제목 한 줄 → 큰 사진(안에 'AI가 만든 그림' 칩)
   // → 사진 설명 한 줄(없는 날은 없음) → 회상 질문 → '읽어 주세요'(질문 바로 아래 본문 보조) → 천천히 보세요. Dock 은 '다 봤어요' 하나.
-  // 100%: 사진·단계·질문·읽어 주세요가 첫 화면. 200%: 사진 100, 설명 줄은 읽어 주세요 아래(질문 첫 문장이 첫 화면에).
+  // 100%(글자 150% 미만): 단계·사진·AI 고지·질문 첫 문장이 첫 화면(fit) — 단 사진이 바닥(폭 50%·160)에 닿는 작은 화면은 사진 우선, 질문은 접힘 아래.
+  // '읽어 주세요'는 첫 화면 보장 없음(사진이 커져서). 200%: 사진 상한은 100%와 같고 설명 줄은 읽어 주세요 아래, 나머지는 스크롤.
   const dock: DockProps = review
     ? {primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}
     : error
@@ -120,7 +142,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       onViewport={setViewport}
       dock={dock}>
       {/* split="photo": 큰 사진이 첫 화면 끝에 걸쳐도 통째로 밀지 않는다(밀면 첫 화면에 단계 제목만 남는다). 사진은 스크롤로 이어 본다 */}
-      <FoldStack viewport={viewport} gap={large ? P4_LAYOUT.gap.large : P4_LAYOUT.gap.base} testID="p4-body" onFold={onFold} split="photo">
+      <FoldStack viewport={viewport} gap={gap} testID="p4-body" onFold={onFold} onMeasure={onMeasure} split="photo">
         {!review && error ? <StepErrorBanner key="error" error={error} /> : null}
         <StepHeader key="header" name={copy.course.step.photo} n={1} review={review} compact={large} />
         {/* B1: 사진 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
@@ -151,12 +173,8 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
                 style={styles.image}
                 // AI 고지는 바로 아래 보이는 줄이 따로 읽힌다(같은 말을 두 번 읽지 않게)
                 accessibilityLabel={photo.caption || appCopy.ai_photo_label}
-                onLoad={e => {
-                  const src = e?.nativeEvent?.source; // 크기를 못 받으면 기본 4:3 틀(잘라 내지는 않음)
-                  setAspect(photoAspect(src?.width, src?.height));
-                  setLoaded(true);
-                }}
-                onError={() => setImageFailed(true)}
+                onLoad={onLoad}
+                onError={onError}
               />
             )}
           </Pressable>

@@ -10,8 +10,6 @@ import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
 import {press, pressBackLink, pressCourseNext} from '../testUtils/flow';
-import {photoFrame} from '../src/features/course/photoFrame';
-import {layout} from '../src/ui/tokens';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
@@ -84,15 +82,18 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('오너 S25 11-24: 사진 틀은 원본 비율(불러오기 전 4:3) — 글자 크기로 줄이지 않는다(photoFrame)', async () => {
+// 첫 화면 보장(360×640·100%에서 질문 첫 문장이 첫 화면)은 p4PhotoV4 '#234 M2' 테스트가 레이아웃 실측을 흉내 내 직접 단언한다(#234 리뷰 M2:
+// 여기 있던 photoFrame 재계산 비교는 동어반복이라 바꿈). 이 스모크는 기기 배율과 상관없이 '잘라 내지 않는다'만 본다.
+test('오너 S25 11-24: 사진은 잘라 내지 않는다 — contain, 틀은 콘텐츠 사진 비율(1152×928), 옛 고정 높이(124/88/80) 아님', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
-  const {width, height} = require('react-native').Dimensions.get('window');
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style)).toMatchObject(photoFrame(width - layout.bodyPadding.x * 2, null, height));
+  const st = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style);
+  expect([124, 88, 80]).not.toContain(st.height);
+  expect(st.width / st.height).toBeCloseTo(1152 / 928, 1);
 });
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {
