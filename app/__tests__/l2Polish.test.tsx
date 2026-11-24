@@ -149,12 +149,12 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     render(<AppRoot api={createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question', 'hangul']})} role="parent" restore />);
     await waitFor(() => screen.getByTestId('date-line'));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
     send.mockClear();
     await pressLast('오늘 코스로'); // 하단 '돌아가기'(v4: 보이는 글 = 읽기, 목적지는 힌트)
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'));
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContainEqual(expect.stringMatching(/^둘 중 고르기, 했어요, \d+일$/)));
   });
   test("화면 읽기가 꺼져 있으면 포커스를 옮기지 않는다", async () => {
     await home();

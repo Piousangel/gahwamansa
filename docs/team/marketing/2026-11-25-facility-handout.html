@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>선생님용 설치 안내</title>
+<!-- 시설 선생님용 안내지(지금 흐름판), 2026-11-25. 글은 2026-11-25-facility-handout.md 1절과 같다. 외부 스크립트·글꼴 없음. 노랑(#FFD43B)은 팻말 전용이라 이 장에는 쓰지 않는다. -->
+<style>
+  :root {
+    --ink: #151515;
+    --sub: #3a3a3a;
+    --press: #1A4C99;
+    --line: #c9ccc4;
+    --paper: #ffffff;
+    --soft: #F4F5F2;
+  }
+  @page { size: A4; margin: 11mm 14mm 10mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 14.5pt;
+    line-height: 1.38;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  .page { max-width: 182mm; margin: 0 auto; padding: 16px; }
+  @media print { .page { padding: 0; max-width: none; } }
+  h1 { font-size: 22pt; line-height: 1.25; margin: 0 0 6pt; }
+  h2 {
+    font-size: 15.5pt; margin: 9pt 0 3pt; padding-top: 6pt;
+    border-top: 1.5pt solid var(--ink);
+  }
+  p { margin: 0 0 2pt; }
+  .intro p { color: var(--sub); }
+  ol, ul { margin: 0; padding-left: 1.4em; }
+  li { margin: 0 0 2pt; }
+  li .more { display: block; color: var(--sub); }
+  ul { list-style: "· "; }
+  .btn { color: var(--press); font-weight: 700; white-space: nowrap; }
+  .self { border: 2pt solid var(--ink); border-radius: 6pt; padding: 6pt 10pt 7pt; margin-top: 9pt; }
+  .self h2 { border: 0; padding-top: 0; margin-top: 0; }
+  .self .strong { font-weight: 700; }
+  .msg { background: var(--soft); border: 1pt solid var(--line); border-radius: 6pt; padding: 6pt 10pt 7pt; margin-top: 9pt; }
+  .msg h2 { border: 0; padding-top: 0; margin-top: 0; }
+  .msg h2 small { font-size: 12pt; font-weight: 400; }
+  .ask { margin-top: 0; }
+  .foot { margin-top: 8pt; font-size: 12.5pt; color: var(--sub); }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>가화만사성 설치를 도와주시는 선생님께</h1>
+  <div class="intro">
+    <p>가화만사성은 옛날 사진 한 장을 보고, 둘 중 마음 가는 쪽을 고르는 앱이에요.</p>
+    <p>어르신이 허락하시면 고르신 답이 가족 휴대폰에 보여요. 가족은 그 답으로 이야기를 꺼내요.</p>
+    <p>어르신 쪽은 무료이고 광고가 없어요. 어르신께 이름이나 전화번호를 묻지 않아요.</p>
+  </div>
+
+  <h2>■ 설치 순서</h2>
+  <ol>
+    <li>Play 스토어에서 '가화만사성'을 찾아 어르신 휴대폰에 설치해 주세요.<span class="more">지금은 안드로이드 휴대폰만 돼요.</span></li>
+    <li>앱을 열고 <span class="btn">[부모님 휴대폰이에요]</span>를 눌러 주세요.</li>
+    <li>번호가 없으면 번호 칸 아래 <span class="btn">[코스 보기]</span>를 눌러 오늘 사진부터 보셔도 돼요.<span class="more">가족과 연결하기 전에 고르신 답은 저장되지 않아요.</span></li>
+    <li>아래 '가족에게 보낼 글'을 가족에게 보내 주세요.</li>
+    <li>가족이 보낸 번호 6자리를 어르신 휴대폰에 써 주세요.<span class="more">코스 화면의 <span class="btn">[번호 쓰기]</span>를 누르면 번호 칸으로 가요.</span></li>
+  </ol>
+
+  <section class="self">
+    <h2>■ 이것은 어르신이 직접 눌러요</h2>
+    <ul>
+      <li><span class="btn">[이 번호로 연결하기]</span></li>
+      <li>'고른 답을 가족과 나눠요' 화면의 <span class="btn">[좋아요]</span> 또는 <span class="btn">[싫어요]</span></li>
+    </ul>
+    <p class="strong">선생님이 대신 고르거나 누르지 말아 주세요.</p>
+    <p><span class="btn">[싫어요]</span>를 누르셔도 앱은 그대로 쓰실 수 있어요. 마음이 바뀌면 설정에서 바꿀 수 있어요.</p>
+    <p>사진에서 둘 중 하나도 어르신이 직접 고르시는 거예요. 정답은 없어요.</p>
+  </section>
+
+  <h2>■ 부탁드려요</h2>
+  <ul class="ask">
+    <li>선생님 휴대폰에서 번호를 만들어 연결하지 말아 주세요. 고르신 답은 연결된 가족만 봐요.</li>
+    <li>번호를 어르신 성함과 같이 적어 두거나 게시판에 붙이지 말아 주세요.</li>
+    <li>앱 속 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요.</li>
+  </ul>
+
+  <section class="msg">
+    <h2>■ 가족에게 보낼 글 <small>(카톡에 그대로 붙여 넣으세요)</small></h2>
+    <p>어르신 휴대폰에 '가화만사성' 앱을 설치해 드렸어요.</p>
+    <p>가족분 휴대폰(만 14세 이상)에 가화만사성을 설치하고 로그인한 뒤 [번호 만들기]를 누르면 번호 6자리가 나와요. 그 번호를 7일 안에 카톡이나 전화로 어르신께 알려 주세요.</p>
+    <p>연결할지, 고른 답을 보여 줄지는 어르신이 직접 정해요.</p>
+  </section>
+
+  <p class="foot">문의: [오너: 문의 메일]</p>
+</main>
+</body>
+</html>

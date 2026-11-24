@@ -1,0 +1,160 @@
+import React, {useCallback, useRef, useState} from 'react';
+import {Image, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {useSession} from '../../app/session';
+import {DsScreen, Sign, SignOther, Text, useAudience, type DockProps} from '../../ui/ds';
+import {ds} from '../../ui/ds/roles';
+import {AiNotice} from '../../ui/AiNotice';
+import {FoldStack} from '../../ui/FoldStack';
+import {PhotoButton} from '../../ui/PhotoButton';
+import {Icon} from '../../ui/assets/icons';
+import {focusLater, useScreenTitleRef} from '../../ui/screenTitle';
+import {appCopy, copy} from '../../copy/copy';
+import {kstDateLine} from './stamps';
+import {photoFit, photoFrame} from './photoFrame';
+import {usePhotoLoad} from './usePhotoLoad';
+import {PhotoZoom} from './PhotoZoom';
+import {ReadAloudNotice, useReadAloudAction} from './ReadAloud';
+
+const c = copy.course;
+const fill = (tpl: string, vars: Record<string, string>) => Object.keys(vars).reduce((s, k) => s.split(`{${k}}`).join(vars[k]), tpl);
+
+// D-3 '오늘 코스 다시 보기' 안 A '오늘 한 장'(DECISIONS 2026-11-24, 시안 docs/design/2026-11-24-d2-d3-c4/d3-course-review.html).
+// 다시 하기가 아니라 오늘 남긴 것 보기: 한 화면 세로 스크롤, 탭 0번.
+// 위 BackLink '오늘 코스로' → 날짜(화면 제목) → 사진(누르면 크게, 원본 비율 — P4 와 같은 photoFrame·usePhotoLoad)
+// → 사진 이름 → AI 고지 → '{질문} · 고르신 쪽' + 노랑 팻말(row, 화면당 1개 R-22) + '다른 하나 · {안 고른 쪽}'(흐린 보조 글자) → 오늘 낱말.
+// Dock = '읽어 주세요'(돌아가기는 BackLink 하나 — U-8 과 같은 이유로 같은 일 하는 버튼을 둘 두지 않는다). 화면 읽기가 켜져 있으면 Dock 없음(R16).
+// 보기 전용: 기록·계측 호출 0. 저장된 답이 없는 날(거부·철회·미연결)은 팻말 줄을 뺀다. D-1 '먼저 떠오른 것' 자리는 아직 없다.
+// 200%: 같은 순서로 스크롤만(사진은 줄이지 않는다 — P4 의 200% 규칙은 단계 화면 버튼을 올리려는 것이라 여기는 해당 없음).
+// 코스 홈 바로 위에만 쌓이므로 뒤로(BackLink·하드웨어)는 기본 goBack 그대로 코스 홈이다(app/ 의존을 늘리지 않게 내비 타입은 필요한 것만).
+export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) {
+  const toCourseHome = useCallback(() => navigation.goBack(), [navigation]);
+  const {content} = useSession();
+  const audience = useAudience();
+  const {width: winW, height: winH, fontScale} = useWindowDimensions();
+  const [boxW, setBoxW] = useState(0);
+  const [zoom, setZoom] = useState(false);
+  const [viewport, setViewport] = useState(0); // R-15: 접힘 경계에 걸치는 묶음(팻말 등)은 통째로 아래로
+  // 첫 화면 맞춤(글자 150% 미만): 사진 위 끝·이름/고지 묶음 높이를 재서 사진이 이름·AI 고지까지 첫 화면에 들게 줄인다(P4 photoFit 과 같은 계산).
+  // 에뮬레이터 360×640 100%(11-25): 사진이 커서 이름·고지 묶음이 통째로 접힘 아래로 밀려 사진 밑이 비고 고지가 첫 화면에서 빠졌다. 둘 다 사진 높이와 무관한 값이라 반복 측정이 없다
+  const [fitM, setFitM] = useState<{photoTop: number; notice: number} | null>(null);
+  const onMeasure = useCallback((top: number, h: Readonly<Record<string, number>>) => {
+    if (h.date === undefined || h.notice === undefined) {
+      return;
+    }
+    const photoTop = top + h.date + BODY_GAP;
+    const notice = h.notice;
+    setFitM(prev => (prev && prev.photoTop === photoTop && prev.notice === notice ? prev : {photoTop, notice}));
+  }, []);
+  const photoRef = useRef<React.ComponentRef<typeof View>>(null);
+  const registerTitle = useScreenTitleRef(true);
+  const {aspect, loaded, failed, onLoad, onError} = usePhotoLoad(content?.photo?.image_url);
+  const photo = content?.photo;
+  const q = content?.question;
+  const date = kstDateLine();
+  const chosen = q && content?.answered_choice ? (content.answered_choice === 'A' ? q.option_a : q.option_b) : null;
+  const other = q && content?.answered_choice ? (content.answered_choice === 'A' ? q.option_b : q.option_a) : null;
+  const readText = photo
+    ? chosen
+      ? fill(c.review_read, {날짜: date, 사진: photo.caption, 답: chosen, 낱말: photo.keyword})
+      : fill(c.review_read_no_choice, {날짜: date, 사진: photo.caption, 낱말: photo.keyword})
+    : '';
+  const read = useReadAloudAction(readText);
+  if (!photo) {
+    return null;
+  }
+  const pending = photo.image_url.startsWith('pending://') || failed;
+  const canZoom = !pending && loaded;
+  const fitH = fontScale < 1.5 && fitM ? photoFit(viewport, fitM.photoTop, BODY_GAP, fitM.notice, 0) : undefined;
+  const frame = photoFrame(boxW || Math.max(0, winW - ds.space.screenX[audience] * 2), aspect, winH, fitH);
+  const dock: DockProps | undefined = read.allowed ? {primary: {kind: 'secondary', label: read.label, loading: read.busy, onPress: read.onPress, testID: 'review-read'}} : undefined;
+  return (
+    <DsScreen variant="step" back={{to: c.to_home, onPress: toCourseHome}} dock={dock} onViewport={setViewport}>
+      {/* R-15(에뮬레이터 실측 11-25, S25급 200%): 팻말이 첫 화면 끝에 걸쳐 윗선만 보였다 → FoldStack 으로 걸치는 묶음을 통째로 민다.
+          사진은 split(통째로 밀면 첫 화면에 날짜만 남는다 — P4 와 같은 이유) */}
+      <FoldStack viewport={viewport} gap={BODY_GAP} testID="today-review" split="photo" onMeasure={onMeasure}>
+        <View key="date" ref={registerTitle} testID="review-date" accessible accessibilityRole="header" accessibilityLabel={date}>
+          <Text role="heading">{date}</Text>
+        </View>
+        <View key="photo" testID="review-photo-box" onLayout={e => setBoxW(Math.round(e.nativeEvent.layout.width))}>
+          <PhotoButton
+            pressRef={photoRef}
+            frame={frame}
+            canPress={canZoom}
+            label={copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption)}
+            hint={copy.photo.zoom_open_hint}
+            onPress={() => setZoom(true)}>
+            {pending ? (
+              <View style={styles.pending}>
+                <Icon name="icon-photo" size={36} color={ds.color.inkSub} />
+                <Text role="sub" tone="muted" style={styles.center}>{failed ? appCopy.photo_load_failed : appCopy.photo_placeholder}</Text>
+              </View>
+            ) : (
+              <Image
+                testID="photo-image"
+                source={{uri: photo.image_url}}
+                resizeMode="contain"
+                style={styles.image}
+                // 읽기는 크게 보기 버튼 이름(사진 이름·AI 포함) 또는 아래 이름·고지 줄이 맡는다 — 사진 자체는 읽지 않는다(QA-1 L1 중복)
+                accessible={false}
+                importantForAccessibility="no"
+                onLoad={onLoad}
+                onError={onError}
+              />
+            )}
+          </PhotoButton>
+        </View>
+        {/* 사진 이름 줄: 크게 보기 버튼이 '오늘 사진, {이름}, AI가 만든 그림'을 읽으므로, 누를 수 있을 때만 화면 읽기에서 뺀다(QA-1 L1 중복).
+            AI 고지 줄은 어떤 상태(불러오기 전·후·실패·준비 중)에서도 숨기지 않는다 — 고지 누락 금지(리드 결정, QA-1 재확인 M1) */}
+        <View key="notice" style={styles.tight}>
+          {photo.caption ? (
+            <View accessibilityElementsHidden={canZoom} importantForAccessibility={canZoom ? 'no-hide-descendants' : 'auto'}>
+              <Text testID="review-caption" role="bodyLg">{photo.caption}</Text>
+            </View>
+          ) : null}
+          <AiNotice text={`${appCopy.ai_photo_label}·${appCopy.not_real_place}`} />
+        </View>
+        {chosen && other ? (
+          <View key="choice" testID="review-choice" style={styles.tight}>
+            {/* 읽기: 질문 줄은 질문만('고르신 쪽'은 팻말 읽기가 말한다), 질문이 없는 날은 이 줄을 읽지 않는다. 가운뎃점은 읽기 이름에 넣지 않는다(QA-1 L1) */}
+            {q?.prompt ? (
+              <Text testID="review-choice-label" role="sub" tone="muted" accessibilityLabel={q.prompt}>
+                {fill(c.review_choice_label, {질문: q.prompt})}
+              </Text>
+            ) : (
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Text testID="review-choice-label" role="sub" tone="muted">{c.review_choice_label_no_prompt}</Text>
+              </View>
+            )}
+            <Sign size="row" label={chosen} readLabel={fill(c.review_sign_a11y, {답: chosen})} />
+            <SignOther testID="review-other" label={fill(c.review_other, {답: other})} readLabel={fill(c.review_other_a11y, {답: other})} />
+          </View>
+        ) : null}
+        <View key="word" testID="review-word" accessible accessibilityLabel={fill(c.review_word_a11y, {낱말: photo.keyword})} style={styles.tight}>
+          <Text role="sub" tone="muted">{c.review_word}</Text>
+          <Text role="title">{photo.keyword}</Text>
+        </View>
+        {/* 안내가 있을 때만 칸을 둔다 — 없을 때 빈 칸이 묶음 간격 16을 낱말 아래에 남겼다(QA-1 재확인 L2) */}
+        {read.notice ? <ReadAloudNotice key="read-notice" notice={read.notice} /> : null}
+      </FoldStack>
+      {canZoom ? (
+        <PhotoZoom
+          visible={zoom}
+          uri={photo.image_url}
+          caption={photo.caption}
+          onClose={() => {
+            setZoom(false);
+            focusLater(() => photoRef.current);
+          }}
+        />
+      ) : null}
+    </DsScreen>
+  );
+}
+
+const BODY_GAP = 16;
+const styles = StyleSheet.create({
+  tight: {gap: 6},
+  image: {flex: 1, alignSelf: 'stretch'},
+  pending: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 8},
+  center: {textAlign: 'center'},
+});
