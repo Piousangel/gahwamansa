@@ -304,6 +304,9 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
     const vertical = (gs: PanResponderGestureState, slop: number) => Math.abs(gs.dy) > slop && Math.abs(gs.dy) > Math.abs(gs.dx);
     const make = (source: DragSource, want: (gs: PanResponderGestureState) => boolean) =>
       PanResponder.create({
+        // 손잡이는 누르는 순간 응답자가 된다. 아무도 응답자가 되지 않은 터치는 Android(Fabric·Modal)에서 이동 사건의
+        // '잡을까' 질문이 손잡이까지 오지 않았다(에뮬레이터 실측 11-24: 손잡이 끌기 무반응, 내용 끌기는 됨). 내용은 안의 버튼 누르기를 지키려고 이동에서만 잡는다
+        onStartShouldSetPanResponder: () => source === 'handle' && isOpen(),
         onMoveShouldSetPanResponderCapture: (_e: GestureResponderEvent, gs) => isOpen() && want(gs),
         onPanResponderGrant: () => begin(source),
         onPanResponderMove: (_e, gs) => move(source, gs),

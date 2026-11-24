@@ -87,6 +87,14 @@ const shownY = () => {
 const a11y = (actionName: string) => act(() => handle().props.onAccessibilityAction({nativeEvent: {actionName}}));
 
 describe('손잡이 끌기', () => {
+  test('손잡이는 누르는 순간 응답자가 되고, 내용은 누르는 순간 잡지 않는다(안의 버튼 누르기 보호)', async () => {
+    // 에뮬레이터 실측(11-24): 누르는 순간 응답자가 없으면 Android 에서 이동의 '잡을까' 질문이 손잡이까지 오지 않아 손잡이 끌기가 죽어 있었다
+    await open();
+    const start = {nativeEvent: {touches: [], changedTouches: [], pageX: 0, pageY: 0, timestamp: 1}, touchHistory: {numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: 1, touchBank: []}};
+    expect(handle().props.onStartShouldSetResponder(start)).toBe(true);
+    expect(screen.getByTestId('s-content').props.onStartShouldSetResponder(start)).toBe(false);
+  });
+
   test('빠르게 아래로 튕기면 닫힌다(500px/s 이상 = 그 방향 한 칸 = 닫힌 자리)', async () => {
     await reduceMotion();
     const onClose = await open();
