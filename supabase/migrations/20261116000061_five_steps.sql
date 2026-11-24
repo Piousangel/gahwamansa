@@ -23,7 +23,7 @@
 --     '목록엔 ② 한 줄만, ⑤는 앨범·날짜 상세만'(시안 6)은 앱 표시 몫 — 서버는 두 값을 함께 준다.
 -- (5) 어르신 읽기 — get_today_content(start_today)·preview_content에 recall{options, picked_slot}·pass_on{enabled, picked_key}·skipped_steps,
 --     parent_history 날마다 recall_label·pass_on_key(키 추가만).
--- (6) 이벤트 step 값에 recall·pass_on(event_prop_ok, 앱 계약 events.ts).
+-- (6) 이벤트 step 값에 recall·pass_on·stop_here(event_prop_ok, 앱 계약 events.ts). 값은 단계 이름뿐 — 고른 낱말·문장은 싣지 않는다.
 -- 콘텐츠 값(② 보기 90개)은 넣지 않는다 — 라이터 PR 병합 뒤 별도 적재. 형식은 supabase/seed_recall_options.sql 머리말.
 
 -- ---- (1) 단계·넘어감·코스 길이 ----
@@ -45,7 +45,7 @@ comment on column public.daily_sessions.stopped_here is '0061: ③ 뒤 ''오늘�
 create table public.content_recall_options (
   day_index int not null references public.content_photos(day_index) on delete cascade,
   slot smallint not null check (slot between 1 and 3),
-  label text not null check (label ~ '^[가-힣]{1,6}$'), -- 기획 3.2 새 규칙: 띄어쓰기·영문·숫자 없는 한 낱말(④에서 그대로 씀)
+  label text not null check (label ~ '^[가-힣]{2,4}$'), -- 기획 3.2·라이터 2절 제안: 한글 2~4자 한 낱말(④에서 그대로 쓰고 자녀 줄 조사 판정이 늘 됨)
   primary key (day_index, slot),
   unique (day_index, label)
 );
@@ -68,13 +68,15 @@ create trigger content_recall_options_immutable before update or delete on publi
   for each row execute function public.content_recall_options_guard();
 
 -- ⑤ 틀 문장 키(기획 3.2 초안 4개). 목록은 함수 본문(행 검사 아님, cheer_key_ok 0060과 같은 방식). 정본은 앱 계약 app/src/api/contract/fiveSteps.ts PASS_ON_KEYS.
---   recall_first = 「{떠올린 것}, 오늘 그게 먼저 떠올랐어요」(②를 고른 날만) · choice_now = 「{고른 쪽}, 요즘은 그게 좋아요」(③을 고른 날만)
---   ask_which = 「너는 어느 쪽이 좋은지 궁금해요」(③의 두 보기) · see_together = 「오늘 사진, 같이 봐도 좋겠어요」(②③ 모두 넘긴 날)
+--   라이터 확정 5키(docs/team/copy/2026-11-25-five-steps-copy.md 4.2, DECISIONS 11-25 #252). 카드는 늘 3장, 자리마다 둘 중 하나:
+--   자리 1: recall_story 「{떠올린 것} 얘기할게요」(②를 고른 날) / photo_memory 「사진 보니 옛 생각 나요」(②를 넘긴 날)
+--   자리 2: choice_like 「{고른 쪽}, 그게 좋아요」(③을 고른 날) / photo_like 「오늘 사진이 좋아요」(③을 넘긴 날)
+--   자리 3: ask_which 「어느 쪽일지 궁금해요」 + 보조 줄 「{③ 보기 A} · {③ 보기 B}」(늘)
 --   문장은 라이터가 확정하고 법률 승인 키만 앱에 보인다. 키를 빼지 않는다(빼려면 pass_on_picks 행을 먼저 지우고 check 재검사, 0060 머리말과 같음).
 create function public.pass_on_key_ok(p_key text) returns boolean
 language sql immutable set search_path = ''
 as $$
-  select coalesce(p_key in ('recall_first', 'choice_now', 'ask_which', 'see_together'), false)
+  select coalesce(p_key in ('recall_story', 'photo_memory', 'choice_like', 'photo_like', 'ask_which'), false)
 $$;
 revoke execute on function public.pass_on_key_ok(text) from public, anon, authenticated;
 
@@ -130,12 +132,12 @@ create trigger profiles_consent_withdrawn_picks after update of consented_at on 
   for each row when (old.consented_at is not null and new.consented_at is null)
   execute function public.five_steps_consent_withdrawn();
 
--- ② 고른 것이 지워지면(넘어감·바꿈 아님) 그 값을 끼운 ⑤ recall_first도 지운다(빈 자리 문장 방지).
+-- ② 고른 것이 지워지면(넘어감·바꿈 아님) 그 값을 끼운 ⑤ recall_story도 지운다(빈 자리 문장 방지).
 create function public.recall_pick_deleted() returns trigger
 language plpgsql security definer set search_path = ''
 as $$
 begin
-  delete from public.pass_on_picks where parent_id = old.parent_id and session_date = old.session_date and line_key = 'recall_first';
+  delete from public.pass_on_picks where parent_id = old.parent_id and session_date = old.session_date and line_key = 'recall_story';
   return null;
 end $$;
 revoke execute on function public.recall_pick_deleted() from public, anon, authenticated, service_role;
@@ -259,7 +261,7 @@ grant execute on function public.save_recall(int, int) to authenticated;
 
 -- ---- (3) save_pass_on: ⑤ 건넨 말 틀 키 저장(스위치 꺼짐 = 거부) ----
 -- {ok:true} | {ok:false, reason:'disabled'|'consent_required'|'invalid_key'|'no_content'|'stale_day'|'missing_value'}.
--- missing_value: recall_first인데 오늘 ② 고른 것이 없음, choice_now인데 오늘 ③ 답이 없음(끼울 값 없는 문장 방지).
+-- missing_value: recall_story인데 오늘 ② 고른 것이 없음, choice_like인데 오늘 ③ 답이 없음(끼울 값 없는 문장 방지).
 create function public.save_pass_on(p_day_index int, p_key text) returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
@@ -278,8 +280,8 @@ begin
   select ds.day_index into v_day from public.daily_sessions ds where ds.parent_id = v_me and ds.session_date = v_today;
   if v_day is null then return jsonb_build_object('ok', false, 'reason', 'no_content'); end if;
   if p_day_index is distinct from v_day then return jsonb_build_object('ok', false, 'reason', 'stale_day'); end if;
-  if (p_key = 'recall_first' and not exists (select 1 from public.recall_picks r where r.parent_id = v_me and r.session_date = v_today))
-     or (p_key = 'choice_now' and not exists (select 1 from public.answers a where a.parent_id = v_me and a.session_date = v_today)) then
+  if (p_key = 'recall_story' and not exists (select 1 from public.recall_picks r where r.parent_id = v_me and r.session_date = v_today))
+     or (p_key = 'choice_like' and not exists (select 1 from public.answers a where a.parent_id = v_me and a.session_date = v_today)) then
     return jsonb_build_object('ok', false, 'reason', 'missing_value');
   end if;
   insert into public.pass_on_picks (parent_id, family_id, session_date, day_index, line_key)
@@ -293,7 +295,7 @@ grant execute on function public.save_pass_on(int, text) to authenticated;
 -- ---- (4) 자녀 읽기: family_child_history(0050) + recalls·pass_ons ----
 -- recalls  = [{session_date, label}]  — ② 고른 낱말
 -- pass_ons = [{session_date, line_key, recall_label, choice_label, option_a, option_b}] — ⑤ 틀 키 + 끼울 값(그날 ②·③). 스위치 꺼짐이면 [].
---            끼울 값이 없어진 줄(recall_first인데 ② 없음, choice_now인데 ③ 답 없음)은 내보내지 않는다.
+--            끼울 값이 없어진 줄(recall_story인데 ② 없음, choice_like인데 ③ 답 없음)은 내보내지 않는다.
 -- 둘 다 동의 중인 어르신만, 최근 30일(오늘 포함)·최신순·최대 30개(answers와 같은 창). answers 항목·키는 0050 그대로.
 create or replace function public.family_child_history(p_family uuid, p_parent uuid) returns jsonb
 language sql stable security definer set search_path = ''
@@ -348,8 +350,8 @@ as $$
                    where po.parent_id = p.id and po.session_date >= public.kst_today() - 29
                    order by po.session_date desc
                    limit 30) x
-           where (x.line_key <> 'recall_first' or x.recall_label is not null)
-             and (x.line_key <> 'choice_now' or x.choice_label is not null)), '[]'::jsonb) end
+           where (x.line_key <> 'recall_story' or x.recall_label is not null)
+             and (x.line_key <> 'choice_like' or x.choice_label is not null)), '[]'::jsonb) end
       ) order by p.created_at, p.id)
       from public.profiles p
       where p.family_id = p_family and p.role = 'parent' and (p_parent is null or p.id = p_parent)), '[]'::jsonb))
@@ -479,7 +481,7 @@ as $$
       when 'login_method'    then '^(kakao|google|email)$'
       when 'purpose'         then '^(parent_code|reconnect|sibling)$'
       when 'reason'          then '^(expired|used|locked|invalid|rate_limited|busy|already_linked|not_parent_device)$'
-      when 'step'            then '^(photo|recall|question|hangul|pass_on)$' -- 0061: ② recall·⑤ pass_on
+      when 'step'            then '^(photo|recall|question|hangul|pass_on|stop_here)$' -- 0061: ② recall·⑤ pass_on·여기까지 stop_here(값은 이름만, 낱말·문장 없음)
       when 'channel'         then '^(kakao|sms|copy|share_sheet|other)$'
       when 'result'          then '^(granted|denied|matched|kept|skipped|finished)$' -- 0053 finished(P6 낱말 쓰기)
       when 'consent_version' then '^v[0-9]{1,3}$'

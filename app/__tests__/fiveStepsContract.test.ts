@@ -1,6 +1,7 @@
 // 오늘 코스 5단계 계약(서버 0061) ↔ 앱 계약 fiveSteps.ts 대조. 마이그레이션 글자를 읽어 목록이 어긋나면 실패한다.
 import {
   COURSE_STEPS,
+  EVENT_STEP_VALUES,
   PASS_ON_KEYS,
   isPassOnKey,
   parseChildFiveSteps,
@@ -35,20 +36,21 @@ test('서버 pass_on_key_ok 목록 = PASS_ON_KEYS(글자까지)', () => {
   expect([file, keys]).toEqual([file, [...PASS_ON_KEYS]]);
 });
 
-test('⑤ 키는 응원 키와 겹치지 않는다(방향·법률 승인이 다른 목록)', () => {
-  for (const k of PASS_ON_KEYS) {
-    expect((CHEER_KEYS as readonly string[]).includes(k)).toBe(false);
-  }
+// ⑤ 키와 응원 키는 다른 목록(방향·법률 승인 따로)이고 저장 칸도 다르다(pass_on_picks.line_key ↔ cheers.message_key).
+// 글자가 같은 키는 photo_memory 하나(라이터 확정 그대로) — 늘어나면 문구 표(copy)에서 헷갈리지 않는지 라이터 확인.
+test('⑤ 키와 응원 키의 글자 겹침은 photo_memory 하나뿐', () => {
+  expect(PASS_ON_KEYS.filter(k => (CHEER_KEYS as readonly string[]).includes(k))).toEqual(['photo_memory']);
 });
 
-test('서버 completed_steps check 단계 = COURSE_STEPS, 이벤트 step 값도 같다', () => {
+test('서버 completed_steps check 단계 = COURSE_STEPS, 이벤트 step 값 = 다섯 단계 + stop_here', () => {
   const re = /add constraint daily_sessions_completed_steps_check/i;
   const {file, sql} = lastFileMatching(re);
   const at = sql.search(re);
   const arr = sql.slice(at, sql.indexOf(']', at));
   const steps = [...arr.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
   expect([file, steps]).toEqual([file, [...COURSE_STEPS]]);
-  expect([...EVENT_PROP_VALUES.step]).toEqual([...COURSE_STEPS]);
+  expect([...EVENT_PROP_VALUES.step]).toEqual([...EVENT_STEP_VALUES]);
+  expect([...EVENT_STEP_VALUES]).toEqual([...COURSE_STEPS, 'stop_here']);
 });
 
 test('get_today_content 5단계 값 파서: 새 서버·옛 서버·틀린 모양', () => {
@@ -57,12 +59,12 @@ test('get_today_content 5단계 값 파서: 새 서버·옛 서버·틀린 모�
       day_index: 3,
       skipped_steps: ['pass_on'],
       recall: {options: [{slot: 1, label: '아궁이'}, {slot: 2, label: '누룽지'}], picked_slot: 2},
-      pass_on: {enabled: true, picked_key: 'recall_first'},
+      pass_on: {enabled: true, picked_key: 'recall_story'},
     }),
   ).toEqual({
     skipped_steps: ['pass_on'],
     recall: {options: [{slot: 1, label: '아궁이'}, {slot: 2, label: '누룽지'}], picked_slot: 2},
-    pass_on: {enabled: true, picked_key: 'recall_first'},
+    pass_on: {enabled: true, picked_key: 'recall_story'},
   });
   // 옛 서버(0061 전): 키 없음 → ② 보기 없음, ⑤ 꺼짐
   expect(parseTodayFiveSteps({day_index: 3})).toEqual({
@@ -95,7 +97,7 @@ test('자녀 ②·⑤ 파서: 옛 서버는 빈 배열, 모르는 ⑤ 키 줄은
         answers: [],
         recalls: [{session_date: '2026-11-25', label: '누룽지'}],
         pass_ons: [
-          {session_date: '2026-11-25', line_key: 'recall_first', recall_label: '누룽지', choice_label: '숭늉', option_a: '숭늉', option_b: '식혜'},
+          {session_date: '2026-11-25', line_key: 'recall_story', recall_label: '누룽지', choice_label: '숭늉', option_a: '숭늉', option_b: '식혜'},
           {session_date: '2026-11-24', line_key: 'future_key', recall_label: null, choice_label: null, option_a: null, option_b: null},
         ],
       },
@@ -106,13 +108,14 @@ test('자녀 ②·⑤ 파서: 옛 서버는 빈 배열, 모르는 ⑤ 키 줄은
     {
       parent_id: 'p1',
       recalls: [{session_date: '2026-11-25', label: '누룽지'}],
-      pass_ons: [{session_date: '2026-11-25', line_key: 'recall_first', recall_label: '누룽지', choice_label: '숭늉', option_a: '숭늉', option_b: '식혜'}],
+      pass_ons: [{session_date: '2026-11-25', line_key: 'recall_story', recall_label: '누룽지', choice_label: '숭늉', option_a: '숭늉', option_b: '식혜'}],
     },
     {parent_id: 'p2', recalls: [], pass_ons: []},
   ]);
   expect(parseChildFiveSteps({parents: [{parent_id: 'p1', recalls: [{session_date: '11-25', label: 'x'}]}]})).toBeNull();
   expect(parseChildFiveSteps({parents: [{parent_id: 'p1', recalls: 'x'}]})).toBeNull();
   expect(parseChildFiveSteps({})).toBeNull();
-  expect(isPassOnKey('see_together')).toBe(true);
+  expect(isPassOnKey('photo_like')).toBe(true);
+  expect(isPassOnKey('recall_first')).toBe(false);
   expect(isPassOnKey('love_you')).toBe(false);
 });

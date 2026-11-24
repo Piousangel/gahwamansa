@@ -2,6 +2,8 @@
 // 근거: supabase/migrations/20261116000061_five_steps.sql, docs/team/dev-server-notes.md "오늘 코스 5단계(0061)", DECISIONS 11-25 R-1·R-3.
 // 서버가 바뀌면 이 파일만 맞춘다. 단계·⑤ 키 목록은 __tests__/fiveStepsContract.test.ts 가 마이그레이션 글자와 대조한다.
 
+/** 이벤트 step 값(서버 event_prop_ok): 다섯 단계 + 여기까지 표지. 값은 이름뿐(낱말·문장 금지) */
+export const EVENT_STEP_VALUES = ['photo', 'recall', 'question', 'hangul', 'pass_on', 'stop_here'] as const;
 /** 단계 순서(① 사진 보기 → ② 떠올려 보기 → ③ 둘 중 고르기 → ④ 낱말 쓰기 → ⑤ 이야기 건네기). = daily_sessions.completed_steps check */
 export const COURSE_STEPS = ['photo', 'recall', 'question', 'hangul', 'pass_on'] as const;
 export type CourseStep = (typeof COURSE_STEPS)[number];
@@ -25,7 +27,9 @@ export type RecordStepArgs = {
 };
 
 /** ⑤ 틀 문장 키(서버 pass_on_key_ok). 문장은 copy(라이터 확정·법률 승인 키만 화면에). 응원 키(CHEER_KEYS)와 다른 목록 */
-export const PASS_ON_KEYS = ['recall_first', 'choice_now', 'ask_which', 'see_together'] as const;
+// 라이터 확정 5키(docs/team/copy/2026-11-25-five-steps-copy.md 4.2): 자리 1 recall_story(② 고른 날)/photo_memory(② 넘긴 날),
+// 자리 2 choice_like(③ 고른 날)/photo_like(③ 넘긴 날), 자리 3 ask_which(늘). 서버 missing_value: recall_story인데 ② 없음, choice_like인데 ③ 답 없음.
+export const PASS_ON_KEYS = ['recall_story', 'photo_memory', 'choice_like', 'photo_like', 'ask_which'] as const;
 export type PassOnKey = (typeof PASS_ON_KEYS)[number];
 export const isPassOnKey = (k: unknown): k is PassOnKey => typeof k === 'string' && (PASS_ON_KEYS as readonly string[]).includes(k);
 
@@ -98,7 +102,7 @@ export const parseSavePassOnResult = (v: unknown): SavePassOnResult | null => pa
 export type ChildRecall = {session_date: string; label: string};
 /**
  * ⑤ 건넨 말: 틀 키 + 끼울 값(그날 ②·③). 앨범 카드·날짜 상세에만(시안 6). 서버 스위치가 꺼져 있으면 항상 [].
- * recall_first → recall_label, choice_now → choice_label, ask_which → option_a·option_b, see_together → 값 없음.
+ * recall_story → recall_label, choice_like → choice_label, ask_which → option_a·option_b(보조 줄), photo_memory·photo_like → 값 없음.
  */
 export type ChildPassOn = {
   session_date: string;

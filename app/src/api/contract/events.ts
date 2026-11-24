@@ -30,7 +30,7 @@ export const EVENT_PROP_VALUES = {
   login_method: ['kakao', 'google', 'email'],
   purpose: ['parent_code', 'reconnect', 'sibling'],
   reason: ['expired', 'used', 'locked', 'invalid', 'rate_limited', 'busy', 'already_linked', 'not_parent_device'],
-  step: ['photo', 'recall', 'question', 'hangul', 'pass_on'], // 0061: ② recall·⑤ pass_on(= fiveSteps.ts COURSE_STEPS)
+  step: ['photo', 'recall', 'question', 'hangul', 'pass_on', 'stop_here'], // 0061: ② recall·⑤ pass_on·여기까지 stop_here(= fiveSteps.ts EVENT_STEP_VALUES, 이름만)
   channel: ['kakao', 'sms', 'copy', 'share_sheet', 'other'],
   // 0029: 권한(granted·denied) + 번호 채움 결과(matched·kept·skipped). 0053: P6 낱말 쓰기는 finished·skipped 두 값만(정오 기록 금지)
   result: ['granted', 'denied', 'matched', 'kept', 'skipped', 'finished'],

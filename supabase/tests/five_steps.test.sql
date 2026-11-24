@@ -6,7 +6,7 @@
 --   (4) 지우는 길: 그만 보여 주기·31일 파기·관리자 계정 삭제·오늘 다시 하기(dev_reset_today)에 모두 포함.
 --   (5) 자녀 읽기 범위: 동의 중·같은 가족·30일, 넘긴 날 무표시, 스위치 꺼짐이면 ⑤ 없음. 앱·anon·서비스 역할의 표 직접 접근 불가.
 begin;
-select plan(68);
+select plan(69);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 
 -- ---- 스위치 기본 꺼짐(픽스처가 손대기 전, 마이그레이션·로컬 시드 그대로) ----
@@ -124,11 +124,13 @@ select is((select array_agg(format_type(a.atttypid, a.atttypmod)::text order by 
           array['uuid', 'uuid', 'date', 'integer', 'smallint', 'timestamp with time zone'], '② 표에는 글자 칸이 없다(보기 번호만, 자유 글 저장 불가)');
 select throws_ok($$ insert into public.content_recall_options (day_index, slot, label) values (2, 3, '연탄 나르던 길') $$, '23514', null,
                  '보기 낱말은 띄어쓰기 없는 한글 한 낱말만');
+select throws_ok($$ insert into public.content_recall_options (day_index, slot, label) values (2, 3, '떡') $$, '23514', null,
+                 '보기 낱말은 2~4자(라이터 2절 조사 판정 조건)');
 select throws_like($$ update public.content_recall_options set label = '부뚜막' where day_index = 1 and slot = 1 $$, '%content_immutable%', '게시된 보기는 고칠 수 없다');
 
 -- ======== (3) ⑤ 저장 조건 ========
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
-select is(public.save_pass_on(1, 'recall_first'), '{"ok": false, "reason": "disabled"}'::jsonb, '스위치 꺼짐이면 ⑤ 저장 거부(동의해도)');
+select is(public.save_pass_on(1, 'recall_story'), '{"ok": false, "reason": "disabled"}'::jsonb, '스위치 꺼짐이면 ⑤ 저장 거부(동의해도)');
 reset role;
 select is((select count(*)::int from public.pass_on_picks), 0, '스위치 꺼짐 거부 뒤 ⑤ 행 0');
 insert into public.server_flags (name, enabled) values ('pass_on_store_enabled', true);
@@ -138,11 +140,11 @@ select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
 select is(public.save_pass_on(1, '오늘 잘 지내요'), '{"ok": false, "reason": "invalid_key"}'::jsonb, '자유 문장 거부(틀 키만)');
 select is(public.save_pass_on(1, 'love_you'), '{"ok": false, "reason": "invalid_key"}'::jsonb, '응원 키는 ⑤ 키가 아니다(다른 목록)');
 select is(public.save_pass_on(2, 'ask_which'), '{"ok": false, "reason": "stale_day"}'::jsonb, '⑤도 오늘 콘텐츠 날만');
-select is(public.save_pass_on(1, 'recall_first'), '{"ok": true}'::jsonb, '스위치 켬 + 동의 + ② 있음 → ⑤ 저장');
-select is(public.get_today_content() -> 'pass_on', '{"enabled": true, "picked_key": "recall_first"}'::jsonb, '어르신 오늘 콘텐츠에 건넨 키');
+select is(public.save_pass_on(1, 'recall_story'), '{"ok": true}'::jsonb, '스위치 켬 + 동의 + ② 있음 → ⑤ 저장');
+select is(public.get_today_content() -> 'pass_on', '{"enabled": true, "picked_key": "recall_story"}'::jsonb, '어르신 오늘 콘텐츠에 건넨 키');
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000b1', true);
-select is(public.save_pass_on(1, 'recall_first'), '{"ok": false, "reason": "missing_value"}'::jsonb, '② 없이 recall_first 거부(빈 자리 문장 방지)');
-select is(public.save_pass_on(1, 'choice_now'), '{"ok": false, "reason": "missing_value"}'::jsonb, '③ 답 없이 choice_now 거부');
+select is(public.save_pass_on(1, 'recall_story'), '{"ok": false, "reason": "missing_value"}'::jsonb, '② 없이 recall_story 거부(빈 자리 문장 방지)');
+select is(public.save_pass_on(1, 'choice_like'), '{"ok": false, "reason": "missing_value"}'::jsonb, '③ 답 없이 choice_like 거부');
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000c1', false);
 select throws_like($$ select public.save_recall(1, 1) $$, '%parent_required%', '자녀는 ② 저장 불가');
 select throws_like($$ select public.save_pass_on(1, 'ask_which') $$, '%parent_required%', '자녀는 ⑤ 저장 불가');
@@ -154,7 +156,7 @@ select is((select jsonb_object_agg(p ->> 'parent_id', jsonb_build_object('r', p 
           jsonb_build_object(
             '70610000-0000-0000-0000-00000000a001', jsonb_build_object(
               'r', jsonb_build_array(jsonb_build_object('session_date', public.kst_today(), 'label', '누룽지')),
-              'p', jsonb_build_array(jsonb_build_object('session_date', public.kst_today(), 'line_key', 'recall_first', 'recall_label', '누룽지',
+              'p', jsonb_build_array(jsonb_build_object('session_date', public.kst_today(), 'line_key', 'recall_story', 'recall_label', '누룽지',
                                                         'choice_label', '숭늉', 'option_a', '숭늉', 'option_b', '식혜'))),
             '70610000-0000-0000-0000-00000000a002', jsonb_build_object('r', '[]'::jsonb, 'p', '[]'::jsonb),
             '70610000-0000-0000-0000-00000000a003', jsonb_build_object('r', '[]'::jsonb, 'p', '[]'::jsonb),
@@ -178,13 +180,13 @@ select is((select p -> 'pass_ons' from jsonb_array_elements(public.child_answer_
 reset role;
 update public.server_flags set enabled = true where name = 'pass_on_store_enabled';
 
--- 넘기면 지운다: ② 넘김 → ② 행과 그 값을 끼운 ⑤ recall_first도 삭제
+-- 넘기면 지운다: ② 넘김 → ② 행과 그 값을 끼운 ⑤ recall_story도 삭제
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
 select public.record_session_step('recall', 1, true, 5);
 reset role;
 select is((select count(*)::int from public.recall_picks where parent_id = '70610000-0000-0000-0000-00000000a001')
         + (select count(*)::int from public.pass_on_picks where parent_id = '70610000-0000-0000-0000-00000000a001'), 0,
-          '② 넘김 → ② 행과 recall_first ⑤ 행 삭제(넘긴 날 무표시)');
+          '② 넘김 → ② 행과 recall_story ⑤ 행 삭제(넘긴 날 무표시)');
 select is((pg_temp.sess('70610000-0000-0000-0000-00000000a001')).completed_at is not null, true, '이미 찍힌 도장은 그대로');
 
 -- ======== (4) 지우는 길 ========
@@ -262,8 +264,9 @@ select ok((select bool_and(proconfig = array['search_path=""']) from pg_proc
           'definer 함수의 search_path는 빈 값으로 고정');
 select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname = 'record_session_step'), 1, 'record_session_step 정의는 하나(옛 2인자 판 없음 — 이름 인자 호출 모호성 없음)');
-select ok(public.event_prop_ok('step', '"recall"') and public.event_prop_ok('step', '"pass_on"') and not public.event_prop_ok('step', '"stop_here"'),
-          '이벤트 step 값에 recall·pass_on 추가(여기까지는 단계 아님)');
+select ok(public.event_prop_ok('step', '"recall"') and public.event_prop_ok('step', '"pass_on"') and public.event_prop_ok('step', '"stop_here"')
+          and not public.event_prop_ok('step', '"누룽지"') and not public.pass_on_key_ok('recall_first'),
+          '이벤트 step 값에 recall·pass_on·stop_here(낱말은 거부), ⑤ 키는 라이터 확정 5키');
 
 select * from finish();
 rollback;

@@ -35,7 +35,7 @@ insert into public.recall_picks (parent_id, family_id, session_date, day_index, 
   ('70510000-0000-0000-0000-00000000a001', '70510000-0000-0000-0000-0000000000f1', public.kst_today(), 1, 2),
   ('70510000-0000-0000-0000-00000000a002', '70510000-0000-0000-0000-0000000000f1', public.kst_today(), 1, 1);
 insert into public.pass_on_picks (parent_id, family_id, session_date, day_index, line_key) values
-  ('70510000-0000-0000-0000-00000000a001', '70510000-0000-0000-0000-0000000000f1', public.kst_today(), 1, 'recall_first');
+  ('70510000-0000-0000-0000-00000000a001', '70510000-0000-0000-0000-0000000000f1', public.kst_today(), 1, 'recall_story');
 insert into public.server_flags (name, enabled) values ('pass_on_store_enabled', true) on conflict (name) do update set enabled = true;
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
@@ -60,7 +60,7 @@ insert into g values
     {"session_date": "{T0}", "prompt": "어느 계절이 좋으세요?", "prompt_short": "가을과 봄 중", "option_a": "가을", "option_b": "봄", "choice_label": "가을"},
     {"session_date": "{T1}", "prompt": "어디로 가고 싶으세요?", "prompt_short": "바다와 산 중", "option_a": "바다", "option_b": "산", "choice_label": "산"}],
    "recalls": [{"session_date": "{T0}", "label": "누룽지"}],
-   "pass_ons": [{"session_date": "{T0}", "line_key": "recall_first", "recall_label": "누룽지", "choice_label": "가을", "option_a": "가을", "option_b": "봄"}]},
+   "pass_ons": [{"session_date": "{T0}", "line_key": "recall_story", "recall_label": "누룽지", "choice_label": "가을", "option_a": "가을", "option_b": "봄"}]},
   {"parent_id": "70510000-0000-0000-0000-00000000a002", "title": "아빠", "connected": false, "shared": false, "answers": [], "recalls": [], "pass_ons": []}]}$j$));
 grant select on g to authenticated;
 
