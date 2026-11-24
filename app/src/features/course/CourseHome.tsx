@@ -37,7 +37,7 @@ const STEPS: {step: StepName; route: StepRoute}[] = [
 //   → 단계 행 3개 → 스티치(화면당 1곳) → '지난 날 보기'(목록 아래).
 // - 단계 행: 지금 = 눌리는 행('지금 할 차례' accent 태그 + 이름 + ›), 했어요 = 눌리는 행('했어요' + 날짜 도장 + ›, 누르면 그 단계 다시 보기 — 리드 결정 시안 1:1),
 //   다음 = 누르지 않는 행. 읽기 이름은 보이는 글과 같게(R-14), '다시 보기'는 힌트로.
-// - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기'.
+// - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기' → '오늘 한 장'(TodayReviewScreen, D-3).
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
   const {api, done, content, consented, syncError, sync} = useSession();
   const titleRef = useRef<unknown>(null); // P8 대화상자가 닫힌 뒤 포커스를 돌려줄 제목
@@ -130,7 +130,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const dock: DockProps | undefined = current
     ? {primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')}}
     : all
-      ? {primary: {kind: 'secondary', label: c.review_link, icon: 'icon-photo', testID: 'course-review', buttonRef: bind('dock'), onPress: () => review('PhotoStep', 'dock')}}
+      ? {primary: {kind: 'secondary', label: c.review_link, icon: 'icon-photo', testID: 'course-review', buttonRef: bind('dock'), onPress: () => {
+          mark('dock');
+          navigation.navigate('TodayReview'); // D-3 안 A '오늘 한 장'(한 화면, 기록 호출 0)
+        }}}
       : undefined;
   const days = week && week.doneDates.length > 0 ? stampsFromDates(week.weekStart, week.doneDates) : null;
   // D-2 날짜 도장: 했어요 행은 오늘(KST) 마친 단계뿐이라 날짜 = 오늘
