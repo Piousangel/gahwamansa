@@ -11,7 +11,7 @@ import {foldPush} from './ds/foldPush';
  * - 자식마다 key 를 준다(위치 id 는 오류 띠·안내 줄이 생기고 사라질 때 다른 요소를 가리킨다, 리뷰 L2).
  * - 이 묶음은 스크롤 내용의 직접 자식이어야 한다(top 값 = 스크롤 내용 안 위치). P1 키패드(CodeInput)와 같은 규칙을 일반화.
  */
-export function FoldStack({viewport, gap, children, testID, onFold, split, onTop}: {
+export function FoldStack({viewport, gap, children, testID, onFold, split, onTop, onMeasure}: {
   viewport: number;
   gap: number;
   children: React.ReactNode;
@@ -24,6 +24,8 @@ export function FoldStack({viewport, gap, children, testID, onFold, split, onTop
    */
   split?: string;
   onTop?: (top: number) => void;
+  /** 묶음 위치(top)와 지금 있는 요소의 자연 높이(key → 높이, 모르는 요소는 빠짐). 화면이 요소 크기를 첫 화면에 맞출 때(P4 사진 높이) */
+  onMeasure?: (top: number, heights: Readonly<Record<string, number>>) => void;
 }) {
   const items = React.Children.toArray(children).filter(Boolean);
   const [top, setTop] = useState(0);
@@ -45,6 +47,18 @@ export function FoldStack({viewport, gap, children, testID, onFold, split, onTop
     }
   }, [splitTop, onTop]);
   const known = viewport > 0 && ids.every(id => heights[id] !== undefined);
+  const idKey = ids.join('|');
+  useEffect(() => {
+    if (onMeasure) {
+      const now: Record<string, number> = {};
+      for (const id of idKey.split('|')) {
+        if (heights[id] !== undefined) {
+          now[id] = heights[id];
+        }
+      }
+      onMeasure(top, now);
+    }
+  }, [onMeasure, top, heights, idKey]);
   useEffect(() => {
     if (known) {
       onFold?.(pushedKey);
@@ -55,6 +69,7 @@ export function FoldStack({viewport, gap, children, testID, onFold, split, onTop
       {items.map((child, i) => (
         <View
           key={ids[i]}
+          testID={testID ? `${testID}:${ids[i]}` : undefined}
           onLayout={e => onItem(ids[i], e)}
           style={{marginTop: (i === 0 ? 0 : gap) + (push && push.index === i ? push.space : 0)}}>
           {child}
