@@ -4,6 +4,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createServer} from 'node:http';
+import {spawn} from 'node:child_process';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {LEGAL_APPROVED_CHEER_KEYS} from './cheer-legal-approved.mjs';
@@ -76,4 +78,42 @@ test('applyPlan: cheer_texts 먼저, 실패하면 push_copy 는 쓰지 않는다
   };
   await assert.rejects(applyPlan(failCheers, {rows: [{kind: 'daily'}], cheers: [{message_key: 'love'}]}), /cheer_texts 실패/);
   assert.deepEqual(wrote, []);
+});
+
+// #244 QA-3 재확인 M1: 대상 대조(confirmTarget)가 어떤 네트워크 요청보다 먼저 — 키를 실은 요청이 엉뚱한 서버로 가지 않게.
+// 실제 스크립트를 자식 프로세스로 돌린다. 대상 주소는 이 시험의 로컬 HTTP 서버(요청 수를 셈), 키는 가짜 값.
+async function runLoader(envAnswer) {
+  let hits = 0;
+  const server = createServer((req, res) => {
+    hits++;
+    res.writeHead(404, {'Content-Type': 'application/json'});
+    res.end('{"code":"PGRST202"}'); // 0060 없는 DB 흉내
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const {port} = server.address();
+  const child = spawn(process.execPath, [join(root, 'supabase/ops/load-push-copy.mjs'), '--dry-run'], {
+    env: {...process.env, SUPABASE_URL: `http://127.0.0.1:${port}`, SUPABASE_SECRET_KEY: 'sb_secret_test_only_not_real', SUPABASE_SERVICE_ROLE_KEY: ''},
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  let out = '';
+  child.stdout.on('data', (d) => (out += d));
+  child.stderr.on('data', (d) => (out += d));
+  child.stdin.end(`${envAnswer}\n`);
+  const code = await new Promise((r) => child.on('close', r));
+  await new Promise((r) => server.close(r));
+  return {code, hits, out};
+}
+
+test('대상 대조가 틀리면(로컬 주소에 staging 이라고 답함) 요청을 한 번도 보내지 않고 멈춘다', async () => {
+  const r = await runLoader('staging');
+  assert.equal(r.hits, 0, `대상 대조 전에 보낸 요청 수: ${r.hits}`);
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /멈춥니다: staging이라고 했지만 대상이 로컬/);
+});
+
+test('대상 대조가 맞으면(local) 그 뒤에야 대상 DB 확인 요청을 보낸다(대조군)', async () => {
+  const r = await runLoader('local');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /0060\(cheer_key_ok\) 없음\(4키만 받음\)/);
+  assert.ok(r.hits >= 1);
 });

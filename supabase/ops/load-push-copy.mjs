@@ -70,6 +70,14 @@ if (!dryRun && !args.has('--approved')) {
 }
 
 const {url, headers: keyH} = await opsTarget();
+// 대상 확인(리뷰 L2·C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트를 대조한다. production은 호스트를 한 번 더.
+// 어떤 네트워크 요청(키를 싣는 대상 DB 확인 포함, --dry-run 도)보다 먼저 한다(#244 QA-3 재확인 M1) — 셸에 남은 다른 환경 키로 엉뚱한 서버에 요청하지 않게.
+let commit = 'unknown';
+try {
+  commit = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], {encoding: 'utf8'}).trim();
+} catch {}
+const host = new URL(url).host;
+const envName = await confirmTarget(root, url, `${dryRun ? '대상 DB 확인(dry-run, 쓰지 않음)' : '푸시 문구 적재'}, copy.ko.json 커밋 ${commit}`);
 // 대상 DB 상태 확인(읽기만): 적재할 응원 키를 받는지. 받지 않으면 아무것도 쓰지 않고 멈춘다(반쪽 적재 방지)
 async function rpc(name, body) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {method: 'POST', headers: {...keyH, 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -89,14 +97,6 @@ if (dryRun) {
   console.log('dry-run: 대상 DB가 위 문구를 받을 수 있어요(쓰지 않음)');
   process.exit(0);
 }
-// 대상 확인(리뷰 L2·C-M1): 입력한 환경의 app/env/<환경>.env ref와 실제 호스트를 대조한다. production은 호스트를 한 번 더.
-// 문구가 들어가는 순간 발송 조건이 충족되므로, 셸에 남은 다른 환경 키로 잘못 넣지 않게 한다.
-let commit = 'unknown';
-try {
-  commit = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], {encoding: 'utf8'}).trim();
-} catch {}
-const host = new URL(url).host;
-const envName = await confirmTarget(root, url, `푸시 문구 적재, copy.ko.json 커밋 ${commit}`);
 async function upsert(table, body, onConflict) {
   const res = await fetch(`${url}/rest/v1/${table}?on_conflict=${onConflict}`, {
     method: 'POST',

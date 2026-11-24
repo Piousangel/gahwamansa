@@ -4,6 +4,8 @@
 // - 쓰기 전에 대상 DB가 그 키를 받는지 확인한다(0060 cheer_key_ok, 없으면 0038 의 4키 check). 받지 않으면 아무것도 쓰지 않는다.
 // - 적재 순서는 cheer_texts → push_copy. cheer_texts 가 실패하면 push_copy 를 쓰지 않는다
 //   (cheer_texts 만 들어간 상태는 무해: push_copy cheer_arrived 문구가 없으면 응원 알림 자체를 보내지 않는다, 0052).
+//   다시 적재할 때(push_copy 가 이미 있음): cheer_texts 만 바뀌고 push_copy 에서 멈추면, 기존 틀(push_copy)에 새로 승인된 응원 문장만 바뀌어 들어간 상태다.
+//   두 표 모두 법률 승인본이라 발송은 정상이고, 같은 명령을 다시 돌리면 push_copy 도 맞춰진다(upsert, 같은 값이면 그대로).
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 
