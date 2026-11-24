@@ -385,7 +385,7 @@
   },
   "course": {
     "title": "오늘 코스",
-    "greeting": "세 가지를 차례로 해요",
+    "greeting": "하나씩 차례로 해요",
     "stamps_label": "이번 주 도장",
     "step": {
       "photo": "사진 보기",
@@ -520,6 +520,7 @@
     "passed_on": "가족에게 건넸어요"
   },
   "question": {
+    "headline": "요즘 마음 가는 쪽을 골라요",
     "need_choice": "하나를 골라 주세요",
     "chosen": "골랐어요"
   },
