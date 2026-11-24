@@ -188,7 +188,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
             <Button kind="secondary" size="inline" label={syncError.button} onPress={sync} />
           </View>
         ) : null,
-        /* 첫날 해님 인사 카드 1개(V1, 알림 안내는 첫 도장 뒤 N1). 200%는 '세 가지를 차례로 해요'를 카드 밖 제목으로(시안 200% 보드) */
+        /* 첫날 해님 인사 카드 1개(V1, 알림 안내는 첫 도장 뒤 N1). 200%는 인사 둘째 줄 '하나씩 차례로 해요'를 카드 밖 제목으로(시안 200% 보드) */
         firstGreeting ? (
           <View key="greet" testID="first-greeting" style={styles.greet} accessible accessibilityLabel={large ? copy.connect.greeting : `${copy.connect.greeting}, ${c.greeting}`}>
             <Icon name="icon-sun" size={GREET_ICON} color={ds.deprecatedColor.sunRay} /* R-23 장식 — 화면 레인이 걷어 낼 때까지(병합 #179) */ />
