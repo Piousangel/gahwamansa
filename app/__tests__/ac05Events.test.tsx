@@ -15,10 +15,10 @@ import {EVENT_NAMES, EVENT_PROP_VALUES} from '../src/api/contract/events';
 import {enterCode, press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import type {Api} from '../src/features/types';
 import * as clipboard from '../src/ui/clipboard';
-import {warmAppRoot, WARM_TIMEOUT_MS} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 콜드 스타트 예열(#125 리뷰): 첫 AppRoot 테스트만 부하에 시간 초과하던 것. prefs 는 beforeEach 에서 새로 만드므로 예열이 app_first_open 을 먼저 쓰지 않는다(파일 전체로 확인)
-beforeAll(warmAppRoot, WARM_TIMEOUT_MS);
+setupWarmAppRoot();
 
 jest.setTimeout(20000);
 beforeEach(() => {

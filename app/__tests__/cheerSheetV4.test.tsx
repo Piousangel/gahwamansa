@@ -7,7 +7,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {AudienceProvider, Sheet, SHEET_MAX_RATIO} from '../src/ui/ds';
 import {roleText} from '../src/ui/ds/roles';
 import {press} from '../testUtils/flow';
-import {warmAppRoot, WARM_TIMEOUT_MS} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 
 const RN = require('react-native');
 afterEach(() => {
@@ -16,7 +16,7 @@ afterEach(() => {
 jest.setTimeout(20000);
 // PR #101 리뷰: 파일의 첫 테스트가 콜드 스타트(모듈 첫 로드·첫 렌더, 4~6초)를 혼자 떠안아 부하 때 흔들렸다(앱 쪽 경합 없음).
 // → 파일 시작 때 AppRoot 를 한 번 그렸다 내려 그 비용을 미리 치른다. 대기 시간은 전역 asyncUtilTimeout(10초, #77 규칙) 그대로
-beforeAll(warmAppRoot, WARM_TIMEOUT_MS);
+setupWarmAppRoot();
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마', latest: {prompt: '봄과 가을', choiceLabel: '봄', answeredDate: today}}]});
