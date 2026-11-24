@@ -45,20 +45,45 @@ test('응원 여러 개: "응원이 3개 왔어요" + 글 3줄', async () => {
   }
 });
 
-test('확정 목록(6절) 밖의 키는 보여 주지 않는다(재촉·건강 문구, 모르는 키)', async () => {
-  const {mark} = await home({cheers: ['will_call', 'stay_healthy', 'no_such_key', 'peaceful_day']});
-  await waitFor(() => screen.getByText('오늘도 편안한 하루 보내세요'));
-  expect(screen.getByText('가족이 보낸 응원이에요')).toBeTruthy(); // 보이는 건 1개
-  expect(screen.queryByText(/전화드릴게요|건강하게/)).toBeNull();
+// 키 확대 배포 순서 ①(DECISIONS 11-24): 서버가 이 앱이 모르는 키를 먼저 열어도 한마디를 놓치지 않는다.
+// 모르는 키는 문장 대신 기본 문장(copy.cheer.unknown) 한 줄로 보여 주고, 읽음 처리는 "알겠어요" 뒤에만.
+const UNKNOWN = '가족이 응원을 보냈어요';
+
+test('모르는 키만 오면: 대화상자에 기본 문장, 알겠어요 전에는 읽음 처리하지 않는다', async () => {
+  const {mark} = await home({cheers: ['miss_you']}); // 확대 뒤 새 키(이 앱 버전은 모름)
+  await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
+  expect(screen.getByText(UNKNOWN)).toBeTruthy();
+  expect(mark).not.toHaveBeenCalled(); // 보기 전에 읽음 처리 금지
   await press('알겠어요');
-  expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2', 'cheer-3', 'cheer-4']); // 확인한 묶음 전체
+  await waitFor(() => expect(screen.queryByText(UNKNOWN)).toBeNull());
+  expect(mark).toHaveBeenCalledWith(['cheer-1']);
 });
 
-test('보여 줄 수 없는 키만 오면 대화상자 없이 조용히 읽음 처리(매번 다시 받지 않게, 리뷰 9)', async () => {
-  const {mark, get} = await home({cheers: ['no_such_key']});
-  await waitFor(() => expect(get).toHaveBeenCalled());
-  await waitFor(() => expect(mark).toHaveBeenCalledWith(['cheer-1']));
-  expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull();
+test('아는 키+모르는 키 섞임: 아는 문장은 그대로, 모르는 키 여럿은 기본 문장 한 줄, 개수는 전체', async () => {
+  const {mark} = await home({cheers: ['miss_you', 'peaceful_day', 'call_soon']});
+  await waitFor(() => screen.getByText('응원이 3개 왔어요'));
+  expect(screen.getByText(/오늘도 편안한 하루 보내세요/)).toBeTruthy();
+  expect(screen.getAllByText(new RegExp(UNKNOWN))).toHaveLength(1); // 본문 한 덩어리
+  const body = screen.getByText(/오늘도 편안한 하루 보내세요/);
+  expect(String(body.props.children).split(UNKNOWN)).toHaveLength(2); // 같은 줄을 되풀이하지 않는다
+  expect(mark).not.toHaveBeenCalled();
+  await press('알겠어요');
+  expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2', 'cheer-3']); // 확인한 묶음 전체
+});
+
+test('빈 키도 버리지 않고 기본 문장으로 보여 준다', async () => {
+  const {mark} = await home({cheers: ['']});
+  await waitFor(() => screen.getByText(UNKNOWN));
+  expect(mark).not.toHaveBeenCalled();
+  await press('알겠어요');
+  expect(mark).toHaveBeenCalledWith(['cheer-1']);
+});
+
+test('확정 목록 밖의 키(재촉·건강 문구)도 그 문장은 보여 주지 않는다', async () => {
+  await home({cheers: ['will_call', 'stay_healthy', 'love_you']});
+  await waitFor(() => screen.getByText('응원이 3개 왔어요'));
+  expect(screen.queryByText(/전화드릴게요|건강하게/)).toBeNull();
+  expect(screen.getByText(/사랑해요, 오늘도 좋은 하루예요/)).toBeTruthy();
 });
 
 test('응원이 없으면 대화상자도 읽음 처리도 없다', async () => {
