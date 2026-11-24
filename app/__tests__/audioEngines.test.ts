@@ -1,6 +1,6 @@
 declare const __dirname: string;
 import {Image, Platform} from 'react-native';
-import {createTtsEngine, getRinger, GOOGLE_TTS_ENGINE, loadSfx, loadSound, pickLocalVoice, pickVoice, subscribeRinger, TTS_RATE, ttsVoicePick} from '../src/audio/engines';
+import {createTtsEngine, getRinger, GOOGLE_TTS_ENGINE, loadSfx, loadSound, pickLocalVoice, pickVoice, subscribeRinger, TTS_RATE, TTS_TUNING, ttsVoicePick} from '../src/audio/engines';
 import {newStampFeedback, setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {setPrefsForTest, createPrefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
@@ -112,7 +112,7 @@ describe('기기 TTS 개선(DECISIONS 11-19 V13a)', () => {
   afterEach(() => jest.restoreAllMocks());
 
   /** 라이브러리 모의는 네 이벤트가 같은 jest.fn 이라 spyOn 으로 나눌 수 없다 → 엔진을 만드는 동안만 바꿔 끼운다 */
-  function engineWithEvents() {
+  function engineWithEvents(opts?: Parameters<typeof createTtsEngine>[0]) {
     const h: Record<string, () => void> = {};
     const names = ['onStart', 'onFinish', 'onError', 'onStopped'] as const;
     const orig = names.map(n => Speech[n]);
@@ -123,7 +123,7 @@ describe('기기 TTS 개선(DECISIONS 11-19 V13a)', () => {
       };
     });
     try {
-      return {tts: createTtsEngine()!, h};
+      return {tts: createTtsEngine(opts)!, h};
     } finally {
       names.forEach((n, i) => (Speech[n] = orig[i]));
     }
@@ -277,6 +277,84 @@ describe('기기 TTS 개선(DECISIONS 11-19 V13a)', () => {
     jest.spyOn(Speech, 'getAvailableVoices').mockResolvedValue([]);
     jest.spyOn(Speech, 'speak').mockRejectedValue(new Error('x'));
     await expect(createTtsEngine()!.speak('하나. 둘.')).rejects.toThrow('x');
+  });
+
+  // P-2(오너 S25): 읽기용 문장 변환·문장 사이 쉼
+  test('읽기 전에 읽기용 문장으로 바꾼다(AI → 에이아이, 가운뎃점 → 쉼표)', async () => {
+    const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+    const {tts} = engineWithEvents();
+    await tts.speak('AI가 만든 그림·실제 장소가 아니에요');
+    expect(speak).toHaveBeenCalledWith('에이아이가 만든 그림, 실제 장소가 아니에요', expect.anything());
+  });
+
+  test('한 글자씩은 글자마다 따로 넣는다', async () => {
+    const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+    const {tts, h} = engineWithEvents();
+    await tts.speak('나무. 한 글자씩, 나, 무.');
+    for (let i = 0; i < 3; i++) {
+      h.onFinish();
+      await tick();
+    }
+    expect(speak.mock.calls.map(c => c[0])).toEqual(['나무.', '한 글자씩.', '나.', '무.']);
+  });
+
+  test('문장 사이 쉼: 앞 문장이 끝나고 sentencePauseMs 뒤에 다음 문장을 넣고, 쉬는 사이 멈추면 넣지 않는다', async () => {
+    jest.useFakeTimers();
+    try {
+      const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+      jest.spyOn(Speech, 'stop').mockResolvedValue(undefined);
+      const {tts, h} = engineWithEvents({sentencePauseMs: TTS_TUNING.sentencePauseMs});
+      const done = jest.fn();
+      tts.onDone(done);
+      await tts.speak('하나. 둘. 셋.');
+      h.onFinish();
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs - 1);
+      expect(speak).toHaveBeenCalledTimes(1); // 아직 쉬는 중
+      await jest.advanceTimersByTimeAsync(1);
+      expect(speak).toHaveBeenCalledTimes(2);
+      h.onFinish();
+      await tts.stop(); // 쉬는 사이 멈춤
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs * 2);
+      expect(speak).toHaveBeenCalledTimes(2); // '셋.'은 넣지 않음
+      // 마지막 문장 끝은 쉼 없이 바로 끝남
+      await tts.speak('넷.');
+      h.onFinish();
+      expect(done).toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('쉬는 사이 새로 읽으면 이전 글의 다음 문장이 끼어들지 않고, 기다리던 타이머는 지운다(#238 리뷰 L4·L5)', async () => {
+    jest.useFakeTimers();
+    try {
+      const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+      const {tts, h} = engineWithEvents({sentencePauseMs: TTS_TUNING.sentencePauseMs});
+      await tts.speak('하나. 둘.');
+      h.onFinish(); // '둘.'을 기다리는 중
+      expect(jest.getTimerCount()).toBe(1);
+      await tts.speak('셋. 넷.'); // 쉬는 사이 새 읽기
+      expect(jest.getTimerCount()).toBe(0); // 이전 글의 타이머를 지움
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs * 2);
+      expect(speak.mock.calls.map(c => c[0])).toEqual(['하나.', '셋.']); // '둘.'은 넣지 않음
+      h.onFinish();
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs);
+      expect(speak.mock.calls.map(c => c[0])).toEqual(['하나.', '셋.', '넷.']);
+      h.onFinish();
+      await tts.speak('다섯. 여섯.');
+      h.onFinish();
+      await tts.stop(); // 쉬는 사이 멈춤도 타이머를 지움
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('말 빠르기·높낮이·쉼 기본값은 한 곳(TTS_TUNING)에서, 근거 범위 안', () => {
+    expect(TTS_RATE).toBe(TTS_TUNING.rate);
+    expect(TTS_TUNING.pitch).toBe(1);
+    expect(TTS_TUNING.sentencePauseMs).toBeGreaterThanOrEqual(200);
+    expect(TTS_TUNING.sentencePauseMs).toBeLessThanOrEqual(800);
   });
 });
 

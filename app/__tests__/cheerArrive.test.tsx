@@ -1,6 +1,6 @@
 import React from 'react';
 import {AccessibilityInfo} from 'react-native';
-import {render, screen, waitFor} from '@testing-library/react-native';
+import {act, render, screen, waitFor} from '@testing-library/react-native';
 import {press, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
@@ -35,6 +35,17 @@ test('응원 1개: 해님(하트 없음)·"가족이 보낸 응원이에요"·�
   await press('알겠어요');
   await waitFor(() => expect(screen.queryByText('가족이 보낸 응원이에요')).toBeNull());
   expect(mark).toHaveBeenCalledWith(['cheer-1']);
+});
+
+test("안드로이드 뒤로로 닫아도 읽음 처리(ds Dialog onRequestClose = 닫는 쪽 '알겠어요', #228 QA-1 L3)", async () => {
+  const {mark} = await home({cheers: ['love_you', 'warm_day']});
+  await waitFor(() => screen.getByText('응원이 2개 왔어요'));
+  const {Modal} = require('react-native');
+  const open = screen.UNSAFE_getAllByType(Modal).filter((m: {props: {visible?: boolean}}) => m.props.visible);
+  expect(open).toHaveLength(1); // 응원 대화상자 하나만 떠 있다
+  act(() => open[0].props.onRequestClose());
+  await waitFor(() => expect(screen.queryByText('응원이 2개 왔어요')).toBeNull());
+  expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2']);
 });
 
 test('응원 여러 개: "응원이 3개 왔어요" + 글 3줄', async () => {
