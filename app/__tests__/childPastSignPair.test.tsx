@@ -260,6 +260,24 @@ describe('QA-1 #239', () => {
     expect(signViolations(screen.root)).not.toEqual([]);
   });
 
+  test('L-a(재확인): 카드 안에 목록·카드를 다시 넣어도 가장 바깥 목록의 직계 카드 하나로 센다 → 팻말 2개 위반', () => {
+    render(
+      <View testID="child-past-list">
+        <View testID="child-past-item">
+          <View testID="child-past-list">
+            <View testID="child-past-item">
+              <Sign size="row" label="봄" readLabel="r" />
+            </View>
+            <View testID="child-past-item">
+              <Sign size="row" label="가을" readLabel="r" />
+            </View>
+          </View>
+        </View>
+      </View>,
+    );
+    expect(signViolations(screen.root)).not.toEqual([]);
+  });
+
   test('M2: 목록과 카드 사이에 다른 View 가 끼면 예외 아님(목록 직계 카드만)', () => {
     render(
       <View testID="child-past-list">

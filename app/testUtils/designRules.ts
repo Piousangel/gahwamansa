@@ -122,19 +122,21 @@ export function signViolations(root: unknown): string[] {
     if (!(typeof n.type === 'string' && n.props.nativeID === SIGN_NATIVE_ID)) {
       return;
     }
+    // 가장 바깥 목록까지 올라가 그 목록의 직계 카드로 센다(#239 재확인 L-a — 카드 안에 목록·카드를 다시 넣는 우회 차단)
     let below: Node = n; // 지금 본 호스트 조상의 바로 아래 호스트 노드
+    let card: Node | null = null;
     for (let p = n.parent; p; p = p.parent) {
       if (typeof p.type !== 'string') {
         continue; // 호스트 노드만(합성 컴포넌트가 같은 testID 를 물려 두 번 세지 않게)
       }
       if (p.props.testID === R22_LIST_EXEMPT.list) {
-        if (below !== n && below.props.testID === R22_LIST_EXEMPT.card) {
-          perCard.set(below, (perCard.get(below) ?? 0) + 1);
-          return;
-        }
-        break; // 목록 안이지만 직계 카드 밖
+        card = below !== n && below.props.testID === R22_LIST_EXEMPT.card ? below : null; // 더 바깥 목록이 있으면 덮어쓴다
       }
       below = p;
+    }
+    if (card) {
+      perCard.set(card, (perCard.get(card) ?? 0) + 1);
+      return;
     }
     loose += 1;
   });
