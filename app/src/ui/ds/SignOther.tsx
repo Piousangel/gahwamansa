@@ -11,11 +11,11 @@ import {ds, roleMark, roleText} from './roles';
  *   화면은 상한을 고르지 못하므로(lint [DS:fontScale]) ui/ds 에 둔다.
  * 자녀 레인 #239 가 ds/SignPair 를 만들고 있다 — 병합되면 이 부품은 SignPair 로 합친다.
  */
-export function SignOther({label, testID = 'sign-other'}: {label: string; testID?: string}) {
+export function SignOther({label, readLabel, testID = 'sign-other'}: {label: string; /** 화면 읽기 이름(가운뎃점 없이, 예: '다른 하나, 편하게 입기') */ readLabel: string; testID?: string}) {
   const a = useAudience();
   const r = roleText('sub', a, 'muted');
   return (
-    <RNText {...koreanTextProps} {...roleMark('sub')} testID={testID} maxFontSizeMultiplier={ds.type.signSmall.maxFontScale} style={r.style}>
+    <RNText {...koreanTextProps} {...roleMark('sub')} testID={testID} accessible accessibilityLabel={readLabel} maxFontSizeMultiplier={ds.type.signSmall.maxFontScale} style={r.style}>
       {keepAllChildren(label)}
     </RNText>
   );

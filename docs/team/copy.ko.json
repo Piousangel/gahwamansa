@@ -431,6 +431,7 @@
     "review_choice_label_no_prompt": "고르신 쪽",
     "review_sign_a11y": "오늘 고르신 쪽, {답}",
     "review_other": "다른 하나 · {답}",
+    "review_other_a11y": "다른 하나, {답}",
     "review_word": "오늘 낱말",
     "review_word_a11y": "오늘 낱말, {낱말}",
     "review_read": "{날짜}. {사진}. 고르신 쪽, {답}. 오늘 낱말, {낱말}.",

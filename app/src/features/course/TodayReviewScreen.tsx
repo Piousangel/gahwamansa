@@ -78,24 +78,34 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
                 source={{uri: photo.image_url}}
                 resizeMode="contain"
                 style={styles.image}
-                accessibilityLabel={photo.caption || appCopy.ai_photo_label}
+                // 읽기는 크게 보기 버튼 이름(사진 이름·AI 포함) 또는 아래 이름·고지 줄이 맡는다 — 사진 자체는 읽지 않는다(QA-1 L1 중복)
+                accessible={false}
+                importantForAccessibility="no"
                 onLoad={onLoad}
                 onError={onError}
               />
             )}
           </PhotoButton>
         </View>
-        <View style={styles.tight}>
+        {/* 크게 보기 버튼이 '오늘 사진, {이름}, AI가 만든 그림'을 읽으므로, 누를 수 있을 때는 이 줄들을 화면 읽기에서 뺀다(QA-1 L1) */}
+        <View style={styles.tight} accessibilityElementsHidden={canZoom} importantForAccessibility={canZoom ? 'no-hide-descendants' : 'auto'}>
           {photo.caption ? <Text testID="review-caption" role="bodyLg">{photo.caption}</Text> : null}
           {pending ? null : <AiNotice text={`${appCopy.ai_photo_label}·${appCopy.not_real_place}`} />}
         </View>
         {chosen && other ? (
           <View testID="review-choice" style={styles.tight}>
-            <Text testID="review-choice-label" role="sub" tone="muted">
-              {q?.prompt ? fill(c.review_choice_label, {질문: q.prompt}) : c.review_choice_label_no_prompt}
-            </Text>
+            {/* 읽기: 질문 줄은 질문만('고르신 쪽'은 팻말 읽기가 말한다), 질문이 없는 날은 이 줄을 읽지 않는다. 가운뎃점은 읽기 이름에 넣지 않는다(QA-1 L1) */}
+            {q?.prompt ? (
+              <Text testID="review-choice-label" role="sub" tone="muted" accessibilityLabel={q.prompt}>
+                {fill(c.review_choice_label, {질문: q.prompt})}
+              </Text>
+            ) : (
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Text testID="review-choice-label" role="sub" tone="muted">{c.review_choice_label_no_prompt}</Text>
+              </View>
+            )}
             <Sign size="row" label={chosen} readLabel={fill(c.review_sign_a11y, {답: chosen})} />
-            <SignOther testID="review-other" label={fill(c.review_other, {답: other})} />
+            <SignOther testID="review-other" label={fill(c.review_other, {답: other})} readLabel={fill(c.review_other_a11y, {답: other})} />
           </View>
         ) : null}
         <View testID="review-word" accessible accessibilityLabel={fill(c.review_word_a11y, {낱말: photo.keyword})} style={styles.tight}>
