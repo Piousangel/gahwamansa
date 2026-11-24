@@ -9,7 +9,7 @@ import {ds, roleMark, roleText} from './roles';
  * - 흐림 = 불투명도가 아니라 보조 글자(sub, muted 색) 400
  * - 확대 상한은 팻말 글자(signSmall)와 같은 1.5 — sub 의 2.0 을 그대로 쓰면 200%에서 안 고른 쪽(40)이 팻말 글자(39)보다 커져 위계가 뒤집힌다.
  *   화면은 상한을 고르지 못하므로(lint [DS:fontScale]) ui/ds 에 둔다.
- * 자녀 레인 #239 가 ds/SignPair 를 만들고 있다 — 병합되면 이 부품은 SignPair 로 합친다.
+ * 자녀 레인 #239 ds/SignPair 가 병합되면 보조 글자색·확대 상한 1.5 값만 한곳으로 모은다.
  */
 export function SignOther({label, readLabel, testID = 'sign-other'}: {label: string; /** 화면 읽기 이름(가운뎃점 없이, 예: '다른 하나, 편하게 입기') */ readLabel: string; testID?: string}) {
   const a = useAudience();

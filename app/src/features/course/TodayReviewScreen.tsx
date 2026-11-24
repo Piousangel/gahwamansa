@@ -87,10 +87,15 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
             )}
           </PhotoButton>
         </View>
-        {/* 크게 보기 버튼이 '오늘 사진, {이름}, AI가 만든 그림'을 읽으므로, 누를 수 있을 때는 이 줄들을 화면 읽기에서 뺀다(QA-1 L1) */}
-        <View style={styles.tight} accessibilityElementsHidden={canZoom} importantForAccessibility={canZoom ? 'no-hide-descendants' : 'auto'}>
-          {photo.caption ? <Text testID="review-caption" role="bodyLg">{photo.caption}</Text> : null}
-          {pending ? null : <AiNotice text={`${appCopy.ai_photo_label}·${appCopy.not_real_place}`} />}
+        {/* 사진 이름 줄: 크게 보기 버튼이 '오늘 사진, {이름}, AI가 만든 그림'을 읽으므로, 누를 수 있을 때만 화면 읽기에서 뺀다(QA-1 L1 중복).
+            AI 고지 줄은 어떤 상태(불러오기 전·후·실패·준비 중)에서도 숨기지 않는다 — 고지 누락 금지(리드 결정, QA-1 재확인 M1) */}
+        <View style={styles.tight}>
+          {photo.caption ? (
+            <View accessibilityElementsHidden={canZoom} importantForAccessibility={canZoom ? 'no-hide-descendants' : 'auto'}>
+              <Text testID="review-caption" role="bodyLg">{photo.caption}</Text>
+            </View>
+          ) : null}
+          <AiNotice text={`${appCopy.ai_photo_label}·${appCopy.not_real_place}`} />
         </View>
         {chosen && other ? (
           <View testID="review-choice" style={styles.tight}>

@@ -131,7 +131,7 @@ test('화면 읽기 중복 없음(QA-1 L1): 사진 이름·AI 고지·고르신 
     }
     const lines = readOut();
     expect(countIn(lines, /마을 입구 나무/)).toBe(1);
-    expect(countIn(lines, /AI가 만든 그림/)).toBe(1);
+    expect(countIn(lines, /실제 장소가 아니에요/)).toBe(1); // AI 고지는 숨기지 않는다(리드 결정, P4 와 같음)
     expect(countIn(lines, /고르신 쪽/)).toBe(1);
     expect(lines).toContain('더 좋아하는 계절은요?'); // 질문 줄 읽기 = 질문만
     expect(lines).toContain('다른 하나, 가을');
@@ -141,24 +141,26 @@ test('화면 읽기 중복 없음(QA-1 L1): 사진 이름·AI 고지·고르신 
   expect(screen.getByText('더 좋아하는 계절은요? · 고르신 쪽')).toBeTruthy();
 });
 
-test('사진 불러오기 실패(QA-1 L2): 실패 안내, 크게 보기 없음, AI 고지 없음, 나머지는 그대로', async () => {
+test('사진 불러오기 실패(QA-1 L2): 실패 안내, 크게 보기 없음, AI 고지는 그대로, 나머지도 그대로', async () => {
   await review();
   fireEvent(screen.getByTestId('photo-image'), 'error');
   await waitFor(() => screen.getByText(appCopy.photo_load_failed));
   expect(screen.queryByTestId('photo-image')).toBeNull();
   expect(screen.getByTestId('photo-polaroid').props.accessibilityRole).toBeUndefined();
-  expect(screen.queryByTestId('ai-notice')).toBeNull();
+  expect(countIn(readOut(), /실제 장소가 아니에요/)).toBe(1);
+  expect(countIn(readOut(), /마을 입구 나무/)).toBe(1);
   expect(screen.getByText('마을 입구 나무')).toBeTruthy();
   expect(screen.getAllByTestId('sign')).toHaveLength(1);
   expect(screen.getByText('나무')).toBeTruthy();
 });
 
-test("사진 준비 중(pending://, QA-1 L2): 준비 안내, 크게 보기 없음, AI 고지 없음", async () => {
+test("사진 준비 중(pending://, QA-1 L2): 준비 안내, 크게 보기 없음, AI 고지는 그대로", async () => {
   await review({realImage: false});
   expect(screen.queryByTestId('photo-image')).toBeNull();
   expect(screen.getByText(PLACEHOLDER)).toBeTruthy();
   expect(screen.getByTestId('photo-polaroid').props.accessibilityRole).toBeUndefined();
-  expect(screen.queryByTestId('ai-notice')).toBeNull();
+  expect(countIn(readOut(), /실제 장소가 아니에요/)).toBe(1);
+  expect(countIn(readOut(), /마을 입구 나무/)).toBe(1);
   expect(screen.getByText('나무')).toBeTruthy();
 });
 
