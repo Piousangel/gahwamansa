@@ -124,6 +124,13 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {kind: 'secondary', label: copy.course.review_link, icon: 'icon-photo', onPress: noop}},
   },
   {
+    name: 'D-3 오늘 한 장(읽어 주세요 하나, 보조)',
+    screen: 'TodayReviewScreen',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {kind: 'secondary', label: copy.tts.button, onPress: noop}},
+  },
+  {
     name: 'P7 완료(알겠어요)',
     screen: 'CourseDone',
     variant: 'step',
