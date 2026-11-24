@@ -189,3 +189,41 @@ test('200%: 같은 순서로 세로 스크롤(사진을 줄이지 않음), Dock 
   expect(order(ORDER)).toEqual(ORDER);
   expect(within(screen.getByTestId('screen-dock')).getAllByRole('button').map(b => b.props.accessibilityLabel)).toEqual(['읽어 주세요']);
 });
+
+test('R-15(에뮬레이터 실측 S25급 200%): 팻말 묶음이 첫 화면 끝에 걸치면 묶음째 접힘 아래로(윗선만 보이지 않게), 사진은 밀지 않는다', async () => {
+  mockFontScale = 2;
+  await review();
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
+  const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(`today-review:${id}`).props.style)?.marginTop;
+  await act(async () => {
+    lay('screen-body-area', 0, 624); // 접힘 = 624 − '더 있음' 띠 24 = 600
+    lay('today-review', 0, 800);
+    lay('today-review:date', 0, 40); // 0~40
+    lay('today-review:photo', 0, 300); // 56~356
+    lay('today-review:notice', 0, 80); // 372~452
+    lay('today-review:choice', 0, 150); // 468~618 → 600 에 걸림
+    lay('today-review:word', 0, 90);
+    lay('today-review:read-notice', 0, 0); // 안내가 없을 때 빈 칸(높이 0)
+  });
+  expect(mt('choice')).toBe(16 + (600 - 468 + 1));
+  expect(mt('photo')).toBe(16);
+  expect(mt('word')).toBe(16);
+});
+
+test('100%(에뮬레이터 실측 360×640): 사진은 첫 화면에 사진 이름·AI 고지까지 들게 줄인다(고지가 접힘 아래로 밀려 사진과 떨어지지 않게, P4 photoFit 과 같은 계산)', async () => {
+  await review();
+  fireEvent(screen.getByTestId('photo-image'), 'load', {nativeEvent: {source: {width: 1152, height: 928}}});
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
+  await act(async () => {
+    lay('screen-body-area', 0, 424); // 접힘 400
+    lay('today-review', 0, 900);
+    lay('today-review:date', 0, 40);
+    lay('today-review:photo', 0, 251);
+    lay('today-review:notice', 0, 80);
+    lay('today-review:choice', 0, 150);
+    lay('today-review:word', 0, 90);
+    lay('today-review:read-notice', 0, 0);
+  });
+  // 사진 위 끝 = 40 + 16 = 56, 높이 = 400 − 56 − 16 − (80 + 16) − 여유 2 = 230
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(230);
+});
