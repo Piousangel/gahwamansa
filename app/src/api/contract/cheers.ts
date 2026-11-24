@@ -19,7 +19,12 @@ export const CHEER_KEYS = [
 export type CheerKey = (typeof CHEER_KEYS)[number];
 export const isCheerKey = (k: string): k is CheerKey => (CHEER_KEYS as readonly string[]).includes(k);
 
-/** 자녀 시트에 보이는 키(순서 = 화면 순서). 새 시트(숨김 3키·묶음)는 다음 레인 — 그때까지 지금 4개 그대로. */
+/**
+ * 자녀 시트에 보이는 키(순서 = 화면 순서). 새 시트(숨김 3키·묶음)는 다음 레인 — 그때까지 지금 4개 그대로.
+ * 배포 관문(DECISIONS 11-25): 이 목록에 새 키를 넣은 자녀 앱(③)은 ① 어르신 앱(#236 모르는 키 기본 문장 + 새 13키 문장)이
+ * 충분히 퍼진 뒤에만 낸다 — 기준: 스토어 콘솔 활성 기기 중 그 버전 이상 ≥ 95%가 7일 이어짐, 또는 최소 버전 장치가 생긴 뒤.
+ * 최소 버전·강제 업데이트 장치는 아직 없다(min_app_version·force_update 0건). 옛 어르신 앱은 새 키 응원을 대화상자에서 조용히 읽음 처리한다.
+ */
 export const CHILD_SHEET_KEYS = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'] as const satisfies readonly CheerKey[];
 
 /** get_my_cheers() → jsonb. 안 읽은 것만, 최신순 최대 20개. 보낸 자녀는 밝히지 않는다. */

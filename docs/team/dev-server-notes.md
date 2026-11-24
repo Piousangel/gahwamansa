@@ -39,7 +39,9 @@
   - 같은 함수를 `cheer_texts.message_key` check·이벤트 `message_key`(event_prop_ok)도 쓴다. 목록은 함수 본문(행 검사 아님 — 응원 문장 적재 전에도 보내기가 된다).
   - 정본은 앱 계약 `app/src/api/contract/cheers.ts` `CHEER_KEYS` 하나. `load-push-copy.mjs`·`events.ts`는 그 상수를 가져다 쓰고, 마이그레이션 목록은 `cheersContract.test.ts`가 마지막 `cheer_key_ok` 정의를 읽어 대조한다. 다음 확대: 새 마이그레이션의 `cheer_key_ok` + `CHEER_KEYS` + copy.ko.json `cheers.*` 세 곳(시험이 어긋남을 잡는다).
   - 문장이 없는 키(적재 전)의 응원 알림은 `body_many`(n=1)로 나간다 — 보내기·알림 모두 실패하지 않는다. 자녀 시트에 보일 키는 앱 `CHILD_SHEET_KEYS`(서버는 숨긴 키도 받는다).
-  - **배포 순서**: 어르신 앱 ①(#236, 모르는 키 기본 문장)이 스토어에 나간 뒤에만 staging/production에 0060 반영(DECISIONS 11-24).
+  - **배포(리드 11-25, #244 QA-1 M1 (a))**: 0060은 언제 반영해도 무해하다(새 키를 보내는 앱이 아직 없음). 관문은 **③ 자녀 새 시트 출시**: ①(#236)이 들어간 어르신 앱이 충분히 퍼진 뒤(스토어 콘솔 활성 기기 중 그 버전 이상 ≥ 95%, 7일 연속) 또는 최소 버전 장치가 생긴 뒤.
+  - **위험(기록)**: 최소 버전·강제 업데이트 장치가 없다(`min_app_version`·`force_update` grep 0건). 업데이트하지 않은 어르신 앱은 새 키 응원을 대화상자에서 조용히 읽음 처리한다(푸시 알림으로는 보임).
+  - **문장 적재**: `load-push-copy.mjs`는 법률 승인 키(`supabase/ops/cheer-legal-approved.mjs`, 지금 기존 4키)만 적재하고, 쓰기 전에 대상 DB가 그 키를 받는지(0060 `cheer_key_ok`, 없으면 4키) 확인한다. 받지 않으면 아무것도 쓰지 않는다. 순서는 cheer_texts → push_copy.
 - `{ok:true, cheer_id}` | `{ok:false, reason:'invalid_key'|'invalid_target'|'disconnected'|'daily_limit'}`.
 - 하루 한도(가정): 같은 자녀→같은 어르신 KST 하루 **2개**. 정책 확정 시 상수만 변경.
 - **0059 재시도 멱등**: 앱은 응원 버튼을 누를 때 uuid를 한 번 만들어 `p_request_id`로 보내고, 시간 초과로 다시 보낼 때 **같은 값**을 쓴다. 같은 자녀의 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`(한도 검사보다 먼저 — 재시도가 `daily_limit`으로 보이지 않음). id를 안 보내면 지금과 같다(하위 호환).
@@ -49,7 +51,7 @@
 - 테이블 직접 insert는 막혔다(0020). 자녀는 읽음 여부(read_at)를 볼 수 없다.
 - **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 `CHEER_KEYS`와 같게 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
 ```ts
-type CheerKey = 'love_you' | 'warm_day' | 'thanks_always' | 'peaceful_day';
+type CheerKey = (typeof CHEER_KEYS)[number]; // app/src/api/contract/cheers.ts — 17키(0060)
 // 호출: sb.rpc('send_cheer', { p_parent: string /* parent_id */, p_key: CheerKey })
 type SendCheerResult =
   | { ok: true; cheer_id: string }
@@ -190,7 +192,7 @@ type UnregisterPushToken = { ok: true; removed: number };
   - 숫자(0 이상 정수): `ttl_hours, attempt_no, day_index, duration_sec, days_since_connect` / 참거짓: `tts_used, is_first`
   - `role_guess` parent·child / `login_method` kakao·google·email / `purpose` parent_code·reconnect·sibling / `step` photo·question·hangul
   - `reason` expired·used·locked·invalid·rate_limited·busy·already_linked·not_parent_device / `channel` kakao·sms·copy·share_sheet·other / `result` granted·denied·matched·kept·skipped(뒤 3개 0029, P6 자판 쓰기: 맞게 씀·이대로 마침·넘어감)
-  - `message_key` 응원 키 4개 / `consent_version` `v2` 형식 / `app_version` `1.0.0` 또는 `1.0.0-12` / `install_source` 영문 소문자로 시작·숫자 포함 1~16자(0029부터 숫자만은 불가) / `source`(0029) app_link·referrer·manual / `plan`(0034) monthly·yearly·gift / `push_kind`(0034) daily·cheer_arrived·parent_connected·parent_reconnected
+  - `message_key` 응원 키(0060부터 `cheer_key_ok` = 17키) / `consent_version` `v2` 형식 / `app_version` `1.0.0` 또는 `1.0.0-12` / `install_source` 영문 소문자로 시작·숫자 포함 1~16자(0029부터 숫자만은 불가) / `source`(0029) app_link·referrer·manual / `plan`(0034) monthly·yearly·gift / `push_kind`(0034) daily·cheer_arrived·parent_connected·parent_reconnected
 - `{ok:true}` | `{ok:false, reason:'invalid_name'|'invalid_props'|'rate_limited'|'no_user'}`(예외 아님 → 계측 실패가 화면을 막지 않음). 가족·역할은 서버가 채움. 프로필 없는 기기(설치 직후 익명 로그인)도 기록 가능.
 - 빌드 1 추가(0034): `paid_sheet_opened{}` C6 시트 열림, `paid_interest_tapped{plan}` C6 소식 받기(관심 표시만), `photo_zoom_opened{day_index}` B1, `child_first_answer_viewed{days_since_connect}` 자녀가 연결 후 처음 답을 봄(전환 분모, 처음 1회만 보내기는 앱 몫), `push_opened{push_kind}` 알림을 눌러 앱을 엶. **앱 계약 `events.ts`(L4)에 이 이름·값을 같은 철자로 추가해야 한다.**
 - 연결 퍼널(0029): `link_opened{source}` 링크로 앱이 열림, `referrer_found{}` 설치 경로에서 번호를 찾음, `code_prefilled{source}` 번호 칸이 채워짐, 연결 성공은 기존 `parent_code_redeemed`. **번호 값은 어떤 키로도 보낼 수 없다**(code 키 없음, source는 3개 값만).
@@ -449,7 +451,8 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0056 | 일일 알림 대상에서 답 공유 동의 조건 제거(알림 받기 동의만) | 브랜치 server-daily-push-consent | 미반영 |
 | 0057 | 연결 전·옛 익명 계정 90일 자동 정리(account_purged) | 브랜치 server-stale-anon-purge | 미반영 |
 | 0058 | 계정 삭제 때 프로필 없이 쌓인 이용 기록(device_key)도 삭제 | 브랜치 server-delete-events-by-device(0057 위) | 미반영 |
-| 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | 브랜치 server/cheer-keys-13 | 미반영(어르신 앱 ① 스토어 출시 뒤) |
+| 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | PR #244 | 미반영(언제 반영해도 무해 — 관문은 ③ 자녀 새 시트, DECISIONS 11-25) |
+- **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
@@ -503,7 +506,7 @@ type UnregisterPushToken = { ok: true; removed: number };
    unset PCS
    ```
    → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
-8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력(https만) → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음, **프롬프트가 뜬 뒤 붙여 넣기** — 먼저 붙여 넣으면 터미널이 보여 준다) → 환경 `staging` 입력(ref 대조). `KEY=값 node …`·`echo 키 | node …` 형태로 쓰지 않는다(파이프 입력은 스크립트가 거부). "옛 키 사용"이 출력되면 셸에 남은 `SUPABASE_SERVICE_ROLE_KEY`를 `unset`하고 다시.
+8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): 먼저 `node supabase/ops/load-push-copy.mjs --dry-run`(대상 DB가 법률 승인 응원 키를 받는지만 확인, 쓰지 않음 — 0060 없으면 4키만) → `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력(https만) → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음, **프롬프트가 뜬 뒤 붙여 넣기** — 먼저 붙여 넣으면 터미널이 보여 준다) → 환경 `staging` 입력(ref 대조). `KEY=값 node …`·`echo 키 | node …` 형태로 쓰지 않는다(파이프 입력은 스크립트가 거부). "옛 키 사용"이 출력되면 셸에 남은 `SUPABASE_SERVICE_ROLE_KEY`를 `unset`하고 다시.
    - 모든 ops·photos 스크립트는 주소 검사 → 대상 확인(confirmTarget) → 그 뒤에만 키로 요청한다(xhigh M3, publish-content `--check` 포함).
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).

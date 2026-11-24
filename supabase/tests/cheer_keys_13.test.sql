@@ -1,9 +1,11 @@
 -- 0060 테스트 (pgTAP): 응원 키 확대 ② — cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합. 실행: npx supabase test db
 -- 보호하는 것: 새 13키는 세 곳 모두 통과, 기존 4키(시트에서 숨길 3키 포함)도 그대로 통과, 모르는 키·ans_seen(D-5 제외)·빈 키는 세 곳 모두 거절,
 --             응원 문장(copy.ko.json cheers.* 17개, 법률 리뷰 뒤 load-push-copy 가 적재)이 cheer_texts 금지어 check 를 통과하고 금지어 문장은 거부.
+--             (#244 QA-3 L1·L2) cheer_key_ok 는 anon·authenticated 가 직접 못 부르고(42501) service_role 은 부른다,
+--             문장이 아직 없는 새 키의 응원 알림은 body_many(n=1) '응원이 1개 왔어요'로 나가고, 문장이 있으면 그 문장으로 나간다.
 -- 키 목록이 앱 계약 CHEER_KEYS 와 같은지는 app/__tests__/cheersContract.test.ts 가 본다(여기 배열은 시험용 기대값).
 begin;
-select plan(18);
+select plan(24);
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('70600000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false), -- 자녀
@@ -84,6 +86,44 @@ select ok(not public.event_prop_ok('message_key', '1'::jsonb), 'event_prop_ok: �
 select pg_temp.act_as('70600000-0000-0000-0000-0000000000c1', false);
 select is(public.log_event('cheer_sent', '{"message_key": "miss_you"}'), '{"ok": true}'::jsonb, 'log_event: 새 키 cheer_sent 기록');
 select is(public.log_event('cheer_sent', '{"message_key": "ans_seen"}') ->> 'reason', 'invalid_props', 'log_event: ans_seen 은 invalid_props');
+reset role;
+
+-- ---- 권한: 앱 역할은 cheer_key_ok 를 직접 못 부른다(PostgREST 노출 없음), 운영(service_role)은 부른다 ----
+set local role anon;
+select throws_ok($$ select public.cheer_key_ok('love') $$, '42501', null, 'cheer_key_ok: anon 직접 호출 거부');
+reset role;
+select pg_temp.act_as('70600000-0000-0000-0000-0000000000c1', false);
+select throws_ok($$ select public.cheer_key_ok('love') $$, '42501', null, 'cheer_key_ok: authenticated 직접 호출 거부');
+reset role;
+set local role service_role;
+select ok(public.cheer_key_ok('love') and not public.cheer_key_ok('ans_seen'), 'cheer_key_ok: service_role 은 부른다(load-push-copy 대상 확인)');
+reset role;
+
+-- ---- 알림 본문: 문장이 없는 새 키 → body_many(n=1), 문장이 있으면 그 문장(0052 push_events_claim) ----
+create function pg_temp.at_kst(p_hhmm text) returns timestamptz language sql as $$
+  select (public.kst_today()::text || ' ' || p_hhmm)::timestamp at time zone 'Asia/Seoul'
+$$;
+create function pg_temp.cheer_bodies(p jsonb) returns text[] language sql as $$
+  select coalesce(array_agg(t ->> 'body' order by t ->> 'token'), '{}')
+    from jsonb_array_elements(p -> 'targets') t where t ->> 'kind' = 'cheer_arrived' and t ->> 'profile_id' = '706b0000-0000-0000-0000-0000000000a1'
+$$;
+delete from public.push_copy; delete from public.cheer_texts;
+insert into public.push_copy (kind, title, body, body_many) values ('cheer_arrived', '가족이 보낸 응원이 왔어요', '{응원}', '응원이 {n}개 왔어요');
+update public.profiles set push_consented_at = now() where id = '706b0000-0000-0000-0000-0000000000a1';
+insert into public.device_tokens (user_id, token) values ('70600000-0000-0000-0000-0000000000a1', 'p60_a1_0000000000000001');
+update public.cheers set notified_at = now() where to_parent = '706b0000-0000-0000-0000-0000000000a1'; -- 위에서 보낸 17개는 처리된 것으로
+insert into public.cheers (family_id, from_child, to_parent, message_key, sent_at) values
+  ('706f0000-0000-0000-0000-000000000001', '706b0000-0000-0000-0000-0000000000c1', '706b0000-0000-0000-0000-0000000000a1', 'love', now());
+select is(pg_temp.cheer_bodies(public.push_events_claim(pg_temp.at_kst('10:00'))), array['응원이 1개 왔어요'],
+          '알림: 문장이 아직 없는 새 키(love) 1개는 body_many n=1 로 보낸다(보내기·알림 실패 없음)');
+insert into public.cheer_texts (message_key, text) values ('miss_you', '보고 싶어요');
+insert into public.cheers (family_id, from_child, to_parent, message_key, sent_at) values
+  ('706f0000-0000-0000-0000-000000000001', '706b0000-0000-0000-0000-0000000000c1', '706b0000-0000-0000-0000-0000000000a1', 'miss_you', now());
+select is(pg_temp.cheer_bodies(public.push_events_claim(pg_temp.at_kst('10:10'))), array['보고 싶어요'],
+          '알림: 문장이 적재된 새 키(miss_you)는 그 문장으로 보낸다');
+set local role service_role;
+select lives_ok($$ insert into public.cheer_texts (message_key, text) values ('love', '사랑해요') on conflict (message_key) do update set text = excluded.text $$,
+                'cheer_texts: service_role(load-push-copy 경로)이 새 키 문장을 넣는다');
 reset role;
 
 -- ---- cheer_texts: 키 check + 금지어 check ----

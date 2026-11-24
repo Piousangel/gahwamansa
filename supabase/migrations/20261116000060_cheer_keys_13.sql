@@ -9,7 +9,12 @@
 -- (2) 기존 4키(love_you·warm_day·thanks_always·peaceful_day)는 지우지도 문장을 바꾸지도 않는다. 앱 시트에서 숨길 3키도 서버는 계속 받는다
 --     (업데이트하지 않은 자녀 앱이 보내면 invalid_key 가 되지 않게, 안 읽은 한마디는 31일 남음).
 -- (3) {답} 연동형(라이터 5-3)은 이번 범위 밖 — cheers·get_my_cheers 모양은 그대로다.
--- 배포 순서(DECISIONS 11-24): 어르신 앱 ①(#236, 모르는 키 기본 문장)이 스토어에 나간 뒤에만 staging/production 에 반영한다.
+-- 배포(리드 11-25, #244 QA-1 M1 (a)): 0060 은 언제 반영해도 무해하다 — 서버가 키를 더 받을 뿐이고, 새 키를 보내는 앱(자녀 새 시트 ③)이 아직 없다.
+--   사용자 위험의 관문은 ③ 자녀 새 시트 출시(CHILD_SHEET_KEYS 확대)로 옮겼다. 조건은 DECISIONS 11-25·dev-server-notes send_cheer 절.
+-- 키를 **빼는** 다음 마이그레이션 주의(#244 QA-3 L3): cheer_key_ok 는 immutable 이고 check 에서 쓰므로, create or replace 로 키를 빼도
+--   기존 cheer_texts 행은 다시 검사되지 않는다(어긋난 행이 조용히 남음). 키를 뺄 때는 그 키의 cheer_texts 행을 지우고
+--   `alter table cheer_texts drop constraint cheer_texts_message_key_check, add constraint … check (public.cheer_key_ok(message_key))`로 다시 검사한다.
+--   (원칙상 키는 빼지 않는다 — 안 읽은 응원이 31일 남는다.)
 -- 응원 문장은 마이그레이션에 넣지 않는다 — docs/team/copy.ko.json cheers.* 가 원본이고 supabase/ops/load-push-copy.mjs 가 법률 리뷰 뒤 적재한다.
 --   문장이 없는 키의 응원 알림은 0052 push_events_claim 이 body_many('응원이 {n}개 왔어요', n=1)로 보낸다 — 보내기·알림 모두 실패하지 않는다.
 
