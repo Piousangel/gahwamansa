@@ -123,7 +123,7 @@ test('보기 전용(B2) P4 에서도 같은 크게 보기, 계측·방문 수는
   const log = jest.spyOn(api, 'logEvent');
   render(<AppRoot api={api} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
-  await press('오늘 코스 다시 보기');
+  await press(/^사진 보기, 했어요/); // D-3 뒤 Dock '오늘 코스 다시 보기'는 '오늘 한 장'으로 — P4 보기 전용은 했어요 행으로 연다
   await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
   await loadPhoto();
   await press(OPEN);

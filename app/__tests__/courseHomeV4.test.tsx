@@ -138,11 +138,11 @@ describe('코스 홈 v4', () => {
     expect(screen.getByRole('button', {name: '오늘 코스 다시 보기'})).toBeTruthy();
   });
 
-  test('다시 보기 → P4 보기 전용: 단계 숨김·돌아가기, 기록·계측·다시 불러오기 0', async () => {
+  test('했어요 행 → P4 보기 전용: 단계 숨김·돌아가기, 기록·계측·다시 불러오기 0(Dock 다시 보기는 D-3 오늘 한 장 — d3TodayReview)', async () => {
     const api = await home({completedSteps: ['photo', 'question', 'hangul']});
     const spies = spyAll(api);
     const before = counts(spies);
-    await press('오늘 코스 다시 보기');
+    await press(/^사진 보기, 했어요/);
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
     expect(screen.getByText('마을 입구 나무')).toBeTruthy();
     expect(screen.getByText('사진 보기')).toBeTruthy(); // 보기 전용은 단계 표시 없이 이름만
