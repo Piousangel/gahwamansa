@@ -11,6 +11,10 @@ import {OfflineError} from '../src/features/types';
 import {copy} from '../src/copy/copy';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 import {enterCode, press} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 let mockDims = {width: 411, height: 914, scale: 3, fontScale: 1};
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({

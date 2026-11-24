@@ -7,6 +7,10 @@ import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {CONSENT_VERSION} from '../src/copy/copy';
 import {enterCode, press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 async function previewHome(api: ReturnType<typeof createFakeApi>) {
   render(<AppRoot api={api} role="parent" />);

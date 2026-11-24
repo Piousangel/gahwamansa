@@ -8,6 +8,10 @@ import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, pressCourseNext} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 type Node = {type: unknown; props: Record<string, unknown>; parent: Node | null; children: unknown[]};
 // 누르는 파랑: action·actionPressed(눌림)(#179 리뷰 M3)

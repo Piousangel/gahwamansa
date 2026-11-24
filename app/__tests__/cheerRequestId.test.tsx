@@ -7,6 +7,10 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError} from '../src/features/types';
 import {uuidV4} from '../src/lib/uuid';
 import {press} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const afterUndoWindow = () =>

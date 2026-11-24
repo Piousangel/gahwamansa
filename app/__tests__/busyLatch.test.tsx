@@ -6,6 +6,10 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {useBusyLatch} from '../src/ui/useBusyLatch';
 import {enterCode, press} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const twice = async (el: Parameters<typeof fireEvent.press>[0]) => {
   await act(async () => {
