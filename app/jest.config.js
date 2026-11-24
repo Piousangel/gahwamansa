@@ -2,8 +2,8 @@ module.exports = {
   preset: '@react-native/jest-preset',
   // 제스처 핸들러 공식 jest 설정(네이티브 모듈 목) — gorhom 바텀시트(11-25)
   setupFiles: ['<rootDir>/node_modules/react-native-gesture-handler/jestSetup.js', '<rootDir>/jest.setup.js'],
-  // Reanimated 4·worklets 공식 jest 리졸버: 네이티브 대신 웹 구현을 불러온다(안에서 worklets 리졸버를 이어 부른다)
-  resolver: 'react-native-reanimated/jest/resolver',
+  // Reanimated 4·worklets 공식 jest 리졸버(네이티브 대신 웹 구현) → RN preset 리졸버 순으로 잇는다(testUtils/jestResolver.js)
+  resolver: '<rootDir>/testUtils/jestResolver.js',
   setupFilesAfterEnv: ['<rootDir>/jest.after.js'],
   // 흐름 테스트는 여러 화면·모션을 지나므로 부하(병렬 워커)에서 기본 5초를 넘을 수 있다(불안정 원인, P7 리뷰 L6)
   testTimeout: 20000,

@@ -5,11 +5,13 @@
 import React from 'react';
 import {StyleSheet, Text as RNText} from 'react-native';
 import {act, fireEvent, render, screen} from '@testing-library/react-native';
-import {ReduceMotion} from 'react-native-reanimated';
+import {getAnimatedStyle as getAnimatedStyleUntyped, ReduceMotion} from 'react-native-reanimated';
 import {Sheet, SHEET_HANDLE_H} from '../src/ui/ds';
 import {resolveSnapPoints} from '../src/ui/ds/Sheet';
 
 const RN = require('react-native');
+// Reanimated 4.8 의 기본 타입은 웹 대역(인자 없음)이라 jest(네이티브 판) 서명으로 맞춘다. 같은 이유로 toHaveAnimatedStyle 매처도 tsc 가 모른다(리뷰)
+const getAnimatedStyle = getAnimatedStyleUntyped as unknown as (el: unknown) => Record<string, unknown>;
 const gorhom = require('@gorhom/bottom-sheet');
 const opener = {current: null};
 const WIN_H = 640;
@@ -36,7 +38,7 @@ const last = () => gorhom.__last() as {props: Record<string, any>; api: Record<s
 const handle = () => screen.getByTestId('sheet-handle');
 const a11y = (actionName: string) => act(() => handle().props.onAccessibilityAction({nativeEvent: {actionName}}));
 /** 몸통(손잡이 아래)을 잰다 → 시트 높이 = 몸통 + 손잡이 48 */
-const measure = (sheetH: number) => fireEvent(screen.getByTestId('s'), 'layout', {nativeEvent: {layout: {height: sheetH - SHEET_HANDLE_H}}});
+const measure = (sheetH: number) => fireEvent(screen.getByTestId('s-scroll'), 'contentSizeChange', 360, sheetH - SHEET_HANDLE_H);
 
 describe('gorhom 설정', () => {
   test('기본(칸 하나 = 내용 높이): 동적 높이, 끌어 닫기 켬, 88% 상한, 모션 줄이기는 시스템 설정을 따름', () => {
@@ -48,11 +50,26 @@ describe('gorhom 설정', () => {
     expect(p.enablePanDownToClose).toBe(true);
     expect(p.maxDynamicContentSize).toBe(Math.floor(WIN_H * 0.88));
     expect(p.overrideReduceMotion).toBe(ReduceMotion.System);
+    // 여는 모션은 불투명도만(공용 모션 규칙 §0-6) — gorhom 아래에서 올라오기는 끈다
+    expect(p.animateOnMount).toBe(false);
+    // 스크롤 밖 아래 줄(더 있음 띠·footer·아래 inset)은 gorhom footerComponent 로, 스크롤 아래 여백을 gorhom 이 맞춘다
+    expect(p.footerComponent).toBeTruthy();
+    expect(screen.UNSAFE_getByType(gorhom.BottomSheetScrollView).props.enableFooterMarginAdjustment).toBe(true);
+  });
+
+  test('스크롤은 시트의 바로 아래 자식(BottomSheetView 로 감싸지 않음) — 감싸면 gorhom 이 내용을 "스크롤 없음"으로 덮어써 넘치는 시트에서 스크롤 대신 시트가 들린다', () => {
+    open();
+    const scroll = screen.UNSAFE_getByType(gorhom.BottomSheetScrollView);
+    // 목의 BottomSheet 는 자식을 'gorhom-sheet' View 바로 안에 그린다(BottomSheetView 목이 끼면 그 컴포넌트가 부모가 된다)
+    expect(scroll.parent?.props.testID).toBe('gorhom-sheet');
   });
 
   test('스크린리더: gorhom 기본(시트 전체 = "Bottom Sheet" 조절 막대 하나)을 끄고, 바탕도 읽지 않는다', () => {
     open();
     expect(last().props.accessible).toBe(false);
+    // gorhom 은 null 을 '없음'으로 받는다(undefined 면 기본값 'Bottom Sheet'·adjustable 이 Android 에 남는다, 리뷰)
+    expect(last().props.accessibilityLabel).toBeNull();
+    expect(last().props.accessibilityRole).toBeNull();
     expect(last().props.backgroundComponent).toBeTruthy(); // 기본 바탕(accessible adjustable)을 쓰지 않는다
     expect(screen.queryByLabelText('Bottom Sheet')).toBeNull();
     // 제목·닫기는 따로 읽힌다(시트 하나로 묶이지 않음)
@@ -126,12 +143,12 @@ describe('밖 누르기 배경', () => {
     jest.useFakeTimers(); // Reanimated jest 는 공유 값 바뀜을 다음 프레임(가짜 시계)에 스타일로 옮긴다
     open();
     const fade = () => screen.getByTestId('sheet-scrim-fade', {includeHiddenElements: true});
-    expect(fade()).toHaveAnimatedStyle({opacity: 1});
+    expect(getAnimatedStyle(fade())).toMatchObject({opacity: 1});
     act(() => last().api.close());
     act(() => {
       jest.advanceTimersByTime(50);
     });
-    expect(fade()).toHaveAnimatedStyle({opacity: 0});
+    expect(getAnimatedStyle(fade())).toMatchObject({opacity: 0});
   });
 });
 
@@ -162,6 +179,21 @@ describe('여러 칸(snapPoints)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  test('열려 있는 동안 gorhom index 는 열 때 정한 값(바뀌면 gorhom 이 그 칸으로 강제 스냅, 리뷰) — 칸 수가 줄어 범위를 벗어날 때만 자른다', () => {
+    open({snapPoints: [100, '50%', 'content'], initialSnap: 1});
+    measure(500);
+    expect(last().props.snapPoints).toEqual([100, 320]);
+    expect(last().props.index).toBe(1);
+    measure(600); // 내용이 길어져도(칸 수 그대로) index 는 그대로
+    expect(last().props.index).toBe(1);
+    measure(300); // 내용이 짧아 320 칸이 내용 칸과 겹침 → [100, 내용] 2칸 — 1 은 아직 범위 안
+    expect(last().props.snapPoints).toEqual([100]);
+    expect(last().props.index).toBe(1);
+    measure(120); // 100 칸도 겹침 직전 → 그대로 2칸
+    measure(60); // 100 칸이 내용 칸보다 높아짐 → 내용 칸 하나 → 0 으로 자름
+    expect(last().props.index).toBe(0);
+  });
+
   test('initialSnap 0 이면 낮은 칸으로 연다', () => {
     open({snapPoints: snaps, initialSnap: 0});
     expect(last().props.index).toBe(0);
@@ -182,6 +214,11 @@ describe('resolveSnapPoints', () => {
     expect(resolveSnapPoints([700, 'content'], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
     expect(resolveSnapPoints([600, 200], 640, 500)).toEqual({points: [200, 500], dynamic: false, count: 2});
     expect(resolveSnapPoints(['content'], 640, 0)).toEqual({points: [], dynamic: true, count: 1});
+  });
+
+  test('쓸 칸이 하나도 없으면 내용 칸 하나(gorhom 은 빈 칸 목록에서 멈춘다, 리뷰)', () => {
+    expect(resolveSnapPoints([], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
+    expect(resolveSnapPoints([0], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
   });
 
   test('재기 전에는 자르지 않는다', () => {

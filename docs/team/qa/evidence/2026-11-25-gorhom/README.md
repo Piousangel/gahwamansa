@@ -1,0 +1,45 @@
+# ds Sheet gorhom 이전 실측 (O-3, l4/gorhom-sheet) · 2026-11-25
+
+- 기기: 에뮬레이터 gahwa_small(emulator-5556, `-read-only`, 화면 없음), 제스처 내비. 실기기 S25 는 쓰지 않음(오너 몫)
+- 빌드: 이 브랜치 `assembleStagingDebug`(reanimated·worklets·RNGH 네이티브 포함, 10분 3초) + 이 브랜치 JS(Metro 8091, `adb reverse`)
+- 시작 상태: selectApi 의 fake 인자를 `{who:'child', childFamily, childLinked, consented, parentTitle:'엄마'}` 로 잠깐 바꿈(호칭 겹침은 `parents:[{title:'엄마'},{title:'엄마'}]` 추가). 커밋 안 함, 되돌림
+- 시트 열기: `app/e2e/audit/sheet-drag-open.yaml`(SHEET=cheer|title|paid), 호칭 겹침은 '이름 고르기' 누름. 끌기: `adb shell input motionevent DOWN/MOVE/UP`(쥔 채 캡처), 튕기기: `input swipe … 120~200ms`
+- 크기: 360×640dp 100% = `wm size 990x1760`, 320×640dp 200% = `wm size 880x1760` + `font_scale 2.0`
+- 끝난 뒤: `wm size reset`(1080×2340), `font_scale 1.0`, `adb reverse --remove-all`, 에뮬레이터 끔, Metro 8091 끔
+- 부하: 측정 중 1분 평균 4~20(다른 레인 빌드). 튕기기 결과는 아래 '남은 위험' 참고
+
+## 캡처(모두 최종 구조 — 스크롤이 시트의 바로 아래 자식)
+
+| 파일 | 크기·배율 | 무엇 |
+|---|---|---|
+| 01-cheer-360x640-100.png | 360×640 100% | 응원 시트: 손잡이(48 줄) + 제목 + 닫기, 내용 높이만큼(gorhom 동적 높이) |
+| 02-cheer-100-content-dragging.png | 100% | 내용(선택지 위)을 쥐고 아래로 끄는 중 → 시트가 손가락을 따르고 배경이 옅어짐 |
+| 03-cheer-100-content-swipe-closed.png | 100% | 내용을 아래로 튕김 → 닫힘 |
+| 04-cheer-100-choice-tap-sent.png | 100% | 다시 열어 선택지 누름 → 바로 보냄(토스트 '엄마께 보냈어요') — gorhom 스크롤 안에서도 누르기 정상 |
+| 05-cheer-320x640-200.png | 320×640 200% | 응원 200%: 88% 상한 + 아래 '더 있음' 띠(넘침) |
+| **06-cheer-200-content-pull-dragging.png** | 200% | **넘치는 시트에서 스크롤 맨 위 내용을 아래로 끄는 중 → 시트가 따라 내려감**(#232 에서는 네이티브 스크롤이 가져가 불가능했던 동작) |
+| 07a-cheer-200-before-flick.png | 200% | 튕기기 전(열린 상태) |
+| **07b-cheer-200-content-flick-closed.png** | 200% | **같은 시트를 내용으로 아래로 튕겨 닫음**(이 캡처는 두 번째 시도에서 닫힘 — 남은 위험 1) |
+| 09-title-360x640-100.png | 100% | 호칭 바꾸기(ChildSettings): 100%에서도 넘침 → 띠 + footer(저장) 고정 |
+| 10-title-320x640-200.png | 200% | 호칭 바꾸기 200% |
+| 11-title-200-content-pull-dragging.png | 200% | 호칭 바꾸기 내용 끌기 → 시트가 따라 내려감(footer 는 gorhom 방식대로 화면 아래에 남음) |
+| 12a-paid-360x640-100.png | 100% | 유료 안내(곧 유료): 내용 높이 + footer(관심 있어요) |
+| 12-paid-320x640-200.png | 200% | 유료 안내 200%: 넘침 → 띠 + footer |
+| 13-paid-200-scrolled-to-end.png | 200% | 안쪽을 위로 밀어 끝까지 스크롤 → 시트는 그대로, 띠는 끝에서 숨김 |
+| 14-paid-200-scrolled-pull-scrolls-first.png | 200% | 스크롤이 내려가 있을 때 아래로 끌면 **스크롤이 먼저 올라가고 시트는 제자리**(gorhom 소유권 규칙) |
+| 15-titledup-320x640-200.png | 200% | 호칭 겹침 안내(TitleDupNotice) 시트 200% |
+| 16-titledup-360x640-100.png | 100% | 호칭 겹침 안내 100% |
+
+## 확인 결과
+
+1. **넘치는 시트 내용 끌어 닫기(이번 PR 의 목적)**: 200% 응원·호칭 바꾸기·유료 안내 모두 스크롤 맨 위에서 내용을 아래로 끌면 시트가 손가락을 따라 내려간다(06·11, 천천히 끌기 10/10). 놓으면 위치·속도로 열린 칸 또는 닫힘. 튕겨 닫기 성공(07b).
+2. **안쪽 스크롤**: 위로 밀면 스크롤(13), 스크롤된 상태에서 아래로 끌면 스크롤이 먼저(14). 첫 구현(BottomSheetView 안에 스크롤)은 gorhom 이 내용을 '스크롤 없음'으로 덮어써 **위로 밀면 스크롤 대신 시트 전체가 들렸다** → 스크롤을 시트의 바로 아래 자식으로, footer·띠를 gorhom footerComponent 로 옮겨 고침(xhigh 리뷰가 원인 지목, 이 실측으로 확인). jest 에 구조 시험 추가.
+3. **닫는 길**: X · 밖(배경) 누르기 · Android 뒤로 가기 모두 닫힘(uiautomator 로 제목 사라짐 확인, 100%). 손잡이 튕기기 200% 6/6 닫힘(부하 4).
+4. **선택지 누르기**: gorhom 스크롤 안 Pressable 정상(04).
+5. **모션**: 여는 모션은 불투명도만(gorhom 올라오기 끔). 개발 빌드 첫 실행에 Reanimated 경고 토스트('Dependencies should only be used on the web' — gorhom 상류 이슈 #2785, 동작 영향 없음) → index.js 에서 그 문구만 숨김.
+
+## 남은 위험(오너 S25 실손가락 확인 필요)
+
+1. **내용 튕겨 닫기 성공률(에뮬레이터 주입 터치)**: `input swipe` 120~200ms 로 내용을 튕기면 100%·200% 모두 일부가 닫히지 않고 제자리(최종 구조 기록 — 100% 응원: 열고 1초 뒤 3/6, 3초 뒤 6/6 · 200% 응원: 여러 묶음에서 대략 30~60%, 3초 뒤에도 2/6 · 손잡이 200%: 6/6). 실패한 시도는 gorhom 이 시트를 움직이지 않은 채 끝나고(onAnimate 없음) 스크롤 쪽 사건(onScrollEndDrag, offset 0)만 남는다 → Android 네이티브 스크롤이 터치 여유(slop)를 먼저 넘겨 gorhom Pan 이 활성화되기 전에 손가락을 가져가는 경합으로 보인다. 천천히 끌기·손잡이 튕기기는 안정적. 부하(1분 평균 12~20)·주입 터치 간격 영향 가능성이 있어 **실손가락으로 '내용을 빠르게 튕겨 닫기' 10회 확인 요청**. Pan 활성 거리를 줄이는 실험(activeOffsetY ±4)은 개선이 보이지 않아 넣지 않음.
+2. footer 가 있는 시트를 끄는 동안 footer 는 화면 아래에 남는다(gorhom 기본 동작, 11). 디자인 확인 필요하면 `BottomSheetFooter` 위치 계산을 바꿀 수 있음.
+3. TalkBack(손잡이 두 번 누르기·조절 막대, 'Bottom Sheet' 군더더기 초점 없음)과 iOS 는 이번에 못 봄 → 실기기 QA 회차.

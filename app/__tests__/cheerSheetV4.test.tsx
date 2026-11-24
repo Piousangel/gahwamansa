@@ -41,9 +41,9 @@ test('시트 머리: 손잡이(끌기, 오너 C-3 — V14 ① 바뀜) + 제목(�
   expect(handle.props.accessibilityRole).toBe('button');
   expect(handle.props.accessibilityLabel).toBe('시트 손잡이');
   expect(handle.props.accessibilityHint).toBe('두 번 누르면 닫혀요');
-  // 높이 상한 88%(손잡이 줄 포함): gorhom 동적 높이 상한 = 88%, 손잡이 아래 몸통 = 88% − 손잡이 48
+  // 높이 상한 88%(손잡이 줄 포함): gorhom 동적 높이 상한(내용 + 손잡이 48 에 적용) = 88%. 200% 넘침은 에뮬레이터 증거 05·10·12
   expect(require('@gorhom/bottom-sheet').__last().props.maxDynamicContentSize).toBe(Math.floor(640 * SHEET_MAX_RATIO));
-  expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).maxHeight).toBe(Math.floor(640 * SHEET_MAX_RATIO) - SHEET_HANDLE_H);
+  expect(StyleSheet.flatten(handle.props.style).height).toBe(SHEET_HANDLE_H);
   await act(async () => fireEvent.press(close));
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
 });
@@ -89,7 +89,7 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
       </Sheet>,
     );
     // 모달 표시는 손잡이·몸통을 함께 감싼 뿌리에(몸통에 두면 형제인 손잡이가 화면 읽기에서 빠진다, gorhom 이전 11-25)
-    expect(screen.getByTestId('s-modal').props.accessibilityViewIsModal).toBe(true);
+    expect(screen.getByTestId('s').props.accessibilityViewIsModal).toBe(true);
     expect(screen.getByTestId('sheet-handle')).toBeTruthy();
     jest.useFakeTimers();
     try {
@@ -135,7 +135,8 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
           <RNText>내용</RNText>
         </Sheet>,
       );
-      expect(StyleSheet.flatten(screen.getByTestId('s').props.style).paddingBottom).toBe(48);
+      // 아래 줄(gorhom footerComponent)의 바닥 여백 = inset. gorhom 이 이 줄 높이만큼 스크롤 아래 여백을 더해 내용도 내비 위(gorhom 이전 11-25)
+      expect(StyleSheet.flatten(screen.getByTestId('s-bottom').props.style).paddingBottom).toBe(48);
     } finally {
       screen.unmount();
       insets.mockImplementation(orig);
@@ -172,6 +173,10 @@ test('ds Sheet footer(PR #100 리뷰 L3): 스크롤 밖 아래에 고정(내용�
   }
 });
 
+// gorhom 이전(11-25): 띠는 스크롤 밖 아래 줄에 있어 높이가 바뀌면 gorhom 이 맞춘 스크롤 아래 여백이 바뀌어 끝에서 튄다
+// → 넘치는 동안은 자리를 두고, 끝까지 내리면 보이지 않게만(불투명도 0, 띠는 원래 화면 읽기에서 숨김)
+const bandShown = () => StyleSheet.flatten(screen.getByTestId('s-more').props.style)?.opacity !== 0;
+
 test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(L1)', () => {
   render(
     <AudienceProvider value="child">
@@ -190,10 +195,11 @@ test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(
     fireEvent(scroll, 'contentSizeChange', 360, 700);
   });
   expect(screen.getByTestId('more-band', {includeHiddenElements: true})).toBeTruthy();
+  expect(bandShown()).toBe(true);
   act(() => {
     fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {x: 0, y: 300}, contentSize: {width: 360, height: 700}, layoutMeasurement: {width: 360, height: 400}}});
   });
-  expect(screen.queryByTestId('more-band', {includeHiddenElements: true})).toBeNull();
+  expect(bandShown()).toBe(false);
 });
 
 test('M1: 응원 시트를 닫으면 화면 읽기 포커스가 \'응원 보내기\'로 돌아간다', async () => {
