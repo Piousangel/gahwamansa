@@ -29,6 +29,7 @@ import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {copy} from '../src/copy/copy';
+import {navRef} from '../src/navigation/navRef';
 import {press} from '../testUtils/flow';
 import {coverQueue} from '../src/ui/ds/coverQueue';
 // V1(11-19): N1 은 오늘 코스를 다 마친 뒤 코스 홈에서. 바로 N1 을 보려면 다 마친 상태로 시작한다
@@ -396,6 +397,29 @@ describe('앱 조립(PushHost)', () => {
       src.emitOpen({kind: 'parent_connected'});
     });
     await waitFor(() => expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'parent_connected'}));
+  });
+
+  test('0052 첫 답 알림(parent_first_answer) 탭: 지난 날 탭에 있어도 자녀 홈(앨범)으로 + push_opened', async () => {
+    const src = createFakeTokenSource();
+    setTokenSourceForTest(src);
+    const api = createFakeApi({consented: true, parentTitle: '엄마'});
+    const log = jest.spyOn(api, 'logEvent');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await act(async () => {
+      fireEvent.press(screen.getByRole('tab', {name: '지난 날'}));
+    });
+    await waitFor(() => expect(navRef.getCurrentRoute()?.name).toBe('Past'));
+    await act(async () => {
+      src.emitOpen({kind: 'parent_first_answer'});
+    });
+    await waitFor(() => expect(navRef.getCurrentRoute()?.name).toBe('Album'));
+    expect(log).toHaveBeenCalledWith('push_opened', {push_kind: 'parent_first_answer'});
+    // 라이터 키(0052가 쓰는 push.first_answer): 제목·본문이 있고 자리값은 {호칭}만(답 내용·시각 없음)
+    const fa = (copy.push as unknown as Record<string, {title: string; body: string}>).first_answer;
+    expect(fa.title).toBeTruthy();
+    expect(fa.body).toBeTruthy();
+    expect((`${fa.title} ${fa.body}`.match(/\{[^}]+\}/g) ?? []).every(m => m === '{호칭}')).toBe(true);
   });
 
   test('자녀 C3 알림 켜기 → 허용이면 받기 동의(set_push_enabled true)·토큰 등록', async () => {
