@@ -31,6 +31,9 @@ for k in DEPRECATED:
 c['sign'] = {'value': '#FFD43B', 'role': "팻말 면 — **부모님이 고르신 쪽**(P5 선택) 전용. 다른 면·글자·버튼에 쓰지 않는다. 바탕(회백)과 1.3이라 경계는 signEdge가 맡는다"}
 c['signInk'] = {'value': '#151515', 'role': '팻말 위 글자(먹). 손글씨(≥48dp)·고딕 700(<48dp) 모두'}
 c['signEdge'] = {'value': '#151515', 'role': '팻말 테두리 2·끈·못. 테두리 없는 노랑 금지'}
+# 날짜 도장(D-2, 11-24 팀 결정): 새 색 없이 먹(inkTitle)의 별칭. 역할 이름만 나눠 두어 잉크를 바꿀 때 화면 코드를 건드리지 않는다
+c['stampInk'] = {'value': c['inkTitle']['value'], 'aliasOf': 'inkTitle',
+                 'role': "P3 '했어요' 옆 날짜 도장(두 겹 원 + '24일') 선·글자. 값은 먹(inkTitle) 그대로 — 팔레트를 늘리지 않는다(docs/design/2026-11-24-d2-d3-c4)"}
 c['info']['rule'] = '정보 띠: 시멘트 회 글자 + ⓘ 아이콘 + infoSoft 면. 파랑(action)은 누르는 것 전용이라 info에 쓰지 않는다(패널 5 겹침 해결)'
 c['accent']['rule'] = "'지금 할 차례' Tag 한 곳. 먹 면 + 흰 글자 + 글자('지금 할 차례')로 구분. 위험색과 같은 화면에서도 색이 겹치지 않는다"
 c['action']['note'] = '누를 수 있는 것 전용(차일 파랑). v4 갈색 #744821에서 교체'
@@ -46,6 +49,9 @@ d['typeRoles']['signLabel'] = {'child': {'size': 52, 'lineHeight': 64}, 'elder':
     'note': '팻말 글자(손글씨 나눔손글씨 붓). 어르신 60×1.18 보정, 자녀 52. **48dp 이상에서만 손글씨**, 그보다 작으면 signSmall(Noto Sans KR 700)'}
 d['typeRoles']['signSmall'] = {'child': {'size': 20, 'lineHeight': 28}, 'elder': {'size': 26, 'lineHeight': 36}, 'weight': 700, 'tone': 'signInk', 'maxFontScale': 1.5,
     'note': '지난 날 작은 팻말·48dp 미만 팻말 글자(고딕 700)'}
+# 날짜 도장 글자(D-2, 11-24): '24일' 20/700, 확대 상한 1.3(도장 지름 64 도 같은 배율로 커져 200%에서 83 — 11-25 리드: 글자 20 유지, 여백 4dp 위해 56→64). 도장 컴포넌트(ui/ds/DateStamp) 안에서만
+d['typeRoles']['stampLabel'] = {'child': {'size': 20, 'lineHeight': 24}, 'elder': {'size': 20, 'lineHeight': 24}, 'weight': 700, 'tone': 'stampInk', 'maxFontScale': 1.3,
+    'note': "P3 '했어요' 옆 날짜 도장 안 글자. 줄 높이 24는 원 안 한 줄(지름 64 − 선·안쪽 원). 화면 Text role 로 고를 수 없다"}
 # 반경 4단, 그림자 2단(패널 5 권고) — B2 v2 값
 d['radius'] = {'sign': 3, 'row': 6, 'button': 8, 'sheet': 12,
     'note': '4단: 팻말·입력칸 3 / 행·선택지·칩 6 / 버튼 8 / 시트·대화상자 12. 알약(36)·반경 16~28 폐기. keypadKey·codeCell 은 row(6)',

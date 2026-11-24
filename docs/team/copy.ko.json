@@ -383,7 +383,7 @@
   },
   "course": {
     "title": "오늘 코스",
-    "greeting": "세 가지를 차례로 해요",
+    "greeting": "하나씩 차례로 해요",
     "stamps_label": "이번 주 도장",
     "step": {
       "photo": "사진 보기",
@@ -436,7 +436,20 @@
     "to_home": "오늘 코스로",
     "history_link": "지난 날 보기",
     "review_row_hint": "다시 보기",
-    "_status_review_row_hint": "라이터 확인 전(P3 v4 했어요 행 힌트, 시안 aria '…, 했어요, 다시 보기'의 끝말, 2기 레인 11-20)"
+    "_status_review_row_hint": "라이터 확인 전(P3 v4 했어요 행 힌트, 시안 aria '…, 했어요, 다시 보기'의 끝말, 2기 레인 11-20)",
+    "done_stamp": "{일}일",
+    "done_row_a11y": "{단계}, 했어요, {일}일",
+    "_status_done_stamp": "라이터 확인 전(D-2 날짜 도장, DECISIONS 11-24). 날짜(사실)만 적는다. 읽기는 시안 README '사진 보기, 했어요, 24일'",
+    "review_choice_label": "{질문} · 고르신 쪽",
+    "review_choice_label_no_prompt": "고르신 쪽",
+    "review_sign_a11y": "오늘 고르신 쪽, {답}",
+    "review_other": "다른 하나 · {답}",
+    "review_other_a11y": "다른 하나, {답}",
+    "review_word": "오늘 낱말",
+    "review_word_a11y": "오늘 낱말, {낱말}",
+    "review_read": "{날짜}. {사진}. 고르신 쪽, {답}. 오늘 낱말, {낱말}.",
+    "review_read_no_choice": "{날짜}. {사진}. 오늘 낱말, {낱말}.",
+    "_status_review_today": "라이터 확인 전(D-3 안 A '오늘 한 장', DECISIONS 11-24, 시안 docs/design/2026-11-24-d2-d3-c4 README 새 문구 '고르신 쪽'·'다른 하나'·'오늘 낱말')"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -478,6 +491,7 @@
     "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요"
   },
   "question": {
+    "headline": "요즘 마음 가는 쪽을 골라요",
     "need_choice": "하나를 골라 주세요",
     "chosen": "골랐어요"
   },
@@ -610,6 +624,7 @@
       "QuestionStep": "둘 중 고르기로",
       "KeyboardStep": "낱말 쓰기로",
       "CourseDone": "오늘 도장으로",
+      "TodayReview": "오늘 코스 다시 보기로",
       "History": "지난 날로",
       "HistoryDay": "그날 기록으로",
       "Settings": "설정으로",

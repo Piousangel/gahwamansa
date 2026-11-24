@@ -49,20 +49,20 @@ describe('AP-10 해님 첫 인사 1회(DECISIONS 11-17: 어르신 연결 직후 
     await new Promise<void>(r => setTimeout(() => r(), 30));
     expect(screen.queryByText('안녕하세요, 해님이에요')).toBeNull();
   });
-  test('P3 v4(시안 ds4b): 해님 인사 카드 1개(해님 36 + 인사 + 세 가지를 차례로 해요), 진입 알림(live region) 없음', async () => {
+  test('P3 v4(시안 ds4b): 해님 인사 카드 1개(해님 36 + 인사 + 하나씩 차례로 해요), 진입 알림(live region) 없음', async () => {
     mockFontScale = 1;
     await home();
     const card = await waitFor(() => screen.getByTestId('first-greeting'));
     expect(within(card).getByTestId('icon-sun', {includeHiddenElements: true}).props.width).toBe(36);
-    expect(card.props.accessibilityLabel).toBe('안녕하세요, 해님이에요, 세 가지를 차례로 해요');
+    expect(card.props.accessibilityLabel).toBe('안녕하세요, 해님이에요, 하나씩 차례로 해요');
     expect(card.props.accessibilityLiveRegion).toBeUndefined();
   });
-  test('글자 150% 이상이면 \'세 가지를 차례로 해요\'는 카드 밖 제목(시안 200% 보드)', async () => {
+  test('글자 150% 이상이면 \'하나씩 차례로 해요\'는 카드 밖 제목(시안 200% 보드)', async () => {
     mockFontScale = 1.5;
     await home();
     const card = await waitFor(() => screen.getByTestId('first-greeting'));
-    expect(within(card).queryByText('세 가지를 차례로 해요')).toBeNull();
-    expect(screen.getByRole('header', {name: '세 가지를 차례로 해요'})).toBeTruthy();
+    expect(within(card).queryByText('하나씩 차례로 해요')).toBeNull();
+    expect(screen.getByRole('header', {name: '하나씩 차례로 해요'})).toBeTruthy();
   });
   test('첫 단계를 시작했다 돌아오면 다시 나오지 않는다(그 방문 동안만)', async () => {
     await home();
@@ -149,12 +149,12 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     render(<AppRoot api={createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question', 'hangul']})} role="parent" restore />);
     await waitFor(() => screen.getByTestId('date-line'));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
     send.mockClear();
     await pressLast('오늘 코스로'); // 하단 '돌아가기'(v4: 보이는 글 = 읽기, 목적지는 힌트)
     await waitFor(() => screen.getByTestId('date-line'));
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('둘 중 고르기, 했어요'));
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContainEqual(expect.stringMatching(/^둘 중 고르기, 했어요, \d+일$/)));
   });
   test("화면 읽기가 꺼져 있으면 포커스를 옮기지 않는다", async () => {
     await home();

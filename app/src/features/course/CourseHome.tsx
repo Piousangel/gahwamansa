@@ -3,7 +3,7 @@ import {Animated, StyleSheet, useWindowDimensions, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ParentParams} from '../../app/ParentStack';
 import {useSession} from '../../app/session';
-import {Button, DsScreen, Heading, ListRow, SettingsLink, Text, type DockProps} from '../../ui/ds';
+import {Button, DateStamp, DsScreen, Heading, ListRow, SettingsLink, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {prefs} from '../../lib/prefs';
 import {Icon} from '../../ui/assets/icons';
@@ -12,7 +12,7 @@ import {useMotionMode} from '../../ui/motion';
 import {appCopy, copy} from '../../copy/copy';
 import {useLoadTodayContent} from './useTodayContent';
 import {CheerDialog} from './CheerDialog';
-import {kstDateLine, stampsFromDates} from './stamps';
+import {kstDateLine, kstDayOfMonth, stampsFromDates} from './stamps';
 import {useWeekStamps} from './useWeekStamps';
 import {useAfterTransition} from './useAfterTransition';
 import {useReturnFocus} from './useReturnFocus';
@@ -35,9 +35,9 @@ const STEPS: {step: StepName; route: StepRoute}[] = [
 // - 위 영역: 날짜 줄(화면 제목, 첫 포커스·P8 닫힌 뒤 복귀) + 오른쪽 '음악 끄기'(소리 날 때만, 켜기는 설정) · '설정'.
 // - 본문(간격 12): [첫날] 해님 인사 카드 1개 / [다 마침] 제목 '오늘 코스는 여기까지예요…' → 이번 주 도장 줄(찍은 날이 있을 때)
 //   → 단계 행 3개 → 스티치(화면당 1곳) → '지난 날 보기'(목록 아래).
-// - 단계 행: 지금 = 눌리는 행('지금 할 차례' accent 태그 + 이름 + ›), 했어요 = 눌리는 행(✓ 했어요 ›, 누르면 그 단계 다시 보기 — 리드 결정 시안 1:1),
+// - 단계 행: 지금 = 눌리는 행('지금 할 차례' accent 태그 + 이름 + ›), 했어요 = 눌리는 행('했어요' + 날짜 도장 + ›, 누르면 그 단계 다시 보기 — 리드 결정 시안 1:1),
 //   다음 = 누르지 않는 행. 읽기 이름은 보이는 글과 같게(R-14), '다시 보기'는 힌트로.
-// - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기'.
+// - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기' → '오늘 한 장'(TodayReviewScreen, D-3).
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
   const {api, done, content, consented, syncError, sync} = useSession();
   const titleRef = useRef<unknown>(null); // P8 대화상자가 닫힌 뒤 포커스를 돌려줄 제목
@@ -130,9 +130,15 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const dock: DockProps | undefined = current
     ? {primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')}}
     : all
-      ? {primary: {kind: 'secondary', label: c.review_link, icon: 'icon-photo', testID: 'course-review', buttonRef: bind('dock'), onPress: () => review('PhotoStep', 'dock')}}
+      ? {primary: {kind: 'secondary', label: c.review_link, icon: 'icon-photo', testID: 'course-review', buttonRef: bind('dock'), onPress: () => {
+          mark('dock');
+          navigation.navigate('TodayReview'); // D-3 안 A '오늘 한 장'(한 화면, 기록 호출 0)
+        }}}
       : undefined;
   const days = week && week.doneDates.length > 0 ? stampsFromDates(week.weekStart, week.doneDates) : null;
+  // D-2 날짜 도장: 했어요 행은 오늘(KST) 마친 단계뿐이라 날짜 = 오늘
+  const day = String(kstDayOfMonth());
+  const stampLabel = c.done_stamp.split('{일}').join(day);
 
   return (
     <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH}>
@@ -182,7 +188,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
             <Button kind="secondary" size="inline" label={syncError.button} onPress={sync} />
           </View>
         ) : null,
-        /* 첫날 해님 인사 카드 1개(V1, 알림 안내는 첫 도장 뒤 N1). 200%는 '세 가지를 차례로 해요'를 카드 밖 제목으로(시안 200% 보드) */
+        /* 첫날 해님 인사 카드 1개(V1, 알림 안내는 첫 도장 뒤 N1). 200%는 인사 둘째 줄 '하나씩 차례로 해요'를 카드 밖 제목으로(시안 200% 보드) */
         firstGreeting ? (
           <View key="greet" testID="first-greeting" style={styles.greet} accessible accessibilityLabel={large ? copy.connect.greeting : `${copy.connect.greeting}, ${c.greeting}`}>
             <Icon name="icon-sun" size={GREET_ICON} color={ds.deprecatedColor.sunRay} /* R-23 장식 — 화면 레인이 걷어 낼 때까지(병합 #179) */ />
@@ -227,14 +233,16 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
                   testID={`step-done-${s.step}`}
                   tone="done"
                   pressRef={bind(`row-${s.step}`)}
-                  accessibilityLabel={`${name}, ${c.status.done}`}
+                  accessibilityLabel={c.done_row_a11y.split('{단계}').join(name).split('{일}').join(day)}
                   accessibilityHint={c.review_row_hint}
                   onPress={() => review(s.route, `row-${s.step}`)}>
-                  <View style={styles.inline}>
+                  {/* D-2: '했어요'·도장·› 는 한 묶음(갈라지지 않음)으로 늘 오른쪽. 이름과 한 줄에 안 들어가면 묶음째 다음 줄 오른쪽 끝으로
+                      — 왼쪽 줄 머리에 빈 원이 오면 라디오 버튼으로 읽힌다(11-19 V5) */}
+                  <View testID="done-line" style={styles.inline}>
                     <Text role="bodyLg" style={styles.grow}>{name}</Text>
-                    <View style={styles.inline}>
-                      <DoneCheck key={justDone === s.step ? 'anim' : 'still'} animate={justDone === s.step} />
-                      <Text role="sub">{c.status.done}</Text>
+                    <View testID="done-status" style={styles.status}>
+                      <Text testID="done-label" role="sub" tone="done">{c.status.done}</Text>
+                      <StampIn key={justDone === s.step ? 'anim' : 'still'} animate={justDone === s.step} label={stampLabel} />
                       <Icon name="icon-chevron-right" size={ICON} color={ds.color.action} />
                     </View>
                   </View>
@@ -271,9 +279,9 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   );
 }
 
-// 방금 마친 행의 ✓: 전환이 끝난 뒤 280ms 페이드(시안 P7_motion 단계 체크, 동작 줄이기 200ms). 판정 전(null)에는 시작하지 않는다.
+// 방금 마친 행의 날짜 도장: 전환이 끝난 뒤 280ms 페이드(시안 P7_motion 단계 체크, 동작 줄이기 200ms). 판정 전(null)에는 시작하지 않는다.
 // 진동·소리 없음(단계마다 울리면 남발)
-function DoneCheck({animate}: {animate: boolean}) {
+function StampIn({animate, label}: {animate: boolean; label: string}) {
   const mode = useMotionMode();
   const v = useRef(new Animated.Value(animate ? 0 : 1)).current;
   useEffect(() => {
@@ -284,13 +292,13 @@ function DoneCheck({animate}: {animate: boolean}) {
     a.start();
     return () => a.stop();
   }, [animate, mode, v]);
-  const icon = <Icon name="icon-check" size={ICON} color={ds.color.doneInk} />;
+  const stamp = <DateStamp testID="done-stamp" label={label} />;
   return animate ? (
     <Animated.View testID="step-check-anim" style={{opacity: v}}>
-      {icon}
+      {stamp}
     </Animated.View>
   ) : (
-    icon
+    stamp
   );
 }
 
@@ -361,6 +369,8 @@ const styles = StyleSheet.create({
   inline: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6},
   // 이름은 줄이지 않는다(좁으면 상태 묶음이 다음 줄로 — 320×640 200% 실측: '사진/보기'로 꺾였다)
   grow: {flexGrow: 1},
+  // D-2 상태 묶음: 갈라지지 않고(nowrap·줄지 않음) 왼쪽 여백 auto 로 늘 오른쪽 끝 — 다음 줄로 내려가도 줄 머리에 원이 오지 않는다
+  status: {flexDirection: 'row', flexWrap: 'nowrap', flexShrink: 0, marginLeft: 'auto', alignItems: 'center', columnGap: 6},
   // '지금 할 차례' 태그: 흰 면 + accent 테두리 1.5(화면당 accent 1곳, R-07)
   tag: {alignSelf: 'flex-start', backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.accent, borderRadius: ds.radius.chip, paddingHorizontal: 12, paddingVertical: 2},
   // 해님 인사 카드: 흰 면 + line 1.5, 반경 22, 패딩 8/14

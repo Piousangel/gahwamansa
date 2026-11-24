@@ -16,13 +16,11 @@ test('사진 화면은 오늘 콘텐츠(2일차)의 설명을 보여 준다', as
   await waitFor(() => screen.getByText('장날 아침'));
   expect(screen.getByText('사진을 준비하고 있어요')).toBeTruthy();
   expect(screen.queryByText(/AI 옛날 사진/)).toBeNull();
-  // 회상 질문 2개를 순서대로 표시
+  // 회상 질문은 첫 질문 1개만 표시(DECISIONS 11-25 R-2 — 콘텐츠는 2개 그대로)
   const a = screen.getByText('장에 가면 제일 먼저 어디를 보셨어요?');
-  const b = screen.getByText('장바구니에 꼭 담던 건 뭐예요?');
   expect(a).toBeTruthy();
-  expect(b).toBeTruthy();
+  expect(screen.queryByText('장바구니에 꼭 담던 건 뭐예요?')).toBeNull();
   expect(StyleSheet.flatten(a.props.style).fontSize).toBeGreaterThanOrEqual(20);
-  expect(StyleSheet.flatten(b.props.style).fontSize).toBeGreaterThanOrEqual(20);
 });
 
 test('질문 화면은 오늘의 선택지를 보여 주고 고른 답을 미리 표시한다', async () => {

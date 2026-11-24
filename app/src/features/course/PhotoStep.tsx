@@ -97,7 +97,9 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   );
   const late = large || lateFor === fit;
   const photo = content?.photo;
-  const read = useReadAloudAction(photo ? ttsText.photo(photo.recall_questions) : '', setReading);
+  // 회상 질문은 첫 질문 1개만 보이고 읽는다(DECISIONS 11-25 R-2 시작 빌드 다듬기). 콘텐츠는 그대로 두고 앱에서만 줄인다
+  const questions = photo ? photo.recall_questions.slice(0, 1) : [];
+  const read = useReadAloudAction(ttsText.photo(questions), setReading);
   if (!photo) {
     return null;
   }
@@ -120,7 +122,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
     }
   };
-  const readable = read.allowed && photo.recall_questions.length > 0;
+  const readable = read.allowed && questions.length > 0;
   // 시안 P4_photo_ds4c(사진 중심 안): 위 BackLink '오늘 코스로'(U-8: 하단 링크 없음), 단계 제목 한 줄 → 큰 사진(안에 'AI가 만든 그림' 칩)
   // → 사진 설명 한 줄(없는 날은 없음) → 회상 질문 → '읽어 주세요'(질문 바로 아래 본문 보조) → 천천히 보세요. Dock 은 '다 봤어요' 하나.
   // 100%(글자 150% 미만): 단계·사진·AI 고지·질문 첫 문장이 첫 화면(fit) — 단 사진이 바닥(폭 50%·160)에 닿는 작은 화면은 사진 우선, 질문은 접힘 아래.
@@ -185,7 +187,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
         {late ? null : caption}
         {/* 회상 질문: 모든 배율에서 문장마다 한 덩어리(R-15) — 접힘에 걸치면 그 문장만 아래로 민다. 한 덩어리로 두면 320 폭 100%에서
             세 줄 묶음이 통째로 밀려 질문이 첫 화면에서 사라졌다(에뮬레이터 실측 11-20, 시안 레드라인 '질문 첫 문장이 첫 화면') */}
-        {photo.recall_questions.map((q, i) => (
+        {questions.map((q, i) => (
           <View key={`q${i}`} testID={i === 0 ? 'recall-questions' : undefined} style={[styles.readBar, reading ? styles.reading : null]}>
             <Text role="bodyLg">{q}</Text>
           </View>

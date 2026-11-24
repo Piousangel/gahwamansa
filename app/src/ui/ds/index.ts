@@ -21,6 +21,8 @@ export {dismissLabel, DECLINE_FORM, DISMISS_TEXT, type Dismiss} from './dismiss'
 export {Dialog, type DialogProps, type DialogAction} from './Dialog';
 export {useCover, configureCoverQueue, createCoverQueue, coverQueue, type CoverStore} from './coverQueue';
 export {Sign, type SignProps} from './Sign';
+export {DateStamp, type DateStampProps} from './DateStamp';
+export {SignOther} from './SignOther';
 export {SignPair, SIGN_PAIR_STACK_SCALE, type SignPairProps} from './SignPair';
 export {ToastProvider, useToast, TOAST_MS, type ToastOptions} from './Toast';
 export {SettingsLink} from './SettingsLink';

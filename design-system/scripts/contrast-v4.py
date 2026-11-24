@@ -35,6 +35,11 @@ if 'sign' in col:
     NONTEXT_ROLES = NONTEXT_ROLES + ['danger']
     NONTEXT_SURFACES = NONTEXT_SURFACES + ['dangerSoft']
 
+# D-2 날짜 도장(11-24): stampInk(먹 별칭)는 도장 안 글자('24일')와 두 겹 원 선 — 글자·비텍스트 표 모두에 넣는다
+if 'stampInk' in col:
+    TEXT_ROLES = TEXT_ROLES + ['stampInk']
+    NONTEXT_ROLES = NONTEXT_ROLES + ['stampInk']
+
 matrix = []; elder = {}; child = {}
 for r in TEXT_ROLES:
     for s in SURFACES:
