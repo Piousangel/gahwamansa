@@ -587,8 +587,9 @@
       "weight": 400,
       "tone": "action",
       "maxFontScale": 2.0,
-      "note": "텍스트 링크, 밑줄 필수. 누름 높이 어르신 64·자녀 48",
-      "iconElder": 24
+      "note": "텍스트 링크, 밑줄 필수. 누름 높이 어르신 64·자녀 48. 자녀 아이콘 20(설정 톱니 SettingsLink, P-3 11-24 — 없으면 32로 글자보다 컸다)",
+      "iconElder": 24,
+      "iconChild": 20
     },
     "backLink": {
       "elder": {

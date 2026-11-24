@@ -32,13 +32,14 @@ const path: {join(...p: string[]): string; relative(a: string, b: string): strin
 // C3 v4(연결 기다리는 중, 11-19): 177 → 170 (fixedBox −1·text20Size −6)
 // C0 v4(로그인 3화면 ui/ds, 11-19): 193 → 177 (fontSize −2·fontWeight −2·lineHeight −1·fixedBox −1·fontScale −1·placeholder −1·text20Size −4·rnImport −4)
 // L2-v4 P4·P5(ui/ds, 11-19, #87·#93 병합 뒤): 168 → 154 (text20Size −11·rnImport −2·fontScale −1)
+// P4 사진 원본 비율(오너 S25 11-24): fixedBox 10 → 11 — 사진 틀(이미지, R-09 허용) features/course/photoFrame.ts
 const BASELINE: Record<string, number> = {
   fontSize: 5,
   fontWeight: 5,
   lineHeight: 2,
   color: 0,
   height: 0, // 글자 상자 후보(가로는 늘고 높이만 고정). AU-10 에 error
-  fixedBox: 10, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
+  fixedBox: 11, // 가로·세로 고정(아이콘·이미지·원·도장·테이프). warn 유지(PR #31 리뷰 L1)
   numberOfLines: 0,
   fontScale: 11,
   placeholder: 0,
@@ -184,7 +185,6 @@ const INK_PRESSABLE: Record<string, number> = {
   'features/link/RoleChoiceButton.tsx': 2, // 누름 카드 테두리·chevron
   'ui/SettingsRow.tsx': 1, // 행 chevron
   'ui/TextLink.tsx': 2, // 링크 글자(밑줄)·아이콘
-  'ui/TopBar.tsx': 2, // 설정 아이콘·글자
 };
 
 function scanSrc(re: RegExp): Record<string, number> {

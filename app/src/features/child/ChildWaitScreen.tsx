@@ -4,7 +4,7 @@ import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
-import {AudienceProvider, Banner, Button, Card, DsScreen, Heading, Text, type DockProps} from '../../ui/ds';
+import {AudienceProvider, Banner, Button, Card, DsScreen, Heading, SettingsLink, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {copyText} from '../../ui/clipboard';
@@ -29,7 +29,7 @@ function WaitHeader({onSettings}: {onSettings: () => void}) {
       <Heading level={1} style={styles.headTitle}>
         {w.chip}
       </Heading>
-      <Button kind="text" size="inline" label={copy.settings.open} onPress={onSettings} testID="wait-settings" />
+      <SettingsLink label={copy.settings.open} onPress={onSettings} testID="wait-settings" />
     </View>
   );
 }

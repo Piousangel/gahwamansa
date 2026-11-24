@@ -6,7 +6,7 @@ import type {ParentParams} from '../../app/ParentStack';
 import {Button, DsScreen, Text, type DockProps} from '../../ui/ds';
 import {AiNotice} from '../../ui/AiNotice';
 import {FoldStack} from '../../ui/FoldStack';
-import {shadow} from '../../ui/tokens';
+import {layout, shadow} from '../../ui/tokens';
 import {ds} from '../../ui/ds/roles';
 import {useBackAction} from '../../app/BackBar';
 import {Icon} from '../../ui/assets/icons';
@@ -21,6 +21,7 @@ import {track} from '../track';
 import {kstYmd} from './stamps';
 import {prefs} from '../../lib/prefs';
 import {focusLater} from '../../ui/screenTitle';
+import {photoAspect, photoFrame} from './photoFrame';
 
 // review: 코스를 다 마친 뒤 '오늘 코스 다시 보기'(시안 P3 v4 B, 기능 회의 B2). 보기 전용 — 기록 호출 없음, 하단은 '돌아가기'.
 export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentParams, 'PhotoStep'>) {
@@ -52,12 +53,14 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       alive = false;
     };
   }, [review]);
-  // 시안 P4_photo_ds4c(#95 최종): 사진은 둘레 카드 없이 가로를 채운다. 높이는 P4_LAYOUT(설명 없는 날 124 / 있는 날 88, 글자 150% 이상 80 — 200% 보드).
-  // 큰 글자에서 질문 첫 문장과 AI 고지가 첫 화면에 들게 사진을 줄이고, 사진 설명 줄은 '읽어 주세요' 아래로 미룬다
-  const {fontScale} = useWindowDimensions();
+  // 사진은 둘레 카드 없이 본문 폭을 채우고 원본 비율 그대로(photoFrame). 오너 S25 11-24: 옛 고정 높이(124/88/80) + cover 는
+  // 사진을 가로 띠처럼 잘랐다. 긴 사진은 창 높이 60%로 막고 폭을 같은 비율로 줄인다. 글자 크기로 사진을 줄이지 않는다(200%는 본문 스크롤).
+  // 큰 글자에서는 사진 설명 줄을 '읽어 주세요' 아래로 미룬다
+  const {fontScale, width: winW, height: winH} = useWindowDimensions();
   const large = fontScale >= 1.5;
-  const hasCaption = !!content?.photo?.caption;
-  const photoH = large ? P4_LAYOUT.photo.large : hasCaption ? P4_LAYOUT.photo.withCaption : P4_LAYOUT.photo.noCaption;
+  const [boxW, setBoxW] = useState(0); // 사진 칸(본문) 폭 — 그리기 전에는 창 폭에서 본문 여백을 뺀 값으로 어림
+  const [aspect, setAspect] = useState<number | null>(null);
+  const frame = photoFrame(boxW || Math.max(0, winW - layout.bodyPadding.x * 2), aspect, winH);
   const [viewport, setViewport] = useState(0); // R-15: 접힘에 걸치는 요소는 통째로 아래로(FoldStack)
   // 100%라도 질문이 길어 '읽어 주세요'가 첫 화면에 못 들면 설명 줄을 읽어 주세요 아래로(200% 순서, 시안 '질문·읽어 주세요가 첫 화면')
   // 정한 순서는 그 화면 크기·배율에서만 유지(창이 바뀌면 다시 잰다)
@@ -116,41 +119,48 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
       scrollRef={errorTop}
       onViewport={setViewport}
       dock={dock}>
-      <FoldStack viewport={viewport} gap={large ? P4_LAYOUT.gap.large : P4_LAYOUT.gap.base} testID="p4-body" onFold={onFold}>
+      {/* split="photo": 큰 사진이 첫 화면 끝에 걸쳐도 통째로 밀지 않는다(밀면 첫 화면에 단계 제목만 남는다). 사진은 스크롤로 이어 본다 */}
+      <FoldStack viewport={viewport} gap={large ? P4_LAYOUT.gap.large : P4_LAYOUT.gap.base} testID="p4-body" onFold={onFold} split="photo">
         {!review && error ? <StepErrorBanner key="error" error={error} /> : null}
         <StepHeader key="header" name={copy.course.step.photo} n={1} review={review} compact={large} />
         {/* B1: 사진 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
-        <Pressable
-          key="photo"
-          ref={polaroidRef}
-          testID="photo-polaroid"
-          disabled={!canZoom}
-          accessible={canZoom}
-          accessibilityRole={canZoom ? 'button' : undefined}
-          accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
-          accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
-          onPress={openZoom}
-          style={[styles.photo, {height: photoH}]}>
-          {photo.image_url.startsWith('pending://') || imageFailed ? (
-            // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
-            <View style={styles.pending}>
-              <Icon name="icon-photo" size={large ? 28 : 36} color={ds.color.inkSub} />
-              {/* 큰 글자(사진 100)에서는 안내 글이 사진 칸을 넘으므로 칸 바로 아래 한 줄로 */}
-              {large ? null : <Text role="sub" tone="muted" style={styles.center}>{pendingText}</Text>}
-            </View>
-          ) : (
-            <Image
-              testID="photo-image"
-              source={{uri: photo.image_url}}
-              resizeMode="cover"
-              style={styles.image}
-              // AI 고지는 바로 아래 보이는 줄이 따로 읽힌다(같은 말을 두 번 읽지 않게)
-              accessibilityLabel={photo.caption || appCopy.ai_photo_label}
-              onLoad={() => setLoaded(true)}
-              onError={() => setImageFailed(true)}
-            />
-          )}
-        </Pressable>
+        {/* 바깥 칸은 본문 폭을 재는 자리(사진 틀이 좁아져도 폭 측정이 흔들리지 않게), 사진 틀은 그 안 가운데 */}
+        <View key="photo" testID="photo-box" onLayout={e => setBoxW(Math.round(e.nativeEvent.layout.width))}>
+          <Pressable
+            ref={polaroidRef}
+            testID="photo-polaroid"
+            disabled={!canZoom}
+            accessible={canZoom}
+            accessibilityRole={canZoom ? 'button' : undefined}
+            accessibilityLabel={canZoom ? copy.photo.zoom_open_a11y.split('{caption}').join(photo.caption) : undefined}
+            accessibilityHint={canZoom ? copy.photo.zoom_open_hint : undefined}
+            onPress={openZoom}
+            style={[styles.photo, frame]}>
+            {photo.image_url.startsWith('pending://') || imageFailed ? (
+              // 사진 준비 중·불러오기 실패: 개발용 상자가 아니라 디자인된 빈 사진 칸(옅은 면 + 사진 아이콘 + 안내)
+              <View style={styles.pending}>
+                <Icon name="icon-photo" size={large ? 28 : 36} color={ds.color.inkSub} />
+                {/* 큰 글자에서는 안내 글이 사진 칸을 넘을 수 있어 칸 바로 아래 한 줄로 */}
+                {large ? null : <Text role="sub" tone="muted" style={styles.center}>{pendingText}</Text>}
+              </View>
+            ) : (
+              <Image
+                testID="photo-image"
+                source={{uri: photo.image_url}}
+                resizeMode="contain" // 틀이 사진 비율과 같아 잘리지 않는다(비율을 알기 전 기본 틀에서도 잘라 내지 않게 contain)
+                style={styles.image}
+                // AI 고지는 바로 아래 보이는 줄이 따로 읽힌다(같은 말을 두 번 읽지 않게)
+                accessibilityLabel={photo.caption || appCopy.ai_photo_label}
+                onLoad={e => {
+                  const src = e?.nativeEvent?.source; // 크기를 못 받으면 기본 4:3 틀(잘라 내지는 않음)
+                  setAspect(photoAspect(src?.width, src?.height));
+                  setLoaded(true);
+                }}
+                onError={() => setImageFailed(true)}
+              />
+            )}
+          </Pressable>
+        </View>
         {/* AI 고지(디자인 #95 최종): 칩 없이 사진 바로 아래 고정 한 줄. 설명 유무와 상관없이 같은 자리, 실제 사진일 때만 */}
         {showImage ? <AiNotice key="ai" text={aiNotice} /> : null}
         {large && !showImage ? <Text key="pending" role="sub" tone="muted">{pendingText}</Text> : null}
@@ -181,17 +191,16 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   );
 }
 
-/** P4 배치 값 한 곳(시안 P4_photo_ds4c, 디자인 #95 최종). 사진은 글자 상자가 아니라 사진 틀이라 높이를 정한다.
- *  사진: 100% 설명 없는 날 124 / 있는 날 88(같은 레드라인 — 질문 첫 문장·고지가 첫 화면), 글자 150% 이상 80. 본문 간격 8 / 6.
+/** P4 배치 값 한 곳. 사진 틀 크기는 photoFrame(원본 비율, 오너 S25 11-24 — 옛 고정 높이 124/88/80 폐기). 본문 간격 8 / 6.
  *  시안의 질문 사이 2(100%)는 쓰지 않는다: 질문을 문장마다 접힘 단위로 나눠 본문 간격(8)을 쓴다(위 주석) */
-export const P4_LAYOUT = {photo: {noCaption: 124, withCaption: 88, large: 80}, gap: {base: 8, large: 6}} as const;
+export const P4_LAYOUT = {gap: {base: 8, large: 6}} as const;
 
 // 사진(시안 ds4c): 둘레 카드·테두리 없이 반경 22 + 그림자. 본문 간격은 P4_LAYOUT.gap — FoldStack gap
 const styles = StyleSheet.create({
   // 읽어 주는 중 표시: 옅은 하늘 면(글 폭·줄바꿈이 움직이지 않게 여백 없이 면만, 리뷰). 글자 inkBody 는 infoSoft 위 허용 짝
   readBar: {borderRadius: 8},
   reading: {backgroundColor: ds.color.infoSoft},
-  photo: {alignSelf: 'stretch', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
+  photo: {alignSelf: 'center', borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperSoft, boxShadow: shadow.lifted},
   image: {flex: 1, alignSelf: 'stretch'},
   read: {gap: 8},
   center: {textAlign: 'center'},

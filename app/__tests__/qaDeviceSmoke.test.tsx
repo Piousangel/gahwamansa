@@ -10,7 +10,8 @@ import {Text20} from '../src/ui/Text20';
 import {StampRow} from '../src/features/course/StampRow';
 import {SelectCard} from '../src/ui/SelectCard';
 import {press, pressBackLink, pressCourseNext} from '../testUtils/flow';
-import {P4_LAYOUT} from '../src/features/course/PhotoStep';
+import {photoFrame} from '../src/features/course/photoFrame';
+import {layout} from '../src/ui/tokens';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
@@ -83,15 +84,15 @@ test('B4: 본문이 넘치면 아래 페이드로 "더 있음"을 보이고, 끝
   expect(screen.queryByTestId('screen-more', {includeHiddenElements: true})).toBeNull();
 });
 
-test('B4·ds4c(#95 최종): 사진 높이는 124/88(100%, 설명 없는·있는 날)·80(글자 150% 이상)으로 정해 회상 질문과 읽어 주세요가 첫 화면에 들게 한다', async () => {
+test('오너 S25 11-24: 사진 틀은 원본 비율(불러오기 전 4:3) — 글자 크기로 줄이지 않는다(photoFrame)', async () => {
   render(<AppRoot api={createFakeApi()} />);
   await press(/부모님 휴대폰이에요/);
   await press('코스 보기');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('step-header'));
-  const {fontScale} = require('react-native').Dimensions.get('window');
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(fontScale >= 1.5 ? P4_LAYOUT.photo.large : P4_LAYOUT.photo.withCaption); // fake 콘텐츠는 설명 있음
+  const {width, height} = require('react-native').Dimensions.get('window');
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style)).toMatchObject(photoFrame(width - layout.bodyPadding.x * 2, null, height));
 });
 
 test('단계 화면: 제목 줄에 "· n / 3", 한 덩어리로 "사진 보기, 3단계 중 1단계"(R4)', async () => {

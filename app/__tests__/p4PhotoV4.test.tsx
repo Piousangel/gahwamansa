@@ -1,4 +1,4 @@
-// P4 사진 중심 안(시안 P4_photo_ds4c, 디자인 #95 최종): 사진 124(설명 없는 날)/88(있는 날)/80(200%), 칩 없이 사진 바로 아래 AI 고지 한 줄,
+// P4 사진 중심 안(시안 P4_photo_ds4c, 디자인 #95 최종): 사진은 원본 비율(오너 S25 11-24, photoFrame — 옛 고정 124/88/80 폐기), 칩 없이 사진 바로 아래 AI 고지 한 줄,
 // 설명 줄 자리(100%: 고지 아래 / 200%: 읽어 주세요 아래), 200% 단계 표시 '1 / 3',
 // 읽어 주세요는 질문 바로 아래 본문, Dock 은 '다 봤어요' 하나.
 import React from 'react';
@@ -36,13 +36,20 @@ function order(ids: string[]): string[] {
   return [...new Set(all.map(n => n.props.testID as string))];
 }
 
+// 360×640 창, 본문 폭은 재기 전 어림(360 − 좌우 24×2 = 312), 사진 높이 상한 = 640 × 0.6 = 384
+const frameOf = () => {
+  const st = StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style);
+  return {width: st.width, height: st.height};
+};
+const loadPhoto = (width: number, height: number) => fireEvent(screen.getByTestId('photo-image'), 'load', {nativeEvent: {source: {width, height}}});
+
 afterEach(() => {
   mockFontScale = 1;
 });
 
-test('100% 설명 있는 날: 사진 88 → AI 고지 → 설명 → 질문 → 읽어 주세요, 칩 없음, Dock 은 다 봤어요 하나', async () => {
+test('100% 설명 있는 날: 사진(불러오기 전 4:3 틀) → AI 고지 → 설명 → 질문 → 읽어 주세요, 칩 없음, Dock 은 다 봤어요 하나', async () => {
   await toPhoto();
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(88);
+  expect(frameOf()).toEqual({width: 312, height: 234});
   expect(order(['photo-polaroid', 'ai-notice', 'photo-caption', 'recall-questions', 'read-aloud'])).toEqual(['photo-polaroid', 'ai-notice', 'photo-caption', 'recall-questions', 'read-aloud']);
   expect(screen.getByTestId('ai-notice')).toHaveTextContent('AI가 만든 그림·실제 장소가 아니에요');
   expect(screen.queryByTestId('photo-ai-chip', {includeHiddenElements: true})).toBeNull();
@@ -52,17 +59,34 @@ test('100% 설명 있는 날: 사진 88 → AI 고지 → 설명 → 질문 → 
   expect(screen.queryByTestId('to-course-home')).toBeNull();
 });
 
-test('100% 설명 없는 날: 사진 124, 고지는 그대로 사진 바로 아래', async () => {
+test('100% 설명 없는 날: 사진 틀은 설명 유무와 상관없음, 고지는 그대로 사진 바로 아래', async () => {
   await toPhoto(true);
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(124);
+  expect(frameOf()).toEqual({width: 312, height: 234});
   expect(screen.queryByTestId('photo-caption')).toBeNull();
   expect(order(['photo-polaroid', 'ai-notice', 'recall-questions'])).toEqual(['photo-polaroid', 'ai-notice', 'recall-questions']);
 });
 
-test('200%: 사진 80, 단계 표시 1 / 3 만(읽기는 그대로), 고지 상한 1.5, 설명 줄은 읽어 주세요 아래', async () => {
+test('오너 S25 11-24(띠처럼 잘림): 불러온 사진의 원본 비율대로 — 가로는 폭을 채우고, 정사각은 폭=높이, 긴 세로는 상한 높이로 폭을 줄인다. 잘라 내지 않는다(contain)', async () => {
+  await toPhoto();
+  expect(screen.getByTestId('photo-image').props.resizeMode).toBe('contain');
+  loadPhoto(1600, 900);
+  await waitFor(() => expect(frameOf()).toEqual({width: 312, height: 176}));
+  loadPhoto(1024, 1024);
+  await waitFor(() => expect(frameOf()).toEqual({width: 312, height: 312}));
+  loadPhoto(900, 1600);
+  await waitFor(() => expect(frameOf()).toEqual({width: 216, height: 384}));
+});
+
+test('200%: 사진은 글자 크기로 줄이지 않는다(100%와 같은 틀, 본문 스크롤)', async () => {
   mockFontScale = 2;
   await toPhoto();
-  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(80);
+  loadPhoto(1024, 1024);
+  await waitFor(() => expect(frameOf()).toEqual({width: 312, height: 312}));
+});
+
+test('200%: 단계 표시 1 / 3 만(읽기는 그대로), 고지 상한 1.5, 설명 줄은 읽어 주세요 아래', async () => {
+  mockFontScale = 2;
+  await toPhoto();
   expect(screen.getByText('1 / 3')).toBeTruthy();
   expect(screen.queryByText(/사진 보기 ·/)).toBeNull();
   expect(screen.getByTestId('step-header').props.accessibilityLabel).toBe('사진 보기, 3단계 중 1단계');
