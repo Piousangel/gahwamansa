@@ -25,10 +25,13 @@ count_evidence() {
 # 경고만 내는 장치이고 나머지는 사람 리뷰가 받친다). '실패 확인' 뒤 첫 화살표(→·->) 다음만 본다.
 # 인정하는 모양:
 #   - 대소문자 그대로의 Expected · Received · Error(TypeError 처럼 붙은 것 포함) · FAIL · ✕   (소문자 error·received·fail 같은 일상어는 아님)
-#   - 숫자와 함께 나오는 failed: '1 failed', '2 Failed'
+#   - 1 이상의 숫자와 함께 나오는 failed: '1 failed', '2 Failed'   ('0 failed' 는 헛통과라 아님, #224 QA-1 M1)
 #   - exit 1~9
-#   - 'N개 실패', '실패했'                                        ('실패' 단독은 아님)
+#   - 'N개 실패'(N ≥ 1), '실패했'                                  ('실패' 단독·'0개 실패'는 아님)
+#   영어 표지의 낱말 경계는 영숫자·_ 로만 본다. 뒤에 한글 조사가 붙어도 센다('Expected가', 'FAIL로' — #224 QA-1 M2.
+#   -Mutf8 에서는 한글도 \w 라 \b 를 쓰면 조사 앞에서 경계가 안 선다)
 #   단, 바로 뒤에 '없음' 이 붙은 표지('Error 없음', 'FAIL 없음')는 치지 않는다
+#   알려진 한계: 'FAIL 안 남'·'Received 없이 통과' 같은 부정 표현은 센다(부정 낱말 목록은 쓰지 않기로 동결). 테스트에 고정
 # 예(인정): '여백 0 → 8 → Expected 0 Received 8', 'x → Tests: 1 failed', 'x → 2개 실패'
 has_fail_check() {
   evidence_section | perl -CSD -Mutf8 -ne '
@@ -36,7 +39,7 @@ has_fail_check() {
     s/^.*?실패 확인//;
     next unless s/^.*?(?:→|->)//;
     s/(?:Expected|Received|Error|FAIL|✕)\s*(?:이|가|은|는)?\s*없음//g;
-    $n++ if /(?:\bExpected\b|\bReceived\b|\b(?:[A-Z][a-z]+)?Error\b|\bFAIL\b|✕|\d+\s*[Ff]ailed\b|\bexit\s*[1-9]\b|\d+\s*개\s*실패|실패했)/;
+    $n++ if /(?<![A-Za-z0-9_])(?:Expected|Received|(?:[A-Z][a-z]+)?Error|FAIL|exit\s*[1-9])(?![A-Za-z0-9_])|✕|(?<!\d)[1-9]\d*\s*(?:[Ff]ailed(?![A-Za-z0-9_])|개\s*실패)|실패했/;
     END { print $n + 0, "\n" }'
 }
 # 검사를 더하거나 바꾼 파일. 문서(.md)는 뺀다(#210 리뷰 M: 서버 테스트·통합 테스트·어디 있든 *.test.ts(x)·*.test.sh 포함)

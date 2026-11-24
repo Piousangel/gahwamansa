@@ -95,6 +95,43 @@ x → 2개 실패, 되돌린 뒤 통과
 OKS
 check "동결: '실패했' 도 인정" 1 "$(printf '## 증거\n- 실패 확인: x → 테스트가 실패했다\n' | bash "$S" --has-fail-check)"
 
+# #224 QA-1 M1: 실패 0건은 실패가 아니다(헛통과). 숫자는 1 이상만 인정
+while IFS= read -r lie; do
+  check "M1 0건 '$lie' 는 0" 0 "$(printf '## 증거\n- 실패 확인: %s\n' "$lie" | bash "$S" --has-fail-check)"
+done <<'LIES'
+x → Tests: 0 failed, 12 passed
+x → 0개 실패
+x → 00 failed
+LIES
+while IFS= read -r ok; do
+  check "M1 1건 이상 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
+done <<'OKS'
+x → Tests: 10 failed, 2 passed
+x → 1개 실패
+OKS
+# #224 QA-1 M2: 영어 표지 뒤에 한글 조사가 붙어도 센다(-Mutf8 에서는 한글도 \w 라 끝 \b 가 안 선다)
+while IFS= read -r ok; do
+  check "M2 조사 '$ok' 는 1" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$ok" | bash "$S" --has-fail-check)"
+done <<'OKS'
+x → Expected가 0인데 Received가 8
+x → TypeError가 남
+x → FAIL로 바뀜
+x → Tests: 1 failed로 바뀜
+OKS
+check "M2: 낱말 속 영어(ExpectedValue·FAILED_X)는 여전히 0" 0 "$(printf '## 증거\n- 실패 확인: x → ExpectedValue FAILED_X\n' | bash "$S" --has-fail-check)"
+
+# 알려진 한계(#224 QA-1 L1, 리드 동결 — 부정 낱말 목록은 쓰지 않는다): 아래 부정 표현은 1 로 센다.
+# 경고만 내는 장치이고 사람 리뷰가 받친다. 이 동작을 바꾸면 여기서 알 수 있게 현재 값을 고정한다
+while IFS= read -r known; do
+  check "알려진 한계 '$known' 는 1(부정 표현 미탐)" 1 "$(printf '## 증거\n- 실패 확인: %s\n' "$known" | bash "$S" --has-fail-check)"
+done <<'KNOWN'
+x → FAIL 안 남
+x → Error 안 남
+x → Received 없이 통과
+x → Expected 대로 통과
+x → 실패했는지 확인 못 함
+KNOWN
+
 # 끝에서 끝: 검사 파일을 바꾼 PR 에 실패 확인이 없으면 경고가 실제로 뜬다(일부러 넣은 위반)
 tmp="$(mktemp -d)"
 (
