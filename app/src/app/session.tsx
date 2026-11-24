@@ -1,6 +1,8 @@
 import {createContext, useContext} from 'react';
 import type {Api, StepName, TodayContent} from '../features/types';
 import type {Message} from '../copy/copy';
+import type {CoursePicks} from '../features/course/fiveSteps';
+import type {PassOnKey, RecallChoice} from '../api/contract/fiveSteps';
 
 export type Session = {
   api: Api;
@@ -16,6 +18,10 @@ export type Session = {
   applyStep: (step: StepName, streak: number) => void; // 서버가 기록을 인정한 뒤 화면 상태에 반영
   applyAnswer: (choice: 'A' | 'B') => void; // 서버가 답을 저장한 뒤 화면 상태(answered_choice)에 반영
   setConsented: (v: boolean) => void; // 서버가 동의/철회를 인정한 뒤 반영(철회면 오늘 고른 답도 비움)
+  // ── 5단계(기능 스위치 fiveSteps). 꺼져 있으면 아무도 부르지 않는다 ──
+  picks: CoursePicks; // 이 기기 화면에서 고른 값(오늘 것만, 날이 바뀌면 빈 값)
+  setPicks: (patch: Partial<Omit<CoursePicks, 'day'>>) => void;
+  applySaved: (patch: {recall_choice?: RecallChoice | null; pass_on_key?: PassOnKey | null}) => void; // 서버가 ②·⑤ 저장을 인정한 뒤
   clear: () => void; // 삭제 후 화면 상태를 비운다
   resetRole: () => void; // 첫 화면(역할 선택)으로 돌아간다
 };

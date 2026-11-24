@@ -5,6 +5,7 @@ import type {EventName, EventProps, LogEventResult} from '../api/contract/events
 import type {MyPushSettings, RegisterPushTokenResult, SetPushEnabledResult} from '../api/contract/push';
 import type {MyTermsStatus, RecordTermsResult} from '../api/contract/terms';
 import type {DeleteScope} from '../api/contract/deleteScope';
+import type {NewStepName, PassOnKey, RecallChoice} from '../api/contract/fiveSteps';
 export type {DeleteScope};
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
@@ -57,7 +58,9 @@ export type ChildState =
       hadExpired: boolean; // 살아 있는 번호가 없고, 쓰지 않은 지난 번호가 있다(만료·무효화) → "새 번호 받기"
     };
 export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
-export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
+// 옛 3단계 + 5단계 새 이름 2개(api/contract/fiveSteps.ts, 기능 스위치 fiveSteps 가 켜졌을 때만 쓴다)
+export type LegacyStepName = 'photo' | 'question' | 'hangul';
+export type StepName = LegacyStepName | NewStepName;
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
 
 // 서버 get_today_content 형태 (null 이면 콘텐츠 없음)
@@ -72,6 +75,11 @@ export type TodayContent = {
   streak: number;
   // false = 미연결 열람(preview_content). 답·기록을 저장하지 않는다.
   linked: boolean;
+  // ── 5단계(기능 스위치 fiveSteps, 서버 계약 제안 api/contract/fiveSteps.ts). 옛 서버·스위치 꺼짐에서는 없다 ──
+  recall?: {options: readonly [string, string, string]} | null; // 그날 ② 보기 3개
+  recall_choice?: RecallChoice | null; // 오늘 ② 고른 번호(서버 저장 값 — 동의한 경우만. 화면에서 고른 값은 세션 picks)
+  pass_on_key?: PassOnKey | null; // 오늘 ⑤ 건넨 틀 키(서버 저장 값 — 동의 + 플래그 켜짐만)
+  pass_on_enabled?: boolean; // ⑤ 저장 플래그(법률 L-11 전 꺼짐). 꺼져 있으면 저장하지 않는다
 };
 
 // 인터넷 문제(연결 실패·시간 초과)를 다른 서버 오류와 구분하기 위한 오류
@@ -127,6 +135,10 @@ export interface Api {
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
   recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
+  // 5단계 ② 떠올려 보기 저장(동의한 경우만 호출). 계약 api/contract/fiveSteps.ts — realApi 는 서버 PR 병합 때 연결(지금 not_ready)
+  saveRecallChoice(choice: RecallChoice): Promise<void>;
+  // 5단계 ⑤ 이야기 건네기 저장(동의 + content.pass_on_enabled 일 때만 호출). 키 하나만 저장(끼우는 값은 ②·③ 값 재사용)
+  savePassOn(key: PassOnKey): Promise<void>;
   // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
   fetchChildSummary(): Promise<ChildSummary>;
   // 가족 기본 호칭(연결 전, 어르신이 아직 없어 set_parent_title_for 를 쓸 수 없을 때만). 0035부터 겹치면 duplicate_title.

@@ -22,10 +22,13 @@ import {FoldStack} from '../../ui/FoldStack';
 import {useBootLoading} from '../../app/splash';
 import {WeekStampStrip, showWeekStrip} from './WeekStampStrip';
 import type {StepName} from '../types';
+import {allStepsDone, FIVE_STEP_ORDER, useFiveSteps, type StepEntry, type StepRoute} from './fiveSteps';
+import {stepA11y} from './StepHeader';
+import {useStopHere} from './useFinishStep';
 
 const c = copy.course;
-type StepRoute = 'PhotoStep' | 'QuestionStep' | 'KeyboardStep';
-const STEPS: {step: StepName; route: StepRoute}[] = [
+// 3단계(기본). 기능 스위치 fiveSteps 가 켜지면 fiveSteps.FIVE_STEP_ORDER(5행)
+const STEPS: StepEntry[] = [
   {step: 'photo', route: 'PhotoStep'},
   {step: 'question', route: 'QuestionStep'},
   {step: 'hangul', route: 'KeyboardStep'},
@@ -39,7 +42,17 @@ const STEPS: {step: StepName; route: StepRoute}[] = [
 //   다음 = 누르지 않는 행. 읽기 이름은 보이는 글과 같게(R-14), '다시 보기'는 힌트로.
 // - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기' → '오늘 한 장'(TodayReviewScreen, D-3).
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
-  const {api, done, content, consented, syncError, sync} = useSession();
+  const {api, done, content, consented, syncError, sync, picks} = useSession();
+  // 5단계(기능 스위치, 기본 꺼짐): 5행 · A′(다음 행은 이름만) · ③ 뒤 '오늘은 여기까지' · 다 마치면 제목 옆 도장 1개 · 열릴 때 지금 행으로 스크롤.
+  // 꺼져 있으면 아래 five 분기는 모두 지나가고 3단계 화면 그대로다
+  const five = useFiveSteps();
+  const steps = five ? FIVE_STEP_ORDER : STEPS;
+  const {stop, error: stopError, busy: stopping} = useStopHere();
+  const scrollRef = useRef<{showRange(top: number, bottom: number): void}>(null); // DsScreen scrollRef(ui/Screen ScreenScroll 과 같은 꼴)
+  const [rowsAt, setRowsAt] = useState<{top: number; heights: Readonly<Record<string, number>>} | null>(null);
+  const onRows = useCallback((top: number, heights: Readonly<Record<string, number>>) => setRowsAt({top, heights}), []);
+  const order = useRef<string[]>([]); // 본문 묶음 key 순서(지금 행 위치 계산용)
+  const scrolledFor = useRef<string | null>(null);
   const titleRef = useRef<unknown>(null); // P8 대화상자가 닫힌 뒤 포커스를 돌려줄 제목
   useLoadTodayContent();
   useBootLoading(content === undefined && !syncError); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
@@ -57,6 +70,26 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   // D-10: 뒤로 돌아오면 떠날 때 누른 요소로(없어졌으면 날짜 줄 제목)
   const {bind, mark} = useReturnFocus(navigation, afterTransition, () => titleRef.current);
   const [viewH, setViewH] = useState(0); // R-15 접힘 기준 창(FoldBody)
+  // 5단계: 홈이 열리거나 지금 행이 바뀌면 그 행이 보이게(시안 리스크 1 — 360×640 100%에서도 ③ 뒤 지금 행이 첫 화면 끝에 걸린다)
+  const nowStep = five && content ? steps.find(s => !done.includes(s.step))?.step ?? null : null;
+  useEffect(() => {
+    if (!nowStep || !rowsAt || scrolledFor.current === nowStep) {
+      return;
+    }
+    let y = rowsAt.top;
+    for (const key of order.current) {
+      const h = rowsAt.heights[key];
+      if (h === undefined) {
+        return; // 아직 다 재지 않음
+      }
+      if (key === nowStep) {
+        scrolledFor.current = nowStep;
+        scrollRef.current?.showRange(y, y + h);
+        return;
+      }
+      y += h + BODY_GAP;
+    }
+  }, [nowStep, rowsAt]);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -116,8 +149,8 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     );
   }
   const preview = !content.linked;
-  const all = done.length === 3;
-  const current = STEPS.find(s => !done.includes(s.step));
+  const all = five ? allStepsDone(done, true) : done.length === 3;
+  const current = steps.find(s => !done.includes(s.step));
   const go = (route: StepRoute, from: string) => {
     mark(from);
     navigation.navigate(route);
@@ -127,8 +160,23 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     mark(from);
     navigation.navigate(route, {review: true});
   };
+  // 5단계: ③을 마친 뒤 남은 단계가 있으면 '오늘은 여기까지 할게요'(확인 대화상자 없음). 100%는 Dock 주 버튼 아래 글자 버튼,
+  // 200%는 단계 행 바로 아래 본문(시안 s4 B1 — Dock 에 두면 두 줄로 꺾여 40%를 넘는다)
+  const rest = steps.slice(steps.findIndex(s => s.step === 'question') + 1).map(s => s.step).filter(s => !done.includes(s));
+  const canStop = five && !all && done.includes('question') && rest.length > 0;
+  const onStop = async () => {
+    mark('stop');
+    if (await stop(rest)) {
+      navigation.navigate('CourseDone'); // P7: 몇 단계 했는지 말하지 않는다
+    }
+  };
+  // 다 마친 뒤 넘긴 ④·⑤는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로)
+  const reopen = (step: StepName) => five && all && (step === 'hangul' || step === 'pass_on') && picks.skipped.includes(step);
   const dock: DockProps | undefined = current
-    ? {primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')}}
+    ? {
+        primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')},
+        ...(canStop && !large ? {secondary: {kind: 'text' as const, label: c.stop_here, disabled: stopping, testID: 'course-stop', buttonRef: bind('stop'), onPress: onStop}} : {}),
+      }
     : all
       ? {primary: {kind: 'secondary', label: c.review_link, icon: 'icon-photo', testID: 'course-review', buttonRef: bind('dock'), onPress: () => {
           mark('dock');
@@ -140,14 +188,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const day = String(kstDayOfMonth());
   const stampLabel = c.done_stamp.split('{일}').join(day);
 
-  return (
-    <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH}>
-      {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음). V1: 첫 인사가 보이는 첫 P3 에서는 묻지 않고 첫 단계 뒤에 */}
-      <CheerDialog api={api} enabled={!preview && greetingDecided && !firstGreeting} returnFocusRef={titleRef} />
-      {/* 본문 묶음(간격 12) + R-15 접힘 경계: 첫 화면 끝에 걸치는 행·줄은 통째로 아래로. 높이는 key 로 기억한다
-          (도장 줄·인사 카드처럼 생겼다 사라지는 요소가 있어도 다른 요소 높이로 계산하지 않게, PR #133 리뷰 L1) — ui/FoldStack */}
-      <FoldStack viewport={viewH} gap={BODY_GAP} testID="course-steps">
-        {[
+  const doneTitle = preview ? c.done_unlinked : c.done_today.replace('. ', '.\n');
+  // 본문 묶음(간격 12) + R-15 접힘 경계: 첫 화면 끝에 걸치는 행·줄은 통째로 아래로. 높이는 key 로 기억한다
+  // (도장 줄·인사 카드처럼 생겼다 사라지는 요소가 있어도 다른 요소 높이로 계산하지 않게, PR #133 리뷰 L1) — ui/FoldStack
+  const items: React.ReactNode[] = [
         preview ? (
           // 미연결 띠: 띠 전체가 하나의 버튼(번호 화면을 위에 쌓아 '이전'이면 여기로)
           <ListRow
@@ -182,6 +226,13 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
             />
           </View>
         ) : null,
+        // 5단계 '여기까지' 기록 실패: 무슨 일인지 + 다시 하기(이미 인정된 단계는 그대로 '했어요')
+        stopError ? (
+          <View key="stop-error" testID="course-stop-error" style={styles.notice} accessibilityLiveRegion="polite">
+            <Text role="heading">{stopError.title}</Text>
+            <Button kind="secondary" size="inline" label={stopError.button} onPress={onStop} />
+          </View>
+        ) : null,
         syncError ? (
           <View key="sync" style={styles.notice} accessibilityLiveRegion="polite">
             <Text role="heading">{syncError.title}</Text>
@@ -199,12 +250,21 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
           </View>
         ) : null,
         firstGreeting && large ? <Heading key="greet-title" level={1}>{c.greeting}</Heading> : null,
-        all ? <Heading key="done-title" level={1} testID="course-done-title">{preview ? c.done_unlinked : c.done_today.replace('. ', '.\n')}</Heading> : null,
+        all && !five ? <Heading key="done-title" level={1} testID="course-done-title">{doneTitle}</Heading> : null,
+        // 5단계 다 마침: 제목 옆 날짜 도장 1개(시안 s1 C-나, 행마다 도장 다섯 개 = 쿠폰판으로 읽힘). 읽기는 제목 + 도장 날짜 한 번
+        all && five ? (
+          <View key="done-title" testID="course-done-head" style={styles.doneHead} accessible accessibilityRole="header" accessibilityLabel={`${doneTitle.replace('\n', ' ')}, ${stampLabel}`}>
+            <View style={styles.doneHeadText}>
+              <Heading level={1} testID="course-done-title">{doneTitle}</Heading>
+            </View>
+            <DateStamp testID="done-title-stamp" label={stampLabel} />
+          </View>
+        ) : null,
         // 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄
         all && preview ? <Text key="done-sub" role="body">{c.done_unlinked_sub}</Text> : null,
         // 찍은 날이 0이면 도장 줄을 숨긴다(빈 칸 7개는 정보가 없고 '아직'으로 읽힘, 감사 M1)
         showWeekStrip() && days ? <WeekStampStrip key="week" testID="course-week" days={days} /> : null,
-        ...STEPS.map(s => {
+        ...steps.map((s, i) => {
             const status = done.includes(s.step) ? 'done' : current?.step === s.step ? 'now' : 'wait';
             const name = c.step[s.step];
             if (status === 'now') {
@@ -227,25 +287,36 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
               );
             }
             if (status === 'done') {
+              // 5단계 다 마친 화면은 행마다 도장 없이 제목 옆 1개. 넘긴 ④·⑤(다시 할 수 있음)는 누르면 그 단계를 연다(보기 전용 아님)
+              const rowStamp = !(five && all);
+              const again = reopen(s.step);
               return (
                 <ListRow
                   key={s.step}
                   testID={`step-done-${s.step}`}
                   tone="done"
                   pressRef={bind(`row-${s.step}`)}
-                  accessibilityLabel={c.done_row_a11y.split('{단계}').join(name).split('{일}').join(day)}
-                  accessibilityHint={c.review_row_hint}
-                  onPress={() => review(s.route, `row-${s.step}`)}>
+                  accessibilityLabel={rowStamp ? c.done_row_a11y.split('{단계}').join(name).split('{일}').join(day) : `${name}, ${c.status.done}`}
+                  accessibilityHint={again ? undefined : c.review_row_hint}
+                  onPress={() => (again ? go(s.route, `row-${s.step}`) : review(s.route, `row-${s.step}`))}>
                   {/* D-2: '했어요'·도장·› 는 한 묶음(갈라지지 않음)으로 늘 오른쪽. 이름과 한 줄에 안 들어가면 묶음째 다음 줄 오른쪽 끝으로
                       — 왼쪽 줄 머리에 빈 원이 오면 라디오 버튼으로 읽힌다(11-19 V5) */}
                   <View testID="done-line" style={styles.inline}>
                     <Text role="bodyLg" style={styles.grow}>{name}</Text>
                     <View testID="done-status" style={styles.status}>
                       <Text testID="done-label" role="sub" tone="done">{c.status.done}</Text>
-                      <StampIn key={justDone === s.step ? 'anim' : 'still'} animate={justDone === s.step} label={stampLabel} />
+                      {rowStamp ? <StampIn key={justDone === s.step ? 'anim' : 'still'} animate={justDone === s.step} label={stampLabel} /> : null}
                       <Icon name="icon-chevron-right" size={ICON} color={ds.color.action} />
                     </View>
                   </View>
+                </ListRow>
+              );
+            }
+            if (five) {
+              // A′(라이터 #9 채택): 다음 행은 이름만 — '다음 차례'를 보이는 글·읽기 모두에서 뺀다(남은 단계를 세는 효과 제거). 읽기 '{단계}, 5단계 중 {n}단계'
+              return (
+                <ListRow key={s.step} testID={`step-wait-${s.step}`} tone="wait" accessibilityLabel={stepA11y(name, i + 1, false, true)}>
+                  <Text role="bodyLg">{name}</Text>
                 </ListRow>
               );
             }
@@ -257,6 +328,12 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
               </ListRow>
             );
           }),
+        // 5단계 200%: '오늘은 여기까지 할게요'는 단계 행 바로 아래 본문(시안 s4 B1)
+        canStop && large ? (
+          <View key="stop" style={styles.linkRow}>
+            <Button kind="text" size="inline" label={c.stop_here} disabled={stopping} testID="course-stop" buttonRef={bind('stop')} onPress={onStop} />
+          </View>
+        ) : null,
         <Stitch key="stitch" width="100%" />,
         // P15 진입(시안: 단계 목록 아래). 미연결 기기는 서버 기록이 없으므로 숨김
         preview ? null : (
@@ -273,7 +350,15 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
             />
           </View>
         ),
-        ]}
+  ];
+  order.current = items.filter(Boolean).map(x => String((x as React.ReactElement).key));
+
+  return (
+    <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH} scrollRef={five ? scrollRef : undefined}>
+      {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음). V1: 첫 인사가 보이는 첫 P3 에서는 묻지 않고 첫 단계 뒤에 */}
+      <CheerDialog api={api} enabled={!preview && greetingDecided && !firstGreeting} returnFocusRef={titleRef} />
+      <FoldStack viewport={viewH} gap={BODY_GAP} testID="course-steps" onMeasure={five ? onRows : undefined}>
+        {items}
       </FoldStack>
     </DsScreen>
   );
@@ -379,4 +464,7 @@ const styles = StyleSheet.create({
   declined: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.chip, paddingVertical: 12, paddingHorizontal: 16},
   notice: {backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 12},
   linkRow: {alignSelf: 'flex-start'},
+  // 5단계 다 마침 머리줄: 제목 + 도장 1개(좁으면 도장이 다음 줄 — 묶음은 갈라지지 않는다)
+  doneHead: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 6},
+  doneHeadText: {flexShrink: 1},
 });

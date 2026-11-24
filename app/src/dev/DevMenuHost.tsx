@@ -15,6 +15,8 @@ import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily
 import {DEV_RESET_REASON_TEXT, devResetTodayChecked} from './devResetToday';
 import type {FakeDevHooks} from '../features/fakeApi';
 import {bgmPreview, setBgmPreview} from '../lib/bgmAsset';
+import {DEV_FEATURE_KEY, isFeatureOn, setFeature} from '../lib/features';
+import {defaultStore} from '../lib/kvStore';
 
 // 번들 검사 표식(scripts/check-dev-menu-bundle.sh): production 번들에 이 글자가 있으면 실패
 export const DEV_MENU_IMPL_MARKER = 'bumojasik-dev-menu-impl';
@@ -46,6 +48,9 @@ const T = {
   nothing: '정리할 테스트 가족이 없어요',
   clearSlots: '보관 세션 모두 지우기',
   failed: '실패했어요',
+  fiveOn: '오늘 코스 5단계 켜기(기능 스위치)',
+  fiveOff: '오늘 코스 5단계 끄기(3단계로)',
+  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. 서버 계약 병합 전이라 ②·⑤ 저장은 fake 모드에서만 돼요',
 };
 
 type Role = 'parent' | 'child';
@@ -80,6 +85,27 @@ export function DevMenuHost({api, children}: Props) {
   const [busy, setBusy] = useState(false);
   const fake = env.API_MODE === 'fake';
   const dev = (api as Api & {__dev?: FakeDevHooks}).__dev;
+  const [five, setFive] = useState(isFeatureOn('fiveSteps'));
+  // 기능 스위치(5단계): 메뉴가 남긴 값을 앱 시작 때 다시 읽는다(이 파일은 production 번들에 없다 — 스위치는 늘 기본 꺼짐)
+  useEffect(() => {
+    if (!allowed) {
+      return;
+    }
+    let alive = true;
+    defaultStore()
+      .getItem(DEV_FEATURE_KEY)
+      .then(v => {
+        if (alive && v === 'on' && !isFeatureOn('fiveSteps')) {
+          setFeature('fiveSteps', true);
+          setFive(true);
+          setAppKey(k => k + 1); // 처음부터 다시 그려 코스 홈이 5행으로
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [allowed]);
 
   const restart = useCallback((r?: Role) => {
     setVisible(false);
@@ -247,6 +273,20 @@ export function DevMenuHost({api, children}: Props) {
                   await localStamps().clear();
                   setMsg(T.done);
                 })} />
+
+                {/* 기능 스위치: 오늘 코스 5단계(DECISIONS 2026-11-25). 켜고 끄면 앱을 처음부터 */}
+                <BigButton
+                  variant="secondary"
+                  label={five ? T.fiveOff : T.fiveOn}
+                  onPress={() => {
+                    const next = !five;
+                    setFeature('fiveSteps', next);
+                    setFive(next);
+                    defaultStore().setItem(DEV_FEATURE_KEY, next ? 'on' : 'off').catch(() => {});
+                    restart(role);
+                  }}
+                />
+                <Text20>{T.fiveHint}</Text20>
 
                 {/* AP-04: 음원 공개 전 실기기 스피커 청취 확인(lib/bgmAsset RELEASED 전에는 이 실행 동안만) */}
                 <BigButton

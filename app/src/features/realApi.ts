@@ -13,6 +13,7 @@ import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
 import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
+import {FIVE_STEPS_NOT_READY} from '../api/contract/fiveSteps';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -397,6 +398,14 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       });
       if (error) fail('record_session_step', error);
       return {completed: !!data.completed, streak: Number(data.streak ?? 0), steps: data.steps};
+    },
+    // 5단계 ②·⑤ 저장: 서버 계약(server/five-steps)이 병합되면 RPC 를 연결한다. 그 전에는 스위치(fiveSteps)가 꺼져 있어 부르지 않는다.
+    // 켜고 부르면 not_ready — 화면은 저장 없이 진행한다(consent_required 와 같은 처리)
+    async saveRecallChoice() {
+      throw new ServerError('save_recall_choice', FIVE_STEPS_NOT_READY);
+    },
+    async savePassOn() {
+      throw new ServerError('save_pass_on', FIVE_STEPS_NOT_READY);
     },
     async fetchChildSummary(): Promise<ChildSummary> {
       const {data, error} = await sb.rpc('child_summary');

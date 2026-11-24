@@ -1,5 +1,5 @@
 import React, {useCallback, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
@@ -16,6 +16,8 @@ import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
+import {stepNumber, useFiveSteps} from './fiveSteps';
+import {SkipInline} from './FiveStepParts';
 
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). 고른 답은 바꿀 수 없고 기록 호출 0, 하단 '돌아가기'.
 export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
@@ -23,7 +25,11 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = useCallback(() => navigation.popTo('CourseHome'), [navigation]);
   useBackAction(toCourseHome);
-  const {api, consented, content, applyAnswer} = useSession();
+  const {api, consented, content, applyAnswer, picks, setPicks} = useSession();
+  // 5단계(기능 스위치): 단계 번호 3/5, '오늘은 넘어갈게요'(넘김도 '했어요'), 고른 쪽은 ⑤ 카드가 쓴다(세션 picks). 꺼짐이면 아래 분기 모두 없음
+  const five = useFiveSteps();
+  const n = stepNumber('question', five);
+  const large = useWindowDimensions().fontScale >= 1.5;
   const {finish, error, setError} = useFinishStep();
   const errorTop = useErrorTop(error);
   useStepStarted('question', review); // AC-05
@@ -58,6 +64,9 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
           }
         }
       }
+      if (five) {
+        setPicks({question: choice, skipped: picks.skipped.filter(s => s !== 'question')});
+      }
       if (await finish('question')) {
         navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
       }
@@ -65,9 +74,23 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
       setSaving(false);
     }
   };
+  // 5단계 넘어가기: 답을 저장하지 않고 단계만 '했어요'. 넘긴 날 자녀 카드는 지금처럼 '답 없는 날'(표시 없음)
+  const skip = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      setPicks({question: null, skipped: [...picks.skipped.filter(s => s !== 'question'), 'question']});
+      if (await finish('question')) {
+        navigation.popTo('CourseHome');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const back = {to: copy.course.to_home, onPress: toCourseHome};
-  const header = <StepHeader name={copy.course.step.question} n={2} review={review} />;
+  const header = <StepHeader name={copy.course.step.question} n={n} review={review} />;
   const title = q.prompt ?? appCopy.question_title;
 
   if (review) {
@@ -93,13 +116,16 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     <DsScreen
       variant="step"
       back={back}
-      stepInfo={stepA11y(copy.course.step.question, 2)}
+      stepInfo={stepA11y(copy.course.step.question, n)}
       scrollRef={errorTop}
       onViewport={setViewport}
       dock={
         error
           ? stepErrorDock(error, confirm)
-          : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
+          : {
+              primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm},
+              ...(five && !large ? {secondary: {kind: 'text' as const, label: copy.keyboard.skip, disabled: saving, onPress: skip, testID: 'five-skip'}} : {}),
+            }
       }>
       <FoldStack viewport={viewport} gap={20} testID="p5-body" split="choice" onTop={setChoiceTop}>
         {error ? <StepErrorBanner key="error" error={error} /> : null}
@@ -127,6 +153,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         />
         {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
         {q.prompt ? <ReadAloud key="read" text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
+        {/* 5단계 200%: 넘어가기는 본문(②·⑤와 같은 규칙, R-12) */}
+        {five && large ? <SkipInline key="skip" onPress={skip} disabled={saving} /> : null}
       </FoldStack>
     </DsScreen>
   );

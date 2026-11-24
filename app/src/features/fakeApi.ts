@@ -8,6 +8,9 @@ import {isCheerKey, type MyCheers} from '../api/contract/cheers';
 import type {HistoryDay} from '../api/contract/history';
 import type {FailReason} from '../copy/copy';
 import {pairShort} from '../lib/childFormat';
+import {isFeatureOn} from '../lib/features';
+import type {PassOnKey, RecallChoice} from '../api/contract/fiveSteps';
+import {fakeRecallFor} from './fakeRecallOptions';
 
 const FAIL_CODES: Record<string, FailReason> = {
   '000000': 'used', '111111': 'expired', '222222': 'rate_limited', '333333': 'busy',
@@ -72,6 +75,12 @@ export type FakeOptions = {
   failParentHistory?: number; // parentHistory 가 처음 N번 실패(오프라인)
   accountTag?: string | null; // 기기 기억값 계정 가명값(기본 'fake-account')
   pushEnabled?: boolean; // 서버 알림 받기 상태(켬 + 받기 시각, 0036). 기본 true, false 면 어르신 N1 이 뜬다
+  // ── 5단계(기능 스위치 fiveSteps 가 켜졌을 때만 콘텐츠에 칸이 생긴다 — 서버 계약 api/contract/fiveSteps.ts 제안) ──
+  recallChoice?: RecallChoice | null; // 오늘 이미 저장된 ② 번호
+  passOnKey?: PassOnKey | null; // 오늘 이미 저장된 ⑤ 키
+  passOnEnabled?: boolean; // ⑤ 저장 플래그(기본 true — 개발 화면 확인용. false 면 앱이 저장을 부르지 않아야 한다)
+  noRecall?: boolean; // 그날 ② 보기가 없음
+  failFiveSave?: number; // saveRecallChoice·savePassOn 이 처음 N번 실패(오프라인)
 };
 export type FakeParent = {
   parentId?: string;
@@ -96,6 +105,11 @@ export type FakeDevHooks = {
 export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHooks} {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
+  // 서버 완료 판정(5단계 R-3): 옛 3단계(photo·question·hangul)가 모두 있으면 완료. 3단계만 쓰는 동안은 '3개'와 같다
+  const legacyDone = () => steps.has('photo') && steps.has('question') && steps.has('hangul');
+  let recallSaved: RecallChoice | null = opts.recallChoice ?? null;
+  let passOnSaved: PassOnKey | null = opts.passOnKey ?? null;
+  let failFiveSave = opts.failFiveSave ?? 0;
   let consented = opts.consented ?? false;
   let parentTitle = opts.parentTitle ?? '부모님';
   let savedLabel: string | null = null;
@@ -168,11 +182,15 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       steps.clear();
       answered = null;
       savedLabel = null;
+      recallSaved = null;
+      passOnSaved = null;
     },
     nextDay() {
       contentDay += 1;
       steps.clear();
       answered = null;
+      recallSaved = null;
+      passOnSaved = null;
     },
     switchParentAccount(id: string) {
       me = id;
@@ -389,7 +407,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       const mon = new Date(kst.getTime() - idx * 86400e3);
       const day = (i: number) => new Date(mon.getTime() + i * 86400e3).toISOString().slice(0, 10);
       const set = new Set((opts.weekDone ?? []).map(day));
-      if (steps.size === 3) {
+      if (legacyDone()) {
         set.add(day(idx));
       }
       return {weekStart: day(0), doneDates: [...set].sort()};
@@ -420,6 +438,15 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       }
       const idx = (contentDay - 1) % FAKE_CONTENT.length;
       const c = FAKE_CONTENT[idx];
+      // 5단계 칸: 스위치가 켜졌을 때만(옛 서버처럼 꺼짐이면 칸 자체가 없다). 보기는 라이터 CSV(fakeRecallOptions)
+      const five = isFeatureOn('fiveSteps')
+        ? {
+            recall: opts.noRecall ? null : ((o => (o ? {options: o} : null))(fakeRecallFor(c.caption))),
+            recall_choice: linked && consented ? recallSaved : null,
+            pass_on_key: linked && consented ? passOnSaved : null,
+            pass_on_enabled: opts.passOnEnabled ?? true,
+          }
+        : {};
       return {
         day_index: idx + 1,
         photo: {caption: c.caption, image_url: opts.realImage ? `https://example.test/day-${idx + 1}.jpg` : `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
@@ -427,8 +454,9 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         answered_choice: linked ? answered : null,
         consented: linked && consented,
         completed_steps: linked ? [...steps] : [],
-        streak: !linked ? 0 : steps.size === 3 ? Math.max(1, baseStreak) : baseStreak,
+        streak: !linked ? 0 : legacyDone() ? Math.max(1, baseStreak) : baseStreak,
         linked,
+        ...five,
       };
     },
     async saveAnswer({choice}) {
@@ -445,8 +473,32 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         throw new OfflineError('offline');
       }
       steps.add(step);
-      const completed = steps.size === 3;
+      const completed = legacyDone();
       return {completed, streak: completed ? Math.max(1, baseStreak) : baseStreak, steps: [...steps]};
+    },
+    // 5단계 ②·⑤ 저장(계약 api/contract/fiveSteps.ts): 서버처럼 동의가 없으면 consent_required, ⑤는 플래그가 꺼져 있으면 거절
+    async saveRecallChoice(choice) {
+      if (failFiveSave > 0) {
+        failFiveSave -= 1;
+        throw new OfflineError('offline');
+      }
+      if (!consented) {
+        throw new ServerError('save_recall_choice', 'consent_required', 'P0001');
+      }
+      recallSaved = choice;
+    },
+    async savePassOn(key) {
+      if (failFiveSave > 0) {
+        failFiveSave -= 1;
+        throw new OfflineError('offline');
+      }
+      if (!consented) {
+        throw new ServerError('save_pass_on', 'consent_required', 'P0001');
+      }
+      if (!(opts.passOnEnabled ?? true)) {
+        throw new ServerError('save_pass_on', 'pass_on_disabled', 'P0001');
+      }
+      passOnSaved = key;
     },
     async fetchChildSummary(): Promise<ChildSummary> {
       if (failChildHome > 0) {
@@ -485,6 +537,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       consented = false;
       answered = null;
       savedLabel = null;
+      recallSaved = null;
+      passOnSaved = null;
     },
     async getMyCheers() {
       if (opts.failCheers) {

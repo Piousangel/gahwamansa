@@ -7,6 +7,7 @@ import {navRef, useCurrentRouteName} from '../navigation/navRef';
 import {pushChannelSpecs} from '../push/channels';
 import {ensureChannels, readNotifyPermission} from '../push/notifyNative';
 import {isParentKind, parentStepAfterOpen} from '../push/openRoute';
+import {FIVE_STEP_ORDER, fiveStepsOn} from '../features/course/fiveSteps';
 import {parentPromptState, registerToken, retryPending} from '../push/pushClient';
 import {configurePush} from '../push/runtime';
 import {N1Prompt} from '../push/N1Prompt';
@@ -150,7 +151,7 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       return;
     }
     if (route === 'CourseHome' && content !== undefined) {
-      const step = parentStepAfterOpen(kind, content);
+      const step = parentStepAfterOpen(kind, content, fiveStepsOn() ? FIVE_STEP_ORDER : undefined);
       if (step) {
         navRef.navigate(step);
       }

@@ -5,6 +5,7 @@ import {isOffline, StepName} from '../types';
 import {track} from '../track';
 import {localStamps} from '../../lib/localStamps';
 import {useBusyLatch} from '../../ui/useBusyLatch';
+import {allStepsDone, isLegacyStep, useFiveSteps} from './fiveSteps';
 
 export type HangulResult = 'finished' | 'skipped';
 
@@ -19,7 +20,8 @@ export function useStepStarted(step: StepName, review: boolean) {
   const ready = !review && !!content?.linked && !done.includes(step);
   const dayIndex = content?.day_index;
   useEffect(() => {
-    if (ready && !sent.current) {
+    // 5단계 새 이름(recall·pass_on)은 서버 이벤트 계약(0053 step 목록)에 아직 없다 — 서버 계약이 더하기 전까지 보내지 않는다
+    if (ready && !sent.current && isLegacyStep(step)) {
       sent.current = true;
       track(api, 'course_step_started', dayIndex !== undefined ? {step, day_index: dayIndex} : {step});
     }
@@ -30,6 +32,7 @@ export function useStepStarted(step: StepName, review: boolean) {
 // 소요 시간은 화면에 들어온 시각부터 잰 초(0~7200).
 export function useFinishStep() {
   const {api, applyStep, content, done} = useSession();
+  const five = useFiveSteps();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
@@ -44,7 +47,7 @@ export function useFinishStep() {
       // 미연결 열람: 서버에 기록하지 않고 화면에서만 다음 단계로. 오늘 코스를 다 마치면 도장은 기기에 찍는다
       // (리드 결정: 날짜만 기기 로컬, 연결 뒤에는 서버 값만). 기다린 뒤 진행해야 P7·코스 홈이 오늘 도장을 읽는다
       try {
-        if (new Set([...done, step]).size === 3) {
+        if (allStepsDone([...done, step], five)) {
           await localStamps().addToday();
         }
         applyStep(step, 0);
@@ -59,7 +62,9 @@ export function useFinishStep() {
       const r = await api.recordSessionStep(step, sec);
       applyStep(step, r.streak);
       // 계측(0022): 서버가 기록을 인정한 뒤에만. 미연결 열람은 기록하지 않으므로 보내지 않는다
-      track(api, 'course_step_completed', {step, duration_sec: sec, ...(hangul ? {attempt_no: hangul.attemptNo, result: hangul.result} : {})});
+      if (isLegacyStep(step)) { // 새 단계 이름은 이벤트 계약에 아직 없다(위 useStepStarted 와 같음)
+        track(api, 'course_step_completed', {step, duration_sec: sec, ...(hangul ? {attempt_no: hangul.attemptNo, result: hangul.result} : {})});
+      }
       if (r.completed) {
         track(api, 'course_completed', content ? {day_index: content.day_index} : {});
       }
@@ -72,4 +77,47 @@ export function useFinishStep() {
     }
   };
   return {finish, error, setError, busy};
+}
+
+// 5단계 '오늘은 여기까지 할게요'(R-3, DECISIONS 5단계 화면): ③을 마친 뒤 남은 단계를 넘어감으로 기록하고 끝낸다(확인 대화상자 없음).
+// 넘어감도 '했어요'라 도장 기준(다 했거나 넘김)을 채운다. 남은 단계는 picks.skipped 에 남겨 홈에서 다시 할 수 있게 둔다.
+// 서버가 하나라도 인정하지 않으면 false + 오류 문구(이미 인정된 단계는 그대로 '했어요').
+export function useStopHere() {
+  const {api, applyStep, content, done, picks, setPicks} = useSession();
+  const [error, setError] = useState<Message | null>(null);
+  const {busy, begin, end} = useBusyLatch();
+  const stop = async (rest: readonly StepName[]): Promise<boolean> => {
+    if (!begin()) {
+      return false;
+    }
+    setError(null);
+    try {
+      setPicks({skipped: [...picks.skipped.filter(s => !rest.includes(s)), ...rest]});
+      if (content && !content.linked) {
+        await localStamps().addToday(); // 미연결 열람: 다 마친 날 도장은 기기에(finish 와 같은 규칙)
+        rest.forEach(s => applyStep(s, 0));
+        return true;
+      }
+      for (const s of rest) {
+        if (done.includes(s)) {
+          continue;
+        }
+        const r = await api.recordSessionStep(s, 0);
+        applyStep(s, r.streak);
+        if (isLegacyStep(s)) {
+          track(api, 'course_step_completed', {step: s, duration_sec: 0, ...(s === 'hangul' ? {attempt_no: 0, result: 'skipped' as const} : {})});
+        }
+        if (r.completed) {
+          track(api, 'course_completed', content ? {day_index: content.day_index} : {});
+        }
+      }
+      return true;
+    } catch (e) {
+      setError(errorMessage(e));
+      return false;
+    } finally {
+      end();
+    }
+  };
+  return {stop, error, busy};
 }

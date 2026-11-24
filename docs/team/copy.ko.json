@@ -128,6 +128,8 @@
   "child": {
     "tab_album": "앨범",
     "tab_past": "지난 날",
+    "recall_line": "사진 보고 {떠올린 것}{을를} 떠올리셨어요",
+    "_status_recall_line": "5단계 ② 자녀 한 줄(five-steps-copy 2절): {을를} 자리는 앱이 값의 마지막 글자 받침으로 '을'·'를'을 고른다(lib/josa). 한글로 끝나지 않으면 줄을 그리지 않는다. 자녀 화면 연결은 자녀 레인",
     "title_suffix": "의 최근 답",
     "talk": " 이야기를 해 볼까요?",
     "no_answer": "고른 답이 생기면 여기에 보여요",
@@ -388,7 +390,9 @@
     "step": {
       "photo": "사진 보기",
       "question": "둘 중 고르기",
-      "hangul": "낱말 쓰기"
+      "hangul": "낱말 쓰기",
+      "recall": "떠올려 보기",
+      "pass_on": "이야기 건네기"
     },
     "status": {
       "done": "했어요",
@@ -449,11 +453,35 @@
     "review_word_a11y": "오늘 낱말, {낱말}",
     "review_read": "{날짜}. {사진}. 고르신 쪽, {답}. 오늘 낱말, {낱말}.",
     "review_read_no_choice": "{날짜}. {사진}. 오늘 낱말, {낱말}.",
-    "_status_review_today": "라이터 확인 전(D-3 안 A '오늘 한 장', DECISIONS 11-24, 시안 docs/design/2026-11-24-d2-d3-c4 README 새 문구 '고르신 쪽'·'다른 하나'·'오늘 낱말')"
+    "_status_review_today": "라이터 확인 전(D-3 안 A '오늘 한 장', DECISIONS 11-24, 시안 docs/design/2026-11-24-d2-d3-c4 README 새 문구 '고르신 쪽'·'다른 하나'·'오늘 낱말')",
+    "stop_here": "오늘은 여기까지 할게요",
+    "review_recall": "먼저 떠올리신 것",
+    "review_recall_a11y": "먼저 떠올리신 것, {값}",
+    "review_pass_on": "건넨 말",
+    "review_pass_on_a11y": "건넨 말, {문장}",
+    "_status_five": "5단계(기능 스위치 fiveSteps, 기본 꺼짐) — 라이터 확정 docs/team/copy/2026-11-25-five-steps-copy.md 1절(#252). step.recall·step.pass_on 이름은 '관찰 테스트 뒤 확정' 상태 그대로. review_*_a11y 는 오늘 한 장 읽기(보이는 글 그대로 쉼표로 잇기)"
+  },
+  "recall": {
+    "question": "이 사진을 보면 무엇이 먼저 떠오르세요?",
+    "hint": "정답은 없어요",
+    "confirm": "이걸로 할게요",
+    "_status": "② 떠올려 보기 — 라이터 확정(five-steps-copy 1절 #1·'함께 확정한 말'). 보조 버튼은 keyboard.skip 재사용(#2), '골랐어요'는 question.chosen"
+  },
+  "pass_on": {
+    "title": "가족에게 건넬 한 줄을 골라요",
+    "confirm": "건넬게요",
+    "recall_story": "{떠올린 것} 얘기할게요",
+    "photo_memory": "사진 보니 옛 생각 나요",
+    "choice_like": "{고른 쪽}, 그게 좋아요",
+    "photo_like": "오늘 사진이 좋아요",
+    "ask_which": "어느 쪽일지 궁금해요",
+    "ask_which_sub": "{보기 A} · {보기 B}",
+    "_status": "⑤ 이야기 건네기 — 라이터 확정(five-steps-copy 1절 #3·#4, 4.2절 틀 문장 5개). 키 이름 = api/contract/fiveSteps.ts PASS_ON_KEYS(서버 레인이 정하면 맞춤). 보조 버튼은 keyboard.skip"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
     "guide": "보이는 낱말을 아래 칸에 써요",
+    "guide_recall": "떠올리신 낱말을 아래 칸에 써요",
     "input_label": "낱말 쓰는 칸",
     "placeholder": "여기를 누르면 자판이 나와요",
     "sub": "천천히 써 봐요",
@@ -488,7 +516,8 @@
     "skip_hint": "화면을 누르면 바로 넘어가요",
     "stamped": "도장을 찍었어요",
     "next_photo": "내일 새 사진이 와요",
-    "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요"
+    "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요",
+    "passed_on": "가족에게 건넸어요"
   },
   "question": {
     "need_choice": "하나를 골라 주세요",
@@ -622,6 +651,8 @@
       "PhotoStep": "사진 보기로",
       "QuestionStep": "둘 중 고르기로",
       "KeyboardStep": "낱말 쓰기로",
+      "RecallStep": "떠올려 보기로",
+      "PassOnStep": "이야기 건네기로",
       "CourseDone": "오늘 도장으로",
       "TodayReview": "오늘 코스 다시 보기로",
       "History": "지난 날로",
