@@ -1,6 +1,9 @@
 module.exports = {
   preset: '@react-native/jest-preset',
-  setupFiles: ['<rootDir>/jest.setup.js'],
+  // 제스처 핸들러 공식 jest 설정(네이티브 모듈 목) — gorhom 바텀시트(11-25)
+  setupFiles: ['<rootDir>/node_modules/react-native-gesture-handler/jestSetup.js', '<rootDir>/jest.setup.js'],
+  // Reanimated 4·worklets 공식 jest 리졸버: 네이티브 대신 웹 구현을 불러온다(안에서 worklets 리졸버를 이어 부른다)
+  resolver: 'react-native-reanimated/jest/resolver',
   setupFilesAfterEnv: ['<rootDir>/jest.after.js'],
   // 흐름 테스트는 여러 화면·모션을 지나므로 부하(병렬 워커)에서 기본 5초를 넘을 수 있다(불안정 원인, P7 리뷰 L6)
   testTimeout: 20000,
@@ -16,6 +19,6 @@ module.exports = {
   // 소리 자산(react-native preset 의 자산 변환에 없는 확장자) → 자산 번호 자리표시
   moduleNameMapper: {'\\.(wav|mp3|ogg|m4a|aac)$': '<rootDir>/testUtils/soundAssetStub.js'},
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-svg|react-native-url-polyfill)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-svg|react-native-url-polyfill|react-native-reanimated|react-native-worklets|react-native-gesture-handler|@gorhom)/)',
   ],
 };

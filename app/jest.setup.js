@@ -3,6 +3,11 @@ jest.mock("react-native-safe-area-context", () =>
   require("react-native-safe-area-context/jest/mock").default,
 );
 
+// gorhom 바텀시트(11-25): worklets 는 공식 jest 목, 시트 자체는 공식 목을 바탕으로 손잡이·배경·밖 누르기까지 그리는 목(testUtils/gorhomMock.js).
+// 손가락 끌기·스크롤 동시 인식은 네이티브(UI 스레드)라 jest 가 아니라 에뮬레이터 증거로 확인한다(docs/team/qa/evidence/2026-11-25-gorhom)
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+jest.mock('@gorhom/bottom-sheet', () => require('./testUtils/gorhomMock'));
+
 // 환경 설정: 빌드가 만든 env.generated.ts·개인 config.local.ts 가 맥에 있든 없든 테스트는 같은 값(fake + 공개 키 형식)으로 돈다
 jest.mock('./src/lib/env.generated', () => ({
   default: {

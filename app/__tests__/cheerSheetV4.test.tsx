@@ -4,7 +4,7 @@ import {StyleSheet, Text as RNText} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {AudienceProvider, Sheet, SHEET_MAX_RATIO} from '../src/ui/ds';
+import {AudienceProvider, Sheet, SHEET_HANDLE_H, SHEET_MAX_RATIO} from '../src/ui/ds';
 import {roleText} from '../src/ui/ds/roles';
 import {press} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
@@ -41,7 +41,9 @@ test('시트 머리: 손잡이(끌기, 오너 C-3 — V14 ① 바뀜) + 제목(�
   expect(handle.props.accessibilityRole).toBe('button');
   expect(handle.props.accessibilityLabel).toBe('시트 손잡이');
   expect(handle.props.accessibilityHint).toBe('두 번 누르면 닫혀요');
-  expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).maxHeight).toBe(Math.floor(640 * SHEET_MAX_RATIO));
+  // 높이 상한 88%(손잡이 줄 포함): gorhom 동적 높이 상한 = 88%, 손잡이 아래 몸통 = 88% − 손잡이 48
+  expect(require('@gorhom/bottom-sheet').__last().props.maxDynamicContentSize).toBe(Math.floor(640 * SHEET_MAX_RATIO));
+  expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).maxHeight).toBe(Math.floor(640 * SHEET_MAX_RATIO) - SHEET_HANDLE_H);
   await act(async () => fireEvent.press(close));
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
 });
@@ -86,7 +88,9 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
         <RNText>내용</RNText>
       </Sheet>,
     );
-    expect(screen.getByTestId('s').props.accessibilityViewIsModal).toBe(true);
+    // 모달 표시는 손잡이·몸통을 함께 감싼 뿌리에(몸통에 두면 형제인 손잡이가 화면 읽기에서 빠진다, gorhom 이전 11-25)
+    expect(screen.getByTestId('s-modal').props.accessibilityViewIsModal).toBe(true);
+    expect(screen.getByTestId('sheet-handle')).toBeTruthy();
     jest.useFakeTimers();
     try {
       act(() => screen.UNSAFE_getByType(RN.Modal).props.onShow?.());
