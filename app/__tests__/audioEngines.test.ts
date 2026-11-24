@@ -350,6 +350,21 @@ describe('기기 TTS 개선(DECISIONS 11-19 V13a)', () => {
     }
   });
 
+  test('같은 차례에 문장 끝 알림이 쉬는 사이 두 번 와도 문장을 건너뛰지 않는다(#238 재확인 L-5)', async () => {
+    jest.useFakeTimers();
+    try {
+      const speak = jest.spyOn(Speech, 'speak').mockResolvedValue('id');
+      const {tts, h} = engineWithEvents({sentencePauseMs: TTS_TUNING.sentencePauseMs});
+      await tts.speak('하나. 둘. 셋.');
+      h.onFinish();
+      h.onError(); // 같은 차례에 한 번 더(엔진이 끝·오류를 둘 다 보낸 경우)
+      await jest.advanceTimersByTimeAsync(TTS_TUNING.sentencePauseMs);
+      expect(speak.mock.calls.map(c => c[0])).toEqual(['하나.', '둘.', '셋.']);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('말 빠르기·높낮이·쉼 기본값은 한 곳(TTS_TUNING)에서, 근거 범위 안', () => {
     expect(TTS_RATE).toBe(TTS_TUNING.rate);
     expect(TTS_TUNING.pitch).toBe(1);

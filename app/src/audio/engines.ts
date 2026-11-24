@@ -334,13 +334,12 @@ async function preferGoogleEngine(Speech: SpeechModule): Promise<void> {
  */
 export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngine | null {
   const pauseMs = opts.sentencePauseMs ?? 0;
-  // 문장 사이 쉼 타이머(하나뿐). 새 읽기·멈춤이면 지운다(#238 리뷰 L5: 차례 번호로도 막히지만 남겨 두지 않는다)
-  let pauseTimer: ReturnType<typeof setTimeout> | null = null;
+  // 문장 사이 쉼 타이머들. 새 읽기·멈춤이면 모두 지운다(#238 리뷰 L5: 차례 번호로도 막히지만 남겨 두지 않는다).
+  // 하나만 두면 같은 차례에 끝 알림이 두 번 올 때 앞 문장 타이머가 지워져 그 문장을 건너뛴다(#238 재확인 L-5) → 모아 둔다
+  const pauseTimers = new Set<ReturnType<typeof setTimeout>>();
   const clearPause = () => {
-    if (pauseTimer !== null) {
-      clearTimeout(pauseTimer);
-      pauseTimer = null;
-    }
+    pauseTimers.forEach(t => clearTimeout(t));
+    pauseTimers.clear();
   };
   let Speech: SpeechModule;
   try {
@@ -401,7 +400,6 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
     }
     const t = turn;
     const go = () => {
-      pauseTimer = null;
       if (t !== turn) {
         return; // 쉬는 사이 멈췄거나 새 읽기가 시작됨
       }
@@ -413,8 +411,11 @@ export function createTtsEngine(opts: {sentencePauseMs?: number} = {}): TtsEngin
       });
     };
     if (pauseMs > 0) {
-      clearPause();
-      pauseTimer = setTimeout(go, pauseMs);
+      const timer = setTimeout(() => {
+        pauseTimers.delete(timer);
+        go();
+      }, pauseMs);
+      pauseTimers.add(timer);
     } else {
       go();
     }
