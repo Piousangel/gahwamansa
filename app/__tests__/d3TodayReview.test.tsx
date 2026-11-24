@@ -203,7 +203,6 @@ test('R-15(에뮬레이터 실측 S25급 200%): 팻말 묶음이 첫 화면 끝�
     lay('today-review:notice', 0, 80); // 372~452
     lay('today-review:choice', 0, 150); // 468~618 → 600 에 걸림
     lay('today-review:word', 0, 90);
-    lay('today-review:read-notice', 0, 0); // 안내가 없을 때 빈 칸(높이 0)
   });
   expect(mt('choice')).toBe(16 + (600 - 468 + 1));
   expect(mt('photo')).toBe(16);
@@ -222,8 +221,31 @@ test('100%(에뮬레이터 실측 360×640): 사진은 첫 화면에 사진 이�
     lay('today-review:notice', 0, 80);
     lay('today-review:choice', 0, 150);
     lay('today-review:word', 0, 90);
-    lay('today-review:read-notice', 0, 0);
   });
   // 사진 위 끝 = 40 + 16 = 56, 높이 = 400 − 56 − 16 − (80 + 16) − 여유 2 = 230
   expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(230);
+});
+
+test('200%는 사진을 줄이지 않는다(같은 측정에서도 원본 비율 높이 251 그대로, 스크롤로 닿음 — QA-1 재확인 L1)', async () => {
+  mockFontScale = 2;
+  await review();
+  fireEvent(screen.getByTestId('photo-image'), 'load', {nativeEvent: {source: {width: 1152, height: 928}}});
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});
+  await act(async () => {
+    lay('screen-body-area', 0, 424);
+    lay('today-review', 0, 900);
+    lay('today-review:date', 0, 40);
+    lay('today-review:photo', 0, 251);
+    lay('today-review:notice', 0, 80);
+    lay('today-review:choice', 0, 150);
+    lay('today-review:word', 0, 90);
+  });
+  expect(StyleSheet.flatten(screen.getByTestId('photo-polaroid').props.style).height).toBe(251);
+});
+
+test('읽어 주기 안내가 없으면 낱말 아래 빈 칸(간격 16)을 두지 않는다 — 안내 칸은 안내가 있을 때만(QA-1 재확인 L2)', async () => {
+  await review();
+  expect(screen.queryByTestId('today-review:read-notice')).toBeNull();
+  const ids = (screen.getByTestId('today-review').children as unknown as {props: {testID?: string}}[]).map(c => c.props.testID);
+  expect(ids[ids.length - 1]).toBe('today-review:word');
 });

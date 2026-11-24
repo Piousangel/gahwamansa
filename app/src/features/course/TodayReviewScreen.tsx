@@ -133,7 +133,8 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
           <Text role="sub" tone="muted">{c.review_word}</Text>
           <Text role="title">{photo.keyword}</Text>
         </View>
-        <ReadAloudNotice key="read-notice" notice={read.notice} />
+        {/* 안내가 있을 때만 칸을 둔다 — 없을 때 빈 칸이 묶음 간격 16을 낱말 아래에 남겼다(QA-1 재확인 L2) */}
+        {read.notice ? <ReadAloudNotice key="read-notice" notice={read.notice} /> : null}
       </FoldStack>
       {canZoom ? (
         <PhotoZoom
