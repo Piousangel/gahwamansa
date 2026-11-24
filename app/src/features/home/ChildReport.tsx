@@ -143,13 +143,15 @@ function Row({item}: {item: HistoryItem}) {
   );
 }
 
+const CARD_PAD_X = 16;
+
 const styles = StyleSheet.create({
   flex: {flex: 1},
   centerText: {textAlign: 'center'},
   empty: {alignItems: 'center', gap: 8, paddingVertical: 32},
   section: {gap: 8},
   list: {gap: 8},
-  row: {gap: 8, backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, paddingTop: 14, paddingBottom: 16, paddingHorizontal: 16},
+  row: {gap: 8, backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, paddingTop: 14, paddingBottom: 16, paddingHorizontal: CARD_PAD_X},
   topic: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ds.color.paperSoft, borderRadius: ds.radius.card, padding: 16, marginTop: 8, minHeight: ds.touch.child.min},
   topicPressed: {backgroundColor: ds.color.actionSoft},
   badge: {backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.chip, paddingHorizontal: 10, paddingVertical: 2},

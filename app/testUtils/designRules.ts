@@ -110,8 +110,9 @@ export const R22_LIST_EXEMPT = {list: 'child-past-list', card: 'child-past-item'
 
 /**
  * R-22 화면당 팻말(Sign) 1개 위반 목록. 팻말은 Sign 판의 호스트 노드(nativeID 표지)로 센다.
- * - 예외 목록(R22_LIST_EXEMPT.list) 안의 카드(R22_LIST_EXEMPT.card)에 든 팻말은 '카드당 1개'로 따로 센다
- * - 그 밖(목록 밖, 목록 안이지만 카드 밖, 목록 없이 카드 testID 만 있는 곳)은 화면 전체에서 1개까지
+ * - 예외 목록(R22_LIST_EXEMPT.list)의 **바로 아래(호스트 직계) 카드**(R22_LIST_EXEMPT.card)에 든 팻말은 '카드당 1개'로 따로 센다.
+ *   카드 안에 카드를 또 넣어도 바깥(직계) 카드 하나로 센다(QA-1 #239 M2 — 한 날짜에 팻말 2개 우회 차단)
+ * - 그 밖(목록 밖, 목록 안이지만 직계 카드 밖, 목록 없이 카드 testID 만 있는 곳)은 화면 전체에서 1개까지
  */
 export function signViolations(root: unknown): string[] {
   const out: string[] = [];
@@ -121,17 +122,19 @@ export function signViolations(root: unknown): string[] {
     if (!(typeof n.type === 'string' && n.props.nativeID === SIGN_NATIVE_ID)) {
       return;
     }
-    let card: Node | null = null;
+    let below: Node = n; // 지금 본 호스트 조상의 바로 아래 호스트 노드
     for (let p = n.parent; p; p = p.parent) {
       if (typeof p.type !== 'string') {
         continue; // 호스트 노드만(합성 컴포넌트가 같은 testID 를 물려 두 번 세지 않게)
       }
-      if (!card && p.props.testID === R22_LIST_EXEMPT.card) {
-        card = p;
-      } else if (card && p.props.testID === R22_LIST_EXEMPT.list) {
-        perCard.set(card, (perCard.get(card) ?? 0) + 1);
-        return;
+      if (p.props.testID === R22_LIST_EXEMPT.list) {
+        if (below !== n && below.props.testID === R22_LIST_EXEMPT.card) {
+          perCard.set(below, (perCard.get(below) ?? 0) + 1);
+          return;
+        }
+        break; // 목록 안이지만 직계 카드 밖
       }
+      below = p;
     }
     loose += 1;
   });

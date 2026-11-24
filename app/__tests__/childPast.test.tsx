@@ -19,7 +19,7 @@ test('답이 있으면 지난 답 탭에 질문·고른 답·날짜가 보이고
   await openPast();
   await waitFor(() => screen.getByTestId('child-past-item'));
   expect(screen.getByTestId('child-past-item')).toHaveTextContent(/2020년 11월 16일.*봄과 가을 중.*가을/);
-  expect(screen.getAllByText('가을').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('가을', {includeHiddenElements: true}).length).toBeGreaterThan(0); // 팻말 글자는 화면 읽기에서 숨김(카드 한 줄로 읽음, #239 M1)
   expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
 });
 
