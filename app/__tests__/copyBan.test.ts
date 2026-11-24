@@ -119,7 +119,7 @@ test('A5: 없앤 닫기 말을 버튼으로 쓰지 않는다', () => {
 test("A5: '알겠어요'는 정보만 읽고 닫는 곳에만(P7·P8·P13 미리보기)", () => {
   const ok = all.filter(([, s]) => s === '알겠어요').map(([p]) => p).sort();
   // dismiss.ack = ds Dialog 닫기 말 'ack'(받은 소식 확인, 11-20 리드 결정) — 쓰는 곳은 ACK_ALLOWED(P8 응원 도착)로 묶는다
-  expect(ok).toEqual(['cheer.button', 'dismiss.ack', 'done.button', 'errors.push_denied.button', 'settings.preview.ok'].sort());
+  expect(ok).toEqual(['dismiss.ack', 'done.button', 'errors.push_denied.button', 'settings.preview.ok'].sort());
 });
 
 // W-09(전문가 리뷰 r2): 버튼 키 이름이 닫기 말 갈래를 말한다. 키와 값이 어긋나면 실패(A5 세 갈래가 문구 파일에서도 지켜지게).
