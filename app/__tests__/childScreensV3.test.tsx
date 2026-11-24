@@ -5,11 +5,11 @@ import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import * as clipboard from '../src/ui/clipboard';
-import {warmAppRoot} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 import {press} from '../testUtils/flow';
 
 // 콜드 스타트 예열(#125 리뷰): 첫 AppRoot 테스트(C3 만료)만 부하에 시간 초과하던 것
-beforeAll(warmAppRoot);
+setupWarmAppRoot();
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const waitApi = (o: Parameters<typeof createFakeApi>[0] = {}) => createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', ...o});

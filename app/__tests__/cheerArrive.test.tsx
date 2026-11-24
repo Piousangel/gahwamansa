@@ -56,6 +56,12 @@ test('응원 여러 개: "응원이 3개 왔어요" + 글 3줄', async () => {
   }
 });
 
+test('새 13키(0060)는 기본 문장이 아니라 그 문장으로 보인다', async () => {
+  await home({cheers: ['miss_you', 'call_soon']});
+  await waitFor(() => screen.getByText('응원이 2개 왔어요'));
+  expect(bodyLines(/보고 싶어요/)).toEqual(['보고 싶어요', '곧 전화할게요']);
+});
+
 // 키 확대 배포 순서 ①(DECISIONS 11-24): 서버가 이 앱이 모르는 키를 먼저 열어도 한마디를 놓치지 않는다.
 // 모르는 키는 문장 대신 기본 줄 하나로 보여 주고, 읽음 처리는 "알겠어요" 뒤에만.
 // - 모르는 키만: 제목(가족이 보낸 응원이에요 / 응원이 {n}개 왔어요)과 겹치지 않는 '마음을 담아 보냈어요'(copy.cheer.unknown)
@@ -65,7 +71,7 @@ const ONLY = '마음을 담아 보냈어요';
 const bodyLines = (anchor: RegExp) => String(screen.getByText(anchor).props.children).split('\n');
 
 test('모르는 키만 1개: 제목과 다른 기본 문장, 알겠어요 전에는 읽음 처리하지 않는다', async () => {
-  const {mark} = await home({cheers: ['miss_you']}); // 확대 뒤 새 키(이 앱 버전은 모름)
+  const {mark} = await home({cheers: ['future_key_a']}); // 이 앱 버전이 모르는 키(0060 의 13키는 이제 앎 — 그다음 확대를 흉내)
   await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
   expect(bodyLines(new RegExp(ONLY))).toEqual([ONLY]);
   expect(screen.queryByText(/가족이 응원을 보냈어요/)).toBeNull(); // 제목과 같은 말 되풀이 금지(읽어 주기에서 두 번 들림)
@@ -76,7 +82,7 @@ test('모르는 키만 1개: 제목과 다른 기본 문장, 알겠어요 전에
 });
 
 test('모르는 키만 2개: 제목은 "응원이 2개 왔어요", 본문은 기본 문장 한 줄, 읽음은 둘 다', async () => {
-  const {mark} = await home({cheers: ['miss_you', 'call_soon']});
+  const {mark} = await home({cheers: ['future_key_a', 'future_key_b']});
   await waitFor(() => screen.getByText('응원이 2개 왔어요'));
   expect(bodyLines(new RegExp(ONLY))).toEqual([ONLY]);
   expect(mark).not.toHaveBeenCalled();
@@ -85,7 +91,7 @@ test('모르는 키만 2개: 제목은 "응원이 2개 왔어요", 본문은 기
 });
 
 test('아는 키+모르는 키 섞임: 아는 문장 그대로 + "그 밖에 응원이 2개 더 왔어요", 개수는 전체', async () => {
-  const {mark} = await home({cheers: ['miss_you', 'peaceful_day', 'call_soon']});
+  const {mark} = await home({cheers: ['future_key_a', 'peaceful_day', 'future_key_b']});
   await waitFor(() => screen.getByText('응원이 3개 왔어요'));
   expect(bodyLines(/오늘도 편안한/)).toEqual(['오늘도 편안한 하루 보내세요', '그 밖에 응원이 2개 더 왔어요']);
   expect(mark).not.toHaveBeenCalled();
