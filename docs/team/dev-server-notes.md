@@ -27,6 +27,7 @@
 - 최근 30일(오늘 포함, session_date ≥ 오늘-29), 최신순, 어르신별 최대 30개, 페이지 없음. 개수·빈 날 집계 없음.
 - 동의 안 함/철회 → `shared:false, answers:[]`(철회 즉시). 같은 질문이 순환으로 두 번 나올 수 있다(날짜가 다름).
 - `prompt_short` = "A와/과 B 중"(앞 낱말 받침으로 와/과 자동).
+- **0061(5단계)**: 어르신 항목에 `recalls: [{session_date, label}]`(② 떠올린 낱말)·`pass_ons: [{session_date, line_key, recall_label, choice_label, option_a, option_b}]`(⑤ 건넨 말 틀 키 + 끼울 값) 두 배열을 더했다. `answers`는 그대로(옛 자녀 앱은 모르는 키를 무시). 둘 다 동의 중만·최근 30일·최대 30개, 넘긴 날은 행이 없다(무표시). `pass_ons`는 서버 스위치가 꺼져 있으면 늘 `[]`. 표시 규칙(목록엔 ② 한 줄, ⑤는 앨범·날짜 상세만)은 앱 몫. 앱 계약 `app/src/api/contract/fiveSteps.ts` `parseChildFiveSteps`. 미리보기(0050)도 같은 내부 함수라 같은 값.
 
 ### set_parent_title_for(p_parent uuid, p_title text) → jsonb  (0019)
 - 어르신 한 분의 호칭. 닫힌 목록 7개(엄마·아빠·어머니·아버지·할머니·할아버지·부모님).
@@ -110,6 +111,26 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - 동의 안 함·철회: 자녀와 똑같이 `shared=false`, `latest=null`, `answers=[]`(철회 즉시). 미리보기에 "지금은 가족에게 보이지 않아요" 같은 상태를 보여 주는 것은 앱·라이터 몫.
 - 본인 항목만: 같은 가족의 다른 어르신 항목은 주지 않는다(그분의 동의는 자녀에게 공개한 것). 자녀 계정 정보(이름·메일·id)는 원래 없다. `parents`가 빈 배열이 되는 경우는 없다(본인 프로필이 있어야 실행됨).
 - 어르신 본인만: 자녀·프로필 없는 기기는 `parent_required`, anon은 실행 불가. 내부 함수는 가족 id를 받으므로 앱·anon·서비스 역할 모두 직접 못 부른다.
+
+### 오늘 코스 5단계 (0061, DECISIONS 11-25 R-1·R-3, 앱 계약 `app/src/api/contract/fiveSteps.ts`)
+```ts
+// 단계: 'photo' → 'recall'(② 떠올려 보기) → 'question' → 'hangul' → 'pass_on'(⑤ 이야기 건네기). ③ 뒤 'stop_here'(오늘은 여기까지)
+// sb.rpc('record_session_step', { p_step, p_duration, p_skipped?: boolean = false, p_course_len?: 3 | 5 = 3 }) → { completed, steps, streak }  // 반환 모양 그대로
+// sb.rpc('save_recall', { p_day_index, p_slot })   → { ok: true } | { ok: false, reason: 'consent_required'|'no_content'|'stale_day'|'invalid_option' }
+// sb.rpc('save_pass_on', { p_day_index, p_key })   → { ok: true } | { ok: false, reason: 'disabled'|'consent_required'|'invalid_key'|'no_content'|'stale_day'|'missing_value' }
+// get_today_content·start_today 추가 키: skipped_steps: string[], recall: { options: [{slot, label}], picked_slot: number|null }, pass_on: { enabled: boolean, picked_key: string|null }
+// preview_content(연결 전) 추가 키: recall: { options, picked_slot: null }(저장 안 함) · parent_history 날마다 recall_label·pass_on_key
+```
+- **완료(도장) 판정**: 옛 앱은 지금처럼 `{p_step, p_duration}`만 보낸다 → 기본 `p_course_len = 3` → 옛 3단계(photo·question·hangul)가 모두 있으면 완료. **새 앱은 모든 호출에 `p_course_len: 5`** → 세션 `course_len = 5`(한 번 5면 줄지 않음, recall·pass_on·stop_here 기록도 5로 만든다) → 다섯 단계가 모두 '했어요 또는 넘어감'일 때 완료. 그래서 새 앱이 ②를 건너뛰고 ③④를 먼저 해도 ⑤ 전에 도장이 찍히지 않는다. `completed_at`은 처음 한 번만, 되돌리지 않는다.
+- **넘어감**: `p_skipped: true` → completed_steps와 skipped_steps에 함께 들어간다(넘어감도 '했어요'). 그 단계에 저장된 값은 서버가 지운다(② `recall_picks`·⑤ `pass_on_picks`·③ 오늘 `answers`, 그리고 ② 값을 끼운 ⑤ `recall_first`) → 넘긴 날 자녀 무표시(법률 조건 4). ①은 넘길 수 없다(`invalid_step`). 넘긴 단계를 나중에 `p_skipped: false`로 다시 기록하면 skipped_steps에서 빠진다.
+- **오늘은 여기까지**: `p_step: 'stop_here'` — ③이 completed_steps에 있어야 한다(없으면 예외 `stop_before_question`). 남은 ④·⑤를 넘어감으로 채우고 `stopped_here = true` → 완료. 자녀에게는 몇 단계 했는지 보내지 않는다.
+- **동시 운영**: 판정이 어르신·날짜 세션마다 따로라 옛 앱 어르신과 새 앱 어르신이 한 가족에 섞여도 각자 맞다(pgTAP). 한 어르신이 같은 날 새 앱 → 옛 앱으로 되돌리면 그날은 ⑤를 기다린다(드묾, 다음 날부터 정상).
+- **② 저장**: 정해진 보기 번호만(`content_recall_options(day_index, slot 1~3, label 한글 1~6자)`, 표에 글자 칸 없음). P2 동의 중에만(`consent_required`, 저장 0). `p_day_index`는 화면에 보여 준 콘텐츠 날 — 자정을 넘겨 다른 날이면 `stale_day`(앱은 오늘 콘텐츠를 다시 불러 다시 고르게). 같은 날 다시 고르면 바꾼다. 연결 전(preview)은 저장하지 않는다.
+- **⑤ 저장**: 틀 키만(`pass_on_key_ok` = `recall_first`·`choice_now`·`ask_which`·`see_together`, 정본 `PASS_ON_KEYS`, jest가 대조). 문장은 앱 copy(라이터·법률 승인 키만 표시). **서버 스위치 `server_flags.pass_on_store_enabled`가 꺼져 있으면(기본, 법률 L-11 전) `disabled`로 거부하고 자녀·미리보기에도 안 나간다** → 앱은 `pass_on.enabled = false`면 ⑤를 '건넸어요'로 보여 주지 않는다(넘어감 처리 또는 단계 숨김은 앱·리드 결정). `missing_value`: `recall_first`인데 오늘 ② 없음, `choice_now`인데 오늘 ③ 답 없음.
+- **지우는 길**: ②·⑤ 행은 `daily_sessions(parent_id, session_date)` FK cascade → 31일 파기·`admin_delete_answers`·`dev_reset_today`와 함께. '그만 보여 주기'는 profiles 트리거(consented_at → null)가 즉시 삭제. 계정·가족 삭제는 profiles·families FK cascade. 모두 pgTAP(`five_steps.test.sql`).
+- **권한**: 새 표 3개 RLS 켬·앱·anon 권한 0, 서비스 역할은 보기 표 읽기만(고른 값 표 0). 쓰기는 definer RPC만(`search_path=''`, 본인·역할 검사). 보기 값 적재는 라이터 PR 병합 뒤 별도(`supabase/seed_recall_options.sql`은 형식만).
+- **스위치 켜기(L-11 승인·리드 결정 뒤, 운영자 postgres)**: `insert into public.server_flags (name, enabled) values ('pass_on_store_enabled', true) on conflict (name) do update set enabled = excluded.enabled, updated_at = now();` 끄기는 `update … set enabled = false`(이미 저장된 ⑤도 자녀에게 바로 안 보임). remote-checks에 상태 줄.
+- **배포 순서**: 서버 먼저 무해 — 옛 앱 호출·반환 모양이 그대로이고(rpc_session·골든 테스트 그대로 통과), 추가 키만 생긴다. 그 다음 새 앱(5단계)을 낸다. 새 앱이 0061 없는 서버를 만나면 `p_skipped`·`p_course_len` 인자 때문에 record_session_step 함수 없음 오류(PGRST202) → **새 앱보다 서버를 먼저** 반영한다.
 
 ### get_my_cheers() → jsonb  (0020, P8)
 ```json
@@ -303,6 +324,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | record_session_step · start_today · get_today_content · my_day_index · save_answer · my_week_stamps · parent_history | 어르신 | parent 역할·본인 행만, save_answer는 동의 확인 |
 | parent_preview_child_view | 어르신 | parent 역할·본인 항목만(자녀 화면과 같은 내부 함수, 0050) |
 | dev_reset_today | 어르신 | parent 역할·본인 오늘 기록만, 스위치·테스터 가족일 때만(0051) |
+| save_recall · save_pass_on | 어르신 | parent 역할·본인 오늘 세션만, P2 동의 확인, 정해진 보기 번호·틀 키만, ⑤는 스위치 켜졌을 때만(0061) |
 | give_consent · withdraw_consent | 어르신 | parent 역할·본인, 이력 기록 |
 | get_my_cheers · mark_cheers_read | 어르신 | 받는 본인 것만 |
 | parent_family_list | 어르신 | 본인 가족, 개인정보 없음 |
@@ -452,6 +474,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0057 | 연결 전·옛 익명 계정 90일 자동 정리(account_purged) | 브랜치 server-stale-anon-purge | 미반영 |
 | 0058 | 계정 삭제 때 프로필 없이 쌓인 이용 기록(device_key)도 삭제 | 브랜치 server-delete-events-by-device(0057 위) | 미반영 |
 | 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | PR #244 | 미반영(언제 반영해도 무해 — 관문은 ③ 자녀 새 시트, DECISIONS 11-25) |
+| 0061 | 오늘 코스 5단계: 완료 판정(옛 3단계·5단계·여기까지·넘어감), ② 떠올린 것·⑤ 건넨 말(스위치 기본 꺼짐) 저장·파기 연쇄, 자녀 recalls·pass_ons | PR(server/five-steps) | 미반영(서버 먼저 무해 — 새 앱보다 먼저) |
 - **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
