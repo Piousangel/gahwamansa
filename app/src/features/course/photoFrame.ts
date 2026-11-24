@@ -14,6 +14,8 @@ export const PHOTO_MAX_HEIGHT_RATIO = 0.45;
 /** fit 바닥: 폭의 50%(가로 2:1보다 납작한 띠로 줄이지 않는다 — 고친 결함이 약 3.5:1 띠) 또는 160dp(옛 고정 틀 최대 124보다 크게) 중 큰 값 */
 export const PHOTO_FLOOR_MIN = 160;
 export const PHOTO_FLOOR_WIDTH_RATIO = 0.5;
+/** fit 여유: 실기기 dp 반올림으로 질문 첫 문장 바닥이 1~2dp 넘치면(foldPush 허용 0.5) 문장이 통째로 접힘 아래로 밀린다(#234 재확인 L1) */
+export const PHOTO_FIT_SLACK = 2;
 
 export type PhotoFrame = {width: number; height: number};
 
@@ -46,12 +48,12 @@ export function photoFrame(boxWidth: number, aspect: number | null, windowHeight
 }
 
 /**
- * 첫 화면 맞춤 높이(fit): viewport − (사진 위 끝 + 간격 + AI 고지 + 간격 + 질문 첫 문장).
+ * 첫 화면 맞춤 높이(fit): viewport − (사진 위 끝 + 간격 + AI 고지 + 간격 + 질문 첫 문장) − 여유(PHOTO_FIT_SLACK).
  * 모두 사진 높이와 상관없는 값이라 사진을 줄여도 다시 바뀌지 않는다(측정 → 줄임 → 재측정 반복 없음).
  */
 export function photoFit(viewport: number, photoTop: number, gap: number, notice: number, question: number): number | undefined {
   if (!(viewport > 0)) {
     return undefined;
   }
-  return viewport - photoTop - gap - (notice > 0 ? notice + gap : 0) - question;
+  return viewport - photoTop - gap - (notice > 0 ? notice + gap : 0) - question - PHOTO_FIT_SLACK;
 }

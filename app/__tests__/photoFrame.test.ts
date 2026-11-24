@@ -1,5 +1,5 @@
 // P4 사진 틀(오너 S25 11-24: 띠처럼 잘림) — 원본 비율, 폭 기준 높이, 상한(창 45% · 첫 화면 fit, fit 은 바닥 아래로 안 내림)
-import {PHOTO_CONTENT_ASPECT, photoAspect, photoFit, photoFloor, photoFrame} from '../src/features/course/photoFrame';
+import {PHOTO_CONTENT_ASPECT, PHOTO_FIT_SLACK, photoAspect, photoFit, photoFloor, photoFrame} from '../src/features/course/photoFrame';
 
 const W = 328; // 360 폭 기기의 본문 폭 예
 const H = 640; // 창 높이 → 상한 288
@@ -38,9 +38,10 @@ test('fit(첫 화면 맞춤)이 더 작으면 그 높이로, 단 바닥(폭 50%�
   expect(photoFrame(W, PHOTO_CONTENT_ASPECT, H, 999)).toEqual({width: 328, height: 264}); // 넉넉하면 그대로
 });
 
-test('photoFit: viewport − (사진 위 끝 + 간격 + 고지 + 간격 + 질문 첫 문장), viewport 를 모르면 없음', () => {
-  expect(photoFit(400, 50, 8, 28, 32)).toBe(400 - 50 - 8 - 28 - 8 - 32);
-  expect(photoFit(400, 50, 8, 0, 32)).toBe(400 - 50 - 8 - 32); // 고지 없음(준비 중)
+test('photoFit: viewport − (사진 위 끝 + 간격 + 고지 + 간격 + 질문 첫 문장) − 여유 2, viewport 를 모르면 없음', () => {
+  expect(PHOTO_FIT_SLACK).toBe(2); // 실기기 반올림 여유(#234 재확인 L1)
+  expect(photoFit(400, 50, 8, 28, 32)).toBe(400 - 50 - 8 - 28 - 8 - 32 - 2);
+  expect(photoFit(400, 50, 8, 0, 32)).toBe(400 - 50 - 8 - 32 - 2); // 고지 없음(준비 중)
   expect(photoFit(0, 50, 8, 28, 32)).toBeUndefined();
 });
 

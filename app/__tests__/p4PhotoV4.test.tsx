@@ -159,8 +159,9 @@ test('#234 M2: 360×640·100%·콘텐츠 사진(1152×928)에서 질문 첫 문�
   loadPhoto(1152, 928);
   await settle(368);
   const q0 = q0Box();
-  expect(q0.bottom).toBeLessThanOrEqual(368);
-  expect(frameOf().height).toBe(368 - (BODY_TOP + 35 + 8) - 8 - 28 - 8 - 64); // fit = 213
+  // 실기기 dp 반올림(1~2dp)에도 밀리지 않게 여유 2를 남긴다(#234 재확인 L1) — 여유를 빼면 바닥이 368 에 딱 붙어 이 단언이 깨진다
+  expect(q0.bottom).toBeLessThanOrEqual(368 - 2);
+  expect(frameOf().height).toBe(368 - (BODY_TOP + 35 + 8) - 8 - 28 - 8 - 64 - 2); // fit = 211
   expect(frameOf().height).toBeGreaterThanOrEqual(160); // 바닥 위
 });
 
