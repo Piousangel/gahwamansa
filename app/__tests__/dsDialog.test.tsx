@@ -9,7 +9,47 @@ const noop = () => {};
 const H = {includeHiddenElements: true};
 const labels = () => screen.getAllByRole('button', H).map(b => b.props.accessibilityLabel);
 
+// 11-20 리드 결정: 'ack'(알겠어요) = 받은 소식 확인 상자 전용, 허용 목록 밖에서 쓰면 실패
+// dismiss= 자리만 보지 않고 문자열 값 'ack'·"ack"·`ack` 자체를 찾는다 — 변수(const X = "ack")로 넘겨도 잡힌다(#228 QA-1 L1).
+// 정의하는 곳(ui/ds/dismiss.ts)만 뺀다. 주석 안의 'ack' 도 위반으로 본다(엄격한 쪽).
+// 알려진 한계: 'a' + 'ck' 처럼 조립하거나 다른 모듈의 값을 빌려 오면 못 잡는다. 완전히 막으려면 'ack' 를 Dismiss 에서 빼고
+// CheerDialog 전용 래퍼만 받게 하는 타입 수준 방법뿐이다(QA-1 리뷰: 허용 목록 목적에는 이 정도로 충분).
+const ACK_DEFINED_IN = ['ui/ds/dismiss.ts'];
+function ackUsers(files: {rel: string; text: string}[]): string[] {
+  const {ACK_ALLOWED} = require('../src/ui/ds/dismiss');
+  const exempt = [...(ACK_ALLOWED as readonly string[]), ...ACK_DEFINED_IN];
+  return files.filter(f => !exempt.includes(f.rel) && /(['"`])ack\1/.test(f.text)).map(f => f.rel);
+}
+test("'ack' 는 허용 목록(CheerDialog)에서만 — 소스 스캔, 일부러 넣은 위반을 잡는다", () => {
+  const fsx: {readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]; readFileSync(p: string, e: string): string} = require('fs');
+  const pathx: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
+  const src = pathx.join(__dirname, '../src');
+  const walk = (d: string): string[] => fsx.readdirSync(d, {withFileTypes: true}).flatMap(e => (e.isDirectory() ? walk(pathx.join(d, e.name)) : /\.tsx?$/.test(e.name) ? [pathx.join(d, e.name)] : []));
+  const files = walk(src).map(f => ({rel: pathx.relative(src, f), text: fsx.readFileSync(f, 'utf8')}));
+  expect(files.find(f => f.rel === 'features/course/CheerDialog.tsx')?.text).toMatch(/dismiss="ack"/);
+  expect(ackUsers(files)).toEqual([]);
+  expect(ackUsers([{rel: 'features/account/DeleteAccountScreen.tsx', text: '<Dialog dismiss="ack" />'}, {rel: 'features/x.tsx', text: "dismiss: 'ack'"}])).toEqual(['features/account/DeleteAccountScreen.tsx', 'features/x.tsx']);
+});
+test("'ack' 를 변수·템플릿 문자열로 넘겨도 소스 스캔이 잡는다(#228 QA-1 L1)", () => {
+  const bypass = [
+    {rel: 'features/settings/ChildSettings.tsx', text: 'const ACKX = "ack" as const;\n<Dialog dismiss={ACKX} />'},
+    {rel: 'features/y.tsx', text: 'const d: Dismiss = `ack`;'},
+    {rel: 'features/z.tsx', text: "openDialog({dismiss: kind === 1 ? 'ack' : 'close'})"},
+  ];
+  expect(ackUsers(bypass)).toEqual(['features/settings/ChildSettings.tsx', 'features/y.tsx', 'features/z.tsx']);
+  // 'ack' 를 정의하는 ds 내부와 낱말 속 ack('back'·"ackno")는 위반이 아니다
+  expect(ackUsers([{rel: 'ui/ds/dismiss.ts', text: "export type Dismiss = 'close' | 'ack';"}, {rel: 'features/w.tsx', text: "goBack('back'); const s = \"ackno\";"}])).toEqual([]);
+});
+
 describe('ds Dialog', () => {
+  test("ack: 하는 쪽 없이 '알겠어요' 하나(주 버튼), 누르면 onDismiss", () => {
+    const onDismiss = jest.fn();
+    render(<Dialog visible title="엄마가 응원을 보냈어요" body="늘 고마워요" dismiss="ack" onDismiss={onDismiss} returnFocusRef={null} />);
+    expect(labels()).toEqual(['알겠어요']);
+    fireEvent.press(screen.getByTestId('ds-dialog-dismiss'));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   test('되돌릴 수 있는 행동: 하는 쪽이 위(주), 닫는 쪽은 아래 "닫기"', () => {
     const onDo = jest.fn();
     const onDismiss = jest.fn();

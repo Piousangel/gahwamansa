@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {useIsFocused} from '@react-navigation/native';
-import {Dialog} from '../../ui/Dialog';
+import {Dialog} from '../../ui/ds';
 import {audio} from '../../audio';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {copy} from '../../copy/copy';
@@ -16,6 +16,7 @@ import type {Api} from '../types';
 // - 닫히면 포커스를 코스 홈 제목으로 돌려준다(R12, returnFocusRef). 그러려면 닫힌 뒤에도 Dialog 를 visible=false 로 남겨 둔다.
 // - 받아 오지 못하면 조용히 아무것도 하지 않는다(장식이라 코스를 막지 않음).
 // - 해님은 그리지 않는다(U0 Dialog 표준, 해님 말은 첫 만남·완료·오류만 — 리뷰 10).
+// - 덮개 큐(useCover)는 아직 쓰지 않는다: 옛 ui/Dialog → ds Dialog 이행만 하고 뜨는 시점(안 읽은 응원이 있으면 앱을 연 뒤 한 번)은 그대로 뒀다. 큐 편입 여부는 따로 리드 결정(DECISIONS N1 절은 P8 을 덮개로 셈, #228 QA-1 L4).
 // TODO(읽어주기): 오디오 스파이크 결론 뒤 응원 문장 아래 '읽어 주세요'(화면 읽기 켜짐이면 숨김 R16).
 export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: boolean; returnFocusRef?: RefObject<unknown>}) {
   const focused = useIsFocused();
@@ -64,10 +65,11 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
       visible={open && focused}
       title={title}
       body={lines.join('\n')}
-      actions={[{label: copy.cheer.button, onPress: close}]}
-      returnFocusRef={returnFocusRef}
+      dismiss="ack" // '알겠어요' = 받은 응원을 확인함(읽음 처리). 하는 쪽 버튼 없는 알림 상자
+      onDismiss={close}
+      returnFocusRef={returnFocusRef ?? null}
       testID="cheer-dialog">
-      {/* AP-03 읽어 주기: 응원 문장 바로 아래 */}
+      {/* AP-03 읽어 주기: 응원 문장 위(ds Dialog 는 children 을 body 앞에 그림, 이행 전과 같은 배치) */}
       <ReadAloud text={ttsText.cheer(lines)} />
     </Dialog>
   );

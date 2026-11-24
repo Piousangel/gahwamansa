@@ -90,7 +90,7 @@ export const tokensV4 = {
       weight: 400,
       maxFontScale: 2,
       elder: {size: 22, lineHeight: 30, icon: 24, tone: 'action'},
-      child: {size: 17, lineHeight: 26, tone: 'action'},
+      child: {size: 17, lineHeight: 26, icon: 20, tone: 'action'},
     },
     backLink: {
       weight: 400,
