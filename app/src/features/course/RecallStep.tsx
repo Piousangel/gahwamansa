@@ -118,6 +118,7 @@ export function RecallStep({navigation, route}: {navigation: Nav; route: {params
           <Choice
             key="choice"
             testID="recall-choice"
+            accessibilityLabel={r.question}
             mode="radio"
             look="answer"
             minItemHeight={FIVE_CARD_MIN_H}

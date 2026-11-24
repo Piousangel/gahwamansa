@@ -11,6 +11,10 @@ import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {press, pressCourseNext} from '../testUtils/flow';
 import {copy} from '../src/copy/copy';
+import {ServerError} from '../src/features/types';
+import {createFakeTokenSource, setTokenSourceForTest} from '../src/push/tokenSource';
+import {setPushTokenStoreForTest} from '../src/lib/pushToken';
+import {FIVE_STEPS_NOT_READY} from '../src/api/contract/fiveSteps';
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -266,6 +270,109 @@ test('동의 안 함: ②·③·⑤ 저장 호출 0, 그래도 ④·⑤는 화�
   expect(s.recall).not.toHaveBeenCalled();
   expect(s.answer).not.toHaveBeenCalled();
   expect(s.passOn).not.toHaveBeenCalled();
+});
+
+test('QA-2 H1: ③ 보기를 누른 뒤 넘어가기 → 기록 끊김 → [다시 하기]도 넘어가기(답 저장 0 — 넘긴 날 자녀에게 무표시)', async () => {
+  const s = await home({completedSteps: ['photo', 'recall'], failRecord: 1});
+  await pressCourseNext();
+  await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+  fireEvent.press(screen.getByText('봄'));
+  await press('오늘은 넘어갈게요');
+  await waitFor(() => screen.getByText(copy.errors.offline.title));
+  await press(copy.errors.offline.button);
+  await backHome();
+  expect(s.answer).not.toHaveBeenCalled();
+  expect(s.rec.mock.calls.map(c => c[0])).toEqual(['question', 'question']);
+});
+
+test('QA-2 H1: 보기를 고르지 않고 넘어가기 → 끊김 → [다시 하기]가 동작한다', async () => {
+  const s = await home({completedSteps: ['photo', 'recall'], failRecord: 1});
+  await pressCourseNext();
+  await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+  await press('오늘은 넘어갈게요');
+  await waitFor(() => screen.getByText(copy.errors.offline.title));
+  await press(copy.errors.offline.button);
+  await backHome();
+  expect(s.answer).not.toHaveBeenCalled();
+  expect(s.rec).toHaveBeenCalledTimes(2);
+});
+
+test('QA-2 M1 방어: 서버가 새 단계를 거절(invalid_step)하고 ② 저장이 not_ready 여도 화면은 다음 단계로(저장 없음, 경고만)', async () => {
+  const api = createFakeApi({linked: true, consented: true, realImage: true, completedSteps: ['photo']});
+  const orig = api.recordSessionStep.bind(api);
+  jest.spyOn(api, 'recordSessionStep').mockImplementation(async (step, sec) => {
+    if (step === 'recall' || step === 'pass_on') {
+      throw new ServerError('record_session_step', 'invalid_step', 'P0001');
+    }
+    return orig(step, sec);
+  });
+  jest.spyOn(api, 'saveRecallChoice').mockRejectedValue(new ServerError('save_recall_choice', FIVE_STEPS_NOT_READY));
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  render(<AppRoot api={api} role="parent" restore />);
+  await backHome();
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('recall-question'));
+  fireEvent.press(screen.getByText('참새'));
+  await press('이걸로 할게요');
+  await backHome();
+  expect(within(screen.getByTestId('step-now-row')).getByText('둘 중 고르기')).toBeTruthy();
+  expect(screen.queryByText(copy.errors.server.title)).toBeNull();
+  expect(warn).toHaveBeenCalled();
+  warn.mockRestore();
+});
+
+test('QA-2 M2: 켜짐 첫날 인사는 「하나씩 차례로 해요」(남은 수 세기 없음)', async () => {
+  setPrefsForTest(createPrefs(memoryStore())); // 첫 인사를 아직 안 본 기기
+  await home();
+  expect(screen.getByTestId('first-greeting').props.accessibilityLabel).toBe('안녕하세요, 해님이에요, 하나씩 차례로 해요');
+  expect(screen.queryByText(/세 가지/)).toBeNull();
+  expect(screen.getByTestId('step-wait-pass_on')).toBeTruthy();
+});
+
+test('QA-2 L1: ⑤ 다시 보기는 화면에서 고른 카드도 표시(②와 같게 — 저장 안 된 날도)', async () => {
+  await home({consented: false, completedSteps: ['photo', 'recall', 'question', 'hangul']});
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('pass-on-title'));
+  fireEvent.press(screen.getByText('오늘 사진이 좋아요'));
+  await press('건넬게요');
+  await waitFor(() => screen.getByText(/도장을 찍었어요/));
+  await press('알겠어요');
+  await waitFor(() => screen.getByTestId('course-done-head'));
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-pass_on'));
+  });
+  await waitFor(() => screen.getByTestId('five-review-photo_like'));
+  expect(screen.getByLabelText('고른 답, 오늘 사진이 좋아요')).toBeTruthy();
+});
+
+test('QA-2 L4: ②·⑤ 보기 묶음(radiogroup)은 질문·제목으로 읽힌다', async () => {
+  await home({completedSteps: ['photo']});
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('recall-choice'));
+  expect(screen.getByTestId('recall-choice').props.accessibilityRole).toBe('radiogroup');
+  expect(screen.getByTestId('recall-choice').props.accessibilityLabel).toBe('이 사진을 보면 무엇이 먼저 떠오르세요?');
+  await press('오늘은 넘어갈게요');
+  await backHome();
+  await doQuestion(null);
+  await doHangul(null);
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('pass-on-choice'));
+  expect(screen.getByTestId('pass-on-choice').props.accessibilityLabel).toBe('가족에게 건넬 한 줄을 골라요');
+});
+
+test('QA-1 L1: 켜짐에서 일일 알림을 열면 5단계 순서의 다음 단계(① 뒤 = ② 떠올려 보기)로', async () => {
+  const src = createFakeTokenSource();
+  setTokenSourceForTest(src);
+  setPushTokenStoreForTest(memoryStore());
+  try {
+    await home({completedSteps: ['photo']});
+    await act(async () => {
+      src.emitOpen({kind: 'daily'});
+    });
+    await waitFor(() => screen.getByTestId('recall-question'));
+  } finally {
+    setTokenSourceForTest(null);
+  }
 });
 
 test('⑤ 서버 플래그 꺼짐: 건네도 저장하지 않고 P7 첫 줄도 없다', async () => {

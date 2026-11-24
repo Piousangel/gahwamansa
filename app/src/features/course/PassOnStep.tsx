@@ -67,7 +67,7 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
         }
       }
       const rest = picks.skipped.filter(s => s !== 'pass_on');
-      setPicks({skipped: key ? rest : [...rest, 'pass_on']});
+      setPicks({passOn: key, skipped: key ? rest : [...rest, 'pass_on']});
       if (await finish('pass_on')) {
         if (!wasAll && allStepsDone([...done, 'pass_on'], five)) {
           navigation.replace('CourseDone');
@@ -91,7 +91,7 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
         header={<StepHeader name={name} n={n} review />}
         dock={{primary: {label: copy.review.back, accessibilityHint: copy.nav.back_course_a11y, onPress: toCourseHome}}}>
         <Text role="title">{p.title}</Text>
-        <ReviewCards items={cards.map(c => ({key: c.key, label: c.text, sub: c.sub}))} chosen={content.pass_on_key ?? null} />
+        <ReviewCards items={cards.map(c => ({key: c.key, label: c.text, sub: c.sub}))} chosen={picks.passOn ?? content.pass_on_key ?? null} />
       </DsScreen>
     );
   }
@@ -113,6 +113,7 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
         <Choice
           key="choice"
           testID="pass-on-choice"
+          accessibilityLabel={p.title}
           mode="radio"
           look="answer"
           minItemHeight={FIVE_CARD_MIN_H}

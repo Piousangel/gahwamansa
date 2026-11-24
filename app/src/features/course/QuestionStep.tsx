@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
@@ -41,6 +41,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const [choiceHeights, setChoiceHeights] = useState<number[] | null>(null);
   const choicePush = choiceTop != null && choiceHeights ? foldPush(viewport, choiceTop, choiceHeights, ds.touch.elder.gap, true) : null;
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
+  // 끊김 뒤 [다시 하기]는 실패한 그 행동을 다시(넘어가기였으면 넘어가기 — 답 저장 금지, QA-2 H1)
+  const lastAction = useRef<'confirm' | 'skip'>('confirm');
   const q = content?.question;
   if (!q) {
     return null;
@@ -48,6 +50,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
 
   const confirm = async () => {
     if (!choice || saving) return;
+    lastAction.current = 'confirm';
     setSaving(true);
     setError(null);
     try {
@@ -77,6 +80,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   // 5단계 넘어가기: 답을 저장하지 않고 단계만 '했어요'. 넘긴 날 자녀 카드는 지금처럼 '답 없는 날'(표시 없음)
   const skip = async () => {
     if (saving) return;
+    lastAction.current = 'skip';
     setSaving(true);
     setError(null);
     try {
@@ -124,7 +128,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
       onViewport={setViewport}
       dock={
         error
-          ? stepErrorDock(error, confirm)
+          ? stepErrorDock(error, () => (lastAction.current === 'skip' ? skip() : confirm()))
           : {
               primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm},
               ...(five && !large ? {secondary: {kind: 'text' as const, label: copy.keyboard.skip, disabled: saving, onPress: skip, testID: 'five-skip'}} : {}),

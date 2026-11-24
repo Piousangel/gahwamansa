@@ -45,8 +45,8 @@ export const allStepsDone = (done: readonly StepName[], five: boolean): boolean 
  * 이 기기 화면에서 고른 값(세션). 저장은 동의한 경우만 하지만 ④ 낱말·⑤ 카드는 고른 값을 그대로 쓴다(어르신 본인 화면).
  * day = 고른 날의 day_index(날이 바뀌면 비운다). skipped = 넘어간 단계(다 마친 뒤 홈에서 ④·⑤를 다시 할 수 있게, DECISIONS 5단계 화면)
  */
-export type CoursePicks = {day: number | null; recall: RecallChoice | null; question: 'A' | 'B' | null; skipped: readonly StepName[]};
-export const EMPTY_PICKS: CoursePicks = Object.freeze({day: null, recall: null, question: null, skipped: []});
+export type CoursePicks = {day: number | null; recall: RecallChoice | null; question: 'A' | 'B' | null; passOn: PassOnKey | null; skipped: readonly StepName[]};
+export const EMPTY_PICKS: CoursePicks = Object.freeze({day: null, recall: null, question: null, passOn: null, skipped: []});
 
 /** ②에서 고른 낱말(화면에서 고른 값 → 서버 저장 값 순). 넘겼거나 보기가 없으면 null */
 export function recallWordOf(content: TodayContent | null | undefined, picks: CoursePicks): string | null {

@@ -65,6 +65,11 @@ describe('조사 자동(받침 판정)', () => {
       expect(fillObject(copy.child.recall_line, '떠올린 것', w)).toBeNull();
     }
   });
+  test('QA-2 L3: 겹받침도 받침(닭·흙·삶·값 → 을), 숫자 뒤 한글로 끝나면 그 글자로(7080년대 → 를)', () => {
+    expect(['닭', '흙', '삶', '값'].map(objectParticle)).toEqual(['을', '을', '을', '을']);
+    expect(objectParticle('7080년대')).toBe('를');
+    expect(objectParticle('삶은달걀')).toBe('을');
+  });
   test('조합형(NFD)도 합쳐서 판정한다', () => {
     expect(objectParticle('누룽지'.normalize('NFD'))).toBe('를');
     expect(objectParticle('장작'.normalize('NFD'))).toBe('을');

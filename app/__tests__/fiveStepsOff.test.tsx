@@ -112,6 +112,13 @@ test('꺼짐: 오늘 한 장은 "오늘 낱말"(사진 낱말), "먼저 떠올�
   expect(screen.queryByText('건넨 말')).toBeNull();
 });
 
+test('QA-1 M1 꺼짐: 기록에 5단계 이름(recall)이 섞여 있어도 옛 3단계 기준 — 다 마침 제목과 다음 단계 버튼이 함께 나오지 않는다', async () => {
+  await home({completedSteps: ['photo', 'recall', 'question']});
+  expect(screen.queryByTestId('course-done-title')).toBeNull();
+  expect(within(screen.getByTestId('screen-dock')).getByText('낱말 쓰기')).toBeTruthy();
+  expect(screen.queryByTestId('step-wait-recall')).toBeNull();
+});
+
 test('꺼짐: 알림 열기 순서는 3단계(사진 → 고르기 → 낱말)', () => {
   const c = (done: ('photo' | 'question' | 'hangul')[]) => ({photo: {}, question: {}, completed_steps: done});
   expect(parentStepAfterOpen('daily', c([]))).toBe('PhotoStep');

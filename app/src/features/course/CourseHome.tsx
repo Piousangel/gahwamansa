@@ -149,7 +149,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     );
   }
   const preview = !content.linked;
-  const all = five ? allStepsDone(done, true) : done.length === 3;
+  const all = allStepsDone(done, five); // 꺼짐도 옛 3단계 이름으로 센다(기록에 5단계 이름이 섞여도, QA-1 M1)
   const current = steps.find(s => !done.includes(s.step));
   const go = (route: StepRoute, from: string) => {
     mark(from);

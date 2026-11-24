@@ -50,7 +50,8 @@ const T = {
   failed: '실패했어요',
   fiveOn: '오늘 코스 5단계 켜기(기능 스위치)',
   fiveOff: '오늘 코스 5단계 끄기(3단계로)',
-  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. 서버 계약 병합 전이라 ②·⑤ 저장은 fake 모드에서만 돼요',
+  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. 서버 계약 병합 전이라 fake 모드에서만 켤 수 있어요',
+  fiveRealOff: '서버 준비 뒤 켤 수 있어요(실서버는 ②·⑤ 단계 기록을 아직 받지 않아요)',
 };
 
 type Role = 'parent' | 'child';
@@ -86,26 +87,34 @@ export function DevMenuHost({api, children}: Props) {
   const fake = env.API_MODE === 'fake';
   const dev = (api as Api & {__dev?: FakeDevHooks}).__dev;
   const [five, setFive] = useState(isFeatureOn('fiveSteps'));
-  // 기능 스위치(5단계): 메뉴가 남긴 값을 앱 시작 때 다시 읽는다(이 파일은 production 번들에 없다 — 스위치는 늘 기본 꺼짐)
+  // 기능 스위치(5단계, 리드 결정 #254 M1): 서버 계약(server/five-steps) 병합 전에는 fake 모드에서만 켤 수 있다.
+  // 메뉴가 남긴 값은 앱을 그리기 전에 읽는다(QA-1 L3 — 3단계로 먼저 그렸다가 다시 그리면 알림으로 연 이동을 잃을 수 있다).
+  // 읽는 동안은 아무것도 그리지 않아 시작 스플래시가 그대로 덮는다. 이 파일은 production 번들에 없다 — 스위치는 늘 기본 꺼짐
+  const canFive = allowed && fake;
+  const [flagsReady, setFlagsReady] = useState(!canFive);
   useEffect(() => {
-    if (!allowed) {
+    if (!canFive) {
       return;
     }
     let alive = true;
     defaultStore()
       .getItem(DEV_FEATURE_KEY)
       .then(v => {
-        if (alive && v === 'on' && !isFeatureOn('fiveSteps')) {
+        if (alive && v === 'on') {
           setFeature('fiveSteps', true);
           setFive(true);
-          setAppKey(k => k + 1); // 처음부터 다시 그려 코스 홈이 5행으로
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (alive) {
+          setFlagsReady(true);
+        }
+      });
     return () => {
       alive = false;
     };
-  }, [allowed]);
+  }, [canFive]);
 
   const restart = useCallback((r?: Role) => {
     setVisible(false);
@@ -212,7 +221,7 @@ export function DevMenuHost({api, children}: Props) {
 
   return (
     <DevMenuContext.Provider value={ctx}>
-      {children({appKey, role})}
+      {flagsReady ? children({appKey, role}) : null}
       {allowed && visible ? (
         <Modal visible transparent animationType="none" onRequestClose={() => setVisible(false)}>
           <View style={styles.scrim}>
@@ -278,6 +287,7 @@ export function DevMenuHost({api, children}: Props) {
                 <BigButton
                   variant="secondary"
                   label={five ? T.fiveOff : T.fiveOn}
+                  disabled={!canFive && !five}
                   onPress={() => {
                     const next = !five;
                     setFeature('fiveSteps', next);
@@ -286,7 +296,7 @@ export function DevMenuHost({api, children}: Props) {
                     restart(role);
                   }}
                 />
-                <Text20>{T.fiveHint}</Text20>
+                <Text20>{canFive ? T.fiveHint : T.fiveRealOff}</Text20>
 
                 {/* AP-04: 음원 공개 전 실기기 스피커 청취 확인(lib/bgmAsset RELEASED 전에는 이 실행 동안만) */}
                 <BigButton
