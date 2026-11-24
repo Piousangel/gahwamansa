@@ -66,6 +66,8 @@ function parseChildHistory(data: Record<string, any>): ParentHistory[] {
     items: (p.shared ? (p.answers ?? []) : []).map((a: Record<string, any>) => ({
       answeredDate: a.session_date,
       promptShort: a.prompt_short ?? pairShort(a.option_a, a.option_b),
+      optionA: a.option_a,
+      optionB: a.option_b,
       choiceLabel: a.choice_label,
     })),
   }));

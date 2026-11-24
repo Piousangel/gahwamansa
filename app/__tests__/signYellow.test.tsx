@@ -8,6 +8,7 @@ import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, pressCourseNext} from '../testUtils/flow';
+import {signViolations} from '../testUtils/designRules';
 
 const fs: {readFileSync(p: string, e: string): string; readdirSync(p: string, o: {withFileTypes: true}): {name: string; isDirectory(): boolean}[]} = require('fs');
 const path: {join(...p: string[]): string; relative(a: string, b: string): string} = require('path');
@@ -90,9 +91,10 @@ const inSign = (n: Node) => {
   return false;
 };
 
-test('② 렌더: 첫 화면·코스 홈·P4·설정·자녀 홈에 Sign 밖 노랑이 없다', async () => {
+test('② 렌더: 첫 화면·코스 홈·P4·설정·자녀 홈에 Sign 밖 노랑이 없고 팻말은 화면당 1개 이하', async () => {
   const seen: Record<string, string[]> = {};
-  const look = (k: string) => (seen[k] = yellowNodes(screen.root as unknown as Node, inSign));
+  // R-22 화면당 팻말 1개도 같은 화면에서 센다(예외는 자녀 지난 날 목록 카드만 — __tests__/childPastSignPair)
+  const look = (k: string) => (seen[k] = [...yellowNodes(screen.root as unknown as Node, inSign), ...signViolations(screen.root)]);
   render(<AppRoot api={createFakeApi()} />);
   await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
   look('첫 화면');

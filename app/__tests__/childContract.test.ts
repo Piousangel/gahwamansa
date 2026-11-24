@@ -94,7 +94,7 @@ test('realApi: child_answer_history·send_cheer(p_parent, p_key, p_request_id)·
   );
   const api = createRealApi(sbWith(rpc).sb, social);
   expect(await api.fetchAnswerHistory()).toEqual([
-    {parentId: 'p1', title: '엄마', shared: true, items: [{answeredDate: '2026-11-16', promptShort: '봄과 가을 중', choiceLabel: '가을'}]},
+    {parentId: 'p1', title: '엄마', shared: true, items: [{answeredDate: '2026-11-16', promptShort: '봄과 가을 중', optionA: '봄', optionB: '가을', choiceLabel: '가을'}]}, // C-4: 두 칸(서버 0021 이 이미 줌)
   ]);
   expect(await api.sendCheer('p1', 'thanks_always')).toEqual({ok: false, reason: 'daily_limit'});
   expect(rpc).toHaveBeenCalledWith('send_cheer', {p_parent: 'p1', p_key: 'thanks_always', p_request_id: null}); // id 없이 부르면 null(서버 0059 기본값)

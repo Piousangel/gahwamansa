@@ -2,8 +2,10 @@
 // - R-04 굵기 집계: 700 이상 글자의 역할 이름 수. 예외는 Tag 하나(#204 리드 결정 — Tag 직계 Text 1개만)
 // - R-07 accent 집계: Tag 를 센다(Tag = accent 면). v5 에서 accent 는 inkTitle 과 같은 값(#151515)이라 색 값으로는 제목·본문과 가를 수 없다 —
 //   그래서 accent 쓰임은 Tag(이름 표지)로만 센다. dangerInk 글자가 같은 화면에 있는지도 본다
+// - R-22 팻말 개수: 화면당 Sign 1개. 예외는 D-4(11-24) 자녀 '지난 날' 목록 하나 — 목록 안 카드마다 1개
 import {StyleSheet} from 'react-native';
 import {TAG_NATIVE_ID} from '../src/ui/ds/Tag';
+import {SIGN_NATIVE_ID} from '../src/ui/ds/Sign';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 
 type Node = {type: unknown; props: Record<string, unknown>; children?: unknown[] | null; parent: Node | null};
@@ -101,4 +103,46 @@ export function accentUse(root: unknown): {accent: number; danger: boolean} {
     }
   });
   return {accent, danger};
+}
+
+/** R-22 예외(D-4, DECISIONS 2026-11-24) — 자녀 C5 '지난 날' 목록(testID 정확히 일치)의 날짜 카드만. 여기에 다른 화면을 더하지 않는다(늘리려면 리드 결정 + RULES-V4 R-22 갱신) */
+export const R22_LIST_EXEMPT = {list: 'child-past-list', card: 'child-past-item'} as const;
+
+/**
+ * R-22 화면당 팻말(Sign) 1개 위반 목록. 팻말은 Sign 판의 호스트 노드(nativeID 표지)로 센다.
+ * - 예외 목록(R22_LIST_EXEMPT.list)의 **바로 아래(호스트 직계) 카드**(R22_LIST_EXEMPT.card)에 든 팻말은 '카드당 1개'로 따로 센다.
+ *   카드 안에 카드를 또 넣어도 바깥(직계) 카드 하나로 센다(QA-1 #239 M2 — 한 날짜에 팻말 2개 우회 차단)
+ * - 그 밖(목록 밖, 목록 안이지만 직계 카드 밖, 목록 없이 카드 testID 만 있는 곳)은 화면 전체에서 1개까지
+ */
+export function signViolations(root: unknown): string[] {
+  const out: string[] = [];
+  let loose = 0;
+  const perCard = new Map<Node, number>();
+  walk(root as Node, n => {
+    if (!(typeof n.type === 'string' && n.props.nativeID === SIGN_NATIVE_ID)) {
+      return;
+    }
+    // 가장 바깥 목록까지 올라가 그 목록의 직계 카드로 센다(#239 재확인 L-a — 카드 안에 목록·카드를 다시 넣는 우회 차단)
+    let below: Node = n; // 지금 본 호스트 조상의 바로 아래 호스트 노드
+    let card: Node | null = null;
+    for (let p = n.parent; p; p = p.parent) {
+      if (typeof p.type !== 'string') {
+        continue; // 호스트 노드만(합성 컴포넌트가 같은 testID 를 물려 두 번 세지 않게)
+      }
+      if (p.props.testID === R22_LIST_EXEMPT.list) {
+        card = below !== n && below.props.testID === R22_LIST_EXEMPT.card ? below : null; // 더 바깥 목록이 있으면 덮어쓴다
+      }
+      below = p;
+    }
+    if (card) {
+      perCard.set(card, (perCard.get(card) ?? 0) + 1);
+      return;
+    }
+    loose += 1;
+  });
+  if (loose > 1) {
+    out.push(`화면에 팻말 ${loose}개(1개까지)`);
+  }
+  [...perCard.values()].forEach((k, i) => k > 1 && out.push(`지난 날 카드 ${i + 1}에 팻말 ${k}개(카드당 1개까지)`));
+  return out;
 }
