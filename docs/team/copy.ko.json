@@ -472,7 +472,8 @@
     "title": "가족이 보낸 응원이에요",
     "button": "알겠어요",
     "title_many": "응원이 {n}개 왔어요",
-    "unknown": "가족이 응원을 보냈어요"
+    "unknown": "마음을 담아 보냈어요",
+    "unknown_more": "그 밖에 응원이 {n}개 더 왔어요"
   },
   "disconnected": {
     "parent": {

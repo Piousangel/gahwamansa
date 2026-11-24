@@ -8,9 +8,10 @@ import {isCheerKey, type MyCheers} from '../../api/contract/cheers';
 import type {Api} from '../types';
 
 // P8 응원 도착(시안 P8_cheer): 코스 홈을 열면 안 읽은 응원(get_my_cheers)을 대화상자(U0 Dialog)로 한 번 보여 준다.
-// - 아는 키(api/contract/cheers.ts)는 그 문장, 모르는 키(빈 키 포함)는 기본 문장(copy.cheer.unknown) 한 줄로 보여 준다.
+// - 아는 키(api/contract/cheers.ts)는 그 문장, 모르는 키(빈 키 포함)는 기본 줄 하나로 보여 준다.
 //   서버가 이 앱보다 먼저 새 키를 열어도 한마디를 놓치지 않게(DECISIONS 11-24 키 확대 배포 순서 ①). 모르는 키의 원래 문장은 보이지 않는다.
-//   모르는 키가 여럿이어도 기본 문장은 한 줄(같은 줄 되풀이 금지), 제목 개수는 받은 한마디 전체.
+//   모르는 키만: copy.cheer.unknown(제목과 겹치지 않는 말, 개수는 제목이 말함). 아는 키와 섞임: copy.cheer.unknown_more('그 밖에 {n}개 더').
+//   제목 개수는 받은 한마디 전체.
 // - 바깥을 눌러도 닫히지 않고 "알겠어요"(·안드로이드 뒤로)로만 닫힌다 = 읽음 처리.
 // - 닫히면 포커스를 코스 홈 제목으로 돌려준다(R12, returnFocusRef). 그러려면 닫힌 뒤에도 Dialog 를 visible=false 로 남겨 둔다.
 // - 받아 오지 못하면 조용히 아무것도 하지 않는다(장식이라 코스를 막지 않음).
@@ -43,7 +44,9 @@ export function CheerDialog({api, enabled, returnFocusRef}: {api: Api; enabled: 
   }, [api, enabled]);
 
   const known = batch.flatMap(c => (isCheerKey(c.message_key) ? [copy.cheers[c.message_key]] : []));
-  const lines = known.length < batch.length ? [...known, copy.cheer.unknown] : known;
+  const unknown = batch.length - known.length;
+  const extra = unknown === 0 ? [] : known.length === 0 ? [copy.cheer.unknown] : [copy.cheer.unknown_more.split('{n}').join(String(unknown))];
+  const lines = [...known, ...extra];
   const close = () => {
     setOpen(false);
     if (audio().isSpeaking()) {

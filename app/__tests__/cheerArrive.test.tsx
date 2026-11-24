@@ -46,26 +46,37 @@ test('응원 여러 개: "응원이 3개 왔어요" + 글 3줄', async () => {
 });
 
 // 키 확대 배포 순서 ①(DECISIONS 11-24): 서버가 이 앱이 모르는 키를 먼저 열어도 한마디를 놓치지 않는다.
-// 모르는 키는 문장 대신 기본 문장(copy.cheer.unknown) 한 줄로 보여 주고, 읽음 처리는 "알겠어요" 뒤에만.
-const UNKNOWN = '가족이 응원을 보냈어요';
+// 모르는 키는 문장 대신 기본 줄 하나로 보여 주고, 읽음 처리는 "알겠어요" 뒤에만.
+// - 모르는 키만: 제목(가족이 보낸 응원이에요 / 응원이 {n}개 왔어요)과 겹치지 않는 '마음을 담아 보냈어요'(copy.cheer.unknown)
+// - 아는 키와 섞임: 아는 문장 아래 '그 밖에 응원이 {n}개 더 왔어요'(copy.cheer.unknown_more) — 제목 개수와 본문이 맞아떨어지게
+const ONLY = '마음을 담아 보냈어요';
+// 본문은 Text 한 덩어리(줄마다 한 문장, \n 으로 이음). 그 안의 한 줄로 덩어리를 찾아 줄 단위로 나눈다
+const bodyLines = (anchor: RegExp) => String(screen.getByText(anchor).props.children).split('\n');
 
-test('모르는 키만 오면: 대화상자에 기본 문장, 알겠어요 전에는 읽음 처리하지 않는다', async () => {
+test('모르는 키만 1개: 제목과 다른 기본 문장, 알겠어요 전에는 읽음 처리하지 않는다', async () => {
   const {mark} = await home({cheers: ['miss_you']}); // 확대 뒤 새 키(이 앱 버전은 모름)
   await waitFor(() => screen.getByText('가족이 보낸 응원이에요'));
-  expect(screen.getByText(UNKNOWN)).toBeTruthy();
+  expect(bodyLines(new RegExp(ONLY))).toEqual([ONLY]);
+  expect(screen.queryByText(/가족이 응원을 보냈어요/)).toBeNull(); // 제목과 같은 말 되풀이 금지(읽어 주기에서 두 번 들림)
   expect(mark).not.toHaveBeenCalled(); // 보기 전에 읽음 처리 금지
   await press('알겠어요');
-  await waitFor(() => expect(screen.queryByText(UNKNOWN)).toBeNull());
+  await waitFor(() => expect(screen.queryByText(ONLY)).toBeNull());
   expect(mark).toHaveBeenCalledWith(['cheer-1']);
 });
 
-test('아는 키+모르는 키 섞임: 아는 문장은 그대로, 모르는 키 여럿은 기본 문장 한 줄, 개수는 전체', async () => {
+test('모르는 키만 2개: 제목은 "응원이 2개 왔어요", 본문은 기본 문장 한 줄, 읽음은 둘 다', async () => {
+  const {mark} = await home({cheers: ['miss_you', 'call_soon']});
+  await waitFor(() => screen.getByText('응원이 2개 왔어요'));
+  expect(bodyLines(new RegExp(ONLY))).toEqual([ONLY]);
+  expect(mark).not.toHaveBeenCalled();
+  await press('알겠어요');
+  expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2']);
+});
+
+test('아는 키+모르는 키 섞임: 아는 문장 그대로 + "그 밖에 응원이 2개 더 왔어요", 개수는 전체', async () => {
   const {mark} = await home({cheers: ['miss_you', 'peaceful_day', 'call_soon']});
   await waitFor(() => screen.getByText('응원이 3개 왔어요'));
-  expect(screen.getByText(/오늘도 편안한 하루 보내세요/)).toBeTruthy();
-  expect(screen.getAllByText(new RegExp(UNKNOWN))).toHaveLength(1); // 본문 한 덩어리
-  const body = screen.getByText(/오늘도 편안한 하루 보내세요/);
-  expect(String(body.props.children).split(UNKNOWN)).toHaveLength(2); // 같은 줄을 되풀이하지 않는다
+  expect(bodyLines(/오늘도 편안한/)).toEqual(['오늘도 편안한 하루 보내세요', '그 밖에 응원이 2개 더 왔어요']);
   expect(mark).not.toHaveBeenCalled();
   await press('알겠어요');
   expect(mark).toHaveBeenCalledWith(['cheer-1', 'cheer-2', 'cheer-3']); // 확인한 묶음 전체
@@ -73,7 +84,7 @@ test('아는 키+모르는 키 섞임: 아는 문장은 그대로, 모르는 키
 
 test('빈 키도 버리지 않고 기본 문장으로 보여 준다', async () => {
   const {mark} = await home({cheers: ['']});
-  await waitFor(() => screen.getByText(UNKNOWN));
+  await waitFor(() => screen.getByText(ONLY));
   expect(mark).not.toHaveBeenCalled();
   await press('알겠어요');
   expect(mark).toHaveBeenCalledWith(['cheer-1']);
