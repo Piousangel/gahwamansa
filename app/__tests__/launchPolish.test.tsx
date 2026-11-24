@@ -47,6 +47,12 @@ async function home(opts: FakeOptions = {}) {
   return api;
 }
 
+// 화면 글(Text) 순서(위 → 아래). texts 중 화면에 있는 것만 처음 나온 순서로
+function textOrder(texts: string[]): string[] {
+  const all = screen.UNSAFE_root.findAll(n => (n.type as unknown) === 'Text' && texts.includes([n.props.children].flat().join('')));
+  return [...new Set(all.map(n => [n.props.children].flat().join('')))];
+}
+
 // 본문에서 testID 순서(위 → 아래)
 function order(ids: string[]): string[] {
   const all = screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && ids.includes(n.props.testID) && typeof n.type === 'string');
@@ -64,6 +70,7 @@ test('① 사진 보기: 회상 질문은 첫 질문 1개만 보이고, 읽어 �
   await press('읽어 주세요');
   await waitFor(() => expect(speak).toHaveBeenCalled());
   expect(speak).toHaveBeenLastCalledWith(recall[0]);
+  expect(speak).not.toHaveBeenCalledWith(expect.stringContaining(recall[1])); // 둘째 질문은 어느 호출에서도 읽지 않는다
 });
 
 test('① 보기 전용(다시 보기)도 첫 질문 1개만', async () => {
@@ -83,10 +90,13 @@ test('③ 둘 중 고르기: 단계 제목과 질문 사이에 머리줄 「요�
   expect(order(['step-header', 'p5-headline', 'p5-title', 'choice-group'])).toEqual(['step-header', 'p5-headline', 'p5-title', 'choice-group']);
 });
 
-test('③ 보기 전용(다시 보기)에도 같은 머리줄', async () => {
-  await home({completedSteps: ['photo', 'question']});
+test('③ 보기 전용(다시 보기)에도 같은 머리줄, 질문보다 앞', async () => {
+  const api = await home({completedSteps: ['photo', 'question']});
   await press(/둘 중 고르기, 했어요/);
   await waitFor(() => screen.getByText('요즘 마음 가는 쪽을 골라요'));
+  // 위 → 아래 글 순서: 머리줄이 질문(제목)보다 앞
+  const prompt = (await api.getTodayContent())!.question!.prompt!;
+  expect(textOrder(['요즘 마음 가는 쪽을 골라요', prompt])).toEqual(['요즘 마음 가는 쪽을 골라요', prompt]);
 });
 
 test('코스 홈 인사: 「하나씩 차례로 해요」(옛 「세 가지를 차례로 해요」 없음)', async () => {
