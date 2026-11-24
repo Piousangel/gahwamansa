@@ -646,3 +646,8 @@
 - 쉼: 라이브러리가 SSML·무음 발화를 열어 주지 않는다. 그래서 문장이 끝난 뒤 JS에서 `TTS_TUNING.sentencePauseMs`(400ms)를 기다린다. 근거는 언어 경계 쉼이 고령자 회상을 돕는다는 Wingfield 1999다. 빠르기(Android 0.9·iOS 0.45)와 높낮이(1.0)는 유지하고, 값은 `engines.ts TTS_TUNING` 한 곳에서 바꾼다
 - 버린 안: 빠르기를 더 늦추기(지나치게 느리면 이해가 떨어지는 연구 있음), pitch 낮추기(직접 근거 없음, 음색 왜곡), 네이티브 패치로 무음 발화(새 설치·패치 금지)
 - 확정은 오너 S25 듣기 10문장(docs/team/dev/2026-11-24-tts-reading.md 6절)과 QA-04
+
+## 2026-11-25 응원 키 검사 한 곳 — cheer_key_ok + 앱 계약 정본(DV-2, 0060)
+- 맥락: 키 확대 ②(서버). 같은 4키 목록이 send_cheer·cheer_texts check·이벤트 정규식·load-push-copy·앱 계약·이벤트 계약 여섯 곳에 복사돼 있었다.
+- 선택: 서버는 `public.cheer_key_ok(text)`(immutable, 목록은 함수 본문) 하나를 세 곳이 쓴다. 정본은 `app/src/api/contract/cheers.ts` `CHEER_KEYS`(17키 = 기존 4 + 새 13, ans_seen 제외). load-push-copy·events.ts 는 그 상수를 import, 마이그레이션 목록은 jest 가 대조. 자녀 시트에 보일 키는 `CHILD_SHEET_KEYS`(새 시트 레인 전까지 지금 4개).
+- 버린 안: cheer_texts 행으로 검사(문장 적재 전 보내기 전부 실패), 숨김 여부를 서버 칸(hidden)으로(시트 목록 원본이 둘이 됨 — 앱이 정함), 응원 문장을 마이그레이션에 시드(법률 리뷰 뒤 load-push-copy 적재 원칙과 어긋남).

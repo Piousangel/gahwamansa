@@ -1,10 +1,10 @@
 import {OfflineError, ServerError} from './types';
-import {CHILD_CHEER_KEYS, ChildSummary, PARENT_TITLES} from './types';
+import {ChildSummary, PARENT_TITLES} from './types';
 import type {
   PeekResult,
   Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
 } from './types';
-import type {MyCheers} from '../api/contract/cheers';
+import {isCheerKey, type MyCheers} from '../api/contract/cheers';
 import type {HistoryDay} from '../api/contract/history';
 import type {FailReason} from '../copy/copy';
 import {pairShort} from '../lib/childFormat';
@@ -260,7 +260,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         failCheer -= 1;
         throw new OfflineError('offline');
       }
-      if (!(CHILD_CHEER_KEYS as readonly string[]).includes(key)) {
+      if (!isCheerKey(key)) { // 서버 cheer_key_ok 와 같은 전체 목록(시트에서 숨긴 키도 받음)
         return {ok: false, reason: 'invalid_key'};
       }
       if (opts.cheerResult) {

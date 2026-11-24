@@ -35,8 +35,9 @@ export type ChildSummary = {
 // answeredDate = session_date, promptShort = 서버 prompt_short("봄과 가을 중")
 export type HistoryItem = {answeredDate: string; promptShort: string; choiceLabel: string};
 export type ParentHistory = {parentId: string; title: string; shared: boolean; items: HistoryItem[]};
-// 응원 키(send_cheer 0020): 계약 한 곳(api/contract/cheers.ts)의 상수를 그대로 쓴다. CHILD_CHEER_KEYS 는 자녀 화면 호환 이름.
-export {CHEER_KEYS as CHILD_CHEER_KEYS} from '../api/contract/cheers';
+// 응원 키(send_cheer 0060 cheer_key_ok): 계약 한 곳(api/contract/cheers.ts)의 상수를 그대로 쓴다.
+// CHILD_CHEER_KEYS 는 자녀 시트에 보이는 키(CHILD_SHEET_KEYS)의 호환 이름 — 서버가 받는 전체 목록은 CHEER_KEYS.
+export {CHILD_SHEET_KEYS as CHILD_CHEER_KEYS} from '../api/contract/cheers';
 export type {CheerKey};
 export const CHEER_FAIL_REASONS = ['invalid_key', 'invalid_target', 'disconnected', 'daily_limit'] as const;
 export type SendCheerResult =

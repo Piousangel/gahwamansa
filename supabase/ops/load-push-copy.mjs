@@ -9,6 +9,8 @@ import {fileURLToPath} from 'node:url';
 import {confirmTarget} from './target-check.mjs';
 import {opsTarget} from './ops-auth.mjs';
 import {execFileSync} from 'node:child_process';
+// 응원 키 정본은 앱 계약 한 곳(0060 cheer_key_ok 와 cheersContract.test.ts 가 대조). .ts 직접 import = Node 22.18+ 타입 제거(scripts/tts 와 같음)
+import {CHEER_KEYS} from '../../app/src/api/contract/cheers.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const copy = JSON.parse(readFileSync(join(root, 'docs/team/copy.ko.json'), 'utf8'));
@@ -24,8 +26,7 @@ const rows = [
   // 0052 첫 답(자녀, 평생 1회). 자리값은 {호칭}만 — 답 내용·시각을 넣지 않는다(U11 예외 조건). 원본은 라이터 push.first_answer.
   {kind: 'parent_first_answer', title: p.first_answer?.title, body: p.first_answer?.body, body_fallback: null, body_many: null, optional: true},
 ];
-const cheerKeys = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'];
-const cheers = cheerKeys.map((k) => ({message_key: k, text: copy.cheers?.[k]}));
+const cheers = CHEER_KEYS.map((k) => ({message_key: k, text: copy.cheers?.[k]}));
 
 const problems = [];
 // 라이터 문구가 아직 없는 선택 종류는 빼고 적재한다(서버는 문구가 없으면 그 종류를 보내지 않음)
@@ -42,6 +43,8 @@ for (const r of rows) {
   for (const f of ['body', 'body_fallback', 'body_many']) if ((r[f] ?? '').length > 60) problems.push(`push.${r.kind}.${f}: 60자 초과`);
 }
 for (const c of cheers) if (!c.text || c.text.length > 60) problems.push(`cheers.${c.message_key}: 없거나 60자 초과`);
+// copy 에만 있고 계약에 없는 키는 서버 check(cheer_key_ok)가 거부한다 — 적재 전에 멈춘다
+for (const k of Object.keys(copy.cheers ?? {})) if (!CHEER_KEYS.includes(k)) problems.push(`cheers.${k}: 계약(CHEER_KEYS)에 없는 키`);
 // 금지어(WR-02·법률 체크리스트 #10): 혜택·유료·재방문 재촉·광고 표시가 들어가면 적재하지 않는다
 // 서버 check(0046 push_text_clean)와 같은 목록 + 유료(서버는 문구 검사 대상 아님)
 const BANNED = ['혜택', '할인', '이벤트', '무료', '쿠폰', '적립', '포인트', '경품', '광고', '다시 오세요', '유료'];

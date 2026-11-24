@@ -35,7 +35,11 @@
 - 연결(redeem) 때는 기본 호칭이 겹쳐도 막지 않는다. 그래서 child_summary에 같은 title이 둘 보일 수 있다 → 앱은 겹친 어르신에게 호칭 바꾸기를 권한다. 기존 `set_parent_title(p_title)`(가족 기본값)은 그대로.
 
 ### send_cheer(p_parent uuid, p_key text, p_request_id uuid default null) → jsonb  (0020, 0059 요청 id)
-- 키 4개만: `love_you`·`warm_day`·`thanks_always`·`peaceful_day`(copy-v3-confirmed 6절 확정 4개).
+- 키는 `public.cheer_key_ok(text)` 한 곳(0060): 기존 4개(`love_you`·`warm_day`·`thanks_always`·`peaceful_day`, 지우지도 문장을 바꾸지도 않음) + 새 13개(`ans_me_too`·`ans_tell_more`·`old_story`·`photo_memory`·`childhood_story`·`call_soon`·`visit_soon`·`eat_together`·`love`·`miss_you`·`thought_of_you`·`doing_well`·`meal_thought`, 라이터 docs/team/copy/2026-11-24-cheer-expansion.md 3절 − `ans_seen`(DECISIONS 11-24 D-5)) = 17개.
+  - 같은 함수를 `cheer_texts.message_key` check·이벤트 `message_key`(event_prop_ok)도 쓴다. 목록은 함수 본문(행 검사 아님 — 응원 문장 적재 전에도 보내기가 된다).
+  - 정본은 앱 계약 `app/src/api/contract/cheers.ts` `CHEER_KEYS` 하나. `load-push-copy.mjs`·`events.ts`는 그 상수를 가져다 쓰고, 마이그레이션 목록은 `cheersContract.test.ts`가 마지막 `cheer_key_ok` 정의를 읽어 대조한다. 다음 확대: 새 마이그레이션의 `cheer_key_ok` + `CHEER_KEYS` + copy.ko.json `cheers.*` 세 곳(시험이 어긋남을 잡는다).
+  - 문장이 없는 키(적재 전)의 응원 알림은 `body_many`(n=1)로 나간다 — 보내기·알림 모두 실패하지 않는다. 자녀 시트에 보일 키는 앱 `CHILD_SHEET_KEYS`(서버는 숨긴 키도 받는다).
+  - **배포 순서**: 어르신 앱 ①(#236, 모르는 키 기본 문장)이 스토어에 나간 뒤에만 staging/production에 0060 반영(DECISIONS 11-24).
 - `{ok:true, cheer_id}` | `{ok:false, reason:'invalid_key'|'invalid_target'|'disconnected'|'daily_limit'}`.
 - 하루 한도(가정): 같은 자녀→같은 어르신 KST 하루 **2개**. 정책 확정 시 상수만 변경.
 - **0059 재시도 멱등**: 앱은 응원 버튼을 누를 때 uuid를 한 번 만들어 `p_request_id`로 보내고, 시간 초과로 다시 보낼 때 **같은 값**을 쓴다. 같은 자녀의 같은 id가 이미 있으면 새로 넣지 않고 그 응원의 `{ok:true, cheer_id}`(한도 검사보다 먼저 — 재시도가 `daily_limit`으로 보이지 않음). id를 안 보내면 지금과 같다(하위 호환).
@@ -43,7 +47,7 @@
   - **요청 id 계약**(리뷰 L2): id는 버튼 한 번마다 새로 만들고, 같은 시간 초과 재시도 안에서만 다시 쓴다. 같은 id로 **다른 어르신·다른 문장**을 보내면 서버는 처음 응원의 성공을 그대로 돌려준다(조용히 무시, 새 응원 없음) — 앱 버그일 때만 생기므로 지금은 `request_conflict`를 두지 않는다. 응원 행이 31일 파기로 지워진 뒤 같은 id는 새 응원이 된다(한도 2개는 그대로).
   - 연결이 끊긴 뒤의 재시도(리뷰 L3): 대상 확인(`invalid_target`·`disconnected`)이 재시도 확인보다 앞이라, 첫 요청이 성공한 뒤 어르신 연결이 끊기면 재시도는 `disconnected`로 보인다(응원은 이미 한 번 생김, 드묾). 앱은 이 경우를 "보냈어요"로 볼 필요 없음 — 연결 끊김 상태 화면이 우선.
 - 테이블 직접 insert는 막혔다(0020). 자녀는 읽음 여부(read_at)를 볼 수 없다.
-- **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 이 4개로 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
+- **키 값은 서버가 기준**(ARCHITECTURE.md): 앱 copy의 cheers 키를 `CHEER_KEYS`와 같게 맞춘다(옛 키 take_your_time·curious_answer·want_story·stay_healthy·will_call은 서버가 거부).
 ```ts
 type CheerKey = 'love_you' | 'warm_day' | 'thanks_always' | 'peaceful_day';
 // 호출: sb.rpc('send_cheer', { p_parent: string /* parent_id */, p_key: CheerKey })
@@ -445,6 +449,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0056 | 일일 알림 대상에서 답 공유 동의 조건 제거(알림 받기 동의만) | 브랜치 server-daily-push-consent | 미반영 |
 | 0057 | 연결 전·옛 익명 계정 90일 자동 정리(account_purged) | 브랜치 server-stale-anon-purge | 미반영 |
 | 0058 | 계정 삭제 때 프로필 없이 쌓인 이용 기록(device_key)도 삭제 | 브랜치 server-delete-events-by-device(0057 위) | 미반영 |
+| 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | 브랜치 server/cheer-keys-13 | 미반영(어르신 앱 ① 스토어 출시 뒤) |
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
 
