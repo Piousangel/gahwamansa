@@ -1,0 +1,54 @@
+# ds Sheet 끌기 실측(C-3, PR #232): 연결된 자녀 홈에서 시트를 연다. 끌기·캡처는 adb input motionevent 로 이어서 한다(README: docs/team/qa/evidence/2026-11-24-sheet-drag/).
+# 전제: fake API 가 '자녀·연결됨·동의'로 시작(selectApi 의 createFakeApi() 인자를 잠깐 바꿈, 커밋하지 않음 — cheer-sheet.yaml 머리 주석).
+# SHEET: cheer(응원 시트) | title(설정 > 부르는 이름 시트) | paid(지난 날 > 이야기 주제 추천 → 곧 유료 시트)
+# 실행 예: maestro --device emulator-5556 test -e SHEET=cheer app/e2e/audit/sheet-drag-open.yaml
+appId: com.bumojasik.app.staging
+name: 시트 끌기 실측 — 시트 열기
+tags:
+  - audit
+---
+- launchApp
+- runFlow:
+    file: ../common/dismiss-system-dialogs.yaml
+- extendedWaitUntil:
+    visible: '이 휴대폰은 누구 거예요\?'
+    timeout: 60000
+- tapOn: '자녀 휴대폰이에요.*'
+- runFlow:
+    when:
+      true: ${SHEET == 'cheer'}
+    commands:
+      - extendedWaitUntil:
+          visible: '응원 보내기'
+          timeout: 20000
+      - tapOn: '응원 보내기'
+      - extendedWaitUntil:
+          visible: '어떤 말을 보낼까요\?'
+          timeout: 10000
+- runFlow:
+    when:
+      true: ${SHEET == 'title'}
+    commands:
+      - extendedWaitUntil:
+          visible: '설정'
+          timeout: 20000
+      - tapOn: '설정'
+      - extendedWaitUntil:
+          visible: '부르는 이름.*'
+          timeout: 10000
+      - tapOn: '부르는 이름.*'
+- runFlow:
+    when:
+      true: ${SHEET == 'paid'}
+    commands:
+      - extendedWaitUntil:
+          visible: '지난 날'
+          timeout: 20000
+      - tapOn: '지난 날'
+      - scrollUntilVisible:
+          element:
+            id: 'child-past-topic'
+          direction: DOWN
+      - tapOn:
+          id: 'child-past-topic'
+- waitForAnimationToEnd

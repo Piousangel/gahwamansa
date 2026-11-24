@@ -29,14 +29,18 @@ async function openSheet() {
   await waitFor(() => screen.getByText('어떤 말을 보낼까요?'));
 }
 
-test('시트 머리: 제목(머리글) + 닫기 48×48 알약, 보조 한 줄, 손잡이 막대 없음(V14 ①)', async () => {
+test('시트 머리: 손잡이(끌기, 오너 C-3 — V14 ① 바뀜) + 제목(머리글) + 닫기 48×48 알약, 보조 한 줄', async () => {
   await openSheet();
   expect(screen.getByText('하나를 누르면 바로 보내요')).toBeTruthy();
   const close = screen.getByRole('button', {name: '닫기'});
   const st = StyleSheet.flatten(typeof close.props.style === 'function' ? close.props.style({pressed: false}) : close.props.style);
   expect(st.minWidth).toBeGreaterThanOrEqual(48);
   expect(st.minHeight).toBeGreaterThanOrEqual(48);
-  expect(screen.queryByTestId('sheet-handle', {includeHiddenElements: true})).toBeNull();
+  // 칸이 하나인 응원 시트: 손잡이는 화면 읽기에서 닫기 버튼(두 번 누르기)
+  const handle = screen.getByTestId('sheet-handle');
+  expect(handle.props.accessibilityRole).toBe('button');
+  expect(handle.props.accessibilityLabel).toBe('시트 손잡이');
+  expect(handle.props.accessibilityHint).toBe('두 번 누르면 닫혀요');
   expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).maxHeight).toBe(Math.floor(640 * SHEET_MAX_RATIO));
   await act(async () => fireEvent.press(close));
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
