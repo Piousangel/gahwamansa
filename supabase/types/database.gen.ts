@@ -616,6 +616,9 @@ isOneToOne: false
 "anon_last_activity":
 { Args: { "p_user": string }; Returns: string
                            },
+"cheer_key_ok":
+{ Args: { "p_key": string }; Returns: boolean
+                           },
 "child_answer_history":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

@@ -155,12 +155,20 @@ test('네이티브 래퍼: 카카오 Cancelled·AccessDenied 는 취소, 네트�
 });
 
 test('네이티브 래퍼: 구글 취소 응답·취소 코드는 cancelled, 성공은 ID 토큰', async () => {
-  Google.GoogleSignin.signIn.mockResolvedValueOnce({type: 'cancelled', data: null});
-  expect(await nativeSocialAuth.google()).toBe('cancelled');
-  Google.GoogleSignin.signIn.mockRejectedValueOnce({code: 'SIGN_IN_CANCELLED'});
-  expect(await nativeSocialAuth.google()).toBe('cancelled');
-  expect(await nativeSocialAuth.google()).toEqual({idToken: 'google-id-token'});
-  expect(Google.GoogleSignin.configure).toHaveBeenCalledWith({webClientId: expect.stringContaining('.apps.googleusercontent.com')});
+  // configure 는 모듈에서 처음 init 할 때 한 번만 불린다. 이 테스트가 앞 테스트(카카오)가 남긴 호출 기록에 기대지 않게
+  // 새 모듈(처음 init 전)로 확인한다(DV-1: jest clearMocks 로 테스트 간 호출 기록이 비워진다)
+  let auth: SocialAuth = nativeSocialAuth;
+  let G = Google;
+  jest.isolateModules(() => {
+    auth = require('../src/features/socialAuth').nativeSocialAuth;
+    G = require('@react-native-google-signin/google-signin');
+  });
+  G.GoogleSignin.signIn.mockResolvedValueOnce({type: 'cancelled', data: null});
+  expect(await auth.google()).toBe('cancelled');
+  G.GoogleSignin.signIn.mockRejectedValueOnce({code: 'SIGN_IN_CANCELLED'});
+  expect(await auth.google()).toBe('cancelled');
+  expect(await auth.google()).toEqual({idToken: 'google-id-token'});
+  expect(G.GoogleSignin.configure).toHaveBeenCalledWith({webClientId: expect.stringContaining('.apps.googleusercontent.com')});
 });
 
 test('계정 지우기: 카카오 자녀면 카카오 연결 끊기 + SDK 로그아웃 + Supabase 로그아웃', async () => {

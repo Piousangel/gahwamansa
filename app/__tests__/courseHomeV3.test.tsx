@@ -5,14 +5,14 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {kstDateLine, stampsFromDates} from '../src/features/course/stamps';
 import {press, pressCourseNext} from '../testUtils/flow';
-import {warmAppRoot} from '../testUtils/warm';
+import {setupWarmAppRoot} from '../testUtils/warm';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
 afterEach(() => setWeekStripForO6(null));
 
 // 부하 때 흔들림(리드 11-20): 첫 AppRoot 렌더 테스트(미연결 띠)가 콜드 스타트를 혼자 떠안았다 → 파일 시작 때 예열
-beforeAll(warmAppRoot);
+setupWarmAppRoot();
 
 test('날짜 줄: KST 기준 "11월 20일 금요일"', () => {
   expect(kstDateLine(new Date('2026-11-20T01:00:00Z'))).toBe('11월 20일 금요일');

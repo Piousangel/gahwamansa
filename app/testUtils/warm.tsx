@@ -6,13 +6,29 @@ import {createFakeApi} from '../src/features/fakeApi';
 /**
  * 파일 시작 때 AppRoot 를 한 번 그렸다 내려 콜드 스타트(모듈 첫 로드·첫 렌더, 부하 때 4~6초)를 미리 치른다(PR #101 리뷰).
  * 그러지 않으면 파일의 첫 테스트만 이 비용을 혼자 떠안아 부하 때 대기 시간(asyncUtilTimeout 10초)을 넘겨 흔들린다.
- * 쓰는 법: beforeAll(warmAppRoot). 대기 시간은 전역 값 그대로(#77 규칙 — 테스트마다 timeout 을 주지 않는다)
+ * 쓰는 법: 파일 맨 위에서 setupWarmAppRoot() 한 줄(안에서 beforeAll + WARM_TIMEOUT_MS 를 등록한다). 테스트 본문의 대기 시간은 전역 값 그대로(#77 규칙 — 테스트마다 timeout 을 주지 않는다).
+ *
+ * WARM_TIMEOUT_MS(DV-1, 2026-11-25): 예열 훅만 따로 길게. 예열이 치르는 것은 첫 렌더 경로의 첫 로드·첫 실행 비용이라
+ * 변환 캐시가 없을 때(새 worktree 는 경로가 달라 캐시를 못 쓴다) CPU 경합에 비례해 늘어난다 — 부하 재현(--no-cache 4벌 + 바쁜 루프 16개)에서
+ * 전역 hook 제한 20초를 넘겨 'Exceeded timeout of 20000 ms for a hook' 으로 그 파일의 모든 테스트가 실패했다.
+ * 기다리는 것이 앱 동작이 아니라 한 번뿐인 적재 비용이므로 그 비용을 받는 자리(예열)만 늘리고, 테스트 본문은 그대로 짧게 둔다.
  *
  * 쓰지 말 것(PR #102 리뷰 L1): 시작 링크(초대 링크)·첫 화면 모션·스플래시·알림으로 열기를 검사하는 파일.
  * 예열 렌더가 시작 링크 처리·첫 실행 상태를 한 번 써 버려, 그 파일의 첫 테스트가 '처음 연 앱'을 보지 못한다.
  */
-export async function warmAppRoot() {
+const WARM_TIMEOUT_MS = 120000;
+
+// 예열 함수·제한 값은 내보내지 않는다(QA-2 M1, #245 후속): 테스트 파일이 beforeAll 에 직접 넘기면
+// 제한을 빠뜨리거나(20초) 다른 값을 줄 수 있었다 → 등록 방법을 setupWarmAppRoot() 하나로 묶는다.
+// 재발 검사: __tests__/mockIsolation.test.ts(테스트 파일이 예열 함수를 직접 부르면 실패)
+async function warmAppRoot() {
   const r = render(<AppRoot api={createFakeApi()} />);
-  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'));
+  await waitFor(() => screen.getByText('이 휴대폰은 누구 거예요?'), {timeout: WARM_TIMEOUT_MS - 5000});
   r.unmount();
+}
+
+/** 이 파일의 테스트 전에 한 번 예열한다(beforeAll, 제한 WARM_TIMEOUT_MS). 테스트 파일의 맨 위(최상위)에서 부른다.
+ * 이름이 use… 가 아닌 이유: React 훅이 아닌데 use 로 시작하면 eslint react-hooks/rules-of-hooks 가 최상위 호출을 오류로 막는다. */
+export function setupWarmAppRoot() {
+  beforeAll(warmAppRoot, WARM_TIMEOUT_MS);
 }

@@ -3,6 +3,8 @@
 // 근거: migrations/20261116000022_events.sql·…029_events_funnel.sql·…034_events_build1.sql, dev-server-notes 3절.
 // 앱은 쓰기만, 글자 내용(입력 낱말 등)·번호 값은 절대 싣지 않는다.
 
+import {CHEER_KEYS} from './cheers';
+
 export const EVENT_NAMES = [
   'app_first_open', 'child_signup_completed', 'invite_code_issued',
   'parent_code_redeemed', 'parent_code_failed',
@@ -32,7 +34,7 @@ export const EVENT_PROP_VALUES = {
   channel: ['kakao', 'sms', 'copy', 'share_sheet', 'other'],
   // 0029: 권한(granted·denied) + 번호 채움 결과(matched·kept·skipped). 0053: P6 낱말 쓰기는 finished·skipped 두 값만(정오 기록 금지)
   result: ['granted', 'denied', 'matched', 'kept', 'skipped', 'finished'],
-  message_key: ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'],
+  message_key: CHEER_KEYS, // 0060: 서버는 cheer_key_ok, 정본은 cheers.ts 한 곳
   source: ['app_link', 'referrer', 'manual'], // 0029 번호가 들어온 경로
   plan: ['monthly', 'yearly', 'gift'], // 0034 C6 가격 3안(관심 표시만)
   push_kind: PUSH_KINDS, // 0034 + 0055(parent_first_answer)
