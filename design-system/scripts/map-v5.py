@@ -49,9 +49,9 @@ d['typeRoles']['signLabel'] = {'child': {'size': 52, 'lineHeight': 64}, 'elder':
     'note': '팻말 글자(손글씨 나눔손글씨 붓). 어르신 60×1.18 보정, 자녀 52. **48dp 이상에서만 손글씨**, 그보다 작으면 signSmall(Noto Sans KR 700)'}
 d['typeRoles']['signSmall'] = {'child': {'size': 20, 'lineHeight': 28}, 'elder': {'size': 26, 'lineHeight': 36}, 'weight': 700, 'tone': 'signInk', 'maxFontScale': 1.5,
     'note': '지난 날 작은 팻말·48dp 미만 팻말 글자(고딕 700)'}
-# 날짜 도장 글자(D-2, 11-24): '24일' 20/700, 확대 상한 1.3(도장 지름 56 도 같은 배율로 커져 200%에서 73). 도장 컴포넌트(ui/ds/DateStamp) 안에서만
+# 날짜 도장 글자(D-2, 11-24): '24일' 20/700, 확대 상한 1.3(도장 지름 64 도 같은 배율로 커져 200%에서 83 — 11-25 리드: 글자 20 유지, 여백 4dp 위해 56→64). 도장 컴포넌트(ui/ds/DateStamp) 안에서만
 d['typeRoles']['stampLabel'] = {'child': {'size': 20, 'lineHeight': 24}, 'elder': {'size': 20, 'lineHeight': 24}, 'weight': 700, 'tone': 'stampInk', 'maxFontScale': 1.3,
-    'note': "P3 '했어요' 옆 날짜 도장 안 글자. 줄 높이 24는 원 안 한 줄(지름 56 − 선·안쪽 원). 화면 Text role 로 고를 수 없다"}
+    'note': "P3 '했어요' 옆 날짜 도장 안 글자. 줄 높이 24는 원 안 한 줄(지름 64 − 선·안쪽 원). 화면 Text role 로 고를 수 없다"}
 # 반경 4단, 그림자 2단(패널 5 권고) — B2 v2 값
 d['radius'] = {'sign': 3, 'row': 6, 'button': 8, 'sheet': 12,
     'note': '4단: 팻말·입력칸 3 / 행·선택지·칩 6 / 버튼 8 / 시트·대화상자 12. 알약(36)·반경 16~28 폐기. keypadKey·codeCell 은 row(6)',

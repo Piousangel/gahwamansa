@@ -29,14 +29,14 @@ describe('토큰: stampInk = 먹 별칭', () => {
 describe('DateStamp 부품', () => {
   const dims = (fontScale: number) => jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale});
 
-  test('100%: 지름 56 두 겹 원(먹 선), 안에 글자, −3° 고정, 화면 읽기에서 숨김(행이 날짜를 읽는다)', () => {
+  test('100%: 지름 64 두 겹 원(먹 선), 안에 글자, −3° 고정, 화면 읽기에서 숨김(행이 날짜를 읽는다)', () => {
     dims(1);
     render(<DateStamp label="24일" testID="st" />);
     const outer = screen.getByTestId('st', {includeHiddenElements: true});
     const o = flat(outer.props.style);
-    expect(o.width).toBe(56);
-    expect(o.height).toBe(56);
-    expect(o.borderRadius).toBe(28);
+    expect(o.width).toBe(64);
+    expect(o.height).toBe(64);
+    expect(o.borderRadius).toBe(32);
     expect(o.borderColor).toBe(ds.color.stampInk);
     expect(o.transform).toEqual([{rotate: '-3deg'}]);
     const inner = flat(screen.getByTestId('st-inner', {includeHiddenElements: true}).props.style);
@@ -48,14 +48,36 @@ describe('DateStamp 부품', () => {
     expect(outer.props.accessibilityElementsHidden).toBe(true);
   });
 
-  test('200%: 지름이 글자를 따라 커지되 상한 1.3(지름 73), 150%는 그 사이', () => {
+  test('200%: 지름이 글자를 따라 커지되 상한 1.3(지름 83), 115%는 그 사이(74)', () => {
     dims(2);
     const {rerender} = render(<DateStamp label="24일" testID="st" />);
-    expect(flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).width).toBe(73);
+    expect(flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).width).toBe(83);
     jest.restoreAllMocks();
     dims(1.15);
     rerender(<DateStamp label="24일" testID="st" />);
-    expect(flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).width).toBe(64);
+    expect(flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).width).toBe(74);
+  });
+
+  // 리드 결정(11-25, 캡처 04): 글자는 최소 20 유지, 지름을 키워 안쪽 원과 글자 잉크 사이 여백 4dp 이상.
+  // 글자 잉크 상자는 에뮬레이터 실측(360×640 100%, 2.75px/dp): '25일' 20/700 = 폭 39 × 높이 18dp.
+  // 숫자는 tabular-nums(칸 폭이 같다)라 '31일'(가장 넓은 날짜로 친 값)도 같은 상자로 본다 — '1'의 잉크가 더 좁아 보수적인 값.
+  // 여백 = 안쪽 원 안 반지름 − 원 중심에서 잉크 상자 모서리까지 거리(모서리가 가장 먼저 닿는다).
+  const INK = {'25일': {w: 39, h: 18}, '31일': {w: 39, h: 18}};
+  test.each(Object.keys(INK))("'%s' 잉크 상자와 안쪽 원 사이 여백 4dp 이상(100%·200% 모두)", label => {
+    for (const fontScale of [1, 2]) {
+      jest.restoreAllMocks();
+      dims(fontScale);
+      const {unmount} = render(<DateStamp label={label} testID="st" />);
+      const d = flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).width as number;
+      const inner = flat(screen.getByTestId('st-inner', {includeHiddenElements: true}).props.style);
+      const ring = flat(screen.getByTestId('st', {includeHiddenElements: true}).props.style).borderWidth as number;
+      const innerR = d / 2 - ring - (inner.top as number) - (inner.borderWidth as number);
+      const k = Math.min(fontScale, 1.3); // 글자도 같은 상한으로 커진다
+      const ink = INK[label as keyof typeof INK];
+      const corner = Math.hypot((ink.w * k) / 2, (ink.h * k) / 2);
+      expect(innerR - corner).toBeGreaterThanOrEqual(4);
+      unmount();
+    }
   });
 });
 
