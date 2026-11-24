@@ -1,12 +1,12 @@
 # 끌어 올리고 내리는 공통 시트 — gorhom 도입 vs 몽망이 sheetMath 이식 (C-3, 2026-11-24)
 
 작성: 가화 DV-1(L4). 오너 피드백 C-3 "gorhom/react-native-bottom-sheet 처럼 손가락으로 끌어 올리고 내리는 공통 시트".
-팀 간 공유 첫 사례: 몽망이 DS-2 커밋 `68863b8`(apps/mobile/src/ui/BottomSheet, 순수 함수 `sheetMath.ts` + 시험).
+팀 간 공유 첫 사례: 몽망이 DS-2 커밋 `92ff492`(첫 구현 `68863b8` 의 리뷰 반영판, apps/mobile/src/ui/BottomSheet, 순수 함수 `sheetMath.ts` + 시험).
 
 ## 출발점
 
 - 가화 앱(RN CLI 0.88)에는 `react-native-reanimated`·`react-native-gesture-handler` 가 **없다**. 둘 다 네이티브 모듈이라 설치는 오너 승인 사항.
-- 기존 ds `Sheet`(app/src/ui/ds/Sheet.tsx)는 V14 ① 결정으로 끌기·손잡이가 없었다(닫기 = X·밖 누르기·뒤로). 사용처 3곳: 응원 시트(ChildHome), 유료 안내(PaidSheet), 호칭 겹침 안내(TitleDupNotice). 모두 내용이 짧은 단일 높이 시트.
+- 기존 ds `Sheet`(app/src/ui/ds/Sheet.tsx)는 V14 ① 결정으로 끌기·손잡이가 없었다(닫기 = X·밖 누르기·뒤로). 사용처 4곳: 응원 시트(ChildHome), 유료 안내(PaidSheet), 호칭 겹침 안내(TitleDupNotice), 호칭 바꾸기(ChildSettings). 모두 단일 높이 시트이고, 큰 글자(200%)에서는 호칭 바꾸기·유료 안내가 넘쳐 시트 안에서 스크롤한다.
 - 몽망이는 같은 문제를 gorhom 설계(0.2초 투영, sqrt 저항, 스크롤 맨 위 규칙)를 참고한 자체 구현으로 풀었다. 단 Expo + Reanimated + RNGH 위에서.
 
 ## 두 안
@@ -24,7 +24,7 @@
 
 ## 권장: B (이번 PR)
 
-- 지금 시트 3곳은 **짧은 단일 높이**라 B 의 한계(손가락 따라가기 JS 스레드, 한 손가락 이어 스크롤 없음)가 거의 드러나지 않는다.
+- 지금 시트 4곳은 **단일 높이**이고 대부분 짧아서 B 의 한계(손가락 따라가기 JS 스레드, 한 손가락 이어 스크롤 없음)가 거의 드러나지 않는다.
 - 설치 없이 오너 피드백(끌어 올리고 내리기·끌어 닫기)을 바로 낼 수 있고, 계산은 몽망이가 리뷰·시험으로 다진 것을 그대로 쓴다.
 - **A 로 옮길 신호**: 긴 목록이 든 시트(앨범·지난 날 등)를 시트로 옮기거나, 에뮬·실기기에서 손가락 따라가기가 끊겨 보일 때. 그때 reanimated·RNGH 설치를 오너에게 묻고, sheetMath 는 그대로 worklet 으로 되돌려 쓴다(몽망이 원본이 worklet).
 

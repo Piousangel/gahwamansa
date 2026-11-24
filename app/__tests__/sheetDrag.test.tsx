@@ -1,5 +1,5 @@
 // ds Sheet 끌기(오너 C-3, 11-24): 손잡이·내용 끌기, 속도 스냅, 끌어 닫기, 안쪽 스크롤 소유권, 모션 줄이기, 스크린리더 손잡이.
-// 계산 자체는 sheetMath.test.ts(몽망이 68863b8 에서 옮김)가 고정하고, 여기서는 Sheet 가 그 계산을 손가락·화면 읽기에 제대로 잇는지 본다.
+// 계산 자체는 sheetMath.test.ts(몽망이 92ff492 에서 옮김)가 고정하고, 여기서는 Sheet 가 그 계산을 손가락·화면 읽기에 제대로 잇는지 본다.
 // PanResponder 는 touchHistory 로 dy·vy 를 계산하므로 같은 모양의 사건을 만들어 panHandlers 를 직접 부른다
 // (RNTL fireEvent 는 터치 응답자의 onMoveShouldSetResponder 를 인자 없이 불러 PanResponder 와 맞지 않는다).
 import React from 'react';
@@ -38,8 +38,11 @@ async function open(props: Partial<React.ComponentProps<typeof Sheet>> = {}, onC
   return onClose;
 }
 
-/** 한 손가락 세로 끌기: dys = 시작점에서의 누적 이동(px), 한 걸음 step ms. 반환 = 캡처 판정(시트가 손가락을 가졌나) */
-function drag(testID: string, dys: number[], step = 16): boolean {
+/**
+ * 한 손가락 세로 끌기: dys = 시작점에서의 누적 이동(px), 한 걸음 step ms. 반환 = 캡처 판정(시트가 손가락을 가졌나).
+ * end: 'release' = 손을 뗌, 'terminate' = 다른 응답자(Android 네이티브 스크롤 등)에 빼앗김, 'hold' = 쥔 채로 둠
+ */
+function drag(testID: string, dys: number[], step = 16, end: 'release' | 'terminate' | 'hold' = 'release'): boolean {
   const el = screen.getByTestId(testID);
   let t = 0;
   let prev = 0;
@@ -65,12 +68,21 @@ function drag(testID: string, dys: number[], step = 16): boolean {
       last = ev(y);
       el.props.onResponderMove(last);
     }
-    el.props.onResponderRelease(last);
+    if (end === 'release') {
+      el.props.onResponderRelease(last);
+    } else if (end === 'terminate') {
+      el.props.onResponderTerminate(last);
+    }
   });
   return true;
 }
 
 const handle = () => screen.getByTestId('sheet-handle');
+/** 지금 그려진 시트 위치(translateY) */
+const shownY = () => {
+  const st = screen.getByTestId('s-mover').props.style;
+  return (Array.isArray(st) ? Object.assign({}, ...st) : st).transform[0].translateY as number;
+};
 /** 화면 읽기 동작(두 번 누르기 = activate, 위·아래 쓸기 = increment·decrement). 손잡이 props 를 직접 부른다(위 drag 와 같은 이유) */
 const a11y = (actionName: string) => act(() => handle().props.onAccessibilityAction({nativeEvent: {actionName}}));
 
@@ -123,6 +135,48 @@ describe('손잡이 끌기', () => {
   });
 });
 
+describe('끌기 모양', () => {
+  test('손잡이를 위로 넘겨 끌면 sqrt 저항으로 조금만 올라간다(손가락 100px → 30px 미만)', async () => {
+    await open();
+    drag('sheet-handle', [-6, -60, -106], 16, 'hold');
+    expect(shownY()).toBeLessThan(0);
+    expect(shownY()).toBeGreaterThan(-30);
+  });
+
+  test('아래로 끄는 동안 배경이 위치에 따라 옅어진다(맨 위 1 → 닫힌 자리 0)', async () => {
+    await open();
+    const scrim = () => {
+      const st = screen.getByTestId('sheet-scrim-fade', {includeHiddenElements: true}).props.style;
+      return (Array.isArray(st) ? Object.assign({}, ...st) : st).opacity as number;
+    };
+    expect(scrim()).toBe(1);
+    drag('sheet-handle', [6, 256], 16, 'hold'); // 위치 250 = 시트 500 의 절반
+    expect(scrim()).toBeCloseTo(0.5, 2);
+  });
+
+  test('끌어 닫은 뒤 다시 열면 또 끌 수 있다(닫힘 상태가 남지 않는다)', async () => {
+    jest.useFakeTimers();
+    await reduceMotion();
+    const onClose = jest.fn();
+    const el = (visible: boolean) => (
+      <Sheet visible={visible} title="제목" testID="s" onClose={onClose} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>
+    );
+    await open({}, onClose);
+    drag('sheet-handle', [6, 30, 60]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    screen.rerender(el(false)); // 부모가 닫음
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    screen.rerender(el(true)); // 다시 엶
+    fireEvent(screen.getByTestId('s'), 'layout', {nativeEvent: {layout: {height: SHEET_H}}});
+    expect(drag('sheet-handle', [6, 30, 60])).toBe(true);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('잘못 닫지 않기(리뷰)', () => {
   test('선택지를 누르다 살짝 튕긴 손가락(24px 미만)은 빨라도 닫지 않는다', async () => {
     await reduceMotion();
@@ -131,22 +185,25 @@ describe('잘못 닫지 않기(리뷰)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  test('다른 응답자에 빼앗긴 손가락(terminate)은 빼앗긴 순간 속도로 닫지 않고 열린 칸으로', async () => {
+  test('빼앗긴 손가락(terminate)은 절반 넘게 내렸어도 닫지 않는다(빼앗긴 순간의 위치로 닫기 금지)', async () => {
     await reduceMotion();
     const onClose = await open();
-    const el = handle();
-    const touch = (y: number, t: number, prev: number) => ({
-      nativeEvent: {touches: [], changedTouches: [], pageX: 0, pageY: y, timestamp: t},
-      touchHistory: {numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: t, touchBank: [{touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0, currentPageX: 0, currentPageY: y, currentTimeStamp: t, previousPageX: 0, previousPageY: prev, previousTimeStamp: t - 16}]},
-    });
-    const e0 = touch(6, 16, 0);
-    el.props.onMoveShouldSetResponderCapture(e0);
-    act(() => {
-      el.props.onResponderGrant(e0);
-      el.props.onResponderMove(touch(60, 32, 6));
-      el.props.onResponderTerminate(touch(60, 32, 6));
-    });
+    drag('sheet-handle', [6, 200, 300, 320], 200, 'terminate'); // 놓았다면 닫혔을 위치(위 '절반 넘게' 시험)
     expect(onClose).not.toHaveBeenCalled();
+    expect(shownY()).toBe(0);
+  });
+
+  test('빼앗긴 손가락은 빼앗긴 순간의 속도를 버린다(빠르게 조금 내리다 빼앗기면 가까운 위 칸으로)', async () => {
+    await reduceMotion();
+    await open({snapPoints: ['50%', 'content']}); // 위치 [0, 180]
+    drag('sheet-handle', [6, 30, 40], 16, 'terminate'); // 위치 34, 속도 625px/s — 놓았다면 아래 칸(180)으로 튕김
+    expect(handle().props.accessibilityValue.now).toBe(2);
+    expect(shownY()).toBe(0);
+  });
+
+  test('안쪽 버튼 누르기 보호: 8px 이하 움직임은 내용 끌기로 잡지 않는다', async () => {
+    await open();
+    expect(drag('s-content', [8])).toBe(false); // 넘으면 잡는 쪽은 '스크롤할 게 없는 내용은 … 시트가 받는다'(10px)가 본다
   });
 
   test('호출부가 닫기를 막으면(visible 그대로) 잠시 뒤 시트가 제자리로 돌아와 다시 끌 수 있다', async () => {
@@ -167,6 +224,12 @@ describe('잘못 닫지 않기(리뷰)', () => {
 
 describe('여러 칸(snapPoints)', () => {
   const snaps = ['50%', 'content'] as const; // 화면 640 → 320, 시트 500 → 위치 [0, 180]
+
+  test('여러 칸이면 손잡이 두 번 누르기(activate)로 닫지 않는다(조절 막대 — 닫기는 X·뒤로)', async () => {
+    const onClose = await open({snapPoints: snaps});
+    a11y('activate');
+    expect(onClose).not.toHaveBeenCalled();
+  });
 
   test('손잡이는 조절 막대: 값(2단계 중 2단계), 위아래 쓸기로 한 칸씩, 끝에서 멈춤', async () => {
     await reduceMotion();

@@ -1,6 +1,6 @@
 // 공용 아래 시트(ui/ds Sheet)의 순수 계산: 스냅 높이 해석·과도 당김 저항·속도 기반 스냅·닫힘 판정·안쪽 스크롤과의 소유권.
 // 좌표: 위치 = 시트의 translateY(0 = 가장 높이 펼친 자리, sheetH = 화면 밖으로 닫힘). 아래로 갈수록 큰 값.
-// 출처: 몽망이 DS-2 apps/mobile/test/bottom-sheet-math.test.ts(커밋 68863b8). vitest → jest 전역만 바꿨고 사례는 그대로다.
+// 출처: 몽망이 DS-2 apps/mobile/test/bottom-sheet-math.test.ts(커밋 92ff492 = 68863b8 의 리뷰 반영판). vitest → jest 전역만 바꿨고 사례는 그대로다.
 import {
   EDGE_EPS,
   IDLE_DRAG,

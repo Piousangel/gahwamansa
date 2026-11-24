@@ -1,5 +1,5 @@
 // 공용 아래 시트(ui/ds Sheet)의 순수 계산. RN 을 불러오지 않는다 — 시험(__tests__/sheetMath.test.ts)으로 고정.
-// 출처: 몽망이 DS-2 apps/mobile/src/ui/BottomSheet/sheetMath.ts(커밋 68863b8, 팀 간 공유 첫 사례 C-3).
+// 출처: 몽망이 DS-2 apps/mobile/src/ui/BottomSheet/sheetMath.ts(커밋 92ff492 = 68863b8 의 리뷰 반영판, 팀 간 공유 첫 사례 C-3).
 //   그쪽은 Reanimated worklet 이라 'worklet' 지시어가 있었다. 가화는 RN 기본 Animated + PanResponder(JS 스레드)라
 //   지시어만 뺐고 계산·상수·주석은 그대로다(주석의 '리뷰 H1·M1·L2' 는 몽망이 쪽 리뷰 번호).
 // 좌표: 위치 = 시트의 translateY. 0 = 가장 높이 펼친 자리, sheetH = 화면 밖으로 닫힌 자리. 아래로 갈수록 큰 값.

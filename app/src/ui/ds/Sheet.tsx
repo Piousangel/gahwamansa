@@ -110,7 +110,7 @@ const DEFAULT_SNAPS: readonly SnapPoint[] = ['content'];
  * - 머리: 손잡이 막대 + 제목(Heading 2) + 닫기 48×48 알약.
  * - 끌기(오너 C-3, 11-24 — V14 ① '끌어서 닫기 없음'을 바꿈): 손잡이와 내용을 손가락으로 끌어 올리고 내린다. 놓으면 속도로
  *   스냅(느리면 0.2초 투영에 가장 가까운 칸, 500px/s 이상 튕기면 그 방향 한 칸), 닫힌 자리로 가면 onClose. 위로 넘치면 sqrt 저항.
- *   계산은 sheetMath(몽망이 DS-2 68863b8 에서 옮김), 움직임은 RN 기본 Animated + PanResponder(새 네이티브 설치 없음).
+ *   계산은 sheetMath(몽망이 DS-2 92ff492 에서 옮김), 움직임은 RN 기본 Animated + PanResponder(새 네이티브 설치 없음).
  * - 안쪽 스크롤 소유권(gorhom 과 같은 규칙, sheetMath.stepContentDrag): 맨 위 칸이 아니면 시트가 손가락을 가진다(그동안 스크롤은 꺼 둔다),
  *   맨 위 칸에서는 스크롤이 맨 위일 때 아래로 당기는 손가락만 시트 몫.
  * - 높이는 화면의 88%까지, 넘치면 시트 안에서만 스크롤 + 아래 '더 있음' 띠(R-19, 넘칠 때만).
@@ -376,7 +376,7 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
       onRequestClose={onClose}>
       <Animated.View style={[styles.root, {opacity}]}>
         {/* 밖 누르기 = 닫기. 화면 읽기에서는 X 가 같은 일을 하므로 숨긴다 */}
-        <Animated.View style={[StyleSheet.absoluteFill, {opacity: scrimOpacity}]}>
+        <Animated.View testID="sheet-scrim-fade" style={[StyleSheet.absoluteFill, {opacity: scrimOpacity}]}>
           <Pressable testID="sheet-scrim" style={styles.scrim} onPress={onClose} accessible={false} importantForAccessibility="no" />
         </Animated.View>
         <Animated.View testID={`${testID}-mover`} style={{transform: [{translateY: pos}]}}>

@@ -613,5 +613,5 @@
 
 ## 2026-11-24 ds Sheet 끌기: gorhom 대신 몽망이 sheetMath + RN 기본 Animated·PanResponder(DV-1, 오너 C-3)
 - 맥락: 오너가 gorhom 처럼 끌어 올리고 내리는 공통 시트를 요청. 가화엔 reanimated·gesture-handler 가 없고 설치는 오너 승인 사항
-- 선택: 몽망이 DS-2 `68863b8` 의 순수 계산(sheetMath, 시험 그대로)을 옮기고 ds Sheet 에 손잡이·내용 끌기, 속도 스냅, 끌어 닫기, 손잡이 화면 읽기 동작을 더함. V14 ①(끌어 닫기 없음)을 바꿈
+- 선택: 몽망이 DS-2 `92ff492`(68863b8 의 리뷰 반영판)의 순수 계산(sheetMath, 시험 그대로)을 옮기고 ds Sheet 에 손잡이·내용 끌기, 속도 스냅, 끌어 닫기, 손잡이 화면 읽기 동작을 더함. V14 ①(끌어 닫기 없음)을 바꿈
 - 버린 안: gorhom 도입(네이티브 설치·빌드 위험). 긴 목록 시트가 생기거나 손가락 따라가기가 끊겨 보이면 다시 묻는다(비교: docs/team/dev/2026-11-24-sheet-compare.md)
