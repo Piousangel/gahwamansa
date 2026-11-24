@@ -649,7 +649,7 @@
 
 ## 2026-11-25 응원 키 검사 한 곳 — cheer_key_ok + 앱 계약 정본(DV-2, 0060)
 - 맥락: 키 확대 ②(서버). 같은 4키 목록이 send_cheer·cheer_texts check·이벤트 정규식·load-push-copy·앱 계약·이벤트 계약 여섯 곳에 복사돼 있었다.
-- 선택: 서버는 `public.cheer_key_ok(text)`(immutable, 목록은 함수 본문) 하나를 세 곳이 쓴다. 정본은 `app/src/api/contract/cheers.ts` `CHEER_KEYS`(17키 = 기존 4 + 새 13, ans_seen 제외). load-push-copy·events.ts 는 그 상수를 import, 마이그레이션 목록은 jest 가 대조. 자녀 시트에 보일 키는 `CHILD_SHEET_KEYS`(새 시트 레인 전까지 지금 4개).
+- 선택: 서버는 `public.cheer_key_ok(text)`(immutable, 목록은 함수 본문) 하나를 세 곳이 쓴다. 정본은 `app/src/api/contract/cheers.ts` `CHEER_KEYS`(17키 = 기존 4 + 새 13, ans_seen 제외). events.ts 는 그 상수를 import, load-push-copy 는 cheers.ts 를 글자로 읽음, 마이그레이션 목록은 jest 가 대조. 자녀 시트에 보일 키는 `CHILD_SHEET_KEYS`(새 시트 레인 전까지 지금 4개).
 - 버린 안: cheer_texts 행으로 검사(문장 적재 전 보내기 전부 실패), 숨김 여부를 서버 칸(hidden)으로(시트 목록 원본이 둘이 됨 — 앱이 정함), 응원 문장을 마이그레이션에 시드(법률 리뷰 뒤 load-push-copy 적재 원칙과 어긋남).
 - (리드 11-25, #244 리뷰 QA-1 M1 (a)) **배포 관문 이동**: 0060은 어떤 앱도 새 키를 보내지 않는 동안 언제 반영해도 무해 → '0060은 ① 출시 뒤' 대신 관문을 **③ 자녀 새 시트 출시**로. ③ 조건: ①(#236)이 들어간 어르신 앱 버전이 충분히 퍼짐(스토어 콘솔 활성 기기 중 그 버전 이상 ≥ 95%가 7일 연속) 또는 최소 버전 장치가 생긴 뒤.
 - 위험 기록: 최소 버전·강제 업데이트 장치 없음(`min_app_version`·`force_update` grep 0건). 그 전에 ③을 내면 업데이트 안 한 어르신은 새 키 응원을 대화상자에서 못 본다(알림으로는 보임).

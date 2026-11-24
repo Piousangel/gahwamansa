@@ -37,7 +37,7 @@
 ### send_cheer(p_parent uuid, p_key text, p_request_id uuid default null) → jsonb  (0020, 0059 요청 id)
 - 키는 `public.cheer_key_ok(text)` 한 곳(0060): 기존 4개(`love_you`·`warm_day`·`thanks_always`·`peaceful_day`, 지우지도 문장을 바꾸지도 않음) + 새 13개(`ans_me_too`·`ans_tell_more`·`old_story`·`photo_memory`·`childhood_story`·`call_soon`·`visit_soon`·`eat_together`·`love`·`miss_you`·`thought_of_you`·`doing_well`·`meal_thought`, 라이터 docs/team/copy/2026-11-24-cheer-expansion.md 3절 − `ans_seen`(DECISIONS 11-24 D-5)) = 17개.
   - 같은 함수를 `cheer_texts.message_key` check·이벤트 `message_key`(event_prop_ok)도 쓴다. 목록은 함수 본문(행 검사 아님 — 응원 문장 적재 전에도 보내기가 된다).
-  - 정본은 앱 계약 `app/src/api/contract/cheers.ts` `CHEER_KEYS` 하나. `load-push-copy.mjs`·`events.ts`는 그 상수를 가져다 쓰고, 마이그레이션 목록은 `cheersContract.test.ts`가 마지막 `cheer_key_ok` 정의를 읽어 대조한다. 다음 확대: 새 마이그레이션의 `cheer_key_ok` + `CHEER_KEYS` + copy.ko.json `cheers.*` 세 곳(시험이 어긋남을 잡는다).
+  - 정본은 앱 계약 `app/src/api/contract/cheers.ts` `CHEER_KEYS` 하나. `events.ts`는 그 상수를 import하고 `load-push-copy.mjs`는 cheers.ts를 글자로 읽으며(정의 모양을 바꾸면 ops 시험 확인), 마이그레이션 목록은 `cheersContract.test.ts`가 마지막 `cheer_key_ok` 정의를 읽어 대조한다. 다음 확대: 새 마이그레이션의 `cheer_key_ok` + `CHEER_KEYS` + copy.ko.json `cheers.*` 세 곳(시험이 어긋남을 잡는다).
   - 문장이 없는 키(적재 전)의 응원 알림은 `body_many`(n=1)로 나간다 — 보내기·알림 모두 실패하지 않는다. 자녀 시트에 보일 키는 앱 `CHILD_SHEET_KEYS`(서버는 숨긴 키도 받는다).
   - **배포(리드 11-25, #244 QA-1 M1 (a))**: 0060은 언제 반영해도 무해하다(새 키를 보내는 앱이 아직 없음). 관문은 **③ 자녀 새 시트 출시**: ①(#236)이 들어간 어르신 앱이 충분히 퍼진 뒤(스토어 콘솔 활성 기기 중 그 버전 이상 ≥ 95%, 7일 연속) 또는 최소 버전 장치가 생긴 뒤.
   - **위험(기록)**: 최소 버전·강제 업데이트 장치가 없다(`min_app_version`·`force_update` grep 0건). 업데이트하지 않은 어르신 앱은 새 키 응원을 대화상자에서 조용히 읽음 처리한다(푸시 알림으로는 보임).
@@ -244,7 +244,7 @@ type UnregisterPushToken = { ok: true; removed: number };
   - 공통 조건: 알림 켬 + 알림 받기 시각(자녀도 앱이 권한 허용 때 `set_push_enabled(true)`를 불러야 함) + 심사 가족 아님 + 토큰. KST 08:00~20:59에만 처리(밤 것은 아침에), 3일 지난 것은 보내지 않고 처리 표시. 선점 즉시 처리 표시(실패해도 재발송 없음).
   - 문구: 서버가 대상마다 `{설명}`(일일: 그 어르신 오늘 사진 설명, 없으면 `body_fallback`)·`{응원}`·`{n}`·`{호칭}`을 채워 `title`·`body`·`channel`을 준다. 채널 id: daily → `daily`, 응원 → `cheer`, 연결 → `family`(**AU-04가 세 채널을 같은 id로 만든다**, 채널 이름·설명은 copy `push.channel.*`).
   - 문구 검사(0046 Q6): 서버 check 제약이 `push_copy`·`cheer_texts`에 광고성 낱말(혜택·할인·이벤트·무료·쿠폰·적립·포인트·경품·광고·"다시 오세요")이 들어가면 거부한다. 적재 스크립트도 같은 목록 + 유료로 먼저 멈춘다.
-  - 문구 넣기: `node supabase/ops/load-push-copy.mjs --approved`(copy.ko.json `push.*`·`cheers.*` → `push_copy`·`cheer_texts`, 법률 리뷰 뒤, 환경마다). `--dry-run`으로 미리 보기.
+  - 문구 넣기: `node supabase/ops/load-push-copy.mjs --approved`(copy.ko.json `push.*`·`cheers.*` → `push_copy`·`cheer_texts`, 법률 리뷰 뒤, 환경마다). 문구 파일만 오프라인으로 보려면 `--check-copy`. `--dry-run`은 미리 보기가 아니라 **대상 DB 확인**이다(주소·ops 키 필요, 쓰지 않음 — 법률 승인 응원 키를 대상이 받는지).
   - 연결 끊김 알림(`push.disconnected`)은 서버에 발생 지점이 없어 빌드 1 범위 밖(필요하면 별도 결정).
   - Edge 공용 로직은 `supabase/functions/_shared/push.mts`(테스트 `push.test.mts`), 함수 둘 다 secrets 같음.
 - **공유 로컬 DB 규칙(11-18 리드)**: 54322에는 main에 들어간 마이그레이션만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh` 임시 스택에서만 검증한다.
@@ -506,7 +506,8 @@ type UnregisterPushToken = { ok: true; removed: number };
    unset PCS
    ```
    → `{"status":"dry_run" ...}` 또는 창 밖이면 `window_closed`. 비밀 없이 부르면 403이어야 한다. `select * from push_runs order by id desc limit 3;`
-8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): 먼저 `node supabase/ops/load-push-copy.mjs --dry-run`(대상 DB가 법률 승인 응원 키를 받는지만 확인, 쓰지 않음 — 0060 없으면 4키만) → `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력(https만) → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음, **프롬프트가 뜬 뒤 붙여 넣기** — 먼저 붙여 넣으면 터미널이 보여 준다) → 환경 `staging` 입력(ref 대조). `KEY=값 node …`·`echo 키 | node …` 형태로 쓰지 않는다(파이프 입력은 스크립트가 거부). "옛 키 사용"이 출력되면 셸에 남은 `SUPABASE_SERVICE_ROLE_KEY`를 `unset`하고 다시.
+8. **문구 적재**(법률 리뷰 WR-02 통과 뒤): 문구 파일만 먼저 보려면 `node supabase/ops/load-push-copy.mjs --check-copy`(오프라인, 주소·키 불필요). 이어 `--dry-run`(**주소·ops 키 필요**, 대상 DB가 법률 승인 응원 키를 받는지만 확인, 쓰지 않음 — 0060 없으면 4키만) → `node supabase/ops/load-push-copy.mjs --approved` → 대상 주소 입력(https만) → **ops용 secret 키는 숨김 입력**(화면·셸 기록에 안 남음, **프롬프트가 뜬 뒤 붙여 넣기** — 먼저 붙여 넣으면 터미널이 보여 준다) → 환경 `staging` 입력(ref 대조). `KEY=값 node …`·`echo 키 | node …` 형태로 쓰지 않는다(파이프 입력은 스크립트가 거부). "옛 키 사용"이 출력되면 셸에 남은 `SUPABASE_SERVICE_ROLE_KEY`를 `unset`하고 다시.
+   - 대상 DB 확인의 전제: ops 키가 `cheer_key_ok` 실행 권한이 있는 service_role(ops용 secret 키)이어야 한다. rpc `cheer_key_ok`가 404(PGRST202)면 '0060 없음'으로 보고 4키만 받는다고 판단한다 — 다른 키(권한 없는 키)로 돌리면 401·403이 나와 멈추지만, 404 해석은 이 전제 위에 있다.
    - 모든 ops·photos 스크립트는 주소 검사 → 대상 확인(confirmTarget) → 그 뒤에만 키로 요청한다(xhigh M3, publish-content `--check` 포함).
 9. **사진 주소**: B-4의 사진 주소 줄이 false면 0044 이전 주소가 다른 호스트·http인 것 — 게시된 사진은 그대로 두되(이미 보이는 사진), 새 게시는 v2 경로·https만 된다. 필요하면 `scripts/photos/upload-photos.mjs`로 주소 갱신(감사 행 남음).
 10. **실발송 켜기**: secrets에서 `PUSH_DRY_RUN` 제거(`npx supabase secrets unset PUSH_DRY_RUN --project-ref <staging-ref>`) → 실기기 2대(어르신·자녀)로 알림 받기 → 다음 날 09:00 일일 알림, 응원 보내기 5분 안 도착, 새 번호 연결 시 자녀 연결 알림, 테스트 계정 탈퇴 10분 안 카카오 해제(`metrics.sql` ⑧ unlinked_7d).

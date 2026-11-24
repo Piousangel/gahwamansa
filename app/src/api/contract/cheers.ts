@@ -4,7 +4,9 @@
 
 /**
  * 응원 키 정본(서버 0060 cheer_key_ok 와 글자까지 같다 — cheersContract.test.ts 가 마이그레이션을 읽어 대조).
- * 이 목록 하나를 events.ts message_key·supabase/ops/load-push-copy.mjs 가 그대로 가져다 쓴다(복사 금지).
+ * 이 목록 하나를 events.ts message_key 는 import 하고, supabase/ops/load-push-copy.mjs 는 이 파일을 글자로 읽는다(복사 금지).
+ * 정의 모양(export 한 as const 문자열 배열, 이 주석에 그 선언 글자를 그대로 쓰지 말 것 — 정규식이 주석을 먼저 잡는다)을 바꾸면
+ * ops 시험(node --test supabase/ops/load-push-copy.test.mjs)을 확인한다.
  * 기존 4키는 지우지도 문장을 바꾸지도 않는다(이미 보낸 한마디의 뜻 보존). 새 13키 = docs/team/copy/2026-11-24-cheer-expansion.md 3절 − ans_seen(DECISIONS 11-24 D-5).
  * 문장이 달라지면 키를 새로 만든다. 순서는 의미 없음(자녀 시트 순서는 CHILD_SHEET_KEYS).
  */
