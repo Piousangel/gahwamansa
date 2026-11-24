@@ -20,8 +20,8 @@ async function reviewHome(opts: FakeOptions = {}) {
 }
 
 test.each([
-  ['다시 보기 P4(사진)', '사진 보기, 했어요'],
-  ['다시 보기 P5(둘 중 고르기)', '둘 중 고르기, 했어요'],
+  ['다시 보기 P4(사진)', /^사진 보기, 했어요, \d+일$/],
+  ['다시 보기 P5(둘 중 고르기)', /^둘 중 고르기, 했어요, \d+일$/],
 ])('B7 알려진 중복: %s — 위 뒤로·아래 Dock 이 둘 다 "오늘 코스로"', async (_n, row) => {
   await reviewHome();
   await press(row);
@@ -30,7 +30,7 @@ test.each([
 
 test('B7 알려진 중복: 다시 보기 P6(낱말, 옛 화면) — 위 "‹ 오늘 코스로"와 아래 "오늘 코스로"(보이는 글 중복, 아래 읽기는 "오늘 코스로 돌아가기")', async () => {
   await reviewHome();
-  await press('낱말 쓰기, 했어요');
+  await press(/^낱말 쓰기, 했어요, \d+일$/);
   await waitFor(() => expect(count('오늘 코스로')).toBe(1));
   expect(screen.getByText('‹ 오늘 코스로')).toBeTruthy();
   expect(screen.getByRole('button', {name: '오늘 코스로 돌아가기'})).toBeTruthy();

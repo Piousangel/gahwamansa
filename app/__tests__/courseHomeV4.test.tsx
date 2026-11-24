@@ -133,7 +133,7 @@ describe('코스 홈 v4', () => {
     await home({completedSteps: ['photo', 'question', 'hangul']});
     expect(screen.getByText('오늘 코스는 여기까지예요. 내일 또 만나요')).toBeTruthy();
     for (const n of ['사진 보기', '둘 중 고르기', '낱말 쓰기']) {
-      expect(screen.getByRole('button', {name: `${n}, 했어요`})).toBeTruthy();
+      expect(screen.getByRole('button', {name: new RegExp(`^${n}, 했어요, \\d+일$`)})).toBeTruthy();
     }
     expect(screen.getByRole('button', {name: '오늘 코스 다시 보기'})).toBeTruthy();
   });
@@ -157,7 +157,7 @@ describe('코스 홈 v4', () => {
     const api = await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'A'});
     const spies = spyAll(api);
     const before = counts(spies);
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
     expect(screen.getByLabelText('고른 답, 봄')).toBeTruthy();
     expect(screen.getByText('가을')).toBeTruthy();
@@ -170,7 +170,7 @@ describe('코스 홈 v4', () => {
 
   test('P5 보기 전용: 저장된 답이 없으면(동의 거부) 고른 답 줄을 빼고 문구도 넣지 않는다', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], consented: false});
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
     expect(screen.queryByText('고른 답')).toBeNull();
   });
@@ -179,7 +179,7 @@ describe('코스 홈 v4', () => {
     const api = await home({completedSteps: ['photo', 'question', 'hangul']});
     const spies = spyAll(api);
     const before = counts(spies);
-    await press('낱말 쓰기, 했어요');
+    await press(/^낱말 쓰기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     expect(screen.getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy(); // 보이는 글, 읽기는 아래 한 덩어리
     expect(screen.getByLabelText('오늘의 낱말, 나무')).toBeTruthy();
@@ -192,7 +192,7 @@ describe('코스 홈 v4', () => {
 
   test('보기 전용에서 상단 "‹ 오늘 코스"도 코스 홈으로(하드웨어 뒤로가기와 같은 동작)', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul']});
-    await press('사진 보기, 했어요');
+    await press(/^사진 보기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('사진 보기, 다시 보는 중'));
     // v4 BackLink '오늘 코스로'(보이는 글 = 읽기). 하단 '돌아가기'는 힌트로 목적지를 읽는다(copy 11-1 #3)
     expect(screen.getByRole('button', {name: '오늘 코스로'}).props.accessibilityHint).toBe('오늘 코스로 돌아가기');
@@ -202,7 +202,7 @@ describe('코스 홈 v4', () => {
 
   test('리드 결정(시안 1:1): 완료 전에도 했어요 행은 눌러 다시 보기(읽기 이름 = 보이는 글, 다시 보기는 힌트), 다음 행은 누르지 않는다', async () => {
     await home({completedSteps: ['photo']});
-    const row = screen.getByRole('button', {name: '사진 보기, 했어요'});
+    const row = screen.getByRole('button', {name: /^사진 보기, 했어요, \d+일$/});
     expect(row.props.accessibilityHint).toBe('다시 보기');
     expect(screen.getByRole('button', {name: '둘 중 고르기, 지금 할 차례'})).toBeTruthy();
     expect(screen.queryByRole('button', {name: /낱말 쓰기/})).toBeNull();
@@ -311,9 +311,9 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
   test('N1: 세 보기 전용의 "돌아가기"는 주 버튼(P4 는 v4 시안대로 보조 읽어 주세요가 함께)', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'A'});
     for (const [row, label] of [
-      ['사진 보기, 했어요', '사진 보기, 다시 보는 중'],
-      ['둘 중 고르기, 했어요', '둘 중 고르기, 다시 보는 중'],
-      ['낱말 쓰기, 했어요', '낱말 쓰기, 다시 보는 중'],
+      [/^사진 보기, 했어요, \d+일$/, '사진 보기, 다시 보는 중'],
+      [/^둘 중 고르기, 했어요, \d+일$/, '둘 중 고르기, 다시 보는 중'],
+      [/^낱말 쓰기, 했어요, \d+일$/, '낱말 쓰기, 다시 보는 중'],
     ]) {
       await press(row);
       await waitFor(() => screen.getByLabelText(label));
@@ -327,7 +327,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
   test('하드웨어 뒤로가기도 보기 전용에서 코스 홈으로', async () => {
     const back = captureBack();
     await home({completedSteps: ['photo', 'question', 'hangul']});
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
     await back();
     await waitFor(() => screen.getByTestId('date-line'));
@@ -335,7 +335,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
 
   test('N2: P6 보기 전용 — 그림·캡션·제목·칸이 한 흰 카드 안, 칸 사이 10, 좁으면 줄어드는 칸', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], realImage: true});
-    await press('낱말 쓰기, 했어요');
+    await press(/^낱말 쓰기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('낱말 쓰기, 다시 보는 중'));
     const card = screen.getByTestId('kb-review-card');
     expect(within(card).getByText('오늘의 낱말이에요', {includeHiddenElements: true})).toBeTruthy();
@@ -350,7 +350,7 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
 
   test('N3: P5 보기 전용(v4) — 질문 title, 선택 칸 최소 높이 96, 고른 칸 체크 아이콘, 이름표 doneInk', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'B'});
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('고른 답, 가을'));
     expect(StyleSheet.flatten(screen.getByText('더 좋아하는 계절은요?').props.style).fontSize).toBe(roleText('title', 'elder').style.fontSize);
     const chosen = screen.getByLabelText('고른 답, 가을');

@@ -7,8 +7,8 @@ export type {Audience};
 
 /** 화면이 고를 수 있는 글자 역할(Text role). button·link·backLink 는 각 컴포넌트 안에서만 쓴다 */
 export type TextRole = 'display' | 'title' | 'heading' | 'bodyLg' | 'body' | 'sub' | 'label' | 'numeral' | 'hand' | 'answer' | 'answerRow';
-// signLabel·signSmall 은 Sign 컴포넌트 안에서만(R-22, 화면 Text role 로 고를 수 없다)
-type InnerRole = TextRole | 'link' | 'backLink' | 'buttonPrimary' | 'buttonSecondary' | 'fieldInput' | 'signLabel' | 'signSmall';
+// signLabel·signSmall 은 Sign 컴포넌트 안에서만(R-22), stampLabel 은 DateStamp 안에서만(D-2) — 화면 Text role 로 고를 수 없다
+type InnerRole = TextRole | 'link' | 'backLink' | 'buttonPrimary' | 'buttonSecondary' | 'fieldInput' | 'signLabel' | 'signSmall' | 'stampLabel';
 
 /** 글자 tone(뜻). default 는 역할의 기본색, muted 는 보조(어르신 inkSub / 자녀 inkSubChild) */
 export type Tone = 'default' | 'muted' | 'accent' | 'info' | 'done' | 'danger' | 'onAction' | 'action' | 'actionPressed' | 'disabled';
@@ -76,7 +76,7 @@ const roleFace = (role: InnerRole): FaceKey => {
 };
 
 /** 렌더 트리에 역할 이름 표지를 남긴다(디자인 규칙 렌더 검사 R-04 가 값이 아니라 이름으로 센다, #204 L1). 네이티브는 모르는 속성이라 무시한다 */
-const INNER_ROLES = ['display', 'title', 'heading', 'bodyLg', 'body', 'sub', 'label', 'numeral', 'hand', 'answer', 'answerRow', 'link', 'backLink', 'buttonPrimary', 'buttonSecondary', 'fieldInput', 'signLabel', 'signSmall'] as const satisfies readonly InnerRole[];
+const INNER_ROLES = ['display', 'title', 'heading', 'bodyLg', 'body', 'sub', 'label', 'numeral', 'hand', 'answer', 'answerRow', 'link', 'backLink', 'buttonPrimary', 'buttonSecondary', 'fieldInput', 'signLabel', 'signSmall', 'stampLabel'] as const satisfies readonly InnerRole[];
 /** 역할별 표지 상수(렌더마다 새 객체를 만들지 않음, #211 L1). 모든 InnerRole 을 덮는지는 타입이 지킨다 */
 export const ROLE_MARKS = Object.freeze(Object.fromEntries(INNER_ROLES.map(r => [r, Object.freeze({dsRole: r})]))) as Readonly<Record<InnerRole, Readonly<{dsRole: InnerRole}>>>;
 type _AllRolesCovered = Exclude<InnerRole, (typeof INNER_ROLES)[number]> extends never ? true : never;

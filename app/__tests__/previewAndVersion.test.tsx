@@ -24,7 +24,7 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+  await waitFor(() => screen.getByLabelText(/^사진 보기, 했어요, \d+일$/));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));
@@ -67,7 +67,7 @@ test('앱은 동의로 알고 있으나 서버가 거부하면(consent_required)
   await pressCourseNext();
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
-  await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+  await waitFor(() => screen.getByLabelText(/^사진 보기, 했어요, \d+일$/));
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
   fireEvent.press(screen.getByText('봄'));

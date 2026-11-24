@@ -113,7 +113,7 @@ describe('단계 체크 시점: 실제 흐름(리뷰 M1 증명)', () => {
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
     await press('다 봤어요');
-    await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+    await waitFor(() => screen.getByLabelText(/^사진 보기, 했어요, \d+일$/));
     expect(screen.queryByTestId('step-check-anim', {includeHiddenElements: true})).toBeNull(); // 전환 중: 아직 없음
     await waitFor(() => screen.getByTestId('step-check-anim', {includeHiddenElements: true}));
   });

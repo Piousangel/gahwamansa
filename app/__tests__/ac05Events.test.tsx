@@ -157,7 +157,7 @@ describe('단계 시작: course_step_started{step, day_index}', () => {
     const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question', 'hangul']});
     const log = jest.spyOn(api, 'logEvent');
     await toHomeConsented(api);
-    await press('둘 중 고르기, 했어요');
+    await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
     await act(async () => {});
     expect(events(log)).not.toContain('course_step_started');

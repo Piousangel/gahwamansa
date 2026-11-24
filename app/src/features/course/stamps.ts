@@ -13,6 +13,11 @@ export function historyDateLabel(ymd: string): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAYS[d.getUTCDay()]}`;
 }
 
+// 오늘 KST 날짜의 '일'(1~31). P3 했어요 행 날짜 도장(D-2)
+export function kstDayOfMonth(now: Date = new Date()): number {
+  return kst(now).getUTCDate();
+}
+
 // 오늘 KST 날짜 'YYYY-MM-DD'
 export function kstYmd(now: Date = new Date()): string {
   return kst(now).toISOString().slice(0, 10);
