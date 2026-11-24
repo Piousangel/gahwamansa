@@ -470,7 +470,6 @@
   },
   "cheer": {
     "title": "가족이 보낸 응원이에요",
-    "button": "알겠어요",
     "title_many": "응원이 {n}개 왔어요"
   },
   "disconnected": {
@@ -584,7 +583,8 @@
   },
   "dismiss": {
     "close": "닫기",
-    "later": "다음에"
+    "later": "다음에",
+    "ack": "알겠어요"
   },
   "nav": {
     "to": {

@@ -605,6 +605,9 @@
 - #223 앱은 send_cheer에 p_request_id를 보낸다. 0059 없는 서버에서는 "Could not find the function public.send_cheer(p_key, p_parent, p_request_id)"로 응원 전송이 실패(서버 레인 실증)
 - 따라서 staging/production 모두 0059 반영 → 그 뒤 #223 포함 빌드 배포. 반대 순서 금지. 0059는 옛 앱(2키 호출)과 호환(실증)이라 서버 먼저는 안전
 
+## 2026-11-20 ds Dialog 닫기 말에 'ack'(알겠어요) 추가 (리드)
+- '알겠어요'는 받은 소식을 확인했다는 뜻(라이터 확정 어르신 문구). ds Dismiss 'ack' 로 받고, 쓰는 곳은 ACK_ALLOWED(지금 P8 응원 도착 CheerDialog 하나)로 묶는다. 거절·취소가 필요한 곳(위험 행동의 닫는 쪽, 질문의 부정 답)에는 쓰지 않는다 — 그곳은 decline. 허용 목록 밖에서 쓰면 dsDialog 소스 스캔이 실패
+
 ## 2026-11-20 마케팅 v3 방향(사용자 결정 + 리드)
 - 전략 문서 v3로 갱신(docs/team/marketing/strategy.md): 한 줄 = 고르신 답이 노란 팻말로 가족에게, 확인·점수·광고 없음. 1위는 좁은 칸(검색어·시즌 피처드·왕복률)
 - 스레드는 브랜드 계정 담백한 존댓말(사용자). 광고 0원 시작, 4주 회고에서 재판단(사용자)
