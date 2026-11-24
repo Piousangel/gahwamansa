@@ -44,9 +44,9 @@ test('기록이 실패하면 완료 처리하지 않고 다시 하기를 안내�
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   await press('다 봤어요');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
-  expect(screen.queryByLabelText('사진 보기, 했어요')).toBeNull();
+  expect(screen.queryByLabelText(/^사진 보기, 했어요, \d+일$/)).toBeNull();
   await press('다시 하기');
-  await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+  await waitFor(() => screen.getByLabelText(/^사진 보기, 했어요, \d+일$/));
 });
 
 test('소요 시간은 0~7200초 숫자로 보낸다', async () => {
@@ -113,7 +113,7 @@ test('already_linked 버튼은 코스로 이동한다', async () => {
 test('복원: 연결된 기기는 코스 홈으로 시작하고 완료 단계는 서버 기준', async () => {
   const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo'], streak: 2});
   render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByLabelText('사진 보기, 했어요'));
+  await waitFor(() => screen.getByLabelText(/^사진 보기, 했어요, \d+일$/));
 });
 
 test('복원: 연결 안 된 기기는 Connect 로 시작', async () => {
