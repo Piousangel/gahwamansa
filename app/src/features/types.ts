@@ -36,8 +36,9 @@ export type ChildSummary = {
 // optionA·optionB: 그날 두 보기(원래 순서, child_answer_history 0021·0050 이 이미 준다). C-4 두 칸 나란히. 옛 응답·미리보기 값엔 없을 수 있다
 export type HistoryItem = {answeredDate: string; promptShort: string; choiceLabel: string; optionA?: string; optionB?: string};
 export type ParentHistory = {parentId: string; title: string; shared: boolean; items: HistoryItem[]};
-// 응원 키(send_cheer 0020): 계약 한 곳(api/contract/cheers.ts)의 상수를 그대로 쓴다. CHILD_CHEER_KEYS 는 자녀 화면 호환 이름.
-export {CHEER_KEYS as CHILD_CHEER_KEYS} from '../api/contract/cheers';
+// 응원 키(send_cheer 0060 cheer_key_ok): 계약 한 곳(api/contract/cheers.ts)의 상수를 그대로 쓴다.
+// CHILD_CHEER_KEYS 는 자녀 시트에 보이는 키(CHILD_SHEET_KEYS)의 호환 이름 — 서버가 받는 전체 목록은 CHEER_KEYS.
+export {CHILD_SHEET_KEYS as CHILD_CHEER_KEYS} from '../api/contract/cheers';
 export type {CheerKey};
 export const CHEER_FAIL_REASONS = ['invalid_key', 'invalid_target', 'disconnected', 'daily_limit'] as const;
 export type SendCheerResult =

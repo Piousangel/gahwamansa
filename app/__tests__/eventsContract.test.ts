@@ -86,7 +86,13 @@ describe('서버 event_prop_ok = 속성 계약', () => {
       }
     }
     expect(Object.keys(enums).length).toBeGreaterThan(0); // 0이면 정규식이 서버 형식을 못 읽은 것
-    const app = Object.fromEntries(Object.entries(EVENT_PROP_VALUES).map(([k, v]) => [k, sorted(v)]));
+    // message_key 는 0060부터 정규식이 아니라 cheer_key_ok(응원 키 한 곳) — 목록 대조는 cheersContract.test.ts
+    expect(body).toMatch(/when\s+p_key\s*=\s*'message_key'\s+then\s+public\.cheer_key_ok\(p_val\s*#>>\s*'\{\}'\)/);
+    const app = Object.fromEntries(
+      Object.entries(EVENT_PROP_VALUES)
+        .filter(([k]) => k !== 'message_key')
+        .map(([k, v]) => [k, sorted(v)]),
+    );
     expect(app).toEqual(enums);
     expect(sorted(EVENT_FORMAT_PROPS)).toEqual(sorted(formats));
   });
