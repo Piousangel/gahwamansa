@@ -41,14 +41,14 @@ test('호칭 화면: 이미 살아 있는 번호가 있으면 새로 받지 않�
   await waitFor(() => screen.getByTestId('wait-code')); // C2 없이 바로 C3
   expect(issue).toHaveBeenCalledTimes(1); // 두 번째는 새로 받지 않음
   expect(title).toHaveBeenLastCalledWith('아빠');
-  expect(screen.getByText('123 456')).toBeTruthy();
+  expect(screen.getByText('123 456', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByText('아빠 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
   expect(screen.queryByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeNull();
 });
 
 test('대기 화면: 번호가 살아 있으면 "새 번호 만들기"가 없다', async () => {
   render(<AppRoot api={createFakeApi({who: 'child', childFamily: true})} restore />);
-  await waitFor(() => screen.getByText('123 456'));
+  await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true}));
   expect(screen.getByRole('button', {name: '번호 보내기'})).toBeTruthy();
   expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
 });
@@ -61,7 +61,7 @@ test('대기 화면: 번호가 만료됐을 때만 "새 번호 만들기", 만�
   expect(screen.getByText('번호 기간이 지났어요')).toBeTruthy();
   expect(screen.queryByRole('button', {name: '번호 보내기'})).toBeNull();
   await press('새 번호 만들기');
-  await waitFor(() => screen.getByText('123 456'));
+  await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true}));
   expect(issue).toHaveBeenCalledTimes(1);
   expect(screen.getByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeTruthy();
 });
@@ -96,6 +96,6 @@ test('대기 화면: 번호를 받은 적 없는 가족은 "번호 만들기"(�
   expect(screen.queryByText('번호 기간이 지났어요')).toBeNull();
   expect(screen.queryByRole('button', {name: '새 번호 만들기'})).toBeNull();
   await press('번호 만들기');
-  await waitFor(() => screen.getByText('123 456'));
+  await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true}));
   expect(screen.queryByText('전에 보낸 번호는 이제 쓸 수 없어요')).toBeNull();
 });

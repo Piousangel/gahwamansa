@@ -8,6 +8,7 @@ import {CheerKey, ChildParent, isOffline} from '../types';
 import type {Api} from '../types';
 import {CheerResultRow, summarizeCheer} from './cheerLogic';
 import {track} from '../track';
+import {uuidV4} from '../../lib/uuid';
 
 const c = copy.child.cheer;
 
@@ -33,15 +34,22 @@ export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: Re
   const hideRef = useRef(hide);
   hideRef.current = hide;
 
+  // requestIds: 보내기 한 번(누름)에 어르신마다 하나. '다시 하기'는 같은 표를 넘겨 같은 id 로 다시 보낸다(서버 0059 — 응답만 끊긴 응원이 두 번 가지 않게).
+  //   새로 누르면 새 표(send), 끝나면 표를 들고 있는 것은 '다시 하기' 버튼뿐이라 토스트가 사라지면 함께 버려진다
   const deliver = useCallback(
-    async (key: CheerKey, targets: ChildParent[], already: CheerResultRow[] = [], announced = false) => {
+    async (key: CheerKey, targets: ChildParent[], requestIds: Map<string, string>, already: CheerResultRow[] = [], announced = false) => {
       busy.current = true;
       setSending(true);
       const rows: CheerResultRow[] = [...already];
       const skip = new Set(already.map(r => r.parentId));
       for (const p of targets.filter(x => !skip.has(x.parentId))) {
         try {
-          const r = await api.sendCheer(p.parentId, key);
+          let rid = requestIds.get(p.parentId);
+          if (!rid) {
+            rid = uuidV4();
+            requestIds.set(p.parentId, rid);
+          }
+          const r = await api.sendCheer(p.parentId, key, rid);
           rows.push({parentId: p.parentId, title: p.title, outcome: r.ok ? 'ok' : r.reason});
         } catch (e) {
           rows.push({parentId: p.parentId, title: p.title, outcome: isOffline(e) ? 'offline' : 'server'});
@@ -55,7 +63,7 @@ export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: Re
 
       const s = summarizeCheer(rows);
       // 다시 하기: 이번에 받은 분(ok)은 결과를 들고 가서 건너뛴다
-      const again = {label: copy.errors.offline.button, onPress: () => deliver(key, targets, rows.filter(r => r.outcome === 'ok'))};
+      const again = {label: copy.errors.offline.button, onPress: () => deliver(key, targets, requestIds, rows.filter(r => r.outcome === 'ok'))};
       if (s.kind === 'sent') {
         if (!announced) {
           show({text: withTitle(c.sent, s.titles.join('·'))}); // 취소 토스트로 이미 알렸으면 다시 띄우지 않는다
@@ -87,7 +95,7 @@ export function useSendCheer(api: Api, onReload: () => void, returnFocusRef?: Re
         done = true;
         pending.current = null;
         setSending(false);
-        deliver(key, targets, [], true);
+        deliver(key, targets, new Map(), [], true); // 이 누름의 request id 표(어르신마다 처음 보낼 때 만든다)
       };
       const refocus = () => {
         if (screenReader && returnFocusRef) {

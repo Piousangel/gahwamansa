@@ -58,6 +58,13 @@ test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마�
   expect(screen.queryByTestId('preview-notes')).toBeNull(); // 거부 상태에서는 '보이지 않아요' 두 줄 없음
 });
 
+test('0050 호칭은 summary.parents[0].title — 가족 기본 호칭(parent_title)과 다를 때도 본인 호칭으로(리뷰 L1)', async () => {
+  // 가족 기본 호칭은 '엄마', 이 어르신의 호칭은 '어머니'. 미리보기는 자녀가 이 어르신 카드에서 보는 호칭을 써야 한다
+  const device = await openPreview({consented: true, parents: [{parentId: 'parent-1', title: '어머니', latest: LATEST, history: HISTORY}]});
+  expect(within(device).getByTestId('preview-latest').props.accessibilityLabel).toBe('어머니의 최근 답, 가을, 2025년 11월 16일');
+  expect(within(device).queryByText(/^엄마/)).toBeNull();
+});
+
 test('아직 고른 답 없음: "고른 답이 생기면 여기에 보여요", 소개문은 그대로', async () => {
   const device = await openPreview({consented: true, latest: null, history: []});
   expect(within(within(device).getByTestId('preview-empty')).getByText('고른 답이 생기면 여기에 보여요')).toBeTruthy();

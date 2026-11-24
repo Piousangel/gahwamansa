@@ -79,7 +79,7 @@ test('DS 위반 수가 기준선과 같다(늘면 ui/ds 로, 줄면 숫자를 �
 // 늘면 실패(새 코드는 ui/ds·tokensV4), 줄면 실패(숫자를 내린다). ui/ds/Screen 이 ui/Screen 을 감싸는 것도 센다(완료 전에 풀어야 할 의존).
 const LEGACY_BASELINE: Record<string, number> = {
   v3Tokens: 49, // ui/tokens (N1 −1. P2 동의 −1. P3 코스 홈 −1. #146 C2·C6 −2. 11-20: 화면 이행으로 56. v5 scrim·shadow 생성물로 ds Dialog·Sheet −2, Toast 를 ds 로 −1)
-  Screen: 14, // ui/Screen (P3 −1, P2 −1, N1 −1)
+  Screen: 13, // ui/Screen (P3 −1, P2 −1, N1 −1, C4 홈 −1)
   BigButton: 10, // ui/BigButton (P3 −1, P2 −1, N1 −1)
   ChoiceGrid: 0, // ui/ChoiceGrid
   BottomSheet: 1, // ui/BottomSheet

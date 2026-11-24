@@ -68,25 +68,55 @@ test('C4 빈 상태 접힘 경계(R-15): 첫 화면 끝이 예시 카드를 가�
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
   const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).marginTop;
   await act(async () => {
-    lay('screen-body', 0, 328); // C4 홈은 옛 Screen: 접힘 = 스크롤 창 − 아래 흐림 28 = 300(리뷰 L4)
+    lay('screen-body-area', 0, 324); // C4 홈 DsScreen 이행: 접힘 = 본문 영역 − '더 있음' 띠 24 = 300(겹쳐 그리는 흐림 없음, R-19)
     lay('child-home-empty', 20, 400); // 묶음 위 끝 20, 사이 14
     lay('child-home-empty-line', 0, 112); // 20~132
     lay('child-home-example-1', 0, 120); // 146~266
     lay('child-home-example-2', 0, 120); // 280~400 → 300 에 걸림
     lay('child-home-empty-starter', 0, 90);
   });
-  expect(mt('child-home-example-2')).toBe(328 - 280 + 1); // foldPush 공용 +1(PR 91 L1) // 흐림 위(300)에 걸치면 민다, 민 카드는 흐림 밑 창 끝(328)으로
+  expect(mt('child-home-example-2')).toBe(300 - 280 + 1); // foldPush 공용 +1(PR 91 L1). 민 카드는 접힘(띠 위 끝) 바로 아래로
   expect(mt('child-home-example-1')).toBeUndefined();
-  // 재확인 L6: 위 끝이 흐림 구간(300~328) 안에서 시작하는 요소도 민다(흐림 속에 테두리가 비치지 않게)
+  expect(screen.queryByTestId('screen-more')).toBeNull(); // 옛 Screen 의 겹쳐 그리는 흐림은 없다(DsScreen 은 스크롤 밖 띠)
+  // 흐림이 없어져 '흐림 구간에서 시작하는 요소'(옛 재확인 L6)는 없다: 접힘 아래에서 시작하면 이미 첫 화면 밖이라 밀지 않는다
   await act(async () => {
-    lay('child-home-example-1', 0, 140); // 146~286 → 카드 2 는 300~420: 위 끝이 흐림 구간(300~328) 안
+    lay('child-home-example-1', 0, 160); // 146~306 → 카드 1 이 걸림, 카드 2 는 320~ 접힘 밖
   });
-  expect(mt('child-home-example-2')).toBe(328 - 300 + 1);
+  expect(mt('child-home-example-1')).toBe(300 - 146 + 1);
+  expect(mt('child-home-example-2')).toBeUndefined();
   // 창이 커져 다 들어가면 간격 없음
   await act(async () => {
-    lay('screen-body', 0, 700);
+    lay('screen-body-area', 0, 800);
   });
+  expect(mt('child-home-example-1')).toBeUndefined();
   expect(mt('child-home-example-2')).toBeUndefined();
+});
+
+test('#207 캡처(R-15): 어르신이 둘이면 둘째 카드가 첫 화면 끝에 걸칠 때 통째로 민다, 첫 카드도 걸치면 민다(응원 버튼과 한 덩어리)', async () => {
+  const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
+  render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
+  await waitFor(() => screen.getByTestId('child-home-cards'));
+  const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
+  const mt = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.marginTop;
+  await act(async () => {
+    lay('screen-body-area', 0, 424); // 접힘 = 424 − 띠 24 = 400
+    lay('child-home-cards', 10, 700);
+    lay('child-home-card-item-1', 0, 300); // 10~310(카드 + 응원 버튼)
+    lay('child-home-card-item-2', 0, 260); // 326~586 → 400 에 걸림
+  });
+  expect(mt('child-home-card-item-2')).toBe(400 + 6 - 326 + 1); // 접힘 + 테이프 여유(6)
+  expect(mt('child-home-card-item-1')).toBeUndefined();
+  // 첫 카드도 걸치면 민다(호칭 겹침 안내 아래 — #207 재캡처)
+  await act(async () => {
+    lay('child-home-cards', 250, 700);
+    lay('child-home-card-item-1', 0, 300); // 250~550 → 걸침
+  });
+  expect(mt('child-home-card-item-1')).toBe(400 + 6 - 250 + 1);
+  // 한 화면보다 큰 카드는 밀지 않는다(밀어도 또 잘림)
+  await act(async () => {
+    lay('child-home-card-item-1', 0, 450);
+  });
+  expect(mt('child-home-card-item-1')).toBeUndefined();
 });
 
 test('리뷰 L3 ①: 동의한 분(답 없음) + 나누지 않는 분이 섞이면 빈 상태 대신 기존 카드', async () => {

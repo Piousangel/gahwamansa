@@ -73,7 +73,7 @@ test('가족 만들기 -> 호칭(기본 부모님) -> 번호 만들기 -> 큰 �
   expect(create).toHaveBeenCalledTimes(1);
   expect(title).toHaveBeenCalledWith('엄마');
   expect(issue).toHaveBeenCalledTimes(1);
-  expect(screen.getByText('123 456')).toBeTruthy();
+  expect(screen.getByText('123 456', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
   await press('번호 보내기');
   expect(share).toHaveBeenCalledWith(expect.objectContaining({message: expect.stringContaining('123 456')}));
@@ -118,7 +118,7 @@ test('이미 가족이 있는 자녀는 로그인 뒤 만든 번호를 다시 �
   const api = createFakeApi({childFamily: true});
   const issue = jest.spyOn(api, 'issueInviteCode');
   await loginAsChild(api);
-  await waitFor(() => screen.getByText('123 456')); // C3 v4: 대기 화면이 번호를 바로 보여 준다
+  await waitFor(() => screen.getByText('123 456', {includeHiddenElements: true})); // C3 v4: 대기 화면이 번호를 바로 보여 준다
   expect(issue).not.toHaveBeenCalled();
 });
 
