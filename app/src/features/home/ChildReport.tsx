@@ -5,7 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {TopBar} from '../../ui/TopBar';
 import {Screen} from '../../ui/Screen';
-import {AudienceProvider, Heading, StateView, Text} from '../../ui/ds';
+import {AudienceProvider, Heading, SignPair, StateView, Text} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
 import {appCopy, copy, withTitle} from '../../copy/copy';
 import type {HistoryItem, ParentHistory} from '../types';
@@ -18,7 +18,9 @@ import {track} from '../track';
 const c = copy.child;
 const p = c.past;
 
-// C5 지난 답 v4(부품만 ui/ds, 배치는 v3 시안 C5_history 그대로 — V4-INDEX '시안 없음, 토큰 효과만'): 어르신별 최근 30일 고른 답, 최신순(날짜 · 질문 짧은 형 · 고른 답).
+// C5 지난 답 v4(부품만 ui/ds): 어르신별 최근 30일 고른 답, 최신순. 날짜 카드 = 날짜 · 짧은 질문 한 줄 + 두 칸 나란히
+// (C-4 안 1, D-4 2026-11-24 — 시안 docs/design/2026-11-24-d2-d3-c4/c4-child-history.html): A 왼쪽·B 오른쪽, 고른 칸만 노랑 팻말.
+// 팻말이 카드마다 하나라 R-22 '화면당 1개'의 예외 자리(child-past-list > child-past-item, testUtils/designRules.R22_LIST_EXEMPT).
 // 빈 날·개수·빈도·연속 집계 없음, 페이지 나눔 없음. 어르신이 2명 이상이면 호칭 머리글로 나누고 제목은 "지난 답".
 export function ChildReport() {
   const navigation = useNavigation<NativeStackNavigationProp<ChildParams>>();
@@ -116,7 +118,11 @@ function ParentSection({history: h, header}: {history: ParentHistory; header: bo
       ) : h.items.length === 0 ? (
         <Text role="body">{c.no_answer}</Text>
       ) : (
-        h.items.map(it => <Row key={`${h.parentId}-${it.answeredDate}-${it.choiceLabel}`} item={it} />)
+        <View testID="child-past-list" style={styles.list}>
+          {h.items.map(it => (
+            <Row key={`${h.parentId}-${it.answeredDate}-${it.choiceLabel}`} item={it} />
+          ))}
+        </View>
       )}
     </View>
   );
@@ -125,25 +131,14 @@ function ParentSection({history: h, header}: {history: ParentHistory; header: bo
 function Row({item}: {item: HistoryItem}) {
   const date = formatAnswerDate(item.answeredDate);
   const q = item.promptShort;
+  const label = p.row_a11y.split('{날짜}').join(date).split('{질문}').join(q).split('{답}').join(item.choiceLabel);
+  // 카드 한 줄로 읽는다(날짜·질문·고른 답). 빈 날은 서버가 주지 않아 카드가 없다(11-18 U6)
   return (
-    <View
-      testID="child-past-item"
-      style={styles.row}
-      accessible
-      accessibilityLabel={p.row_a11y.split('{날짜}').join(date).split('{질문}').join(q).split('{답}').join(item.choiceLabel)}>
-      <View style={styles.flex}>
-        <Text role="sub" tone="muted">
-          {date}
-        </Text>
-        <Text role="body">{`· ${q}`}</Text>
-      </View>
-      {/* 고른 답: answerRow(디자인 #103 — 목록·여러 분 행의 어르신 답, 자녀 26/36·400·확대 상한 1.5). 머리글 역할 없음.
-          400 이라 한 화면 700 굵기 2역할 집계에서 빠진다(호칭 머리글 heading 은 그대로). 말줄임 없음, 절반까지 */}
-      <View style={styles.answer}>
-        <Text role="answerRow" style={styles.answerText}>
-          {item.choiceLabel}
-        </Text>
-      </View>
+    <View testID="child-past-item" style={styles.row} accessible accessibilityLabel={label}>
+      <Text role="sub" tone="muted">
+        {`${date} · ${q}`}
+      </Text>
+      <SignPair optionA={item.optionA} optionB={item.optionB} chosen={item.choiceLabel} readLabel={item.choiceLabel} testID="child-past-pair" />
     </View>
   );
 }
@@ -153,12 +148,8 @@ const styles = StyleSheet.create({
   centerText: {textAlign: 'center'},
   empty: {alignItems: 'center', gap: 8, paddingVertical: 32},
   section: {gap: 8},
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: ds.color.card, borderRadius: ds.radius.childCard,
-    paddingVertical: 12, paddingHorizontal: 16,
-  },
-  answer: {flexShrink: 0, maxWidth: '50%'},
-  answerText: {textAlign: 'right'},
+  list: {gap: 8},
+  row: {gap: 8, backgroundColor: ds.color.card, borderRadius: ds.radius.childCard, paddingTop: 14, paddingBottom: 16, paddingHorizontal: 16},
   topic: {flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ds.color.paperSoft, borderRadius: ds.radius.card, padding: 16, marginTop: 8, minHeight: ds.touch.child.min},
   topicPressed: {backgroundColor: ds.color.actionSoft},
   badge: {backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.chip, paddingHorizontal: 10, paddingVertical: 2},

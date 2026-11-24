@@ -157,7 +157,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
     const s = single();
     const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
     const items: HistoryItem[] =
-      opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), choiceLabel: savedLabel}] : []);
+      opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), optionA: c.a, optionB: c.b, choiceLabel: savedLabel}] : []);
     return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? items : []}];
   };
   let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));

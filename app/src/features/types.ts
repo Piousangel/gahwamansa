@@ -33,7 +33,8 @@ export type ChildSummary = {
 };
 // 지난 답(C5, child_answer_history 0021): 어르신별 최근 30일(session_date), 최신순, 어르신당 최대 30개
 // answeredDate = session_date, promptShort = 서버 prompt_short("봄과 가을 중")
-export type HistoryItem = {answeredDate: string; promptShort: string; choiceLabel: string};
+// optionA·optionB: 그날 두 보기(원래 순서, child_answer_history 0021·0050 이 이미 준다). C-4 두 칸 나란히. 옛 응답·미리보기 값엔 없을 수 있다
+export type HistoryItem = {answeredDate: string; promptShort: string; choiceLabel: string; optionA?: string; optionB?: string};
 export type ParentHistory = {parentId: string; title: string; shared: boolean; items: HistoryItem[]};
 // 응원 키(send_cheer 0020): 계약 한 곳(api/contract/cheers.ts)의 상수를 그대로 쓴다. CHILD_CHEER_KEYS 는 자녀 화면 호환 이름.
 export {CHEER_KEYS as CHILD_CHEER_KEYS} from '../api/contract/cheers';
