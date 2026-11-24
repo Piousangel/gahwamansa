@@ -11,6 +11,8 @@ import {
   View,
   type AccessibilityActionEvent,
   type GestureResponderEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type PanResponderGestureState,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
@@ -49,13 +51,17 @@ const c = ds.color;
 export const SHEET_MAX_RATIO = 0.88;
 /** 닫기 알약 최소 크기(48×48) */
 const CLOSE_MIN = 48;
-/** 손잡이 줄 높이(손가락이 닿는 띠, 막대는 가운데 40×5) */
-const HANDLE_H = 24;
+/** 손잡이 줄 높이 = 최소 누르기 크기 48(닫기 알약과 같은 규칙, Material 3 시트 손잡이도 48dp). 막대는 40×5 */
+const HANDLE_H = 48;
 /** 놓은 뒤 자리 잡는 시간 상한(ms). 빠르게 튕기면 sheetMath.settleDuration 이 140ms 까지 줄인다 */
 const SETTLE_MS = 280;
 /** 손가락이 이만큼(px) 세로로 움직여야 끌기로 본다 — 손잡이는 짧게, 내용은 안의 버튼 누르기를 지키려고 조금 길게 */
 const HANDLE_SLOP = 4;
 const CONTENT_SLOP = 8;
+/** 끌어 닫기 최소 거리(px): 이보다 짧게 움직인 손가락은 빨라도 닫지 않는다 — 선택지를 누르다 살짝 튕긴 손가락이 시트를 닫지 않게(리뷰) */
+const MIN_CLOSE_DRAG = 24;
+/** onClose 뒤 부모가 이 시간(ms) 안에 visible 을 끄지 않으면(닫기를 막은 호출부) 시트를 제자리로 되돌린다 — 보이지 않는 Modal 이 화면을 막지 않게(리뷰) */
+const CLOSE_GUARD_MS = 120;
 /** 위로 과도 당김(sqrt 저항)으로 들린 만큼 바닥 틈을 시트 색으로 채우는 치마 높이. 저항 때문에 실제 틈은 수십 px 안 */
 const SKIRT_H = 160;
 
@@ -88,7 +94,11 @@ export type SheetProps = {
    * 시트 높이(내용, 상한 88%)를 넘는 값은 시트 높이로 자른다(sheetMath.resolveDetents).
    */
   snapPoints?: readonly SnapPoint[];
-  /** 처음 열 칸(낮은 것부터 0). 기본 가장 높은 칸 */
+  /**
+   * 처음 열 칸(낮은 것부터 0). 기본 가장 높은 칸.
+   * 낮은 칸은 시트 전체를 아래로 내린 모양이라 footer·내용 아랫부분이 화면 밖에 있고 그동안 안쪽 스크롤은 꺼진다.
+   * footer(주 버튼)가 있는 시트에 낮은 칸을 쓰지 않는다(지금 사용처는 모두 기본 한 칸, 리뷰).
+   */
   initialSnap?: number;
   testID?: string;
 };
@@ -154,6 +164,15 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
   const posNow = useRef(0);
   /** 자리 잡는 모션이 가는 곳(없으면 null). settle 이 칸 번호를 바꿔 아래 배치 효과가 다시 돌 때 모션을 끊고 순간 이동하지 않게 */
   const heading = useRef<number | null>(null);
+  const guard = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (guard.current) {
+        clearTimeout(guard.current);
+      }
+    },
+    [],
+  );
   useEffect(() => {
     const id = pos.addListener(({value}) => {
       posNow.current = value;
@@ -197,7 +216,7 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
   }, [visible, sheetH, geo, curIdx, place]);
 
   const settle = useCallback(
-    (target: number, velocity: number) => {
+    function settleTo(target: number, velocity: number) {
       const {geo: g, reduce: rm} = live.current;
       const willClose = shouldClose(target, g.closed);
       if (willClose) {
@@ -209,9 +228,17 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
         }
       }
       const done = () => {
-        if (willClose) {
-          live.current.onClose();
+        if (!willClose) {
+          return;
         }
+        live.current.onClose();
+        guard.current = setTimeout(() => {
+          guard.current = null;
+          if (live.current.visible && closing.current) {
+            closing.current = false; // 호출부가 닫기를 막았다 → 지금 칸으로 되돌린다
+            settleTo(live.current.geo.positions[live.current.curIdx] ?? 0, 0);
+          }
+        }, CLOSE_GUARD_MS);
       };
       const d = settleDuration(target - posNow.current, velocity, rm, SETTLE_MS);
       if (d === 0) {
@@ -238,9 +265,15 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
     const begin = (source: DragSource) => {
       const next = beginDrag(drag.current, source, isOpen(), posNow.current);
       if (next !== null) {
-        pos.stopAnimation();
-        heading.current = null;
         drag.current = next;
+        heading.current = null;
+        // 네이티브 드라이버 모션 중이면 리스너 값이 한두 프레임 늦다 → 멈춘 실제 위치로 시작점을 고친다(리뷰)
+        pos.stopAnimation(v => {
+          posNow.current = v;
+          if (drag.current.owner === source && !drag.current.moved) {
+            drag.current = {...drag.current, start: v, raw: v};
+          }
+        });
       }
     };
     const move = (source: DragSource, gs: PanResponderGestureState) => {
@@ -255,10 +288,12 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
       posNow.current = dragPosition({raw, top: g.top, bottom: g.closed, overTop, overBottom: false, factor: OVERDRAG_FACTOR});
       pos.setValue(posNow.current);
     };
-    const release = (source: DragSource, gs: PanResponderGestureState) => {
+    const release = (source: DragSource, gs: PanResponderGestureState, interrupted = false) => {
       const g = live.current.geo;
-      const v = gs.vy * 1000; // PanResponder 는 px/ms, sheetMath 는 px/s
-      const target = releaseTarget(drag.current, source, isOpen(), posNow.current, v, g.positions, g.closed);
+      // 다른 응답자(Android 네이티브 스크롤 등)에 빼앗긴 손가락은 속도 없이 가까운 열린 칸으로만 — 빼앗긴 순간의 속도로 닫지 않는다
+      const v = interrupted ? 0 : gs.vy * 1000; // PanResponder 는 px/ms, sheetMath 는 px/s
+      const canClose = !interrupted && posNow.current - drag.current.start >= MIN_CLOSE_DRAG;
+      const target = releaseTarget(drag.current, source, isOpen(), posNow.current, v, g.positions, canClose ? g.closed : null);
       drag.current = endDrag(drag.current, source);
       if (target !== null) {
         settle(target, v);
@@ -273,7 +308,7 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
         onPanResponderGrant: () => begin(source),
         onPanResponderMove: (_e, gs) => move(source, gs),
         onPanResponderRelease: (_e, gs) => release(source, gs),
-        onPanResponderTerminate: (_e, gs) => release(source, gs),
+        onPanResponderTerminate: (_e, gs) => release(source, gs, true),
         onPanResponderTerminationRequest: () => false,
       });
     return {
@@ -317,7 +352,15 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
       };
 
   // 배경 진하기: 가장 낮은 칸까지 1, 닫힌 자리에서 0(sheetMath.backdropProgress 와 같은 식, 애니메이션 보간으로)
-  const scrimOpacity = geo.closed - geo.lowest >= 1 ? pos.interpolate({inputRange: [geo.lowest, geo.closed], outputRange: [1, 0], extrapolate: 'clamp'}) : 1;
+  // 스크롤마다 다시 그려도 보간 노드를 새로 만들지 않게 묶는다(리뷰)
+  const scrimOpacity = useMemo(
+    () => (geo.closed - geo.lowest >= 1 ? pos.interpolate({inputRange: [geo.lowest, geo.closed], outputRange: [1, 0], extrapolate: 'clamp'}) : 1),
+    [pos, geo.lowest, geo.closed],
+  );
+  const track = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
+    setY(Math.round(e.nativeEvent.contentOffset.y));
+  };
 
   return (
     <Modal
@@ -361,19 +404,12 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
                 scrollEnabled={curIdx === 0}
                 onLayout={e => setView(Math.round(e.nativeEvent.layout.height))}
                 onContentSizeChange={(_w, h) => setContent(Math.round(h))}
-                onScroll={e => {
-                  scrollY.current = e.nativeEvent.contentOffset.y;
-                  setY(Math.round(e.nativeEvent.contentOffset.y));
-                }}
+                // iOS 튕김을 끈다: 스크롤 맨 위에서 아래로 당기면 내용이 튕기지 않고 시트만 내려가게(리뷰)
+                bounces={false}
+                onScroll={track}
                 // 관성 스크롤이 멈춘 마지막 위치는 onScroll(쓰로틀)로 안 올 수 있다 → 멈출 때도 기록(에뮬레이터 200% 실측)
-                onMomentumScrollEnd={e => {
-                  scrollY.current = e.nativeEvent.contentOffset.y;
-                  setY(Math.round(e.nativeEvent.contentOffset.y));
-                }}
-                onScrollEndDrag={e => {
-                  scrollY.current = e.nativeEvent.contentOffset.y;
-                  setY(Math.round(e.nativeEvent.contentOffset.y));
-                }}
+                onMomentumScrollEnd={track}
+                onScrollEndDrag={track}
                 scrollEventThrottle={16}
                 contentContainerStyle={styles.body}>
                 <View style={styles.head}>
@@ -418,11 +454,11 @@ const styles = StyleSheet.create({
   root: {flex: 1, justifyContent: 'flex-end'},
   scrim: {...StyleSheet.absoluteFill, backgroundColor: ds.scrim},
   panel: {backgroundColor: c.paper, borderTopLeftRadius: ds.radius.sheet, borderTopRightRadius: ds.radius.sheet, boxShadow: ds.shadow.sheet, overflow: 'hidden'},
-  handleRow: {height: HANDLE_H, alignItems: 'center', justifyContent: 'flex-end'},
+  handleRow: {height: HANDLE_H, alignItems: 'center', justifyContent: 'center'},
   handleBar: {width: 40, height: 5, borderRadius: 3, backgroundColor: c.line},
   contentWrap: {flexShrink: 1},
   scroll: {flexGrow: 0},
-  body: {gap: 12, paddingTop: 4, paddingHorizontal: 20, paddingBottom: 28}, // 손잡이 줄(24)이 위 여백을 맡는다. 아래 inset 은 패널 바닥 여백(PR #93 L2)
+  body: {gap: 12, paddingTop: 0, paddingHorizontal: 20, paddingBottom: 28}, // 손잡이 줄(48)이 위 여백을 맡는다. 아래 inset 은 패널 바닥 여백(PR #93 L2)
   head: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
   titleWrap: {flex: 1},
   close: {

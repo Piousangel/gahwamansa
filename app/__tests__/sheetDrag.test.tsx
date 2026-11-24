@@ -123,6 +123,48 @@ describe('손잡이 끌기', () => {
   });
 });
 
+describe('잘못 닫지 않기(리뷰)', () => {
+  test('선택지를 누르다 살짝 튕긴 손가락(24px 미만)은 빨라도 닫지 않는다', async () => {
+    await reduceMotion();
+    const onClose = await open();
+    expect(drag('s-content', [10, 20])).toBe(true); // 10px / 16ms ≈ 625px/s, 움직인 거리 10px
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test('다른 응답자에 빼앗긴 손가락(terminate)은 빼앗긴 순간 속도로 닫지 않고 열린 칸으로', async () => {
+    await reduceMotion();
+    const onClose = await open();
+    const el = handle();
+    const touch = (y: number, t: number, prev: number) => ({
+      nativeEvent: {touches: [], changedTouches: [], pageX: 0, pageY: y, timestamp: t},
+      touchHistory: {numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: t, touchBank: [{touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0, currentPageX: 0, currentPageY: y, currentTimeStamp: t, previousPageX: 0, previousPageY: prev, previousTimeStamp: t - 16}]},
+    });
+    const e0 = touch(6, 16, 0);
+    el.props.onMoveShouldSetResponderCapture(e0);
+    act(() => {
+      el.props.onResponderGrant(e0);
+      el.props.onResponderMove(touch(60, 32, 6));
+      el.props.onResponderTerminate(touch(60, 32, 6));
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test('호출부가 닫기를 막으면(visible 그대로) 잠시 뒤 시트가 제자리로 돌아와 다시 끌 수 있다', async () => {
+    jest.useFakeTimers();
+    await reduceMotion();
+    const onClose = await open(); // onClose 가 visible 을 끄지 않는다
+    drag('sheet-handle', [6, 30, 60]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    const timing = jest.spyOn(RN.Animated, 'timing');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(timing).not.toHaveBeenCalled(); // 모션 줄이기라 바로 제자리
+    expect(drag('sheet-handle', [6, 30, 60])).toBe(true); // 닫히는 중으로 묶여 있지 않다
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('여러 칸(snapPoints)', () => {
   const snaps = ['50%', 'content'] as const; // 화면 640 → 320, 시트 500 → 위치 [0, 180]
 
