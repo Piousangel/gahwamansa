@@ -1,31 +1,30 @@
 import {useEffect, useRef, useState} from 'react';
 import {useSession} from '../../app/session';
 import {copy, offlineMessage, Message} from '../../copy/copy';
-import {hasReason, isOffline, isServerError, StepName} from '../types';
-import {FIVE_STEPS_NOT_READY} from '../../api/contract/fiveSteps';
+import {isOffline, isServerError, StepName} from '../types';
 import {track} from '../track';
 import {localStamps} from '../../lib/localStamps';
 import {useBusyLatch} from '../../ui/useBusyLatch';
-import {allStepsDone, isLegacyStep, useFiveSteps} from './fiveSteps';
+import {allStepsDone, isLegacyStep} from './fiveSteps';
 
 export type HangulResult = 'finished' | 'skipped';
 
 export const errorMessage = (e: unknown): Message => (isOffline(e) ? offlineMessage : copy.errors.server);
 
 /**
- * 5단계 방어(리드 M1, #254 QA-2): 서버 계약(server/five-steps) 전에는 새 단계(recall·pass_on) 기록을 서버가 거절한다
- * (record_session_step 허용 값은 photo·question·hangul — invalid_step, 또는 not_ready). 그때는 화면이 멈추지 않게
- * 이 기기 화면에서만 '했어요'로 두고 진행한다(저장 없음, 콘솔 경고만). 옛 3단계 거절은 지금처럼 오류로 알린다.
+ * 5단계 방어(리드 M1, #254 QA-2): 서버가 새 단계(recall·pass_on) 기록을 invalid_step 으로 거절하면(0061 전 서버 — 보통은
+ * five_steps_supported 가 없어 3단계로 돌아 여기 오지 않는다) 화면이 멈추지 않게 이 기기 화면에서만 '했어요'로 두고 진행한다
+ * (저장 없음, 콘솔 경고만). 옛 3단계 거절은 지금처럼 오류로 알린다.
  */
 export function newStepNotAccepted(step: StepName, e: unknown): boolean {
-  if (isLegacyStep(step) || !(isServerError(e, 'invalid_step') || hasReason(e, FIVE_STEPS_NOT_READY))) {
+  if (isLegacyStep(step) || !isServerError(e, 'invalid_step')) {
     return false;
   }
-  console.warn(`[5단계] 서버가 '${step}' 기록을 아직 받지 않아요 — 화면에서만 진행(서버 계약 병합 전)`);
+  console.warn(`[5단계] 서버가 '${step}' 기록을 받지 않아요 — 화면에서만 진행`);
   return true;
 }
 
-// 단계 시작 계측(AC-05, 0053 course_step_started{step, day_index}): 단계 화면에 들어올 때 한 번.
+// 단계 시작 계측(AC-05, 0053 course_step_started{step, day_index}): 단계 화면에 들어올 때 한 번. step 값은 0061 에서 다섯 단계.
 // course_step_completed 와 같은 모집단이어야 이탈(시작 − 완료)을 셀 수 있어, 완료처럼 연결된 기기의 진행 모드에서만 보낸다
 // (미연결 열람·다 마친 뒤 보기 전용·이미 마친 단계는 보내지 않음).
 export function useStepStarted(step: StepName, review: boolean) {
@@ -34,26 +33,33 @@ export function useStepStarted(step: StepName, review: boolean) {
   const ready = !review && !!content?.linked && !done.includes(step);
   const dayIndex = content?.day_index;
   useEffect(() => {
-    // 5단계 새 이름(recall·pass_on)은 서버 이벤트 계약(0053 step 목록)에 아직 없다 — 서버 계약이 더하기 전까지 보내지 않는다
-    if (ready && !sent.current && isLegacyStep(step)) {
+    if (ready && !sent.current) {
       sent.current = true;
       track(api, 'course_step_started', dayIndex !== undefined ? {step, day_index: dayIndex} : {step});
     }
   }, [ready, api, step, dayIndex]);
 }
 
+export type FinishOptions = {
+  hangul?: {attemptNo: number; result: HangulResult};
+  /** 5단계 「오늘은 넘어갈게요」(p_skipped). 3단계(five 아님)에서는 서버에 보내지 않는다(realApi 가 옛 2인자로) */
+  skipped?: boolean;
+};
+
 // 단계 완료: 서버가 기록을 인정해야 완료 표시한다. 실패하면 false 와 오류 문구를 돌려주고 진행하지 않는다.
 // 소요 시간은 화면에 들어온 시각부터 잰 초(0~7200).
+// course_completed 는 서버가 completed=true 를 돌려줄 때만(5단계: 다 마친 뒤 다시 하기는 이미 완료라 다시 보내지 않음).
 export function useFinishStep() {
-  const {api, applyStep, content, done, streak} = useSession();
-  const five = useFiveSteps();
+  const {api, applyStep, content, done, streak, five} = useSession();
   const startedAt = useRef(Date.now());
   const [error, setError] = useState<Message | null>(null);
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
 
   // hangul: P6 만 준다. attemptNo = '다 썼어요'를 누른 수(이벤트 attempt_no),
   // result = finished(마치기·이대로 마칠게요) | skipped(넘어갈게요) 두 값만(AC-05, 0053). 맞았는지·글자 내용은 싣지 않는다.
-  const finish = async (step: StepName, hangul?: {attemptNo: number; result: HangulResult}): Promise<boolean> => {
+  const finish = async (step: StepName, opts: FinishOptions = {}): Promise<boolean> => {
+    const {hangul} = opts;
+    const skipped = five ? !!opts.skipped : undefined; // 3단계는 넘긴 목록을 건드리지 않는다
     if (!beginBusy()) {
       return false; // 같은 틱 두 번 누름(AP-14)
     }
@@ -64,28 +70,27 @@ export function useFinishStep() {
         if (allStepsDone([...done, step], five)) {
           await localStamps().addToday();
         }
-        applyStep(step, 0);
+        applyStep(step, 0, skipped);
         return true;
       } finally {
         endBusy();
       }
     }
     setError(null);
+    const wasAll = five && allStepsDone(done, five);
     try {
       const sec = Math.min(7200, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
-      const r = await api.recordSessionStep(step, sec);
-      applyStep(step, r.streak);
+      const r = five ? await api.recordSessionStep(step, sec, {skipped: !!skipped}) : await api.recordSessionStep(step, sec);
+      applyStep(step, r.streak, skipped);
       // 계측(0022): 서버가 기록을 인정한 뒤에만. 미연결 열람은 기록하지 않으므로 보내지 않는다
-      if (isLegacyStep(step)) { // 새 단계 이름은 이벤트 계약에 아직 없다(위 useStepStarted 와 같음)
-        track(api, 'course_step_completed', {step, duration_sec: sec, ...(hangul ? {attempt_no: hangul.attemptNo, result: hangul.result} : {})});
-      }
-      if (r.completed) {
+      track(api, 'course_step_completed', {step, duration_sec: sec, ...(hangul ? {attempt_no: hangul.attemptNo, result: hangul.result} : {})});
+      if (r.completed && !wasAll) {
         track(api, 'course_completed', content ? {day_index: content.day_index} : {});
       }
       return true;
     } catch (e) {
       if (newStepNotAccepted(step, e)) {
-        applyStep(step, streak);
+        applyStep(step, streak, skipped);
         return true;
       }
       setError(errorMessage(e));
@@ -97,54 +102,41 @@ export function useFinishStep() {
   return {finish, error, setError, busy};
 }
 
-// 5단계 '오늘은 여기까지 할게요'(R-3, DECISIONS 5단계 화면): ③을 마친 뒤 남은 단계를 넘어감으로 기록하고 끝낸다(확인 대화상자 없음).
-// 넘어감도 '했어요'라 도장 기준(다 했거나 넘김)을 채운다. 남은 단계는 picks.skipped 에 남겨 홈에서 다시 할 수 있게 둔다.
-// 서버가 하나라도 인정하지 않으면 false + 오류 문구(이미 인정된 단계는 그대로 '했어요').
+/**
+ * 5단계 '오늘은 여기까지 할게요'(R-3, DECISIONS 5단계 화면): ③을 마친 뒤 record_session_step('stop_here') 한 번 — 서버가 남은 ④·⑤(빠진 ②도)를
+ * 넘어감으로 채워 완료한다(확인 대화상자 없음). 넘긴 단계는 서버 skipped_steps 에 남아 다 마친 뒤 홈에서 다시 할 수 있다.
+ * 결과: 'done' = P7 로, 'reload' = 서버가 stop_before_question(③ 전, 또는 자정을 넘겨 새 날) → 오늘 콘텐츠를 다시 불러 홈에서 이어 하기(오류 아님),
+ * 'error' = 끊김 등(오류 문구 + 다시 하기).
+ */
 export function useStopHere() {
-  const {api, applyStep, content, done, picks, setPicks, streak} = useSession();
+  const {api, applyStep, content, sync} = useSession();
   const [error, setError] = useState<Message | null>(null);
   const {busy, begin, end} = useBusyLatch();
-  const stop = async (rest: readonly StepName[]): Promise<boolean> => {
+  const stop = async (rest: readonly StepName[]): Promise<'done' | 'reload' | 'error'> => {
     if (!begin()) {
-      return false;
+      return 'error';
     }
     setError(null);
-    // 넘긴 단계 표시(picks.skipped)는 기록이 모두 인정된 뒤에만(QA-2 L2 — 실패하면 넘기지 않은 단계가 남지 않게)
-    const markSkipped = () => setPicks({skipped: [...picks.skipped.filter(s => !rest.includes(s)), ...rest]});
     try {
       if (content && !content.linked) {
         await localStamps().addToday(); // 미연결 열람: 다 마친 날 도장은 기기에(finish 와 같은 규칙)
-        rest.forEach(s => applyStep(s, 0));
-        markSkipped();
-        return true;
+        rest.forEach(s => applyStep(s, 0, true));
+        return 'done';
       }
-      for (const s of rest) {
-        if (done.includes(s)) {
-          continue;
-        }
-        let r;
-        try {
-          r = await api.recordSessionStep(s, 0);
-        } catch (e) {
-          if (newStepNotAccepted(s, e)) {
-            applyStep(s, streak);
-            continue;
-          }
-          throw e;
-        }
-        applyStep(s, r.streak);
-        if (isLegacyStep(s)) {
-          track(api, 'course_step_completed', {step: s, duration_sec: 0, ...(s === 'hangul' ? {attempt_no: 0, result: 'skipped' as const} : {})});
-        }
-        if (r.completed) {
-          track(api, 'course_completed', content ? {day_index: content.day_index} : {});
-        }
+      const r = await api.recordSessionStep('stop_here', 0);
+      rest.forEach(s => applyStep(s, r.streak, true)); // 서버 skipped_steps 와 같게(넘긴 목록은 기록이 인정된 뒤에만, QA-2 L2)
+      track(api, 'course_step_completed', {step: 'stop_here', duration_sec: 0});
+      if (r.completed) {
+        track(api, 'course_completed', content ? {day_index: content.day_index} : {});
       }
-      markSkipped();
-      return true;
+      return 'done';
     } catch (e) {
+      if (isServerError(e, 'stop_before_question')) {
+        await sync(); // 새 날이면 새 콘텐츠·단계로 — 화면은 막히지 않는다
+        return 'reload';
+      }
       setError(errorMessage(e));
-      return false;
+      return 'error';
     } finally {
       end();
     }

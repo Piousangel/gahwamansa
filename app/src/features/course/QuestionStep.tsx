@@ -16,7 +16,7 @@ import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
-import {stepNumber, useFiveSteps} from './fiveSteps';
+import {skippedOf, stepNumber} from './fiveSteps';
 import {SkipInline} from './FiveStepParts';
 
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). 고른 답은 바꿀 수 없고 기록 호출 0, 하단 '돌아가기'.
@@ -25,9 +25,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = useCallback(() => navigation.popTo('CourseHome'), [navigation]);
   useBackAction(toCourseHome);
-  const {api, consented, content, applyAnswer, picks, setPicks} = useSession();
-  // 5단계(기능 스위치): 단계 번호 3/5, '오늘은 넘어갈게요'(넘김도 '했어요'), 고른 쪽은 ⑤ 카드가 쓴다(세션 picks). 꺼짐이면 아래 분기 모두 없음
-  const five = useFiveSteps();
+  // five(스위치 + 서버 지원): 단계 번호 3/5, '오늘은 넘어갈게요'(넘김도 '했어요'), 고른 쪽은 ⑤ 카드가 쓴다(세션 picks). 아니면 아래 분기 모두 없음
+  const {api, consented, content, applyAnswer, setPicks, five} = useSession();
   const n = stepNumber('question', five);
   const large = useWindowDimensions().fontScale >= 1.5;
   const {finish, error, setError} = useFinishStep();
@@ -54,10 +53,24 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     setSaving(true);
     setError(null);
     try {
+      // 5단계: 넘긴 ③을 다시 하면 기록(p_skipped:false)을 먼저 — 서버는 넘긴 단계 답을 예외 'skipped' 로 거부한다(0061 계약 규칙)
+      let finished = false;
+      if (five && skippedOf(content).includes('question')) {
+        if (!(await finish('question'))) return;
+        finished = true;
+      }
       // 동의한 경우에만 답변 저장. 거부 시 보기만 하고 저장 함수는 호출하지 않는다.
       if (consented) { // 미연결 열람은 consented=false 로 온다
         try {
-          await api.saveAnswer({questionId: q.id, choice});
+          try {
+            await api.saveAnswer({questionId: q.id, choice});
+          } catch (e) {
+            // 넘긴 줄 몰랐는데 skipped 가 오면 기록 먼저 → 한 번 더(5단계만)
+            if (!(five && !finished && isServerError(e, 'skipped'))) throw e;
+            if (!(await finish('question'))) return;
+            finished = true;
+            await api.saveAnswer({questionId: q.id, choice});
+          }
           applyAnswer(choice); // 서버가 받은 뒤 화면 상태에도(다시 보기에서 '고른 답'으로 보임)
         } catch (e) {
           // 서버가 동의가 없다고 하면 저장 없이 그대로 진행한다(보기만 하는 흐름). 그 밖의 실패는 알린다.
@@ -68,24 +81,24 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         }
       }
       if (five) {
-        setPicks({question: choice, skipped: picks.skipped.filter(s => s !== 'question')});
+        setPicks({question: choice});
       }
-      if (await finish('question')) {
+      if (finished || (await finish('question'))) {
         navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
       }
     } finally {
       setSaving(false);
     }
   };
-  // 5단계 넘어가기: 답을 저장하지 않고 단계만 '했어요'. 넘긴 날 자녀 카드는 지금처럼 '답 없는 날'(표시 없음)
+  // 5단계 넘어가기: 답을 저장하지 않고 p_skipped 로 '했어요'(서버가 그날 답·choice_like 를 지운다). 넘긴 날 자녀 카드는 '답 없는 날'(표시 없음)
   const skip = async () => {
     if (saving) return;
     lastAction.current = 'skip';
     setSaving(true);
     setError(null);
     try {
-      setPicks({question: null, skipped: [...picks.skipped.filter(s => s !== 'question'), 'question']});
-      if (await finish('question')) {
+      setPicks({question: null});
+      if (await finish('question', {skipped: true})) {
         navigation.popTo('CourseHome');
       }
     } finally {
@@ -94,7 +107,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   };
 
   const back = {to: copy.course.to_home, onPress: toCourseHome};
-  const header = <StepHeader name={copy.course.step.question} n={n} review={review} />;
+  const header = <StepHeader name={copy.course.step.question} n={n} review={review} five={five} />;
   const title = q.prompt ?? appCopy.question_title;
   // 고정 머리줄(DECISIONS 11-25 R-2): ③은 '요즘 마음'을 묻는다는 것을 질문 위에서 먼저 말한다(콘텐츠 행은 그대로)
   const headline = <Text key="headline" testID="p5-headline" role="label">{copy.question.headline}</Text>;
@@ -123,7 +136,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     <DsScreen
       variant="step"
       back={back}
-      stepInfo={stepA11y(copy.course.step.question, n)}
+      stepInfo={stepA11y(copy.course.step.question, n, false, five)}
       scrollRef={errorTop}
       onViewport={setViewport}
       dock={

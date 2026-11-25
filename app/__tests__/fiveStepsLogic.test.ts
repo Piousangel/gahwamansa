@@ -8,6 +8,7 @@ import {
   allStepsDone,
   courseStepNames,
   EMPTY_PICKS,
+  fiveStepsActive,
   FIVE_STEP_ORDER,
   passOnCards,
   passOnLine,
@@ -15,7 +16,7 @@ import {
   recallWordOf,
   stepNumber,
 } from '../src/features/course/fiveSteps';
-import {PASS_ON_KEYS, parseFiveStepsContent} from '../src/api/contract/fiveSteps';
+import {PASS_ON_KEYS} from '../src/api/contract/fiveSteps';
 import {COURSE_ORDER, parentStepAfterOpen} from '../src/push/openRoute';
 import {copy} from '../src/copy/copy';
 import type {TodayContent} from '../src/features/types';
@@ -127,35 +128,28 @@ describe('⑤ 카드 3장(문구 문서 4.2)', () => {
   });
 });
 
-test('고른 값: 화면에서 고른 값이 먼저, 없으면 서버 저장 값, 넘겼으면 null', () => {
+test('고른 값: 화면에서 고른 slot 이 먼저, 없으면 서버 picked_slot, 넘겼으면 null(서버 recall.options[{slot,label}])', () => {
+  const recall = {options: [{slot: 1, label: '그늘'}, {slot: 2, label: '참새'}, {slot: 3, label: '산들바람'}], picked_slot: 3};
   const content = {
     question: {id: 'q', option_a: '봄', option_b: '가을', prompt: null},
     answered_choice: 'B',
-    recall: {options: ['그늘', '참새', '산들바람']},
-    recall_choice: 3,
+    recall,
   } as unknown as TodayContent;
   expect(recallWordOf(content, EMPTY_PICKS)).toBe('산들바람');
   expect(recallWordOf(content, {...EMPTY_PICKS, recall: 2})).toBe('참새');
-  expect(recallWordOf({...content, recall_choice: null}, EMPTY_PICKS)).toBeNull();
-  expect(recallWordOf({...content, recall: null}, {...EMPTY_PICKS, recall: 1})).toBeNull();
+  expect(recallWordOf({...content, recall: {...recall, picked_slot: null}}, EMPTY_PICKS)).toBeNull();
+  expect(recallWordOf({...content, recall: {options: [], picked_slot: null}}, {...EMPTY_PICKS, recall: 1})).toBeNull(); // 보기 없는 날
+  expect(recallWordOf({...content, recall: {...recall, picked_slot: 9}}, EMPTY_PICKS)).toBeNull(); // 모르는 slot
   expect(questionLabelOf(content, EMPTY_PICKS)).toBe('가을');
   expect(questionLabelOf(content, {...EMPTY_PICKS, question: 'A'})).toBe('봄');
 });
 
-test('계약 읽기: 옛 서버(칸 없음)는 빈 값, 이상한 값은 버린다', () => {
-  expect(parseFiveStepsContent({})).toEqual({recall: null, recall_choice: null, pass_on_key: null, pass_on_enabled: false});
-  expect(parseFiveStepsContent({recall: {options: ['a', 'b', 'c']}, recall_choice: 2, pass_on_key: 'ask_which', pass_on_enabled: true})).toEqual({
-    recall: {options: ['a', 'b', 'c']},
-    recall_choice: 2,
-    pass_on_key: 'ask_which',
-    pass_on_enabled: true,
-  });
-  expect(parseFiveStepsContent({recall: {options: ['a', 'b']}, recall_choice: 4, pass_on_key: 'hello', pass_on_enabled: 'yes'})).toEqual({
-    recall: null,
-    recall_choice: null,
-    pass_on_key: null,
-    pass_on_enabled: false,
-  });
+test('5단계로 도는 조건 = 스위치 켜짐 + 서버 지원(five_steps_supported)', () => {
+  const c = (v?: boolean) => ({five_steps_supported: v}) as unknown as TodayContent;
+  expect(fiveStepsActive(true, c(true))).toBe(true);
+  expect(fiveStepsActive(false, c(true))).toBe(false);
+  expect(fiveStepsActive(true, c(undefined))).toBe(false); // 옛 서버
+  expect(fiveStepsActive(true, null)).toBe(false);
 });
 
 test('문구: 라이터 확정 값 그대로(five-steps-copy 1절·4.2절)', () => {

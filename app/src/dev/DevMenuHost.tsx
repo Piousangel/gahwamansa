@@ -50,8 +50,8 @@ const T = {
   failed: '실패했어요',
   fiveOn: '오늘 코스 5단계 켜기(기능 스위치)',
   fiveOff: '오늘 코스 5단계 끄기(3단계로)',
-  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. 서버 계약 병합 전이라 fake 모드에서만 켤 수 있어요',
-  fiveRealOff: '서버 준비 뒤 켤 수 있어요(실서버는 ②·⑤ 단계 기록을 아직 받지 않아요)',
+  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. staging 서버에 5단계(0061)가 반영되기 전이라 fake 모드에서만 켤 수 있어요',
+  fiveRealOff: '서버 준비 뒤 켤 수 있어요(staging 에 5단계(0061) 반영 전)',
 };
 
 type Role = 'parent' | 'child';

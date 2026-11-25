@@ -1,10 +1,11 @@
 // 오늘 코스 5단계(기능 스위치 fiveSteps, 기본 꺼짐) — 단계 순서·값 고르기·⑤ 문장 만들기 한 곳.
 // 근거: DECISIONS 2026-11-25 '3단계 → 5단계'·'5단계 화면 결정'·'5단계 문구 확정', docs/team/copy/2026-11-25-five-steps-copy.md.
-// 스위치가 꺼져 있으면 여기 함수들은 옛 3단계 값(LEGACY_STEPS)만 돌려준다 — 3단계 화면은 한 줄도 바뀌지 않는다.
+// 5단계로 도는 조건 = 스위치 켜짐 + 서버가 지원(get_today_content.five_steps_supported, 0061). 둘 중 하나라도 아니면 옛 3단계(LEGACY_STEPS)
+// — 3단계 화면은 한 줄도 바뀌지 않는다. 화면은 세션의 five(AppRoot 가 계산)를 읽는다.
 import {useSyncExternalStore} from 'react';
 import {isFeatureOn, subscribeFeatures} from '../../lib/features';
 import {copy} from '../../copy/copy';
-import type {PassOnKey, RecallChoice} from '../../api/contract/fiveSteps';
+import type {PassOnKey} from '../../api/contract/fiveSteps';
 import type {LegacyStepName, StepName, TodayContent} from '../types';
 
 export type StepRoute = 'PhotoStep' | 'RecallStep' | 'QuestionStep' | 'KeyboardStep' | 'PassOnStep';
@@ -24,13 +25,17 @@ const FIVE_NAMES: readonly StepName[] = FIVE_STEP_ORDER.map(s => s.step);
 
 export const isLegacyStep = (s: StepName): s is LegacyStepName => (LEGACY_STEPS as readonly string[]).includes(s);
 
-/** 화면 밖(로직·푸시)에서 읽는 스위치 */
+/** 스위치만(서버 지원 여부는 따로) */
 export const fiveStepsOn = (): boolean => isFeatureOn('fiveSteps');
 
-/** 화면에서 읽는 스위치(개발자 메뉴가 바꾸면 다시 그린다) */
+/** 스위치만 읽는 훅(개발자 메뉴가 바꾸면 다시 그린다). 화면은 이것 대신 세션 five(스위치 + 서버 지원)를 쓴다 */
 export function useFiveSteps(): boolean {
   return useSyncExternalStore(subscribeFeatures, fiveStepsOn, fiveStepsOn);
 }
+
+/** 5단계로 도는가: 스위치 켜짐 + 오늘 콘텐츠가 5단계를 지원(옛 서버면 키가 없다 → 3단계) */
+export const fiveStepsActive = (switchOn: boolean, content: TodayContent | null | undefined): boolean =>
+  switchOn && content?.five_steps_supported === true;
 
 /** 오늘 코스 단계 이름(순서대로) */
 export const courseStepNames = (five: boolean): readonly StepName[] => (five ? FIVE_NAMES : LEGACY_STEPS);
@@ -43,19 +48,22 @@ export const allStepsDone = (done: readonly StepName[], five: boolean): boolean 
 
 /**
  * 이 기기 화면에서 고른 값(세션). 저장은 동의한 경우만 하지만 ④ 낱말·⑤ 카드는 고른 값을 그대로 쓴다(어르신 본인 화면).
- * day = 고른 날의 day_index(날이 바뀌면 비운다). skipped = 넘어간 단계(다 마친 뒤 홈에서 ④·⑤를 다시 할 수 있게, DECISIONS 5단계 화면)
+ * day = 고른 날의 day_index(날이 바뀌면 비운다). recall = ② 보기 slot. 넘긴 단계는 서버 skipped_steps(content)가 기억한다
  */
-export type CoursePicks = {day: number | null; recall: RecallChoice | null; question: 'A' | 'B' | null; passOn: PassOnKey | null; skipped: readonly StepName[]};
-export const EMPTY_PICKS: CoursePicks = Object.freeze({day: null, recall: null, question: null, passOn: null, skipped: []});
+export type CoursePicks = {day: number | null; recall: number | null; question: 'A' | 'B' | null; passOn: PassOnKey | null};
+export const EMPTY_PICKS: CoursePicks = Object.freeze({day: null, recall: null, question: null, passOn: null});
 
-/** ②에서 고른 낱말(화면에서 고른 값 → 서버 저장 값 순). 넘겼거나 보기가 없으면 null */
+/** 넘긴 단계(서버 skipped_steps, 화면 반영 포함) */
+export const skippedOf = (content: TodayContent | null | undefined): readonly StepName[] => content?.skipped_steps ?? [];
+
+/** ②에서 고른 낱말(화면에서 고른 slot → 서버 저장 picked_slot 순). 넘겼거나 보기가 없으면 null */
 export function recallWordOf(content: TodayContent | null | undefined, picks: CoursePicks): string | null {
   const opts = content?.recall?.options;
-  if (!opts) {
+  if (!opts || opts.length === 0) {
     return null;
   }
-  const n = picks.recall ?? content?.recall_choice ?? null;
-  return n ? opts[n - 1] ?? null : null;
+  const slot = picks.recall ?? content?.recall?.picked_slot ?? null;
+  return slot == null ? null : opts.find(o => o.slot === slot)?.label ?? null;
 }
 
 /** ③에서 고른 쪽의 글(화면에서 고른 값 → 저장된 답 순). 넘겼으면 null */

@@ -14,7 +14,7 @@ import {photoFit, photoFrame} from './photoFrame';
 import {usePhotoLoad} from './usePhotoLoad';
 import {PhotoZoom} from './PhotoZoom';
 import {ReadAloudNotice, useReadAloudAction} from './ReadAloud';
-import {passOnLine, questionLabelOf, recallWordOf, useFiveSteps} from './fiveSteps';
+import {passOnLine, questionLabelOf, recallWordOf} from './fiveSteps';
 
 const c = copy.course;
 const fill = (tpl: string, vars: Record<string, string>) => Object.keys(vars).reduce((s, k) => s.split(`{${k}}`).join(vars[k]), tpl);
@@ -29,8 +29,7 @@ const fill = (tpl: string, vars: Record<string, string>) => Object.keys(vars).re
 // 코스 홈 바로 위에만 쌓이므로 뒤로(BackLink·하드웨어)는 기본 goBack 그대로 코스 홈이다(app/ 의존을 늘리지 않게 내비 타입은 필요한 것만).
 export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) {
   const toCourseHome = useCallback(() => navigation.goBack(), [navigation]);
-  const {content, picks} = useSession();
-  const five = useFiveSteps();
+  const {content, picks, five} = useSession();
   const audience = useAudience();
   const {width: winW, height: winH, fontScale} = useWindowDimensions();
   const [boxW, setBoxW] = useState(0);
@@ -58,7 +57,8 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
   // 5단계(기능 스위치): ②를 한 날은 '먼저 떠올리신 것' 한 줄이 '오늘 낱말' 줄을 대신(④ 낱말 = ② 낱말이라 같은 낱말 두 번 금지, 문구 #7),
   // ⑤에서 건넨 날은 맨 아래 '건넨 말' + 문장(먹 글자, 노랑 없음). 넘긴 단계의 줄은 없다
   const recallWord = five ? recallWordOf(content, picks) : null;
-  const passed = five && content?.pass_on_key ? passOnLine(content.pass_on_key, recallWord, questionLabelOf(content, picks), q) : null;
+  const key = five ? content?.pass_on?.picked_key ?? null : null;
+  const passed = key ? passOnLine(key, recallWord, questionLabelOf(content, picks), q) : null;
   const baseRead = photo
     ? chosen
       ? fill(c.review_read, {날짜: date, 사진: photo.caption, 답: chosen, 낱말: photo.keyword})

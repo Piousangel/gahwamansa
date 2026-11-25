@@ -14,7 +14,6 @@ import {copy} from '../src/copy/copy';
 import {ServerError} from '../src/features/types';
 import {createFakeTokenSource, setTokenSourceForTest} from '../src/push/tokenSource';
 import {setPushTokenStoreForTest} from '../src/lib/pushToken';
-import {FIVE_STEPS_NOT_READY} from '../src/api/contract/fiveSteps';
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -38,7 +37,7 @@ async function home(opts: FakeOptions = {}) {
   const api = createFakeApi({linked: true, consented: true, realImage: true, ...opts});
   const spies = {
     rec: jest.spyOn(api, 'recordSessionStep'),
-    recall: jest.spyOn(api, 'saveRecallChoice'),
+    recall: jest.spyOn(api, 'saveRecall'),
     passOn: jest.spyOn(api, 'savePassOn'),
     answer: jest.spyOn(api, 'saveAnswer'),
   };
@@ -126,7 +125,7 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   expect(screen.getByText('골랐어요', {includeHiddenElements: true})).toBeTruthy(); // ✓ 표시(읽기는 radio 선택 상태가 맡음)
   await press('이걸로 할게요');
   await backHome();
-  expect(s.recall).toHaveBeenCalledWith(2);
+  expect(s.recall).toHaveBeenCalledWith(1, 2); // save_recall(p_day_index, p_slot)
   await doQuestion('봄');
   // ③ 뒤: '오늘은 여기까지 할게요'(100%는 Dock 주 버튼 아래)
   expect(dock().getByRole('button', {name: '오늘은 여기까지 할게요'})).toBeTruthy();
@@ -154,9 +153,9 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   await press('건넬게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => screen.getByText(/^가족에게 건넸어요 /) /* 첫 줄(줄바꿈은 찾기에서 공백) */);
-  expect(s.passOn).toHaveBeenCalledWith('recall_story');
+  expect(s.passOn).toHaveBeenCalledWith(1, 'recall_story'); // save_pass_on(p_day_index, p_key)
   expect(s.answer).toHaveBeenCalledWith({questionId: 'q-1', choice: 'A'});
-  expect(s.rec.mock.calls.map(c => c[0])).toEqual(['photo', 'recall', 'question', 'hangul', 'pass_on']);
+  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false], ['pass_on', false]]);
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('course-done-head'));
   expect(screen.getAllByTestId('done-title-stamp', {includeHiddenElements: true})).toHaveLength(1);
@@ -194,7 +193,8 @@ test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ⑤는 �
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
-  expect(s.rec.mock.calls.map(c => c[0])).toEqual(['photo', 'recall', 'question', 'hangul', 'pass_on']);
+  // 넘어감은 p_skipped:true(①은 넘길 수 없다)
+  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', true], ['question', true], ['hangul', true], ['pass_on', true]]);
   expect(s.recall).not.toHaveBeenCalled();
   expect(s.answer).not.toHaveBeenCalled();
   expect(s.passOn).not.toHaveBeenCalled();
@@ -217,7 +217,7 @@ test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
   expect(screen.queryByText(/단계/)).toBeNull();
-  expect(s.rec.mock.calls.map(c => c[0])).toEqual(['photo', 'recall', 'question', 'hangul', 'pass_on']);
+  expect(s.rec.mock.calls.map(c => c[0])).toEqual(['photo', 'recall', 'question', 'stop_here']); // 서버가 남은 ④·⑤를 넘어감으로 채운다
   expect(s.passOn).not.toHaveBeenCalled();
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('course-done-head'));
@@ -244,7 +244,7 @@ test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남
 });
 
 test('이어 하기: 앱이 꺼져도 하던 단계부터(서버 기록) — 지금 행 = 다음 단계, ④는 서버에 저장된 ② 낱말', async () => {
-  await home({completedSteps: ['photo', 'recall'], recallChoice: 3});
+  await home({completedSteps: ['photo', 'recall'], recallSlot: 3});
   expect(rowIds()).toEqual(['step-done-photo', 'step-done-recall', 'step-now-row', 'step-wait-hangul', 'step-wait-pass_on']);
   expect(within(screen.getByTestId('step-now-row')).getByText('둘 중 고르기')).toBeTruthy();
   await doQuestion('봄');
@@ -297,7 +297,7 @@ test('QA-2 H1: 보기를 고르지 않고 넘어가기 → 끊김 → [다시 �
   expect(s.rec).toHaveBeenCalledTimes(2);
 });
 
-test('QA-2 M1 방어: 서버가 새 단계를 거절(invalid_step)하고 ② 저장이 not_ready 여도 화면은 다음 단계로(저장 없음, 경고만)', async () => {
+test('QA-2 M1 방어: 서버가 새 단계 기록을 거절(invalid_step)해도 화면은 다음 단계로(경고만)', async () => {
   const api = createFakeApi({linked: true, consented: true, realImage: true, completedSteps: ['photo']});
   const orig = api.recordSessionStep.bind(api);
   jest.spyOn(api, 'recordSessionStep').mockImplementation(async (step, sec) => {
@@ -306,7 +306,6 @@ test('QA-2 M1 방어: 서버가 새 단계를 거절(invalid_step)하고 ② 저
     }
     return orig(step, sec);
   });
-  jest.spyOn(api, 'saveRecallChoice').mockRejectedValue(new ServerError('save_recall_choice', FIVE_STEPS_NOT_READY));
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   render(<AppRoot api={api} role="parent" restore />);
   await backHome();
@@ -396,7 +395,7 @@ test('② 저장이 끊기면 알리고 멈춘다(단계 기록 0) → 다시 �
   expect(s.rec).not.toHaveBeenCalled();
   await press(copy.errors.offline.button);
   await backHome();
-  expect(s.recall).toHaveBeenLastCalledWith(1);
+  expect(s.recall).toHaveBeenLastCalledWith(1, 1);
   expect(s.rec.mock.calls.map(c => c[0])).toEqual(['recall']);
 });
 

@@ -13,7 +13,8 @@ import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
 import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
-import {FIVE_STEPS_NOT_READY} from '../api/contract/fiveSteps';
+import {FIVE_STEP_COURSE_LEN, TODAY_FIVE_STEP_KEYS, parseSavePassOnResult, parseSaveRecallResult, parseTodayFiveSteps, type TodayFiveSteps} from '../api/contract/fiveSteps';
+import {isFeatureOn} from '../lib/features';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
   SendCheerResult, StepName, TodayContent,
@@ -110,6 +111,23 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
     }
     flushWaiting();
   };
+  // 5단계(0061): 서버가 five_steps_supported 를 준 뒤에만 true. 스위치(fiveSteps)와 함께 켜져 있으면 record_session_step 모든 호출에
+  // p_course_len 5 를 붙인다(이 한 곳 — 리뷰 L-a). 옛 서버(키 없음)면 새 인자를 보내지 않는다(함수 없음 오류).
+  let serverFive = false;
+  const fiveOn = () => serverFive && isFeatureOn('fiveSteps');
+  // 오늘 콘텐츠의 5단계 칸만 계약 파서로 읽어 덮어쓴다. 모양이 틀리면 5단계 칸 없이(앱은 3단계) — 3단계 화면을 막지 않는다
+  const withFive = <T extends object>(base: T, raw: unknown): T & Partial<TodayFiveSteps> => {
+    const five = parseTodayFiveSteps(raw);
+    serverFive = !!five?.five_steps_supported;
+    if (!five || !five.five_steps_supported) {
+      const rest = {...base} as Record<string, unknown>;
+      for (const k of TODAY_FIVE_STEP_KEYS) {
+        delete rest[k];
+      }
+      return rest as T & Partial<TodayFiveSteps>;
+    }
+    return {...base, ...five};
+  };
   // get_today_content(읽기 전용)·start_today(0024, 커서 전진 + 같은 객체 + advanced) 공용. 미연결이면 미리 보기.
   const loadToday = async (rpc: 'get_today_content' | 'start_today'): Promise<TodayContent | null> => {
     // 처음 설치한 기기는 세션이 없다. anon 은 RPC 권한이 없으므로 먼저 익명 로그인한다(서버 권한은 열지 않음).
@@ -126,20 +144,23 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
           fail('preview_content', pe);
         }
         if (!pv) return null;
-        return {
-          day_index: pv.day_index,
-          photo: pv.photo,
-          question: pv.question,
-          answered_choice: null,
-          consented: false,
-          completed_steps: [],
-          streak: 0,
-          linked: false,
-        };
+        return withFive(
+          {
+            day_index: pv.day_index,
+            photo: pv.photo,
+            question: pv.question,
+            answered_choice: null,
+            consented: false,
+            completed_steps: [],
+            streak: 0,
+            linked: false,
+          } as TodayContent,
+          pv,
+        );
       }
       fail(rpc, error);
     }
-    return data ? ({...data, linked: true} as TodayContent) : null;
+    return data ? withFive({...data, linked: true} as TodayContent, data) : null;
   };
   return {
     async signUpChild(email, password) {
@@ -391,21 +412,29 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       const {error} = await sb.rpc('save_answer', {p_question: questionId, p_choice: choice});
       if (error) fail('save_answer', error);
     },
-    async recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult> {
-      const {data, error} = await sb.rpc('record_session_step', {
-        p_step: step,
-        p_duration: durationSec,
-      });
+    async recordSessionStep(step: StepName | 'stop_here', durationSec: number, opts?: {skipped?: boolean}): Promise<RecordStepResult> {
+      // 3단계(스위치 꺼짐·옛 서버): 옛 2인자 그대로. 5단계: 모든 호출에 p_skipped·p_course_len 5(0061)
+      const args = fiveOn()
+        ? {p_step: step, p_duration: durationSec, p_skipped: !!opts?.skipped, p_course_len: FIVE_STEP_COURSE_LEN}
+        : {p_step: step, p_duration: durationSec};
+      const {data, error} = await sb.rpc('record_session_step', args);
       if (error) fail('record_session_step', error);
       return {completed: !!data.completed, streak: Number(data.streak ?? 0), steps: data.steps};
     },
-    // 5단계 ②·⑤ 저장: 서버 계약(server/five-steps)이 병합되면 RPC 를 연결한다. 그 전에는 스위치(fiveSteps)가 꺼져 있어 부르지 않는다.
-    // 켜고 부르면 not_ready — 화면은 저장 없이 진행한다(consent_required 와 같은 처리)
-    async saveRecallChoice() {
-      throw new ServerError('save_recall_choice', FIVE_STEPS_NOT_READY);
+    // 5단계 ② save_recall·⑤ save_pass_on(0061). 거절은 값({ok:false, reason}), 역할·끊김은 예외
+    async saveRecall(dayIndex, slot) {
+      const {data, error} = await sb.rpc('save_recall', {p_day_index: dayIndex, p_slot: slot});
+      if (error) fail('save_recall', error);
+      const r = parseSaveRecallResult(data);
+      if (!r) throw new ServerError('save_recall', 'contract_mismatch');
+      return r;
     },
-    async savePassOn() {
-      throw new ServerError('save_pass_on', FIVE_STEPS_NOT_READY);
+    async savePassOn(dayIndex, key) {
+      const {data, error} = await sb.rpc('save_pass_on', {p_day_index: dayIndex, p_key: key});
+      if (error) fail('save_pass_on', error);
+      const r = parseSavePassOnResult(data);
+      if (!r) throw new ServerError('save_pass_on', 'contract_mismatch');
+      return r;
     },
     async fetchChildSummary(): Promise<ChildSummary> {
       const {data, error} = await sb.rpc('child_summary');

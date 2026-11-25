@@ -22,7 +22,7 @@ import {FoldStack} from '../../ui/FoldStack';
 import {useBootLoading} from '../../app/splash';
 import {WeekStampStrip, showWeekStrip} from './WeekStampStrip';
 import type {StepName} from '../types';
-import {allStepsDone, FIVE_STEP_ORDER, useFiveSteps, type StepEntry, type StepRoute} from './fiveSteps';
+import {allStepsDone, FIVE_STEP_ORDER, skippedOf, type StepEntry, type StepRoute} from './fiveSteps';
 import {stepA11y} from './StepHeader';
 import {useStopHere} from './useFinishStep';
 
@@ -42,10 +42,9 @@ const STEPS: StepEntry[] = [
 //   다음 = 누르지 않는 행. 읽기 이름은 보이는 글과 같게(R-14), '다시 보기'는 힌트로.
 // - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기' → '오늘 한 장'(TodayReviewScreen, D-3).
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
-  const {api, done, content, consented, syncError, sync, picks} = useSession();
+  const {api, done, content, consented, syncError, sync, five} = useSession();
   // 5단계(기능 스위치, 기본 꺼짐): 5행 · A′(다음 행은 이름만) · ③ 뒤 '오늘은 여기까지' · 다 마치면 제목 옆 도장 1개 · 열릴 때 지금 행으로 스크롤.
   // 꺼져 있으면 아래 five 분기는 모두 지나가고 3단계 화면 그대로다
-  const five = useFiveSteps();
   const steps = five ? FIVE_STEP_ORDER : STEPS;
   const {stop, error: stopError, busy: stopping} = useStopHere();
   const scrollRef = useRef<{showRange(top: number, bottom: number): void}>(null); // DsScreen scrollRef(ui/Screen ScreenScroll 과 같은 꼴)
@@ -166,12 +165,12 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const canStop = five && !all && done.includes('question') && rest.length > 0;
   const onStop = async () => {
     mark('stop');
-    if (await stop(rest)) {
+    if ((await stop(rest)) === 'done') {
       navigation.navigate('CourseDone'); // P7: 몇 단계 했는지 말하지 않는다
     }
   };
-  // 다 마친 뒤 넘긴 ④·⑤는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로)
-  const reopen = (step: StepName) => five && all && (step === 'hangul' || step === 'pass_on') && picks.skipped.includes(step);
+  // 다 마친 뒤 넘긴 ④·⑤는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로). 넘긴 목록은 서버 skipped_steps(앱을 다시 켜도 남는다)
+  const reopen = (step: StepName) => five && all && (step === 'hangul' || step === 'pass_on') && skippedOf(content).includes(step);
   const dock: DockProps | undefined = current
     ? {
         primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')},

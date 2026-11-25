@@ -25,7 +25,7 @@ async function home(opts: FakeOptions = {}) {
   const api = createFakeApi({linked: true, consented: true, realImage: true, ...opts});
   const spies = {
     rec: jest.spyOn(api, 'recordSessionStep'),
-    recall: jest.spyOn(api, 'saveRecallChoice'),
+    recall: jest.spyOn(api, 'saveRecall'),
     passOn: jest.spyOn(api, 'savePassOn'),
     answer: jest.spyOn(api, 'saveAnswer'),
   };
@@ -56,11 +56,10 @@ test('꺼짐: 코스 홈은 3행(사진 보기·둘 중 고르기·낱말 쓰기
   }
 });
 
-test('꺼짐: 오늘 콘텐츠에 5단계 칸이 없다(옛 서버와 같다)', async () => {
-  const api = createFakeApi({linked: true, consented: true});
-  const c = await api.getTodayContent();
-  expect(c && 'recall' in c).toBe(false);
-  expect(c && 'pass_on_enabled' in c).toBe(false);
+test('꺼짐: 서버(0061)가 5단계 칸을 줘도 3단계 — 코스 홈 3행', async () => {
+  const s = await home();
+  expect((await s.api.getTodayContent())?.five_steps_supported).toBe(true); // fake = 새 서버
+  expect([...new Set(rowIds())]).toEqual(['step-now-row', 'step-wait-question', 'step-wait-hangul']);
 });
 
 test('꺼짐: 사진 → 고르기 → 낱말 → P7 흐름, 단계 표시 n / 3, 기록 순서·저장 호출 그대로, ②·⑤ 저장 0', async () => {
@@ -91,6 +90,7 @@ test('꺼짐: 사진 → 고르기 → 낱말 → P7 흐름, 단계 표시 n / 3
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
   expect(s.rec.mock.calls.map(c => c[0])).toEqual(['photo', 'question', 'hangul']);
+  expect(s.rec.mock.calls.every(c => c.length === 2)).toBe(true); // 옛 2인자 호출 그대로(넘어감·과정 길이 없음)
   expect(await s.rec.mock.results[2].value).toMatchObject({completed: true});
   expect(s.answer).toHaveBeenCalledWith({questionId: 'q-1', choice: 'A'});
   expect(s.recall).not.toHaveBeenCalled();
