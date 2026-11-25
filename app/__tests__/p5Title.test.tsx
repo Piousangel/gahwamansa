@@ -62,3 +62,25 @@ test('100%: 단계 제목은 이름까지 한 줄 그대로', async () => {
   await toQuestion();
   expect(screen.getByText('둘 중 고르기 · 2 / 3')).toBeTruthy();
 });
+
+// #257 QA-2 L1: 문턱은 P4와 같은 150%(PhotoStep large). 1.4는 이름까지 한 줄, 1.5부터 짧은 표시
+test.each([
+  [1.4, '둘 중 고르기 · 2 / 3', '2 / 3'],
+  [1.5, '2 / 3', '둘 중 고르기 · 2 / 3'],
+])('글자 %s배: 단계 표시 「%s」(경계)', async (scale, shown, hidden) => {
+  mockFontScale = scale;
+  await toQuestion();
+  expect(screen.getByText(shown)).toBeTruthy();
+  expect(screen.queryByText(hidden)).toBeNull();
+  expect(screen.getByTestId('step-header').props.accessibilityLabel).toBe('둘 중 고르기, 3단계 중 2단계');
+});
+
+// #257 QA-2 L2: 안내('하나를 눌러 주세요')와 [정했어요] 비활성 이유가 화면 읽기에서 같은 말로 들리지 않게 — 이유는 버튼 상태를 말한다(P6 '한 글자라도 쓰면 눌려요'와 같은 꼴)
+test('[정했어요] 비활성 이유는 「한쪽을 고르면 눌려요」, 안내와 다른 말', async () => {
+  await toQuestion({completedSteps: ['photo']});
+  const hint = screen.getByTestId('p5-hint').props.children;
+  const btn = screen.getByRole('button', {name: '정했어요'});
+  expect(btn.props.accessibilityHint).toBe('한쪽을 고르면 눌려요');
+  expect(btn.props.accessibilityHint).not.toContain('하나를');
+  expect(hint).toBe('정답은 없어요. 하나를 눌러 주세요');
+});
