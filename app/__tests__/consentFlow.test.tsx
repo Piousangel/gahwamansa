@@ -41,9 +41,7 @@ test('설정에서 다시 동의하면 그 뒤 답이 저장된다', async () =>
   await waitFor(() => screen.getByText('오늘부터 고르신 답이 가족에게 보여요'));
   // P2 v6 리뷰: 다시 보여 주기도 CONSENT_VERSION(v6)으로 기록되므로, 그 버전의 동의 다섯 줄을 좋아요 앞에 같은 글자로 보인다
   const panel = screen.getByTestId('settings-confirm');
-  for (const line of copy.consent.body) {
-    expect(within(panel).getByText(`• ${line}`)).toBeTruthy();
-  }
+  expect(within(panel).getAllByTestId('resume-consent-point').map(n => n.props.accessibilityLabel)).toEqual(copy.consent.body);
   const give = jest.spyOn(api, 'giveConsent');
   await press('좋아요');
   expect(give).toHaveBeenCalledWith('v6');

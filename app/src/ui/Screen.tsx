@@ -81,7 +81,10 @@ export function Screen({children, top, bottom, scrollEnabled = true, dockMaxRati
         if (view <= 0) {
           return;
         }
-        if (to > y + view) {
+        if (to - from > view) {
+          // #298 QA-3 M1: 범위가 창보다 크면 끝이 아니라 위쪽에 맞춘다(제목·첫 줄부터 읽고, 아래 버튼은 스크롤로 닿는다)
+          bodyScroll.current?.scrollTo({y: Math.max(0, from - space.md), animated: true});
+        } else if (to > y + view) {
           bodyScroll.current?.scrollTo({y: Math.max(0, to - view + space.md), animated: true});
         } else if (from < y) {
           bodyScroll.current?.scrollTo({y: Math.max(0, from - space.md), animated: true});
