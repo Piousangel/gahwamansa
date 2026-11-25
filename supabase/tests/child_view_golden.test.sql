@@ -1,5 +1,6 @@
 -- 자녀 화면·어르신 미리보기 골든 테스트 (pgTAP, PR #18 리뷰 L4). 실행: npx supabase test db
 -- 보호하는 것: child_summary·child_answer_history·parent_preview_child_view의 **출력 전체**를 대표 픽스처의 기대 JSON으로 고정한다.
+--   0065: latest·answers[]에 care(챙겨 드릴 거리, 스위치 꺼짐 = null).
 --   0061: 어르신 항목에 recalls(② 고른 낱말)·pass_ons(⑤ 틀 키 + 끼울 값) 두 배열. answers 항목은 그대로, 미동의 어르신은 둘 다 [].
 --   0050에서 계산부를 내부 함수(family_child_summary·family_child_history)로 옮겼으므로, 내부 함수를 고치면 자녀 화면과 미리보기가 함께 바뀐다.
 --   "자녀 = 미리보기" 비교(parent_preview.test.sql)만으로는 둘이 같이 틀어져도 잡지 못하므로, 여기서 키·값·순서를 글자 그대로 고정한다.
@@ -53,12 +54,12 @@ create temp table g (k text primary key, v jsonb);
 insert into g values
 ('summary', pg_temp.golden($j${"parent_title": "엄마", "parents": [
   {"parent_id": "70510000-0000-0000-0000-00000000a001", "title": "엄마", "connected": true, "connected_date": "2026-11-10", "shared": true,
-   "latest": {"prompt": "어느 계절이 좋으세요?", "choice_label": "가을", "starter": "가을 이야기", "answered_date": "{T0}"}},
+   "latest": {"prompt": "어느 계절이 좋으세요?", "choice_label": "가을", "starter": "가을 이야기", "care": null, "answered_date": "{T0}"}},
   {"parent_id": "70510000-0000-0000-0000-00000000a002", "title": "아빠", "connected": false, "connected_date": "2026-11-11", "shared": false, "latest": null}]}$j$)),
 ('history', pg_temp.golden($j${"parents": [
   {"parent_id": "70510000-0000-0000-0000-00000000a001", "title": "엄마", "connected": true, "shared": true, "answers": [
-    {"session_date": "{T0}", "prompt": "어느 계절이 좋으세요?", "prompt_short": "가을과 봄 중", "option_a": "가을", "option_b": "봄", "choice_label": "가을"},
-    {"session_date": "{T1}", "prompt": "어디로 가고 싶으세요?", "prompt_short": "바다와 산 중", "option_a": "바다", "option_b": "산", "choice_label": "산"}],
+    {"session_date": "{T0}", "prompt": "어느 계절이 좋으세요?", "prompt_short": "가을과 봄 중", "option_a": "가을", "option_b": "봄", "choice_label": "가을", "care": null},
+    {"session_date": "{T1}", "prompt": "어디로 가고 싶으세요?", "prompt_short": "바다와 산 중", "option_a": "바다", "option_b": "산", "choice_label": "산", "care": null}],
    "recalls": [{"session_date": "{T0}", "label": "누룽지"}],
    "pass_ons": [{"session_date": "{T0}", "line_key": "recall_story", "recall_label": "누룽지", "choice_label": "가을", "option_a": "가을", "option_b": "봄"}]},
   {"parent_id": "70510000-0000-0000-0000-00000000a002", "title": "아빠", "connected": false, "shared": false, "answers": [], "recalls": [], "pass_ons": []}]}$j$));
