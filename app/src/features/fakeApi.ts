@@ -24,7 +24,7 @@ const FAKE_CONTENT = [
   {caption: '장날 아침', keyword: '바구니', a: '시장 구경', b: '공원 산책', prompt: '나들이를 간다면요?',
     recall: ['장에 가면 제일 먼저 어디를 보셨어요?', '장바구니에 꼭 담던 건 뭐예요?']},
   {caption: '라디오가 있던 방', keyword: '라디오', a: '라디오 듣기', b: '텔레비전 보기', prompt: '편한 쪽은요?',
-    recall: ['라디오에서 나오던 소리 중 기억나는 게 있어요?', '어디서 들으셨어요?']},
+    recall: ['라디오로 즐겨 들으시던 게 있으세요?', '어디서 들으셨어요?']},
 ];
 
 export type FakeOptions = {
