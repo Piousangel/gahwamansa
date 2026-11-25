@@ -76,7 +76,7 @@ app(조립: AppRoot·Stack·Provider)  →  features/<기능>  →  api · ui ·
 - [ ] 서버 키 목록·reason과 앱 상수가 글자까지 같다
 - [ ] 문구는 원본만 고치고 사본 동기화, 토큰 하드코딩 없음
 - [ ] 마이그레이션 번호가 대장 순서이고 down·pgTAP이 짝지어 있다
-- [ ] 공유 파일(DECISIONS.md, 루트 scripts, `.gitignore`)은 리드에게 넘겼다(줄 브랜치에서 직접 수정 금지)
+- [ ] 공유 파일(DECISIONS.md, 루트 scripts, `.gitignore`)은 리드에게 넘겼다(줄 브랜치에서 직접 수정 금지). 결정은 PR 본문 `## 결정` 절에
 - [ ] 다중 어르신·iOS·토스에서 깨질 가정(첫 어르신 고정, Android 전용 API, RN 전용 코드의 contracts 유입)이 없다
 - [ ] 인증·데이터 저장 변경은 /code-review xhigh, 나머지 high
 
@@ -87,4 +87,4 @@ app(조립: AppRoot·Stack·Provider)  →  features/<기능>  →  api · ui ·
 - 계약 타입을 클라이언트마다 손으로 따로 쓰기, 서버 문자열 상수를 앱에 오타 가능한 리터럴로 복제
 - 문구 원본·사본 동시 수기 편집, 화면 안 하드코딩 문구·헥스 색
 - 마이그레이션 번호 예약·건너뛰기, 이미 원격에 간 마이그레이션 수정(새 마이그레이션으로 고친다)
-- 줄 브랜치에서 `db reset`·원격 push·DECISIONS 수정, 비밀값 커밋
+- 줄 브랜치에서 `db reset`·원격 push·DECISIONS 수정(결정은 PR 본문 `## 결정` 절 → 결정 모음 PR), 비밀값 커밋
