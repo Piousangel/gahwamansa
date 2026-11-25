@@ -59,8 +59,8 @@ select is(jsonb_array_length(pg_temp.hist('75b00000-0000-0000-0000-0000000000a2'
 select is((pg_temp.hist('75b00000-0000-0000-0000-0000000000a2') -> 'answers' -> 0 ->> 'session_date')::date, public.kst_today() - 29, '29일 전 회차는 들어간다');
 select is(pg_temp.hist('75b00000-0000-0000-0000-0000000000a2') -> 'answers' -> 0,
           jsonb_build_object('session_date', public.kst_today() - 29, 'prompt', 'q2', 'prompt_short', '바다와 산 중',
-                             'option_a', '바다', 'option_b', '산', 'choice_label', '산'),
-          '행은 날짜·질문·짧은 질문·선택지·고른 답만');
+                             'option_a', '바다', 'option_b', '산', 'choice_label', '산', 'care', null),
+          '행은 날짜·질문·짧은 질문·선택지·고른 답 + care(0065, 스위치 꺼짐 = null)만');
 select is(pg_temp.hist('75b00000-0000-0000-0000-0000000000a1') -> 'answers' -> 0 ->> 'prompt_short' in ('가을과 봄 중', '바다와 산 중'), true, '받침이 있으면 과, 없으면 와');
 select is((select count(*)::int from jsonb_array_elements(pg_temp.hist('75b00000-0000-0000-0000-0000000000a1') -> 'answers') e
             where e ->> 'prompt_short' = '가을과 봄 중'), 15, '받침 있는 선택지는 "과"로 이어진다');

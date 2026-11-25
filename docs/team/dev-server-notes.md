@@ -17,6 +17,7 @@
 - `latest`는 **session_date(그 답의 날)** 기준 최신 1개. answered_date = session_date(답을 고친 시각 아님).
 - 어르신이 2명 이상이면 반드시 parent_id·title로 행을 나눠 보여 준다(섞이면 오표시).
 - `starter`(0027, 첫마디 한 줄): 어르신이 **고른 쪽** 선택지의 대화 시작 문장(`content_questions.starter_a/b`). 문장이 아직 없으면 null → 앱은 줄을 숨긴다. 문장은 라이터가 채우며 시드는 비어 있다.
+- `care`(0065, 챙겨 드릴 거리 한 줄): 어르신이 **고른 쪽** 보기의 '챙겨 드릴 거리'(`content_questions.care_a/b`, 1~17자 명사구). 키는 늘 있고, 서버 스위치 `care_lines_enabled`가 꺼져 있으면(기본, 모든 환경) **늘 null**. 다음 단계에서 '그 어르신의 답 공유 동의 v6 이상' 조건이 내부 함수 `care_lines_visible`에 더해진다(설계서 `docs/team/2026-11-26-content-axes.md` 5절). 고르지 않은 쪽 문장·갈래·횟수는 돌려주지 않는다. null이면 앱은 줄을 숨긴다.
 
 ### child_answer_history() → jsonb  (0021, C5 지난 답)
 ```json
@@ -27,6 +28,7 @@
 - 최근 30일(오늘 포함, session_date ≥ 오늘-29), 최신순, 어르신별 최대 30개, 페이지 없음. 개수·빈 날 집계 없음.
 - 동의 안 함/철회 → `shared:false, answers:[]`(철회 즉시). 같은 질문이 순환으로 두 번 나올 수 있다(날짜가 다름).
 - `prompt_short` = "A와/과 B 중"(앞 낱말 받침으로 와/과 자동).
+- **0065**: `answers[]` 항목에 `care`(위 child_summary와 같은 규칙 — 고른 쪽 문장 하나, 스위치 꺼짐이면 null). 미리보기(0050)도 같은 내부 함수라 같은 값.
 - **0061(5단계)**: 어르신 항목에 `recalls: [{session_date, label}]`(② 떠올린 낱말)·`pass_ons: [{session_date, line_key, recall_label, choice_label, option_a, option_b}]`(⑤ 건넨 말 틀 키 + 끼울 값) 두 배열을 더했다. `answers`는 그대로(옛 자녀 앱은 모르는 키를 무시). 둘 다 동의 중만·최근 30일·최대 30개, 넘긴 날은 행이 없다(무표시). `pass_ons`는 서버 스위치가 꺼져 있으면 늘 `[]`. 표시 규칙(목록엔 ② 한 줄, ⑤는 앨범·날짜 상세만)은 앱 몫. 앱 계약 `app/src/api/contract/fiveSteps.ts` `parseChildFiveSteps`. 미리보기(0050)도 같은 내부 함수라 같은 값.
 
 ### set_parent_title_for(p_parent uuid, p_title text) → jsonb  (0019)
@@ -495,6 +497,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0062 | 받기 동의 전 푸시 토큰 저장 안 함·철회 시 토큰 삭제·일회 정리, 잠금 순서 profiles → device_tokens 통일(register·set_push_enabled·account_delete_core) | PR #264 | 미반영(오너 승인 — 반영 전 지울 행 수 세기, 0050~0061과 함께 db push) |
 | 0063 | 심사 가족 정리(admin_cleanup_review_family) 잠금 순서: 가족 → 어르신 프로필 user_id 순서(#264 QA-1 L-a) | PR(server/lock-order-followup) | 미반영(0062와 함께 — 데이터 변경 없음) |
 | 0064 | 초대 번호 잠금 순서: redeem_invite_code·issue_invite_code가 가족 행 KEY SHARE를 먼저(#271 QA-1 L-a) | PR(server/invite-lock-order) | 미반영(0062·0063과 함께 — 데이터 변경 없음) |
+| 0065 | 챙겨 드릴 거리 문장 열 care_a·care_b(1~17자·금지어 검사), 자녀 응답 care 키(스위치 care_lines_enabled 뒤, 기본 꺼짐) | PR(server/content-axes) | 미반영(오너 승인 — 콘텐츠 재시드와 한 번에, PR '오너 승인 필요') |
 - **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
