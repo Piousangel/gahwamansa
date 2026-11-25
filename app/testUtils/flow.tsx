@@ -10,6 +10,20 @@ export async function press(name: string | RegExp) {
   });
 }
 
+// 불러오는 동안 같은 이름의 꺼진 버튼이 먼저 보이는 화면(자녀 홈 '응원 보내기': 요약을 받기 전엔 disabled + 불러오는 중 이유)에서
+// 버튼이 켜질 때까지 기다렸다 누른다. getByRole 만 기다리면 꺼진 버튼을 찾고 끝나, 누름이 아무 일도 안 해 다음 단계(시트 선택지)를
+// 못 찾는 간헐 실패가 났다(대기열 46, #269 CI 첫 실행 cheerRequestId). 재발 검사: __tests__/cheerSheetReady.test.tsx
+export async function pressWhenEnabled(name: string | RegExp) {
+  await waitFor(() => expect(screen.getByRole('button', {name})).toBeEnabled());
+  await press(name);
+}
+
+// 응원 시트 열기: 버튼이 켜질 때까지 기다려 누르고, 시트의 첫 선택지가 보일 때까지 기다린다
+export async function openCheerSheet(firstOption: string | RegExp = '늘 고마워요') {
+  await pressWhenEnabled('응원 보내기');
+  await waitFor(() => screen.getByRole('button', {name: firstOption}));
+}
+
 // 코스 홈의 주 버튼(지금 단계 이름: 사진 보기 / 둘 중 고르기 / 글씨 쓰기, 시안 P3 copy 10절)을 누른다
 // 같은 이름 버튼이 여럿일 때 마지막 것(예: 설정 동사 버튼과 펼친 확인 안의 실행 버튼, 디자인 W0 ②)
 export async function pressLast(name: string | RegExp) {

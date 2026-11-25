@@ -6,7 +6,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import * as clipboard from '../src/ui/clipboard';
 import {setupWarmAppRoot} from '../testUtils/warm';
-import {press} from '../testUtils/flow';
+import {press, pressWhenEnabled} from '../testUtils/flow';
 
 // 콜드 스타트 예열(#125 리뷰): 첫 AppRoot 테스트(C3 만료)만 부하에 시간 초과하던 것
 setupWarmAppRoot();
@@ -352,17 +352,17 @@ describe('C4 홈 · 응원', () => {
       const api = () => createFakeApi({consented: true, parentTitle: '엄마', latest: {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'}});
       dims(1);
       render(<AppRoot api={api()} role="child" />);
-      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
       expect(within(screen.getByTestId('screen-dock')).getByRole('button', {name: '응원 보내기'})).toBeTruthy();
       expect(screen.queryByTestId('child-home-cheer-inline')).toBeNull();
       screen.unmount();
       for (const scale of [1.5, 2]) {
         dims(scale);
         render(<AppRoot api={api()} role="child" />);
-        await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+        await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
         expect(screen.queryByTestId('screen-dock')).toBeNull();
         expect(order(/^(child-home-card|child-home-cheer-inline)$/)).toEqual(['child-home-card', 'child-home-cheer-inline']);
-        await press('응원 보내기'); // 시트가 열린다(닫히면 이 버튼으로 초점, PR #93 M1)
+        await pressWhenEnabled('응원 보내기'); // 시트가 열린다(닫히면 이 버튼으로 초점, PR #93 M1)
         expect(within(screen.getByTestId('sheet')).getByText('어떤 말을 보낼까요?')).toBeTruthy();
         screen.unmount();
       }
@@ -372,7 +372,7 @@ describe('C4 홈 · 응원', () => {
       dims(2);
       const latest = {prompt: null, choiceLabel: '가을', answeredDate: '2020-01-02'};
       render(<AppRoot api={createFakeApi({consented: true, parents: [{title: '엄마', latest}, {title: '아빠', latest}]})} role="child" />);
-      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
       expect(order(/^(child-home-card|child-home-cheer-inline)$/)).toEqual(['child-home-card', 'child-home-cheer-inline', 'child-home-card']);
     });
 
@@ -393,8 +393,8 @@ describe('C4 홈 · 응원', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마', latest: null});
     const send = jest.spyOn(api, 'sendCheer');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     const sheet = screen.getByTestId('sheet');
     expect(within(sheet).getByText('어떤 말을 보낼까요?')).toBeTruthy();
     expect(within(sheet).getByText('하나를 누르면 바로 보내요')).toBeTruthy();
@@ -426,8 +426,8 @@ describe('C4 홈 · 응원', () => {
   test('하루 한도를 넘으면 보내지 않고 알린다(서버 daily_limit)', async () => {
     useCheerClock();
     render(<AppRoot api={createFakeApi({consented: true, cheerDailyLimit: 0})} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
     await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('오늘 보낼 수 있는 응원은 다 보냈어요. 내일 다시 보낼 수 있어요'));
@@ -445,8 +445,8 @@ describe('C4 홈 · 응원', () => {
       return real(id, key);
     });
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
     await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('엄마께 보냈어요. 나머지 분께는 잠시 뒤에 다시 보내 주세요'));
@@ -458,8 +458,8 @@ describe('C4 홈 · 응원', () => {
   test('응원 실패(오프라인)는 토스트로 알린다', async () => {
     useCheerClock();
     render(<AppRoot api={createFakeApi({consented: true, failCheer: 1})} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
     await afterUndoWindow(); // U10: 토스트 '취소' 시간(4초)이 지나야 실제로 보낸다
     await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
@@ -496,7 +496,7 @@ describe('C4 홈 · 응원', () => {
     );
     await waitFor(() => screen.getByText('엄마의 최근 답'));
     expect(screen.getByText('아빠의 최근 답')).toBeTruthy();
-    await press('응원 보내기');
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
     await waitFor(() => screen.getByText('엄마·아빠께 보냈어요'));
   });
@@ -507,7 +507,7 @@ describe('C4 홈 · 응원', () => {
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByText('화면이 열리지 않아요'));
     await press('다시 하기');
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
   });
 });
 

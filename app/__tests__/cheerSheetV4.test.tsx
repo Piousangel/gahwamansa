@@ -6,7 +6,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {AudienceProvider, Sheet, SHEET_HANDLE_H, SHEET_MAX_RATIO} from '../src/ui/ds';
 import {roleText} from '../src/ui/ds/roles';
-import {press} from '../testUtils/flow';
+import {pressWhenEnabled} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 const RN = require('react-native');
@@ -24,8 +24,8 @@ const homeApi = () => createFakeApi({consented: true, parents: [{title: '엄마'
 async function openSheet() {
   jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
   render(<AppRoot api={homeApi()} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-  await press('응원 보내기');
+  await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+  await pressWhenEnabled('응원 보내기');
   await waitFor(() => screen.getByText('어떤 말을 보낼까요?'));
 }
 

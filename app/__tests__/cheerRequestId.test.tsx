@@ -6,7 +6,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {OfflineError} from '../src/features/types';
 import {uuidV4} from '../src/lib/uuid';
-import {press} from '../testUtils/flow';
+import {openCheerSheet, press, pressWhenEnabled} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -28,8 +28,8 @@ test('uuidV4: 버전 4·변형 비트, 난수 출처가 없어도 만든다', ()
 });
 
 async function sendOnce(api: ReturnType<typeof createFakeApi>, phrase = '늘 고마워요') {
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-  await press('응원 보내기');
+  // 대기열 46: 꺼진(불러오는 중) 버튼이 아니라 켜진 버튼을 눌러 시트가 열린 뒤 고른다(testUtils/flow openCheerSheet)
+  await openCheerSheet(phrase);
   await press(phrase);
   await afterUndoWindow();
 }
@@ -82,8 +82,8 @@ test('되돌리기 뒤 다시 보내면 서버 호출은 1번(되돌린 것은 �
   const api = createFakeApi({consented: true, parentTitle: '엄마'});
   const send = jest.spyOn(api, 'sendCheer');
   render(<AppRoot api={api} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-  await press('응원 보내기');
+  await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+  await pressWhenEnabled('응원 보내기');
   await press('늘 고마워요');
   await press('되돌리기');
   await waitFor(() => screen.getByText('응원을 보내지 않았어요'));

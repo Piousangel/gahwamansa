@@ -15,7 +15,7 @@ import {findTitleDup} from '../src/features/home/titleDup';
 import {newConnection, parseSeen} from '../src/features/home/newConnection';
 import {NewConnectionBanner} from '../src/features/home/NewConnectionBanner';
 import {memoryStore} from '../src/lib/kvStore';
-import {press} from '../testUtils/flow';
+import {press, pressWhenEnabled} from '../testUtils/flow';
 import type {ChildParent} from '../src/features/types';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
@@ -118,11 +118,11 @@ describe('토스트 아래 끝 ≤ 탭 막대 위 끝(200%)', () => {
     jest.useFakeTimers();
     try {
       render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
-      await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+      await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
       await act(async () => {
         fireEvent(screen.getByTestId('child-tab-bar'), 'layout', {nativeEvent: {layout: {x: 0, y: 640 - barH, width: 360, height: barH}}});
       });
-      await press('응원 보내기');
+      await pressWhenEnabled('응원 보내기');
       await press('늘 고마워요');
       const layer = StyleSheet.flatten(screen.getByTestId('toast-layer').props.style) as {bottom: number};
       // 토스트 층의 아래 끝(화면 아래에서 bottom) ≥ 탭 막대 높이 = 토스트 아래 끝이 막대 위 끝보다 위
@@ -149,16 +149,16 @@ describe('U10 응원 취소', () => {
 
   test('D-17: 응원 문장 칸 사이는 8 이상(바로 보내는 표적이 붙어 있지 않게, 7:90)', async () => {
     render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     const list = StyleSheet.flatten(screen.getByTestId('cheer').props.style);
     expect(list.rowGap ?? list.gap).toBeGreaterThanOrEqual(8);
   });
 
   async function pickCheer(api: ReturnType<typeof createFakeApi>) {
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
   }
 
@@ -219,8 +219,8 @@ describe('U10 응원 취소', () => {
 describe('D-17a 화면 읽기 켜짐: 응원 보냄 토스트 10초 + 초점 되돌리기', () => {
   async function pickCheerSr(api: ReturnType<typeof createFakeApi>) {
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
   }
 
