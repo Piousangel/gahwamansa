@@ -59,7 +59,7 @@ test('200%: 마운트 272·도장은 캡션 위(-2, #95)', async () => {
 });
 
 test('R-15: 첫 화면 끝이 도장 줄을 가르면 그 줄을 통째로 접힘 밖으로(마운트는 밀지 않음)', async () => {
-  mockFontScale = 2;
+  mockFontScale = 1.5; // 마운트가 맨 위인 가장 큰 배율(1.75 이상은 본문 먼저 — p7BodyFirst200.test)
   await toDone();
   const {fireEvent, act} = require('@testing-library/react-native');
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height: h}}});
@@ -99,7 +99,7 @@ test('인장 색은 토큰(brandSeal·brandSealDeep·brandSealGlyph)에서 — �
 
 test('리뷰 L3: 도장 줄을 끄면(오너 검토 중) P7 은 3개 묶음(마운트·제목·둘째 줄)이고 접힘 계산도 그대로, P3 에도 없다', async () => {
   setWeekStripForTest(false);
-  mockFontScale = 2;
+  mockFontScale = 1.5; // 마운트가 맨 위인 가장 큰 배율(1.75 이상은 본문 먼저 — p7BodyFirst200.test)
   await toDone();
   expect(screen.queryByTestId('p7-week')).toBeNull();
   expect(screen.queryByTestId('course-week', {includeHiddenElements: true})).toBeNull();

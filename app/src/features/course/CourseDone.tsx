@@ -30,6 +30,14 @@ const INK_FROM = 0.1; // 번짐 원 투명도(축하 효과로 보이지 않게,
 // 이징(시안 CSS cubic-bezier 그대로)
 const EASE = {land: Easing.bezier(0.3, 0, 0.8, 0.15), squash: Easing.bezier(0.2, 0.8, 0.2, 1)};
 const BODY_GAP = 16;
+/**
+ * 본문을 마운트보다 먼저 두는 글자 배율(대기열 33, 리드 결정 #263 QA-2 M1 = 1.6). Android 1.8·2.0 과 함께
+ * iOS Dynamic Type AX1(약 1.64)·제조사 중간 단계·'화면 크기'를 키운 150%처럼 1.5를 조금 넘는 배율도 본문 먼저로 둔다.
+ * 1.5 는 320×640 에서도 본문까지 첫 화면에 들어(에뮬레이터 실측 43 남음) 시안 순서(마운트 먼저)를 그대로 둔다.
+ * 접힘 실측으로 고르지 않는 이유: 본문 글은 이번 주 도장 응답 뒤에야 정해져(최대 1.5초) 그때 제목이 위로 튄다.
+ */
+export const P7_BODY_FIRST_SCALE = 1.6;
+export const p7BodyFirst = (fontScale: number) => fontScale >= P7_BODY_FIRST_SCALE;
 const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0, easing?: (x: number) => number) =>
   Animated.timing(val, {toValue, duration, delay, easing, useNativeDriver: true}); // 본문 간격(시안 data-body gap 16)
 
@@ -64,6 +72,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   useBackAction(toHome);
   const {fontScale} = useWindowDimensions();
   const large = fontScale >= 1.5;
+  const bodyFirst = p7BodyFirst(fontScale);
 
   const titleNode = useRef<unknown>(null);
   useEffect(() => focusLater(() => titleNode.current), []);
@@ -85,12 +94,22 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 연출은 동작 줄이기 판정(mode)만 정해지면 시작한다. 이번 주 도장 응답(week)이 필요한 것은 둘째 줄뿐이라
   // 둘째 줄 페이드만 따로 기다린다(PR #108 리뷰 L2 — 응답을 기다리는 동안 사진·도장까지 투명하지 않게)
   const startedAt = useRef(0);
+  // 본문 먼저 배치(리드 결정 #263 QA-2 M2): 마운트가 첫 화면 밖이라 도장은 처음부터 찍힌 상태로 그리고,
+  // 촉각·소리는 어르신이 보는 「…도장을 찍었어요」가 나타나는 순간으로 옮긴다. 연출 시작 때 한 번 정한다(도중에 배율이 바뀌어도 두 번 울리지 않게)
+  const stampWithText = useRef(false);
   useEffect(() => {
     if (mode === null || phase !== 'wait') {
       return;
     }
     setPhase('run');
     startedAt.current = Date.now();
+    if (bodyFirst) {
+      stampWithText.current = true;
+      v.mount.setValue(1);
+      v.sealOpacity.setValue(1);
+      v.sealScale.setValue(1);
+      return; // 끝(phase done)은 본문이 나타난 뒤 — 음악 권유가 본문보다 먼저 뜨지 않게
+    }
     if (mode === 'reduce') {
       // 모두 즉시 끝 상태(시안 '동작 줄이기: 도장·번짐·페이드 없음')
       v.mount.setValue(1);
@@ -127,7 +146,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     });
     // 촉각·소리는 애니메이션 끝 콜백이 아니라 타임라인 시각으로(프레임이 밀려도 도장이 닿는 때와 같게)
     timers.current.push(setTimeout(() => alive.current && feedback.fire(), P7_T.stampAt + P7_T.land));
-  }, [mode, phase, feedback, v]);
+  }, [mode, phase, feedback, v, bodyFirst]);
   // 둘째 줄: 연출 시작 뒤 700ms(시안)와 응답 도착 중 늦은 때 300ms 페이드. 동작 줄이기면 응답이 오는 즉시
   const textStarted = useRef(false);
   const [, setTextShown] = useState(false);
@@ -136,21 +155,32 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       return;
     }
     textStarted.current = true;
+    const withStamp = stampWithText.current;
     if (mode === 'reduce') {
       v.text.setValue(1);
       setTextShown(true);
+      if (withStamp) {
+        feedback.fire();
+        setPhase('done');
+      }
       return;
     }
     const wait = Math.max(0, P7_T.textAt - (Date.now() - startedAt.current));
     const a = tween(v.text, 1, P7_T.text, wait);
     running.current.push(a);
+    if (withStamp) {
+      timers.current.push(setTimeout(() => alive.current && feedback.fire(), wait)); // 본문이 나타나기 시작하는 때
+    }
     a.start(() => {
       if (alive.current) {
         v.text.setValue(1);
         setTextShown(true); // 끝 상태를 한 번 그린다(JS 값과 화면 일치)
+        if (withStamp) {
+          setPhase('done');
+        }
       }
     });
-  }, [mode, week, phase, v]);
+  }, [mode, week, phase, v, feedback]);
 
   useEffect(() => {
     alive.current = true;
@@ -209,9 +239,13 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       {body ? <Text role="bodyLg" style={styles.center}>{d.passed_on}</Text> : null}
     </Animated.View>
   ) : null;
-  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
+  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 첫 요소(from 1)는 밀지 않는다.
+  // 글자 1.6배 이상이면 제목 → 본문 → 마운트로 순서만 바꾼다(대기열 33, FS 200% '숨기지 말고 순서만' 선례): 마운트가 274(캡션 3줄 114)라
+  // 320·360×640 에서 제목 뒤 남는 칸이 30뿐이고 본문(120~160)이 통째로 접힘 아래로 갔다. 캡션을 두 줄로 줄여도 38만 늘어 본문이 들지 않는다.
+  // 이때 마운트는 R-15 대로 통째로 접힘 아래로 간다(스크롤하면 사진·도장·AI 고지가 함께 보인다)
+  const mount = <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} afterBody={bodyFirst} />;
   const items: React.ReactNode[] = [
-    <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} />,
+    ...(bodyFirst ? [] : [mount]),
     // 화면 제목: 들어오면 화면 읽기 포커스를 여기로(캡션보다 먼저, PR #108 리뷰 L1)
     <View
       key="title"
@@ -229,6 +263,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     <Animated.View key="text" testID="p7-text" style={{opacity: v.text}} accessibilityLiveRegion="polite">
       {body ? <Text role="bodyLg" style={styles.center}>{body}</Text> : null}
     </Animated.View>,
+    ...(bodyFirst ? [mount] : []),
   ];
   const fold = useFoldGap(items.length, BODY_GAP, 1);
 
