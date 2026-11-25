@@ -133,7 +133,7 @@ describe('자녀: 받기 동의 전이면 OS 권한과 상관없이 [알림 켜�
     expect(screen.queryByTestId('wait-notify')).toBeNull();
   });
 
-  test('연결 직후 화면: 아직 켜지 않았으면 "{호칭}께서 처음 답을 고르시면 알려 드릴게요" + [알림 켜기], 켜면 사라진다', async () => {
+  test('연결 직후 화면: 아직 켜지 않았으면 "알림을 켜면 첫 답이 보일 때 알려 드려요" + [알림 켜기], 켜면 사라진다', async () => {
     setPlatform('android', 31);
     setTokenSourceForTest(createFakeTokenSource());
     const handlers: ((s: string) => void)[] = [];
@@ -153,7 +153,7 @@ describe('자녀: 받기 동의 전이면 OS 권한과 상관없이 [알림 켜�
     });
     await waitFor(() => screen.getByText(copy.connect_done.title, {normalizer: wj}));
     await waitFor(() => screen.getByTestId('done-notify'));
-    expect(screen.getByText('엄마께서 처음 답을 고르시면 알려 드릴게요', {normalizer: wj})).toBeTruthy();
+    expect(screen.getByText('알림을 켜면 첫 답이 보일 때 알려 드려요', {normalizer: wj})).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: copy.child.wait.notify_button}));
     });
