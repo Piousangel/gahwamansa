@@ -823,6 +823,9 @@ isOneToOne: true
 "parent_history":
 { Args: { "p_days"?: number }; Returns: Json
                            },
+"parent_month_scope":
+{ Args: { "p_parent": string }; Returns: boolean
+                           },
 "parent_preview_child_view":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

@@ -50,10 +50,11 @@ insert into auth.users (id, aud, role, is_anonymous) values
   ('70650000-0000-0000-0000-0000000000a1', 'authenticated', 'authenticated', true),
   ('70650000-0000-0000-0000-0000000000a2', 'authenticated', 'authenticated', true);
 insert into public.families (id, created_by, parent_title) values ('70650000-0000-0000-0000-0000000000f1', '70650000-0000-0000-0000-0000000000c1', '엄마');
-insert into public.profiles (id, user_id, family_id, role, consented_at) values
-  ('70650000-0000-0000-0000-00000000c001', '70650000-0000-0000-0000-0000000000c1', '70650000-0000-0000-0000-0000000000f1', 'child', null),
-  ('70650000-0000-0000-0000-00000000a001', '70650000-0000-0000-0000-0000000000a1', '70650000-0000-0000-0000-0000000000f1', 'parent', now()),
-  ('70650000-0000-0000-0000-00000000a002', '70650000-0000-0000-0000-0000000000a2', '70650000-0000-0000-0000-0000000000f1', 'parent', null);
+-- 0068: care는 동의 v6 이상 어르신에게만 보인다(게이트 자체는 consent_gate_month_list.test.sql). 여기서는 문장 고르기를 보려고 a001을 v6로 둔다.
+insert into public.profiles (id, user_id, family_id, role, consented_at, consent_version) values
+  ('70650000-0000-0000-0000-00000000c001', '70650000-0000-0000-0000-0000000000c1', '70650000-0000-0000-0000-0000000000f1', 'child', null, null),
+  ('70650000-0000-0000-0000-00000000a001', '70650000-0000-0000-0000-0000000000a1', '70650000-0000-0000-0000-0000000000f1', 'parent', now(), 'v6'),
+  ('70650000-0000-0000-0000-00000000a002', '70650000-0000-0000-0000-0000000000a2', '70650000-0000-0000-0000-0000000000f1', 'parent', null, null);
 insert into public.content_questions (id, day_index, option_a, option_b, prompt, care_a, care_b) values
   ('70650000-0000-0000-0000-0000000000d1', 9065, '단감', '홍시', '어느 맛이 더 좋으세요?', '단감 한 상자 챙겨 가기', '홍시 한 상자 챙겨 가기');
 insert into public.answers (family_id, parent_id, question_id, choice, session_date) values
@@ -88,7 +89,8 @@ select ok((select position('단감 한 상자' in v::text) = 0 from r where k = 
           and (select position('단감 한 상자' in v::text) = 0 from r where k = 'hist_on'), '고르지 않은 쪽 문장은 응답 어디에도 없다');
 select is((select v -> 'parents' -> 1 -> 'latest' from r where k = 'sum_on'), 'null'::jsonb, '동의 안 한 어르신은 그대로 latest = null');
 select is((select v -> 'parents' -> 1 -> 'answers' from r where k = 'hist_on'), '[]'::jsonb, '동의 안 한 어르신은 그대로 answers = []');
-select ok((select not (v::text ~ '(axis|category|갈래|count)') from r where k = 'hist_on'), '갈래·횟수 키를 돌려주지 않는다');
+select ok((select not (v::text ~ '(axis|category|갈래|count)') from r where k = 'hist_on')
+          and (select not (v::text ~ '(axis|category|갈래|count)') from r where k = 'sum_on'), '갈래·횟수 키를 돌려주지 않는다(요약 month 포함, 0068)');
 
 -- 보임 판단 함수는 앱·anon이 못 부른다
 select ok(not has_function_privilege('authenticated', 'public.care_lines_visible(uuid)', 'execute')
