@@ -17,6 +17,7 @@ import {childErrorMessage} from '../../shared/childError';
 import {buildShareMessage, codeA11y, formatExpiry} from '../../lib/childFormat';
 import {appShareLink} from '../../lib/env';
 import {useNotifyPermission} from './useNotifyPermission';
+import {useChildNotifyAsk} from './ChildNotifyPrompt';
 import {useChildWaitState} from './useChildWaitState';
 import {track} from '../track';
 
@@ -60,6 +61,17 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
 
   const title = state?.parentTitle ?? '부모님';
   const code = state?.code ?? null;
+  // 알림 권한 앞당김(기획 v2.1 0.4): 번호를 보낸(공유 창에서 돌아옴·복사) 직후, 또는 연결 직후 화면에서 우리 말 한 장 → 시스템 창.
+  //   화면에 들어오자마자는 묻지 않는다. 한 장을 어떻게 닫든 C3·연결 직후 [알림 켜기] 줄은 그대로(나중에 켜는 길, C7 토글도)
+  const ask = useChildNotifyAsk(notify, title);
+  const {offer} = ask;
+  useEffect(() => {
+    if (linked) {
+      offer('done');
+    } else if (sent || copied > 0) {
+      offer('wait');
+    }
+  }, [linked, sent, copied, offer]);
 
   // 쓸 수 있는 번호가 없을 때만 새로 만든다(만료·받은 적 없음)
   const makeCode = async () => {
@@ -151,6 +163,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
             </View>
           ) : null}
         </DsScreen>
+        {ask.node}
       </AudienceProvider>
     );
   }
@@ -247,6 +260,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           </View>
         )}
       </DsScreen>
+      {ask.node}
     </AudienceProvider>
   );
 }
