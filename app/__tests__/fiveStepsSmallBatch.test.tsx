@@ -3,6 +3,8 @@
 //     첫 화면에 카드가 1장만 보였다). 넘어가기가 첫 화면 밖이 되므로 꺼진 [건넬게요] 읽기 힌트가 그 길을 알린다(pass_on.need_choice).
 // 35: 5단계 ③ 꺼진 [정했어요] 힌트는 넘어가는 길까지 말한다(question.need_choice_five). 3단계는 넘어가기가 없어 그대로.
 import React from 'react';
+import {StyleSheet} from 'react-native';
+import {ds} from '../src/ui/ds/roles';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, type FakeOptions} from '../src/features/fakeApi';
@@ -46,6 +48,9 @@ for (const scale of [1, 2]) {
     expect(dock.queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
     expect(within(screen.getByTestId('pass-on-skip-gap')).getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
     expect(order(['pass-on-choice', 'pass-on-skip-gap'])).toEqual(['pass-on-choice', 'pass-on-skip-gap']);
+    // #277 QA-1 L1: 마지막 카드와 넘어가기 사이 = 묶음 간격 32(본문 간격 12 + 위 여백 20, ②와 같음)
+    expect(StyleSheet.flatten(screen.getByTestId('pass-on-skip-gap').props.style).paddingTop + 12).toBe(ds.space.section);
+    expect(ds.space.section).toBe(32);
     const confirm = dock.getByRole('button', {name: '건넬게요'});
     expect(confirm.props.accessibilityHint).toBe(copy.pass_on.need_choice);
     expect(copy.pass_on.need_choice).toBe("한 줄을 고르면 눌려요. 넘어가려면 '오늘은 넘어갈게요'를 눌러 주세요");
