@@ -1,5 +1,5 @@
 // 비공개 테스트 시작 빌드(12/06) 다듬기 — DECISIONS 11-25 '오늘 코스 3단계 → 5단계' R-2, docs/team/board/2026-11-25-course-five-steps.md.
-// 데이터·서버 변경 없음: ① 회상 질문은 첫 질문만(콘텐츠의 recall_questions 는 그대로 2개), ③ 머리줄 「요즘 마음 가는 쪽을 골라요」,
+// 데이터·서버 변경 없음: ① 회상 질문은 첫 질문만(콘텐츠의 recall_questions 는 그대로 2개), ③ 머리줄 「요즘 생각대로 한쪽을 골라요」,
 // 코스 홈 인사 「하나씩 차례로 해요」, 남은 수 문구('둘 남았어요'·'하나 남았어요') 없음.
 import React from 'react';
 import {AccessibilityInfo} from 'react-native';
@@ -86,21 +86,21 @@ test('① 보기 전용(다시 보기)도 첫 질문 1개만', async () => {
   expect(screen.queryByText(recall[1])).toBeNull();
 });
 
-test('③ 둘 중 고르기: 단계 제목과 질문 사이에 머리줄 「요즘 마음 가는 쪽을 골라요」', async () => {
+test('③ 둘 중 고르기: 단계 제목과 질문 사이에 머리줄 「요즘 생각대로 한쪽을 골라요」', async () => {
   await home({completedSteps: ['photo']});
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('p5-title'));
-  expect(screen.getByText('요즘 마음 가는 쪽을 골라요')).toBeTruthy();
+  expect(screen.getByText('요즘 생각대로 한쪽을 골라요')).toBeTruthy();
   expect(order(['step-header', 'p5-headline', 'p5-title', 'choice-group'])).toEqual(['step-header', 'p5-headline', 'p5-title', 'choice-group']);
 });
 
 test('③ 보기 전용(다시 보기)에도 같은 머리줄, 질문보다 앞', async () => {
   const api = await home({completedSteps: ['photo', 'question']});
   await press(/둘 중 고르기, 했어요/);
-  await waitFor(() => screen.getByText('요즘 마음 가는 쪽을 골라요'));
+  await waitFor(() => screen.getByText('요즘 생각대로 한쪽을 골라요'));
   // 위 → 아래 글 순서: 머리줄이 질문(제목)보다 앞
   const prompt = (await api.getTodayContent())!.question!.prompt!;
-  expect(textOrder(['요즘 마음 가는 쪽을 골라요', prompt])).toEqual(['요즘 마음 가는 쪽을 골라요', prompt]);
+  expect(textOrder(['요즘 생각대로 한쪽을 골라요', prompt])).toEqual(['요즘 생각대로 한쪽을 골라요', prompt]);
 });
 
 test('코스 홈 인사: 「하나씩 차례로 해요」(옛 「세 가지를 차례로 해요」 없음)', async () => {

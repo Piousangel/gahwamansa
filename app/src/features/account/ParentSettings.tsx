@@ -108,7 +108,8 @@ export function ParentSettings() {
               </View>
               {/* P2 v6 리뷰: 좋아요는 CONSENT_VERSION 으로 기록된다 → 그 버전 동의 화면과 같은 다섯 줄(같은 글자)을 버튼 앞에 보인다.
                   v5 로 동의했다가 멈춘 분이 여기서 v6 범위(모아 보기·챙겨 드릴 거리)를 보지 않고 동의되는 일을 막는다 */}
-              {/* #298 QA-3 L4: 동의 화면과 같은 제목·다섯 줄·거절 안내 키(같은 버전 글). L5: 점 '•'는 읽지 않게 감춘다(ConsentScreen 과 같은 방식) */}
+              {/* #298 QA-3 L4: 동의 화면과 같은 제목·다섯 줄(같은 버전 글). 거절 안내는 이 칸 버튼(닫기)에 맞춘 settings.reshow_note(#298 QA-1 L3 —
+                  decline_note 는 이 칸에 없는 '싫어요'를 말함). L5: 점 '•'는 읽지 않게 감춘다(ConsentScreen 과 같은 방식) */}
               <Text20 weight="bold">{copy.consent.title}</Text20>
               {copy.consent.body.map(line => (
                 <View key={line} testID="resume-consent-point" accessible accessibilityLabel={line} style={styles.resumePoint}>
@@ -118,7 +119,7 @@ export function ParentSettings() {
                   <Text20 style={styles.resumePointText}>{line}</Text20>
                 </View>
               ))}
-              <Text20>{copy.consent.decline_note}</Text20>
+              <Text20>{t.reshow_note}</Text20>
               <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
               <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
             </View>

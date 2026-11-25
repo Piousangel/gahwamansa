@@ -122,14 +122,13 @@ describe("자녀 홈 '최근 한 달 고르신 것' 문구(콘텐츠 갈래 설�
   });
 });
 
-// 기획 v2.1 Q1: 앱의 판단어('취향')·부모님을 풀이하는 말('좋아하시는')은 화면·동의 문구에서 뺀다.
-// 예외 1키(first.intro[1] '…취향을 알아 가요')는 첫 화면 소개 — 라이터 교체 대기(PR 결정란). 새로 생기면 실패한다.
-// ('마음 가는 쪽'도 Q1 판단어지만 question.headline·login.preview_lines[1] 두 곳에 있어 라이터 묶음으로 따로 — 이 시험 밖)
-const JUDGE = /취향|좋아하시/;
-const JUDGE_WAITING = new Set(['first.intro[1]']);
+// 기획 v2.1 Q1: 앱의 판단어('취향'·'알아서'·'마음 가는 쪽')·부모님을 풀이하는 말('좋아하시는')은 화면·동의 문구에서 뺀다.
+// 예외 없음 — #298 QA-3 M3·금지어 표의 대기 3키(first.intro[1]·question.headline·login.preview_lines[1])는 라이터가 교체(copy-legal/v6-scope).
+// ('알아서'는 '알아서 해 드려요' 꼴만 막는다 — '알아요'(decline_note 등 사실 문장)는 걸리지 않는다)
+const JUDGE = /취향|좋아하시|알아서|마음 ?가는/;
 function judgeHits(o: unknown, p = '', out: string[] = []): string[] {
   if (typeof o === 'string') {
-    if (JUDGE.test(o) && !JUDGE_WAITING.has(p)) out.push(p);
+    if (JUDGE.test(o)) out.push(p);
   } else if (Array.isArray(o)) {
     o.forEach((v, i) => judgeHits(v, `${p}[${i}]`, out));
   } else if (o && typeof o === 'object') {
@@ -138,8 +137,14 @@ function judgeHits(o: unknown, p = '', out: string[] = []): string[] {
   return out;
 }
 
-test("금지어: 동의·자녀 목록을 포함한 전 문구에 '취향'·'좋아하시'·'좋아하시'가 없다(대기 1키 제외)", () => {
+test("금지어: 동의·자녀 목록을 포함한 전 문구에 '취향'·'좋아하시'·'알아서'·'마음 가는'이 없다(예외 없음)", () => {
   expect(judgeHits(copy)).toEqual([]);
   expect(judgeHits({consent: {body: ['가족이 좋아하시는 걸 챙겨 드릴 수 있어요']}, x: {_memo: '취향'}})).toEqual(['consent.body[0]']); // 검사가 실제로 붙잡는다
+  expect(judgeHits({first: {intro: ['a', '고르신 답으로 자녀가 취향을 알아 가요']}, q: {h: '요즘 마음 가는 쪽을 골라요'}, l: ['마음가는 쪽'], s: '알아서 챙겨 드려요'})).toEqual([
+    'first.intro[1]',
+    'q.h',
+    'l[0]',
+    's',
+  ]); // 예전 대기 키 꼴도 이제 붙잡는다
   expect([copy.consent, copy.child.home.month].flatMap(o => JSON.stringify(o).match(JUDGE) ?? [])).toEqual([]);
 });
