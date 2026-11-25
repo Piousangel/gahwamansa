@@ -12,6 +12,7 @@ pr() { # 번호, 상태, 날짜, 제목 (표준 입력: 본문)
   printf '%s\t%s\t%s\n' "$2" "$3" "$4" > "$T/$1.meta"; cat > "$T/$1.body"
 }
 export COLLECT_FIXTURE_DIR="$T" DECISIONS_FILE="$T/DECISIONS.md"
+NOSEC="'## 결정' 절 없음(머리 모양 '## 결정' 확인)"
 printf '# DECISIONS\n\n## 2026-11-24 옛 결정\n- 옛 본문' > "$DECISIONS_FILE" # 끝 줄바꿈 없음
 
 # 템플릿 주석·CR·다른 절 섞인 본문, '### 제목' 두 개
@@ -45,7 +46,7 @@ expected='# DECISIONS
 - 선택: 하나'
 check "끝에 붙임: 병합일·제목·번호·표식, '### '마다 항목, 주석·CR·다른 절 제외, 끝 줄바꿈 보정" "$expected" "$(cat "$DECISIONS_FILE")"
 check "건너뜀 사유: 열림·빈 절·없음·절 없음" \
-  "$(printf '%s\n' '붙임 #101' '붙임 #102' '건너뜀 #103: 병합 안 됨(OPEN)' "건너뜀 #104: '## 결정' 절 없음" "건너뜀 #105: '## 결정' 절 없음" "건너뜀 #106: '## 결정' 절 없음")" \
+  "$(printf '%s\n' '붙임 #101' '붙임 #102' '건너뜀 #103: 병합 안 됨(OPEN)' "건너뜀 #104: $NOSEC" "건너뜀 #105: $NOSEC" "건너뜀 #106: $NOSEC")" \
   "$(cat "$T.err")"
 
 before="$(cat "$DECISIONS_FILE")"
@@ -58,7 +59,27 @@ dry="$(bash "$S" --dry-run 107 2>/dev/null)"
 check "--dry-run 은 출력만, 파일은 그대로" "$before" "$(cat "$DECISIONS_FILE")"
 check "--dry-run 출력" "$(printf '\n## 2026-11-27 새 것 (#107)\n<!-- collected: #107 -->\n- 선택: z')" "$dry"
 pr 108 MERGED 2026-11-27 '템플릿 그대로' < "$HERE/../.github/pull_request_template.md"
-check "PR 템플릿 원문('## 결정' 은 안내 주석뿐) → 건너뜀" "건너뜀 #108: '## 결정' 절 없음" "$(bash "$S" --dry-run 108 2>&1 >/dev/null | head -1)"
+check "PR 템플릿 원문('## 결정' 은 안내 주석뿐) → 건너뜀" "건너뜀 #108: $NOSEC" "$(bash "$S" --dry-run 108 2>&1 >/dev/null | head -1)"
+
+# #270 QA-1 M1: 코드 블록 안의 '## ' 는 절 경계가 아니다
+printf '## 결정\n### 코드 있는 결정\n- 선택: 아래 설정\n```md\n## 예시 제목\n\n# 주석 아님\n```\n- 버린 안: 끝까지 붙어야 함\n## 증거\n- x\n' | pr 110 MERGED 2026-11-27 'm1a'
+check "M1: 결정 안 코드 블록의 '## '·'# '·빈 줄에서 자르지 않고 코드 블록을 닫힌 채로 붙임" \
+  "$(printf '\n## 2026-11-27 코드 있는 결정 (#110)\n<!-- collected: #110 -->\n- 선택: 아래 설정\n```md\n## 예시 제목\n\n# 주석 아님\n```\n- 버린 안: 끝까지 붙어야 함')" \
+  "$(bash "$S" --dry-run 110 2>/dev/null)"
+printf '## 증거\n```\n## 결정\n- 가짜\n```\n## 검증\nok\n' | pr 111 MERGED 2026-11-27 'm1b'
+check "M1: 다른 절 코드 블록 안의 가짜 '## 결정' 은 붙이지 않음" "건너뜀 #111: $NOSEC" "$(bash "$S" --dry-run 111 2>&1 >/dev/null | head -1)"
+printf '## 결정\n- 선택: x\n```\n## 닫지 않음\n' | pr 112 MERGED 2026-11-27 'open fence'
+check "닫지 않은 \`\`\` → 건너뜀" "건너뜀 #112: '## 결정' 절에 닫지 않은 \`\`\` — PR 본문을 고친 뒤 다시" "$(bash "$S" --dry-run 112 2>&1 >/dev/null | head -1)"
+# L1·L2
+printf '## 결정\n<!-- 안내를 지우다 반만 남김\n### 제목\n- 선택: x\n' | pr 113 MERGED 2026-11-27 'open comment'
+check "L1: 닫지 않은 <!-- → 건너뜀" "건너뜀 #113: '## 결정' 절에 닫지 않은 <!-- — PR 본문을 고친 뒤 다시" "$(bash "$S" --dry-run 113 2>&1 >/dev/null | head -1)"
+printf '## 결정:\n# 큰 제목으로 씀\n- 선택: y\n' | pr 114 MERGED 2026-11-27 'h1'
+check "L1·L2: '## 결정:' 머리 인정, '# 제목' 은 항목 제목" \
+  "$(printf '\n## 2026-11-27 큰 제목으로 씀 (#114)\n<!-- collected: #114 -->\n- 선택: y')" "$(bash "$S" --dry-run 114 2>/dev/null)"
+# L3·L4
+check "L3: 같은 번호 두 번 → 한 번만" 1 "$(bash "$S" --dry-run 114 '#114' 114 2>/dev/null | grep -c '^## ')"
+check "L4: PR 정보를 못 읽으면(gh 실패) 건너뛰지 않고 exit 1" "1 실패 #999: PR 정보를 못 읽음(gh 인증·번호 확인)" \
+  "$(bash "$S" --dry-run 114 999 2> "$T.err" >/dev/null; echo $?) $(grep '^실패' "$T.err")"
 check "인자 없으면 exit 2" 2 "$(bash "$S" 2>/dev/null; echo $?)"
 rm -f "$T.err"
 exit "$fail"

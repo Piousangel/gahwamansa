@@ -24,7 +24,8 @@
 ## 결정은 이렇게 남긴다 (2026-11-25, DECISIONS.md 병합 충돌 제거)
 1. 작업 PR은 DECISIONS.md를 고치지 않는다. 결정은 PR 본문 `## 결정` 절에 `### 제목` + 맥락·선택·버린 안으로 쓴다(템플릿에 있음, 고치면 CI `decisions` 경고).
 2. 리드가 하루 1~2번 `scripts/collect-decisions.sh <병합된 PR 번호…>`로 그 절들을 DECISIONS.md 끝에 붙여 결정 모음 PR(브랜치 `decisions/collect-YYYYMMDD`)을 낸다 — 이미 붙은 PR은 건너뛴다.
-3. DECISIONS.md를 고치는 열린 PR은 결정 모음 PR 하나뿐이라 충돌이 없다. DECISIONS.md가 계속 정본이다.
+3. DECISIONS.md를 고치는 열린 PR은 결정 모음 PR 하나뿐이라 충돌이 없다(**열린 결정 모음 PR은 한 번에 하나** — 병합된 뒤 다음 것을 낸다). DECISIONS.md가 계속 정본이다.
+- 전환기: 이 규칙(#270) 병합 전에 이미 DECISIONS.md를 고친 열린 PR은 그대로 병합해도 된다(CI 경고만). #270 병합 뒤 새로 여는 PR부터 본문 `## 결정` 절로 쓴다.
 
 ## 교차 검토 짝
 정책↔라이터(의료·동의 문구), 정책↔개발(개인정보·삭제 경로), 디자이너↔라이터(말풍선 문구), PM↔사업 기획(지표·일정 정합), QA↔개발(RLS 테스트).
