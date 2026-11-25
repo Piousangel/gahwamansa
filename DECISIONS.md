@@ -1,5 +1,8 @@
 # DECISIONS
 
+> **2026-11-25부터 새 결정은 이 파일에 붙여 쓰지 않는다 → [`docs/decisions/`](docs/decisions/README.md) 에 `YYYY-MM-DD-<slug>.md` 파일 하나씩.**
+> 모든 PR이 이 파일 끝에 붙여 써서 병합 때마다 다른 PR이 전부 충돌했다([결정](docs/decisions/2026-11-25-decisions-per-file.md)). 아래는 그 전까지의 결정 원문 그대로(지우거나 고치지 않음). 색인·최근 결정: `scripts/decisions-index.sh` (`--recent 3`).
+
 ## 2026-11-16 스택: React Native CLI, 백엔드 Supabase
 - 맥락: 부모·자녀 공용 앱, iOS+Android, 1인 개발
 - 선택: RN CLI + Supabase(Auth, Postgres+RLS, Storage) / 버린 안: Expo(네이티브 설정 변경 여지), Flutter(새로 학습), Firebase(사용자가 Supabase 선택)
