@@ -813,6 +813,10 @@
 - 0062부터 받기 동의 전 `register_push_token`은 `{ok:true, stored:false}`(서버 저장 없음). 앱은 지금 이것도 성공으로 보고 토큰을 로컬(`lib/pushToken`)에 둔다 — 로그아웃 해제용이라 무해(해제는 removed:0 멱등). 그대로 둔다
 - 앱에 '로컬 토큰과 같으면 서버 등록 호출 생략' 최적화를 넣지 않는다 — 동의 전 등록분은 서버에 없어서, 동의 뒤 재등록(set_push_enabled(true) 직후·앞으로 올 때 sync)이 건너뛰어지면 알림이 오지 않는다. 앱 코드 변경은 이 PR 밖
 
+## 2026-11-25 개발 빌드 'Error: undefined'(S4) = 무해, 앱 수정 없음 (DV-1, stability/launch-checks)
+- 원인: RN Fast Refresh(HMRClient)가 Metro 웹소켓을 잃을 때 "Cannot connect to Metro … Error: ${e.message}" 를 console.warn 한다. RN WebSocket 은 실패 때 message 없는 `Event('error')` 를 보내서 마지막 줄이 `Error: undefined` 가 된다. release 번들에는 없는 개발 전용 코드다.
+- 선택: 고치지 않고 `LogBox.ignoreLogs` 로도 숨기지 않는다(Metro 끊김 신호가 사라짐). 시험 `devMetroDisconnectWarning` 이 RN·Metro 의 세 사실을 고정한다 — 올렸을 때 바뀌면 다시 판정. 근거 `docs/team/qa/evidence/2026-11-25-stability` 1절
+
 ## 2026-11-25 받기 동의 뒤에만 FCM 토큰 요청(대기열 38, DV-1, push/token-after-consent)
 - 맥락: #262 QA-3 M2 — Android 12 이하는 알림 기본 허용이라 역할만 고르면 앱이 getToken → 설치 ID·토큰 생성. 서버는 0062(#264)로 동의 전 토큰을 저장하지 않게 됨.
 - 선택(리드): 앱이 **받기 동의를 아는 경우에만** getToken. `registerToken(deps, consented)` — 동의 직후 경로(N1 '알려 주세요'·자녀 '알림 켜기'·P13/C7 켬)는 set_push_enabled(true) 성공 값을, PushHost sync(시작·깨어남·토큰 갱신)는 `registerIfConsented`(my_push_settings true)를 넘긴다. 확인 못 하면(오프라인) 부르지 않는다. onTokenRefresh 구독은 JS 이벤트 듣기뿐이라 토큰을 만들지 않는다(RNFB 27.1).
