@@ -164,15 +164,18 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
     }
   }, [pending, role, route, content, api, n1Open]);
 
-  // N1: P7 의 연속(리드 결정 ⓐ, #168 기획 리뷰). 이번 실행에서 P7(CourseDone) → 코스 홈으로 돌아왔을 때만 묻는다.
+  // N1 을 묻는 때(이번 실행에서 코스 홈에 이렇게 들어왔을 때만):
+  //   ① 연결 직후(H1, 오너 11-25): 번호 연결(P1c Connect)·답 보여 주기(P2 Consent)를 마치고 코스 홈에 처음 왔을 때 — 연결한 날 코스를 안 해도
+  //      다음 날 09시 알림이 오게. 사용자가 방금 끝낸 행동의 연속이라 '진입 즉시 권한 묻기'가 아니다.
+  //   ② P7 의 연속(리드 결정 ⓐ, #168): P7(CourseDone) → 코스 홈으로 돌아왔을 때. ①에서 뒤로(오늘은 넘김)를 고른 사람에게 다음 날 다시 묻는 자리.
   // 앱을 열 때·앞으로 돌아올 때(깨어남)는 묻지 않는다(토스 '진입 즉시 권한 묻기 금지'). 하루 한 번 이하는 pushClient 기억이 지킨다:
-  //   답함(알려 주세요·안 받을게요) → 다시 묻지 않음, 뒤로(답 없이) → 오늘은 넘김(다음 날 P7 뒤에 다시).
-  // V1(DECISIONS 11-19): 가치를 보기 전(첫 코스 직전)에 묻지 않는다 — P7 뒤라 자연히 지켜진다.
+  //   답함(알려 주세요·안 받을게요) → 다시 묻지 않음, 뒤로(답 없이) → 오늘은 넘김(다음 날 P7 뒤에 다시) — 재촉하지 않는다.
+  // V1(DECISIONS 11-19 '가치를 보기 전에 묻지 않는다')은 ①로 바뀐다(오너 결정 H1, PR 본문 결정).
   // PR #65 리뷰 L1: 알림 받기와 답 보여 주기는 별개 동의 — 답 보여 주기에 동의하지 않은 어르신에게도 묻는다.
   const prevRoute = useRef<string | undefined>(undefined);
-  const [fromP7, setFromP7] = useState(0); // P7 → 코스 홈으로 돌아온 횟수(이번 실행)
+  const [fromP7, setFromP7] = useState(0); // 묻는 자리(①·②)로 코스 홈에 들어온 횟수(이번 실행)
   useEffect(() => {
-    if (prevRoute.current === 'CourseDone' && route === 'CourseHome') {
+    if ((prevRoute.current === 'CourseDone' || prevRoute.current === 'Connect' || prevRoute.current === 'Consent') && route === 'CourseHome') {
       setFromP7(n => n + 1);
     }
     prevRoute.current = route;

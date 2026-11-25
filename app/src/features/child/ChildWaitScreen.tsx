@@ -125,6 +125,9 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
     }
   }, [sent]);
 
+  // H1(오너 11-25): OS 권한이 꺼졌거나, 아직 '알림 켜기'(받기 동의)를 누르지 않았으면 켜는 줄을 보인다.
+  //   #269 이후 동의 전에는 토큰이 없어 연결·첫 답 알림이 오지 않으므로, 권한이 이미 허용(12 이하 기본 허용)이어도 묻는다.
+  const askNotify = notify.denied || notify.consented === false;
   if (linked) {
     const d = copy.connect_done;
     return (
@@ -138,6 +141,15 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
               {withTitle(l, title)}
             </Text>
           ))}
+          {askNotify ? (
+            // 연결 직후(H1): C3 에서 켜지 않은 자녀에게 한 번 더 — 첫 답 알림은 연결 뒤 한 번뿐이라 지금이 마지막 기회(0052)
+            <View testID="done-notify" style={styles.notify}>
+              <Text role="sub" tone="muted">
+                {withTitle(d.notify, title)}
+              </Text>
+              <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+            </View>
+          ) : null}
         </DsScreen>
       </AudienceProvider>
     );
@@ -153,7 +165,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
         <Button kind="text" size="dock" label={w.copy} onPress={copyCode} testID="wait-copy" />
       </View>
     ) : null;
-  const notifyRow = notify.denied ? (
+  const notifyRow = askNotify ? (
     <View testID="wait-notify" style={big ? styles.notifyOut : styles.notify}>
       <Text role="sub" tone="muted">
         {w.notify}
