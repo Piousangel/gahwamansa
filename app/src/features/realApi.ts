@@ -13,7 +13,7 @@ import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
 import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
-import {FIVE_STEP_COURSE_LEN, TODAY_FIVE_STEP_KEYS, parseSavePassOnResult, parseSaveRecallResult, parseTodayFiveSteps, type TodayFiveSteps} from '../api/contract/fiveSteps';
+import {FOUR_STEP_COURSE_LEN, TODAY_FIVE_STEP_KEYS, parseSavePassOnResult, parseSaveRecallResult, parseTodayFiveSteps, type TodayFiveSteps} from '../api/contract/fiveSteps';
 import {isFeatureOn} from '../lib/features';
 import type {
   Api, ChildParent, PeekResult, ChildState, ChildSummary, CreateFamilyResult, LoginMethod, ParentHistory, RecordStepResult, RedeemResult,
@@ -111,15 +111,16 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
     }
     flushWaiting();
   };
-  // 5단계(0061): 서버가 five_steps_supported 를 준 뒤에만 true. 스위치(fiveSteps)와 함께 켜져 있으면 record_session_step 모든 호출에
-  // p_course_len 5 를 붙인다(이 한 곳 — 리뷰 L-a). 옛 서버(키 없음)면 새 인자를 보내지 않는다(함수 없음 오류).
+  // 스위치 경로(0061·0067): 서버가 five_steps_supported·four_steps_supported 를 둘 다 준 뒤에만 true. 스위치(fiveSteps)와 함께 켜져 있으면
+  // record_session_step 모든 호출에 p_course_len 4 를 붙인다(이 한 곳 — 리뷰 L-a). 옛 서버(키 없음)면 새 인자를 보내지 않는다
+  // (0061 전: 함수 없음 오류, 0067 전: invalid_course_len).
   let serverFive = false;
   const fiveOn = () => serverFive && isFeatureOn('fiveSteps');
   // 오늘 콘텐츠의 5단계 칸만 계약 파서로 읽어 덮어쓴다. 모양이 틀리면 5단계 칸 없이(앱은 3단계) — 3단계 화면을 막지 않는다
   const withFive = <T extends object>(base: T, raw: unknown): T & Partial<TodayFiveSteps> => {
     const five = parseTodayFiveSteps(raw);
-    serverFive = !!five?.five_steps_supported;
-    if (!five || !five.five_steps_supported) {
+    serverFive = !!five?.five_steps_supported && !!five?.four_steps_supported;
+    if (!five || !serverFive) {
       const rest = {...base} as Record<string, unknown>;
       for (const k of TODAY_FIVE_STEP_KEYS) {
         delete rest[k];
@@ -448,9 +449,9 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       if (error) fail('save_answer', error);
     },
     async recordSessionStep(step: StepName | 'stop_here', durationSec: number, opts?: {skipped?: boolean}): Promise<RecordStepResult> {
-      // 3단계(스위치 꺼짐·옛 서버): 옛 2인자 그대로. 5단계: 모든 호출에 p_skipped·p_course_len 5(0061)
+      // 3단계(스위치 꺼짐·옛 서버): 옛 2인자 그대로. 스위치 경로(4단계): 모든 호출에 p_skipped·p_course_len 4(0067)
       const args = fiveOn()
-        ? {p_step: step, p_duration: durationSec, p_skipped: !!opts?.skipped, p_course_len: FIVE_STEP_COURSE_LEN}
+        ? {p_step: step, p_duration: durationSec, p_skipped: !!opts?.skipped, p_course_len: FOUR_STEP_COURSE_LEN}
         : {p_step: step, p_duration: durationSec};
       const {data, error} = await sb.rpc('record_session_step', args);
       if (error) fail('record_session_step', error);

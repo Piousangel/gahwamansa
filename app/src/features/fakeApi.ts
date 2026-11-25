@@ -76,8 +76,9 @@ export type FakeOptions = {
   accountTag?: string | null; // 기기 기억값 계정 가명값(기본 'fake-account')
   pushEnabled?: boolean; // 서버 알림 받기 상태(켬 + 받기 시각, 0036). 기본 true, false 면 어르신 N1 이 뜬다
   // ── 5단계(기능 스위치 fiveSteps 가 켜졌을 때만 콘텐츠에 칸이 생긴다 — 서버 계약 api/contract/fiveSteps.ts 제안) ──
-  // 서버 0061 흉내(api/contract/fiveSteps.ts). 칸은 늘 준다(새 서버) — fiveStepsSupported:false 면 옛 서버처럼 칸이 없다
+  // 서버 0061·0067 흉내(api/contract/fiveSteps.ts). 칸은 늘 준다(새 서버) — fiveStepsSupported:false 면 옛 서버처럼 칸이 없다
   fiveStepsSupported?: boolean; // 기본 true
+  fourStepsSupported?: boolean; // 기본 true. false 면 0067 전 서버(four_steps_supported 없음 → 앱은 3단계)
   recallSlot?: number | null; // 오늘 이미 저장된 ② slot
   passOnKey?: PassOnKey | null; // 오늘 이미 저장된 ⑤ 키
   passOnEnabled?: boolean; // ⑤ 서버 스위치(기본 true — 개발 화면 확인용. false 면 save_pass_on 이 disabled)
@@ -108,12 +109,13 @@ export type FakeDevHooks = {
 export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHooks} {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
-  // 서버 완료 판정(0061): 옛 3단계가 모두 있고, 5단계로 기록된 날(course_len 5)이면 ②·⑤까지 있어야 완료
+  // 서버 완료 판정(0061·0067): 옛 3단계가 모두 있고, 4단계(course_len 4)면 ②까지, 5단계(course_len 5)면 ②·⑤까지 있어야 완료.
+  // 저장 길이는 줄지 않고(가장 긴 값), 4로 부른 호출은 4로 판정한다(0067 머리말)
   const supported = opts.fiveStepsSupported ?? true;
-  const fiveCalls = () => supported && isFeatureOn('fiveSteps'); // realApi 가 p_course_len 5 를 붙이는 조건과 같다
-  let courseLen: 3 | 5 = 3;
-  const legacyDone = () =>
-    steps.has('photo') && steps.has('question') && steps.has('hangul') && (courseLen === 3 || (steps.has('recall') && steps.has('pass_on')));
+  const fiveCalls = () => supported && opts.fourStepsSupported !== false && isFeatureOn('fiveSteps'); // realApi 가 p_course_len 4 를 붙이는 조건과 같다
+  let courseLen: 3 | 4 | 5 = 3;
+  const legacyDone = (judge: 3 | 4 | 5 = courseLen) =>
+    steps.has('photo') && steps.has('question') && steps.has('hangul') && (judge === 3 || steps.has('recall')) && (judge !== 5 || steps.has('pass_on'));
   const skipped = new Set<StepName>(opts.skippedSteps ?? []);
   let recallSaved: number | null = opts.recallSlot ?? null;
   let passOnSaved: PassOnKey | null = opts.passOnKey ?? null;
@@ -456,6 +458,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       const five = supported
         ? {
             five_steps_supported: true,
+            ...(opts.fourStepsSupported === false ? {} : {four_steps_supported: true}), // 0067 표지(false = 0061만 있는 서버)
             skipped_steps: linked ? [...skipped] : [],
             recall: {options: todayRecall(), picked_slot: linked && consented ? recallSaved : null},
             pass_on: {enabled: opts.passOnEnabled ?? true, picked_key: linked && consented && (opts.passOnEnabled ?? true) ? passOnSaved : null},
@@ -484,7 +487,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
       savedLabel = choice === 'A' ? c.a : c.b;
     },
-    // record_session_step(0061 흉내): 3단계 호출이면 옛 판정 그대로. 5단계(fiveCalls)면 넘어감·여기까지·course_len 5
+    // record_session_step(0061·0067 흉내): 3단계 호출이면 옛 판정 그대로. 스위치 경로(fiveCalls)면 넘어감·여기까지·course_len 4
     async recordSessionStep(step, _sec, o) {
       if (failRecord > 0) {
         failRecord -= 1;
@@ -498,14 +501,15 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       if (skip && (step === 'photo' || step === 'stop_here')) {
         throw new ServerError('record_session_step', 'invalid_step', 'P0001');
       }
-      if (five || step === 'recall' || step === 'pass_on' || step === 'stop_here') {
-        courseLen = 5;
-      }
+      // 4는 앱이 명시(fiveCalls), 기본값 3인데 새 단계면 5(0061 규칙)
+      const callLen = five ? 4 : step === 'recall' || step === 'pass_on' || step === 'stop_here' ? 5 : 3;
+      courseLen = Math.max(courseLen, callLen) as 3 | 4 | 5;
       if (step === 'stop_here') {
         if (!steps.has('question')) {
           throw new ServerError('record_session_step', 'stop_before_question', 'P0001');
         }
-        for (const s of ['recall', 'hangul', 'pass_on'] as const) {
+        // 4로 부르면 화면에 없는 ⑤는 기록하지 않는다(0067)
+        for (const s of five ? (['recall', 'hangul'] as const) : (['recall', 'hangul', 'pass_on'] as const)) {
           if (!steps.has(s)) {
             steps.add(s);
             skipped.add(s);
@@ -527,7 +531,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
           skipped.delete(step);
         }
       }
-      const completed = legacyDone();
+      const completed = legacyDone(five ? 4 : courseLen);
       return {completed, streak: completed ? Math.max(1, baseStreak) : baseStreak, steps: [...steps]};
     },
     // 5단계 ② save_recall·⑤ save_pass_on(0061 흉내): 거절은 값

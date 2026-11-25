@@ -19,7 +19,7 @@ export type Session = {
   applyStep: (step: StepName, streak: number, skipped?: boolean) => void;
   applyAnswer: (choice: 'A' | 'B') => void; // 서버가 답을 저장한 뒤 화면 상태(answered_choice)에 반영
   setConsented: (v: boolean) => void; // 서버가 동의/철회를 인정한 뒤 반영(철회면 오늘 고른 답도 비움)
-  // ── 5단계: five = 스위치 켜짐 + 서버 지원(content.five_steps_supported). false 면 아래는 아무도 부르지 않는다 ──
+  // ── 5단계: five = 스위치 켜짐 + 서버 지원(content.five_steps_supported·four_steps_supported). false 면 아래는 아무도 부르지 않는다 ──
   five: boolean;
   picks: CoursePicks; // 이 기기 화면에서 고른 값(오늘 것만, 날이 바뀌면 빈 값)
   setPicks: (patch: Partial<Omit<CoursePicks, 'day'>>) => void;

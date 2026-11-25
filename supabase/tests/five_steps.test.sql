@@ -101,7 +101,7 @@ select public.record_session_step('photo', 1, false, 5);
 select public.record_session_step('question', 1, false, 5);
 select is(public.record_session_step('hangul', 1, false, 5) ->> 'completed', 'false', '5단계 코스는 ②·⑤ 없이 완료되지 않는다(순서를 건너뛰어도)');
 select throws_like($$ select public.record_session_step('photo', 1, true, 5) $$, '%invalid_step%', '① 사진 보기는 넘어갈 수 없다');
-select throws_like($$ select public.record_session_step('photo', 1, false, 4) $$, '%invalid_course_len%', '코스 길이는 3 또는 5만');
+select throws_like($$ select public.record_session_step('photo', 1, false, 6) $$, '%invalid_course_len%', '코스 길이는 3·4·5만(4는 0067)');
 select throws_like($$ select public.record_session_step('sound', 1) $$, '%invalid_step%', '목록 밖 단계 거부');
 select is(public.record_session_step('recall', 1, false, 3) ->> 'completed', 'false', '새 단계를 기록하면 p_course_len 없이도 5단계 코스로 본다');
 reset role;

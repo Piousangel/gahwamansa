@@ -91,14 +91,17 @@ test('get_today_content 5단계 값 파서: 새 서버·옛 서버·틀린 모�
     }),
   ).toEqual({
     five_steps_supported: false,
+    four_steps_supported: false,
     skipped_steps: ['pass_on'],
     recall: {options: [{slot: 1, label: '아궁이'}, {slot: 2, label: '누룽지'}], picked_slot: 2},
     pass_on: {enabled: true, picked_key: 'recall_story'},
   });
   // 옛 서버(0061 전): 키 없음 → ② 보기 없음, ⑤ 꺼짐
   expect(parseTodayFiveSteps({day_index: 3, five_steps_supported: true})?.five_steps_supported).toBe(true);
+  expect(parseTodayFiveSteps({day_index: 3, five_steps_supported: true, four_steps_supported: true})?.four_steps_supported).toBe(true); // 0067
   expect(parseTodayFiveSteps({day_index: 3})).toEqual({
     five_steps_supported: false,
+    four_steps_supported: false,
     skipped_steps: [],
     recall: {options: [], picked_slot: null},
     pass_on: {enabled: false, picked_key: null},

@@ -117,7 +117,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ### 오늘 코스 5단계 (0061, DECISIONS 11-25 R-1·R-3, 앱 계약 `app/src/api/contract/fiveSteps.ts`)
 ```ts
 // 단계: 'photo' → 'recall'(② 떠올려 보기) → 'question' → 'hangul' → 'pass_on'(⑤ 이야기 건네기). ③ 뒤 'stop_here'(오늘은 여기까지)
-// sb.rpc('record_session_step', { p_step, p_duration, p_skipped?: boolean = false, p_course_len?: 3 | 5 = 3 }) → { completed, steps, streak }  // 반환 모양 그대로
+// sb.rpc('record_session_step', { p_step, p_duration, p_skipped?: boolean = false, p_course_len?: 3 | 4 | 5 = 3 }) → { completed, steps, streak }  // 반환 모양 그대로
 // sb.rpc('save_recall', { p_day_index, p_slot })   → { ok: true } | { ok: false, reason: 'consent_required'|'no_content'|'stale_day'|'skipped'|'invalid_option' }
 // sb.rpc('save_pass_on', { p_day_index, p_key })   → { ok: true } | { ok: false, reason: 'disabled'|'consent_required'|'invalid_key'|'no_content'|'stale_day'|'skipped'|'missing_value' }
 // save_answer(0061 변경): 오늘 ③이 넘어감이면 예외 'skipped'(반환형 void·예외 계약 그대로)
@@ -138,6 +138,7 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 - **② 보기 적재·오타 수정(운영, 리뷰 QA-1 L4)**: 원본은 `docs/team/copy/2026-11-25-recall-options.csv`(라이터·검수 승인본). 적재 SQL은 `supabase/seed_recall_options.sql` 하나다(로컬 db reset 시드 겸용, 값은 CSV와 글자까지 같음 — `supabase/ops/recall-options-seed.test.mjs`). 로컬 임시 스택 → staging(오너 승인) → production 순서로 postgres(SQL Editor)에서 **파일 전체를 한 번에** 실행한다. 한 트랜잭션: 사전 확인(90행·날 1~30·slot 1~3·중복·한글 2~4자·금지어·DB에 있는 날의 ③/사진 겹침) → content_photos에 있는 날만 넣음(없는 날은 NOTICE로 알리고 건너뜀 — 그날 게시 뒤 다시 실행) → 사후 확인(이미 다른 보기가 있던 날이 있으면 전체 되돌림). 다시 실행해도 안전. 서비스 역할·앱은 이 표에 쓸 수 없다. 게시 뒤 수정은 트리거가 막는다. **오타 수정**: ① `select count(*) from recall_picks where day_index = <N>`가 0이면(아직 아무도 고르지 않음) 한 트랜잭션에서 `select set_config('bumo.allow_content_delete','on',true); delete from content_recall_options where day_index = <N>; insert …(고친 3개)` ② 0이 아니면 지우지 않는다 — 보기를 지우면 FK cascade로 그날 고른 것이 사라진다. 그 날은 그대로 두고 새 콘텐츠 날로 고친다(사진 콘텐츠 규칙과 같음).
 - **스위치 켜기(L-11 승인·리드 결정 뒤, 운영자 postgres)**: `insert into public.server_flags (name, enabled) values ('pass_on_store_enabled', true) on conflict (name) do update set enabled = excluded.enabled, updated_at = now();` 끄기는 `update … set enabled = false`(이미 저장된 ⑤도 자녀에게 바로 안 보임). remote-checks에 상태 줄.
 - **배포 순서**: 서버 먼저 무해 — 옛 앱 호출·반환 모양이 그대로이고(rpc_session·골든 테스트 그대로 통과), 추가 키만 생긴다. 그 다음 새 앱(5단계)을 낸다. 새 앱이 0061 없는 서버를 만나면 `p_skipped`·`p_course_len` 인자 때문에 record_session_step 함수 없음 오류(PGRST202) → **새 앱보다 서버를 먼저** 반영한다.
+- **4단계 완료 판정(0067, 기획 v2.1 Q7 — ⑤ 비움)**: `p_course_len`에 4를 더했다(3|4|5, 그 밖 `invalid_course_len`). 4 = 옛 3단계 + recall로 완료(⑤ 기록 없이). 지금 앱은 스위치 경로의 모든 호출에 `p_course_len: 4`를 보낸다. 저장 `course_len`은 지금처럼 줄지 않는 가장 긴 값이고, 판정은 저장 값 — 단 **4로 부른 호출은 4로 판정**(같은 날 5로 시작한 기기가 4단계 빌드로 마쳐도 화면에 없는 ⑤를 기다리지 않게). `stop_here`를 4로 부르면 빠진 ②·남은 ④만 넘어감으로 채운다(⑤ 기록 없음). #287 대신 기록 빌드(5 + ④ 뒤 pass_on 넘어감)는 0061과 같은 결과이고, 이미 완료된 세션에 pass_on 넘어감을 다시 보내도 오류 없이 `completed: true`·`completed_at` 그대로. 계약 표지 `four_steps_supported: true`(get_today_content·start_today·preview_content) — 앱은 five·four 표지가 **둘 다** 있어야 스위치 경로로 돌고, 없으면 3단계(0067 전 서버에 4를 보내 막히지 않게). 서버 먼저. pgTAP `four_step_course.test.sql`.
 
 ### get_my_cheers() → jsonb  (0020, P8)
 ```json
