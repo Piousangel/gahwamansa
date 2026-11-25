@@ -22,7 +22,7 @@ import {FoldStack} from '../../ui/FoldStack';
 import {useBootLoading} from '../../app/splash';
 import {WeekStampStrip, showWeekStrip} from './WeekStampStrip';
 import type {StepName} from '../types';
-import {allStepsDone, FIVE_STEP_ORDER, skippedOf, type StepEntry, type StepRoute} from './fiveSteps';
+import {allStepsDone, FIVE_STEP_ORDER, nowRowRange, skippedOf, type StepEntry, type StepRoute} from './fiveSteps';
 import {stepA11y} from './StepHeader';
 import {useStopHere} from './useFinishStep';
 
@@ -71,24 +71,22 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [viewH, setViewH] = useState(0); // R-15 접힘 기준 창(FoldBody)
   // 5단계: 홈이 열리거나 지금 행이 바뀌면 그 행이 보이게(시안 리스크 1 — 360×640 100%에서도 ③ 뒤 지금 행이 첫 화면 끝에 걸린다)
   const nowStep = five && content ? steps.find(s => !done.includes(s.step))?.step ?? null : null;
+  // 행 위치는 자연 위치(접힘 여백 없음). 내려야 하는 날은 아래 FoldStack 이 여백을 끄므로 실제 위치와 같다(#254 캡처 문제 1)
+  const nowAt = (): ReturnType<typeof nowRowRange> =>
+    nowStep && rowsAt ? nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH) : null;
   useEffect(() => {
-    if (!nowStep || !rowsAt || scrolledFor.current === nowStep) {
+    if (!nowStep || !rowsAt || viewH <= 0 || scrolledFor.current === nowStep) {
       return;
     }
-    let y = rowsAt.top;
-    for (const key of order.current) {
-      const h = rowsAt.heights[key];
-      if (h === undefined) {
-        return; // 아직 다 재지 않음
-      }
-      if (key === nowStep) {
-        scrolledFor.current = nowStep;
-        scrollRef.current?.showRange(y, y + h);
-        return;
-      }
-      y += h + BODY_GAP;
+    const at = nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH);
+    if (!at) {
+      return; // 아직 다 재지 않음
     }
-  }, [nowStep, rowsAt]);
+    scrolledFor.current = nowStep;
+    if (at.scroll) {
+      scrollRef.current?.showRange(at.top, at.bottom);
+    }
+  }, [nowStep, rowsAt, viewH]);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -254,11 +252,13 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         all && !five ? <Heading key="done-title" level={1} testID="course-done-title">{doneTitle}</Heading> : null,
         // 5단계 다 마침: 제목 옆 날짜 도장 1개(시안 s1 C-나, 행마다 도장 다섯 개 = 쿠폰판으로 읽힘). 읽기는 제목 + 도장 날짜 한 번
         all && five ? (
-          <View key="done-title" testID="course-done-head" style={styles.doneHead} accessible accessibilityRole="header" accessibilityLabel={`${doneTitle.replace('\n', ' ')}, ${stampLabel}`}>
-            <View style={styles.doneHeadText}>
+          <View key="done-title" testID="course-done-head" style={large ? styles.doneHeadLarge : styles.doneHead} accessible accessibilityRole="header" accessibilityLabel={`${doneTitle.replace('\n', ' ')}, ${stampLabel}`}>
+            <View testID="course-done-head-text" style={large ? undefined : styles.doneHeadText}>
               <Heading level={1} testID="course-done-title">{doneTitle}</Heading>
             </View>
-            <DateStamp testID="done-title-stamp" label={stampLabel} />
+            <View testID="course-done-head-stamp" style={large ? styles.doneStampLarge : undefined}>
+              <DateStamp testID="done-title-stamp" label={stampLabel} />
+            </View>
           </View>
         ) : null,
         // 미연결 완료(11-7 #18): 가족에게 언제 보이는지 둘째 줄
@@ -353,12 +353,16 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
         ),
   ];
   order.current = items.filter(Boolean).map(x => String((x as React.ReactElement).key));
+  // 5단계에서 지금 행으로 내리는 날(또는 아직 재는 중)은 접힘 여백을 끈다: 사용자가 처음 보는 화면은 내린 화면이고, 그 아래 끝은
+  // 지금 행 끝 + 간격 12(showRange 여유) = 다음 행 위 끝이라 줄 경계가 맞는다. 여백을 두면 내린 화면 위에 빈칸이 생기고 위치도 어긋난다
+  const now = nowAt();
+  const foldViewport = nowStep && (!now || now.scroll) ? 0 : viewH;
 
   return (
     <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH} scrollRef={five ? scrollRef : undefined}>
       {/* P8: 연결된 어르신에게 온 읽지 않은 응원(미연결 열람은 묻지 않음). V1: 첫 인사가 보이는 첫 P3 에서는 묻지 않고 첫 단계 뒤에 */}
       <CheerDialog api={api} enabled={!preview && greetingDecided && !firstGreeting} returnFocusRef={titleRef} />
-      <FoldStack viewport={viewH} gap={BODY_GAP} testID="course-steps" onMeasure={five ? onRows : undefined}>
+      <FoldStack viewport={foldViewport} gap={BODY_GAP} testID="course-steps" onMeasure={five ? onRows : undefined}>
         {items}
       </FoldStack>
     </DsScreen>
@@ -465,7 +469,12 @@ const styles = StyleSheet.create({
   declined: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.chip, paddingVertical: 12, paddingHorizontal: 16},
   notice: {backgroundColor: ds.color.noticeSoft, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 16, gap: 12},
   linkRow: {alignSelf: 'flex-start'},
-  // 5단계 다 마침 머리줄: 제목 + 도장 1개(좁으면 도장이 다음 줄 — 묶음은 갈라지지 않는다)
-  doneHead: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 6},
-  doneHeadText: {flexShrink: 1},
+  // 5단계 다 마침 머리줄: 제목 + 도장 1개(시안 s1 C-나). 줄바꿈(wrap) 묶음은 쓰지 않는다 — 여러 줄로 꺾이는 글은 한 줄 전체 폭을
+  // 차지해 도장이 늘 아래 줄 왼쪽(줄 머리)으로 갔다(#254 캡처 문제 5). 150% 미만: 제목이 남은 폭을 갖고 도장은 옆(줄지 않음)
+  doneHead: {flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', columnGap: 12},
+  doneHeadText: {flex: 1, minWidth: 0},
+  // 150% 이상: 옆에 두면 제목 낱말이 가운데서 꺾인다(320 200% 제목 폭 178 < '여기까지예요.' 220) → 제목 끝 아래 오른쪽(낙관 자리).
+  // 줄 머리(왼쪽)에는 두지 않는다 — 왼쪽 원은 라디오 버튼으로 읽힌다(11-19 V5, 단계 행 D-2 상태 묶음과 같은 규칙)
+  doneHeadLarge: {flexDirection: 'column', rowGap: 6},
+  doneStampLarge: {alignSelf: 'flex-end'},
 });

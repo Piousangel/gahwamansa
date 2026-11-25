@@ -198,9 +198,18 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       ? null
       : !linked
         ? d.unlinked_body.replace('. ', '.\n')
-        : `${passedOn ? `${d.passed_on}\n` : ''}${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
+        : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
   const strip = showWeekStrip() && days ? <WeekStampStrip key="week" testID="p7-week" days={days} /> : null;
-  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
+  // 「가족에게 건넸어요」는 본문과 따로 접힘 단위(#254 캡처 문제 3): 한 덩어리 3줄이면 R-15 가 통째로 밀어 첫 화면에 제목만 남았다.
+  // 이 줄이 그날의 새 소식이라 제목 바로 아래(도장 줄보다 위)에 두고, 늘 같은 둘째 줄(도장·내일 사진)만 접힘 아래로 밀릴 수 있게 한다.
+  // 3단계·넘긴 날·'여기까지'로 마친 날은 이 요소가 없어 묶음이 예전과 같다.
+  // 요소는 처음부터 두고 글만 본문과 함께 채운다(useFoldGap 은 첫 요소 수로 잰다 — 나중에 끼우면 뒤 요소를 판정하지 않는다)
+  const passed = passedOn ? (
+    <Animated.View key="passed" testID="p7-passed" style={{opacity: v.text}} accessibilityLiveRegion="polite">
+      {body ? <Text role="bodyLg" style={styles.center}>{d.passed_on}</Text> : null}
+    </Animated.View>
+  ) : null;
+  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
   const items: React.ReactNode[] = [
     <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} />,
     // 화면 제목: 들어오면 화면 읽기 포커스를 여기로(캡션보다 먼저, PR #108 리뷰 L1)
@@ -215,6 +224,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       accessibilityLabel={d.title}>
       <Text role="title" style={styles.center}>{d.title}</Text>
     </View>,
+    ...(passed ? [passed] : []),
     ...(strip ? [strip] : []),
     <Animated.View key="text" testID="p7-text" style={{opacity: v.text}} accessibilityLiveRegion="polite">
       {body ? <Text role="bodyLg" style={styles.center}>{body}</Text> : null}
