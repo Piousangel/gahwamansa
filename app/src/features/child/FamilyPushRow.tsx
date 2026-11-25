@@ -95,8 +95,8 @@ export function FamilyPushRow({api}: {api: Api}) {
     <Pressable
       testID="child-notify-row"
       accessibilityRole="switch"
-      accessibilityLabel={p.channel.family}
-      accessibilityHint={p.channel.family_desc}
+      // L2(대기열 44): 이름에 무엇을 켜는지까지(보이는 글 두 줄과 같게). 힌트만으로는 힌트를 끈 화면 읽기에서 '가족 연결'만 들렸다
+      accessibilityLabel={`${p.channel.family}, ${p.channel.family_desc}`}
       accessibilityState={{checked: enabled, disabled: busy}}
       onPress={toggle}
       style={({pressed}) => [styles.row, pressed ? styles.pressed : null]}>

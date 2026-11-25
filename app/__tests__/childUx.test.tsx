@@ -605,15 +605,15 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await press('설정');
-    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
-    const row = screen.getByRole('switch', {name: '가족 연결'});
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
+    const row = screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'});
     expect(row.props.accessibilityState.checked).toBe(true); // my_push_settings 기본 켬
     fireEvent.press(row);
     await waitFor(() => expect(set).toHaveBeenCalledWith(false));
-    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(false));
-    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}).props.accessibilityState.checked).toBe(false));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     await waitFor(() => expect(set).toHaveBeenLastCalledWith(true));
-    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}).props.accessibilityState.checked).toBe(true));
   });
 
   test('C7 토글: 실패하면 되돌리고 알린다', async () => {
@@ -623,10 +623,10 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await press('설정');
-    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
-    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     await waitFor(() => screen.getByTestId('toast'));
-    expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.checked).toBe(true);
+    expect(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}).props.accessibilityState.checked).toBe(true);
   });
 
   test('C7: 휴대폰에서 \'family\' 채널을 끄면 꺼짐 표시 + 누르면 그 채널 설정', async () => {
@@ -968,6 +968,8 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
   });
 
   test('P-12: C1 Dock 에 \'지금은 부모님 폰이 안드로이드일 때만 연결돼요\' 한 줄(번호 만들기 아래, 보내기 전에 안다)', async () => {
+    // 100% 기준(jest 기본 글자 배율은 2 — 1.6배 이상이면 안내 줄은 본문 끝으로, 대기열 44 M3 · c1BigText.test)
+    jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: 640, scale: 2.75, fontScale: 1});
     render(<AppRoot api={createFakeApi({who: 'child'})} restore />);
     await waitFor(() => screen.getByTestId('title-group'));
     const dock = within(screen.getByTestId('screen-dock'));

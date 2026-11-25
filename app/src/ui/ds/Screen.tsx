@@ -8,6 +8,7 @@ import {DOCK_PAD_TOP, dockBottomPad, dockCap, nextSpill} from './dockLayout';
 import {ds} from './roles';
 import {MoreBand, MORE_BAND_H} from './MoreBand';
 import {Button} from './Button';
+import {isBigText} from '../bigText';
 
 /** 빌드 1 구현 틀(SUMMARY Q8): step·form·intro. list·done·state 는 빌드 1 끝에(60h 안이면) */
 export type ScreenVariant = 'step' | 'form' | 'intro';
@@ -47,6 +48,11 @@ export type DsScreenProps = {
   /** 접힘 기준 창 높이(R-15) = 본문 영역 − '더 있음' 띠. 띠 유무와 무관해 스크롤 끝에서 흔들리지 않는다(PR #83 재확인 H1) */
   onViewport?: (h: number) => void;
   scrollRef?: React.Ref<ScreenScroll>;
+  /**
+   * 글자 1.6배 이상(ui/bigText)에서 머리(header)와 Dock note 를 본문으로 보낸다(BackLink·주 버튼은 그대로 고정).
+   * 고정 머리 + Dock 이 본문 창을 줄여 고를 것이 첫 화면에 안 보이던 화면만 켠다(C1: 머리 45%·Dock 34% → 본문 15%, 대기열 44 M3). 기본 꺼짐
+   */
+  bigTextBody?: boolean;
 };
 
 /** 자판 높이(dp, 닫혀 있으면 0). 열림 여부는 > 0 */
@@ -70,7 +76,7 @@ function useKeyboardHeight(enabled: boolean) {
  * v4 화면 틀. 옛 ui/Screen(KAV·첫 포커스·본문 페이드·토스트 자리)을 감싸고, variant 가 Dock 상한·자판 정책을 정한다.
  * Dock 이 상한을 넘으면 note → 보조 순으로 본문 끝(DockSpill)으로 보낸다. 2단계에서도 넘치면 개발 경고(테스트는 dsDockBudget 이 실패시킨다).
  */
-export function DsScreen({variant, back, backAside, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport}: DsScreenProps) {
+export function DsScreen({variant, back, backAside, header, stepInfo, dock, children, tail, scrollRef, dockReleaseOnKeyboard = false, onViewport, bigTextBody = false}: DsScreenProps) {
   const v = VARIANT[variant];
   const {width, height, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -83,6 +89,9 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
     spillRef.current = n;
     setSpillState(n);
   };
+  const bigBody = bigTextBody && isBigText(fontScale);
+  // 큰 글자 본문 모드: note 는 처음부터 본문 끝(DockSpill 1단계)에서 시작한다. 넘치면 기존대로 보조까지(2단계)
+  const spillFloor: DockSpillLevel = bigBody && dock?.note ? 1 : 0;
   const ratio = dockRatioFor(variant, dock);
   // R-15(PR #29 리뷰 M3): 자판이 열리면 상한은 실제로 보이는 창(창 높이 - 자판) 기준
   const visible = Math.max(0, height - kb);
@@ -100,10 +109,11 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
   const condKey = `${width}|${height}|${fontScale}|${kb}|${dockKey}`;
   useEffect(() => {
     const known = releasedFor.current.has(condKey);
-    spillRef.current = known ? 2 : 0;
-    setSpillState(known ? 2 : 0);
+    const start: DockSpillLevel = known ? 2 : spillFloor;
+    spillRef.current = start;
+    setSpillState(start);
     setUndock(known);
-  }, [condKey]);
+  }, [condKey, spillFloor]);
 
   const onDockHeight = (content: number, rendered: DockSpillLevel = spillRef.current) => {
     if (!dock) {
@@ -143,7 +153,7 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
   const primary = dock && !isSocialGroup(dock.primary) ? dock.primary : null;
 
   const top =
-    back || header ? (
+    back || (header && !bigBody) ? (
       <View style={styles.top} testID="ds-screen-top">
         {back ? (
           backAside ? (
@@ -155,7 +165,7 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
             <BackLink {...back} context={collapsed ? stepInfo ?? back.context : back.context} />
           )
         ) : null}
-        {collapsed ? null : header}
+        {collapsed || bigBody ? null : header}
       </View>
     ) : undefined;
 
@@ -171,6 +181,7 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
       onBodyArea={onViewport ? h => onViewport(h - MORE_BAND_H) : undefined}
       moreBand={<MoreBand />}
       bottom={dock && !undock ? <Dock {...dock} spill={spill} onContentHeight={onDockHeight} /> : undefined}>
+      {bigBody && header && !collapsed ? <View testID="ds-header-in-body" style={styles.headerInBody}>{header}</View> : null}
       {children}
       {undock && primary ? (
         <View testID="dock-undocked">
@@ -197,5 +208,6 @@ export function DsScreen({variant, back, backAside, header, stepInfo, dock, chil
 
 const styles = StyleSheet.create({
   top: {gap: ds.space.group, paddingBottom: ds.space.group},
+  headerInBody: {gap: ds.space.group},
   backRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: ds.space.group},
 });

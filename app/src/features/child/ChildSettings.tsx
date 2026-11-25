@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {LayoutChangeEvent, Pressable, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -19,6 +19,8 @@ import {clearAccountKeys} from '../../lib/accountStore';
 import {defaultStore} from '../../lib/kvStore';
 import {useBusyLatch} from '../../ui/useBusyLatch';
 import {track} from '../track';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
+import {isBigText} from '../../ui/bigText';
 
 const s = copy.child.settings;
 const rel = copy.relation;
@@ -26,6 +28,9 @@ type Target = {parentId: string; title: string}; // parentId '' = 가족 기본 
 
 // C7 자녀 설정 v2: 어르신별(부르는 이름·새 폰 연결 번호) / 계정(로그인 수단·로그아웃·내 계정 지우기) / 앱(앱 정보).
 // v4(V4-INDEX '시안 없음, 토큰 효과만'): 배치는 v2 그대로, 부품만 ui/ds(DsScreen·Text 역할·StateView·Sheet+Choice). 로그아웃 확인은 어르신과 함께 쓰는 Dialog 그대로.
+// 묶음 사이 = 옛 Screen 본문 간격 16(묶음으로 감싸도 배치가 같게) = 자녀 요소 간격 토큰
+const BLOCK_GAP = ds.space.between.child;
+
 export function ChildSettings() {
   const navigation = useNavigation<NativeStackNavigationProp<ChildParams>>();
   const {api, resetRole} = useSession();
@@ -33,6 +38,8 @@ export function ChildSettings() {
   const [method, setMethod] = useState<LoginMethod | null>(null);
   const [editing, setEditing] = useState<Target | null>(null);
   const [picked, setPicked] = useState('부모님');
+  const fold = useFoldGap(0, BLOCK_GAP, 1);
+  const big = isBigText(useWindowDimensions().fontScale);
   const [saving, setSaving] = useState(false);
   const [logout, setLogout] = useState(false);
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
@@ -127,10 +134,111 @@ export function ChildSettings() {
     ? s.logout_body.split('{수단}').join(s.method[method])
     : s.logout_body.replace('({수단})', '');
 
+  // '가족 연결' 알림: 앱 안 토글(켬·끔 = set_push_enabled, 리드 결정 11-18), 휴대폰에서 꺼져 있으면 켜는 길
+  const pushRow = <FamilyPushRow api={api} />;
+  const accountRows = (
+    <>
+      {method ? <Row label={s.login_row} sub={s.login_via.split('{수단}').join(s.via[method])} /> : null}
+      <Row
+        label={s.logout}
+        onPress={() => {
+          setModalError(null);
+          setLogout(true);
+        }}
+      />
+      <Row label={copy.child.delete_link} danger onPress={() => navigation.navigate('DeleteAccount')} />
+    </>
+  );
+  const items: {key: string; node: React.ReactNode}[] = [
+    ...targets.map(t => ({
+      key: `parent-${t.parentId || 'family'}`,
+      node: (
+        <View style={styles.group}>
+          <GroupTitle>{t.title}</GroupTitle>
+          <View style={styles.section}>
+            <Row
+              label={s.name_row}
+              value={t.title}
+              onPress={() => openName(t)}
+              pressRef={r => {
+                nameRows.current[t.parentId || 'family'] = r;
+              }}
+            />
+            {t.linked ? <Row label={s.newphone_row} sub={withTitle(s.newphone_sub, t.title)} onPress={() => newPhoneCode(t)} /> : null}
+          </View>
+        </View>
+      ),
+    })),
+    // 큰 글자: 계정 묶음(약 460)이 접힘 창(약 440)보다 길어 묶음째 밀 수 없다 → '가족 연결' 카드와 나머지 카드로 나눠 각각 접힘 단위로(에뮬레이터 실측)
+    ...(big
+      ? [
+          {
+            key: 'account',
+            node: (
+              <View style={styles.group}>
+                <GroupTitle>{s.account}</GroupTitle>
+                <View style={styles.section}>{pushRow}</View>
+              </View>
+            ),
+          },
+          {key: 'account-rest', node: <View style={styles.section}>{accountRows}</View>},
+        ]
+      : [
+          {
+            key: 'account',
+            node: (
+              <View style={styles.group}>
+                <GroupTitle>{s.account}</GroupTitle>
+                <View style={styles.section}>
+                  {pushRow}
+                  {accountRows}
+                </View>
+              </View>
+            ),
+          },
+        ]),
+    {
+      key: 'app',
+      node: (
+        <View style={styles.group}>
+          <GroupTitle>{s.app}</GroupTitle>
+          <View style={styles.section}>
+            <Row label={s.app_info} sub={s.version.split('{버전}').join(APP_VERSION)} onPress={() => navigation.navigate('AppInfo')} />
+          </View>
+        </View>
+      ),
+    },
+    {
+      key: 'foot',
+      node: (
+        <Text role="sub" tone="muted" style={styles.foot}>
+          {s.not_safety}
+        </Text>
+      ),
+    },
+  ];
+  const itemKeys = items.map(it => it.key).join('|');
+  const [heights, setHeights] = useState<Record<string, number>>({});
+  const onItem = (key: string) => (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setHeights(cur => (cur[key] === h ? cur : {...cur, [key]: h}));
+  };
+  const onFoldHeights = fold.onHeights;
+  useEffect(() => {
+    const list = itemKeys.split('|').map(k => heights[k]);
+    if (list.every(h => h !== undefined)) {
+      onFoldHeights(list as number[]);
+    }
+    // onHeights 는 같은 값이면 상태를 바꾸지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemKeys, heights]);
+
   return (
     <AudienceProvider value="child">
       <DsScreen
         variant="step"
+        // 접힘 맞춤은 큰 글자(1.6 이상)에서만: 100%·150%는 계정 묶음을 통째로 밀면 첫 화면 절반이 비어(에뮬레이터 실측) 예전 배치가 낫다(L3 은 목록만)
+        onViewport={big ? fold.onViewport : undefined}
         header={
           <>
             <BackBar />
@@ -139,47 +247,15 @@ export function ChildSettings() {
         }>
         {!info && !error ? <StateView kind="loading" title={appCopy.loading} /> : null}
         {error && !info ? <StateView kind="error" title={error.title} action={{label: error.button, onPress: load}} /> : null}
-        {targets.map(t => (
-          <View key={t.parentId || 'family'} style={styles.group}>
-            <GroupTitle>{t.title}</GroupTitle>
-            <View style={styles.section}>
-              <Row
-                label={s.name_row}
-                value={t.title}
-                onPress={() => openName(t)}
-                pressRef={r => {
-                  nameRows.current[t.parentId || 'family'] = r;
-                }}
-              />
-              {t.linked ? <Row label={s.newphone_row} sub={withTitle(s.newphone_sub, t.title)} onPress={() => newPhoneCode(t)} /> : null}
+        {/* R-15(대기열 44 M4): 묶음(묶음 제목 + 카드) 단위로 접힘을 맞춘다 — 200%에서 '가족 연결' 행이 첫 화면 끝에 걸쳐 설명이 잘렸다(#272 c7-1).
+            묶음 제목만 첫 화면 끝에 남지 않게 묶음째 민다. 첫 묶음은 밀지 않는다(from 1) */}
+        <View testID="c7-block" onLayout={fold.onBlock} style={styles.block}>
+          {items.map((it, i) => (
+            <View key={it.key} testID={`c7-item-${it.key}`} onLayout={onItem(it.key)} style={fold.gapStyle(i)}>
+              {it.node}
             </View>
-          </View>
-        ))}
-        <View style={styles.group}>
-          <GroupTitle>{s.account}</GroupTitle>
-          <View style={styles.section}>
-            {/* '가족 연결' 알림: 앱 안 토글(켬·끔 = set_push_enabled, 리드 결정 11-18), 휴대폰에서 꺼져 있으면 켜는 길 */}
-            <FamilyPushRow api={api} />
-            {method ? <Row label={s.login_row} sub={s.login_via.split('{수단}').join(s.via[method])} /> : null}
-            <Row
-              label={s.logout}
-              onPress={() => {
-                setModalError(null);
-                setLogout(true);
-              }}
-            />
-            <Row label={copy.child.delete_link} danger onPress={() => navigation.navigate('DeleteAccount')} />
-          </View>
+          ))}
         </View>
-        <View style={styles.group}>
-          <GroupTitle>{s.app}</GroupTitle>
-          <View style={styles.section}>
-            <Row label={s.app_info} sub={s.version.split('{버전}').join(APP_VERSION)} onPress={() => navigation.navigate('AppInfo')} />
-          </View>
-        </View>
-        <Text role="sub" tone="muted" style={styles.foot}>
-          {s.not_safety}
-        </Text>
       </DsScreen>
       <Sheet
         testID="sheet"
@@ -307,6 +383,7 @@ function Row({
 const styles = StyleSheet.create({
   flex: {flex: 1},
   group: {gap: 6, alignSelf: 'stretch'},
+  block: {gap: BLOCK_GAP},
   section: {backgroundColor: ds.color.card, borderRadius: ds.radius.card, paddingHorizontal: 16, paddingVertical: 4},
   row: {flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: ds.touch.child.primary, paddingVertical: 10},
   pressed: {opacity: 0.6},
