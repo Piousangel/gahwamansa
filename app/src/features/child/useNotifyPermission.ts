@@ -46,6 +46,19 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; con
     return () => sub.remove();
   }, [refresh]);
 
+  // 누른 뒤: 동의가 서버에 남았으면 다시 읽고, 못 남겼으면(오프라인 등) 줄을 그대로 둔다(#284 QA-1 L2 — 다시 읽기가 'offline'이라 숨겨지지 않게).
+  const afterOptIn = useCallback(
+    (ok: boolean) => {
+      if (ok) {
+        refresh();
+        return;
+      }
+      readNotifyState().then(setState);
+      setConsented(false);
+    },
+    [refresh],
+  );
+
   // 켜기: 이미 허용이면(12 이하 기본 허용·전에 허용) 창 없이 받기 동의만, 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)·앱 알림 끔이면 휴대폰 설정.
   // 누른 것이 받기 동의(리뷰 L2) → 결과와 상관없이 서버 받기 동의, 허용이면 토큰 등록(push/runtime)
   const open = useCallback(() => {
@@ -53,7 +66,7 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; con
       .catch(() => 'unknown' as const)
       .then(now => {
         if (now === 'granted') {
-          return childNotifyOptIn('granted').then(() => refresh());
+          return childNotifyOptIn('granted').then(afterOptIn);
         }
         openByAsking();
       })
@@ -62,8 +75,8 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; con
       if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
         requestNotifyPermission().then(p => {
           childNotifyOptIn(p)
-            .catch(() => {})
-            .then(() => refresh());
+            .catch(() => false)
+            .then(afterOptIn);
           if (p === 'blocked' || p === 'unknown') {
             openNotifySettings();
           }
@@ -71,11 +84,11 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; con
         return;
       }
       childNotifyOptIn('blocked')
-        .catch(() => {})
-        .then(() => refresh());
+        .catch(() => false)
+        .then(afterOptIn);
       openNotifySettings();
     }
-  }, [refresh]);
+  }, [afterOptIn]);
 
   return {state, denied: state === 'denied', consented, open};
 }

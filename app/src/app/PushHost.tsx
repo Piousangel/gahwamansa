@@ -174,8 +174,11 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
   // PR #65 리뷰 L1: 알림 받기와 답 보여 주기는 별개 동의 — 답 보여 주기에 동의하지 않은 어르신에게도 묻는다.
   const prevRoute = useRef<string | undefined>(undefined);
   const [fromP7, setFromP7] = useState(0); // 묻는 자리(①·②)로 코스 홈에 들어온 횟수(이번 실행)
+  const fromLink = useRef(false); // 이번 묻기가 ①(연결 직후)인가
   useEffect(() => {
-    if ((prevRoute.current === 'CourseDone' || prevRoute.current === 'Connect' || prevRoute.current === 'Consent') && route === 'CourseHome') {
+    const prev = prevRoute.current;
+    if ((prev === 'CourseDone' || prev === 'Connect' || prev === 'Consent') && route === 'CourseHome') {
+      fromLink.current = prev !== 'CourseDone';
       setFromP7(n => n + 1);
     }
     prevRoute.current = route;
@@ -186,14 +189,23 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
       return;
     }
     handledP7.current = fromP7;
-    parentPromptState(deps)
+    // #284 QA-1 L1: ①(연결 직후)에서 안 읽은 응원이 있으면(같은 기기 두 번째 연결) P8 응원 대화상자가 같은 진입에 뜬다 →
+    //   N1 은 이번에는 묻지 않고(넘김 기록도 없음) 다음 P7 뒤로 미룬다. 응원 확인을 못 하면(오프라인) 그대로 묻는다
+    const cheersFirst = fromLink.current
+      ? api
+          .getMyCheers()
+          .then(r => r.cheers.length > 0)
+          .catch(() => false)
+      : Promise.resolve(false);
+    cheersFirst
+      .then(busy => (busy ? 'skip' : parentPromptState(deps)))
       .then(state => {
         if (state === 'ask' && navRef.isReady() && navRef.getCurrentRoute()?.name === 'CourseHome') {
           setAsk(n => n + 1);
         }
       })
       .catch(() => {}); // 확인 못 함(오프라인): 이번에는 묻지 않는다(깨어남에 다시 묻지 않는 결정 — 다음 P7 뒤에)
-  }, [role, linked, fromP7, route, pending, deps]);
+  }, [role, linked, fromP7, route, pending, deps, api]);
 
   return ask > 0 ? <N1Prompt key={ask} onClose={() => setAsk(0)} /> : null;
 }

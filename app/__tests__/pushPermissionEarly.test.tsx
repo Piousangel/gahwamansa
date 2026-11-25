@@ -112,6 +112,9 @@ describe('자녀: 받기 동의 전이면 OS 권한과 상관없이 [알림 켜�
     const reg = jest.spyOn(api, 'registerPushToken');
     render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByTestId('wait-notify'));
+    await settle();
+    expect(en).not.toHaveBeenCalled(); // #284 QA-3 L2: 누르기 전에는 받기 동의·토큰 등록 0회
+    expect(reg).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: copy.child.wait.notify_button}));
     });
@@ -153,11 +156,74 @@ describe('자녀: 받기 동의 전이면 OS 권한과 상관없이 [알림 켜�
     });
     await waitFor(() => screen.getByText(copy.connect_done.title, {normalizer: wj}));
     await waitFor(() => screen.getByTestId('done-notify'));
+    expect(en).not.toHaveBeenCalled(); // #284 QA-3 L2: 누르기 전에는 0회
     expect(screen.getByText('알림을 켜면 첫 답이 보일 때 알려 드려요', {normalizer: wj})).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByRole('button', {name: copy.child.wait.notify_button}));
     });
     await waitFor(() => expect(en).toHaveBeenCalledWith(true));
     await waitFor(() => expect(screen.queryByTestId('done-notify')).toBeNull());
+  });
+});
+
+describe('#284 리뷰 반영', () => {
+  test('QA-1 M1: 묻는 자리는 연결 직후·P7 뒤뿐 — 설정·가족·첫 단계에서 코스 홈으로 돌아와도 N1 을 띄우지 않는다', async () => {
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false}); // 받기 꺼짐, 답한 적 없음(물으면 뜨는 상태)
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(courseHomeShown);
+    for (const to of ['Settings', 'Family', 'PhotoStep']) {
+      await act(async () => {
+        navRef.navigate(to as never);
+      });
+      await act(async () => {
+        navRef.goBack();
+      });
+      await waitFor(courseHomeShown);
+      await settle();
+      expect(screen.queryByTestId('n1')).toBeNull();
+    }
+  });
+
+  test('QA-1 L1: 연결 직후라도 안 읽은 응원이 있으면(같은 기기 두 번째 연결) N1 은 미룬다 — P8 과 겹치지 않게, 넘김 기록도 없음', async () => {
+    const api = createFakeApi({pushEnabled: false, cheers: ['love_you']});
+    const cheers = jest.spyOn(api, 'getMyCheers');
+    await toHome(api);
+    await waitFor(() => expect(cheers).toHaveBeenCalled());
+    await settle();
+    expect(screen.queryByTestId('n1')).toBeNull();
+    // 미룬 것이지 답이 아니다: P7 뒤 자리에서는 묻는다
+    await act(async () => {
+      navRef.navigate('CourseDone' as never);
+    });
+    await act(async () => {
+      navRef.navigate('CourseHome' as never);
+    });
+    await waitFor(() => screen.getByTestId('n1'));
+  });
+
+  test('QA-1 L2: 오프라인에서 [알림 켜기]를 눌러 동의가 안 남으면 줄을 그대로 둔다', async () => {
+    setPlatform('android', 31);
+    setTokenSourceForTest(createFakeTokenSource());
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    jest.spyOn(api, 'setPushEnabled').mockRejectedValue(new Error('offline'));
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-notify'));
+    jest.spyOn(api, 'myPushSettings').mockRejectedValue(new Error('offline')); // 누른 뒤 다시 읽기도 끊김
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: copy.child.wait.notify_button}));
+    });
+    await settle();
+    expect(screen.getByTestId('wait-notify')).toBeTruthy();
+  });
+
+  test("QA-1 L2: '모르면 숨김' — 권한이 허용이고 받기 상태를 못 읽으면(오프라인) 줄을 보이지 않는다(다음 깨어남에 다시 읽음)", async () => {
+    setPlatform('android', 31);
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const my = jest.spyOn(api, 'myPushSettings').mockRejectedValue(new Error('offline'));
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await waitFor(() => expect(my).toHaveBeenCalled());
+    await settle();
+    expect(screen.queryByTestId('wait-notify')).toBeNull();
   });
 });
