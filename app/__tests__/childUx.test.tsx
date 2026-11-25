@@ -496,7 +496,7 @@ describe('C0 연령 안내', () => {
     render(<AppRoot api={createFakeApi()} />);
     await press(/자녀 휴대폰이에요/);
     await waitFor(() => screen.getByTestId('legal-child'));
-    expect(screen.getByText('로그인하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
+    expect(screen.getByText('로그인하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요')).toBeTruthy();
     expect(screen.getByText('만 14세 이상이 쓰는 앱이에요')).toBeTruthy();
   });
 });
@@ -1026,14 +1026,14 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const {LegalText} = require('../src/ui/LegalText');
     const {legalLinks} = require('../src/shared/legalLinks');
     const open = jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(true);
-    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} />);
+    render(<LegalText text="연결하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} />);
     const links = screen.getAllByRole('link');
     expect(links.map(l => l.props.children)).toEqual(['이용약관', '개인정보 처리방침']);
     expect(StyleSheet.flatten(links[0].props.style)).toMatchObject({fontWeight: 'bold', textDecorationLine: 'underline'});
     fireEvent.press(links[1]);
     expect(open).toHaveBeenCalledWith('https://p.example');
     screen.unmount();
-    render(<LegalText text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: null, privacy: null})} />);
+    render(<LegalText text="연결하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요" links={legalLinks({terms: null, privacy: null})} />);
     expect(screen.queryAllByRole('link')).toHaveLength(0); // 누를 수 없는데 링크처럼 보이지 않게
   });
 
@@ -1041,7 +1041,7 @@ describe('독립 UX 감사 11-18(자녀·연결 화면)', () => {
     const {LegalText, LEGAL_LINK_LINE_H} = require('../src/ui/LegalText');
     const {legalLinks} = require('../src/shared/legalLinks');
     const onOpen = jest.fn();
-    const text = '연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요';
+    const text = '연결하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요';
     render(<LegalText testID="legal" text={text} links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} onOpen={onOpen} />);
     const line = screen.getByTestId('legal');
     expect(LEGAL_LINK_LINE_H).toBeGreaterThanOrEqual(48);

@@ -85,7 +85,7 @@ test('약관 링크는 400 + 밑줄, 문장은 sub 보조색(700 은 제목·버
   // 화면의 약관 주소는 빌드 설정에 따라 비어 있을 수 있어(그때는 일반 글자) 주소를 준 LegalText 로 본다
   const {LegalText} = require('../src/ui/LegalText');
   const {toneColor} = require('../src/ui/ds/roles');
-  render(<LegalText testID="lt" audience="child" text="로그인하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={[{label: '이용약관', url: 'https://x/t'}, {label: '개인정보 처리방침', url: 'https://x/p'}]} />);
+  render(<LegalText testID="lt" audience="child" text="로그인하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요" links={[{label: '이용약관', url: 'https://x/t'}, {label: '개인정보 처리방침', url: 'https://x/p'}]} />);
   expect(StyleSheet.flatten(screen.getByTestId('lt').props.style).color).toBe(toneColor('sub', 'muted', 'child'));
   const links = screen.getAllByRole('link');
   expect(links).toHaveLength(2);

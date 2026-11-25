@@ -49,7 +49,7 @@ test.each([1.6, 2])('② 글자 %s배: 본문 긴 문장의 두 링크(이용약
   await p1c(scale);
   const body = within(screen.getByTestId('screen-body'));
   const line = body.getByTestId('legal-line');
-  expect(line.props.accessibilityLabel).toBe('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요');
+  expect(line.props.accessibilityLabel).toBe('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요');
   const links = within(line).getAllByRole('link');
   expect(links.map(l => l.props.children)).toEqual(['이용약관', '개인정보 처리방침']);
   fireEvent.press(links[0]);

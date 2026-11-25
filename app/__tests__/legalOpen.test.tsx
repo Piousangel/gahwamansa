@@ -28,7 +28,7 @@ test('useLegalOpen: 이용약관·처리방침은 앱 안 웹 화면 Web{target}
     const {open: onOpen} = useLegalOpen();
     return (
       <>
-        <LegalText testID="legal" text="연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} onOpen={onOpen} />
+        <LegalText testID="legal" text="연결하면 이용약관에 동의하고 개인정보 처리방침을 확인하게 돼요" links={legalLinks({terms: 'https://t.example', privacy: 'https://p.example'})} onOpen={onOpen} />
         <Text onPress={() => onOpen('https://x.example', '다른 것', 'other')}>다른 링크</Text>
       </>
     );
