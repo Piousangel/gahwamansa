@@ -285,3 +285,36 @@ describe('리드 결정 11-25: 동의가 없어지면 SDK 자동 초기화도 �
     }
   });
 });
+
+describe('#269 QA-3 L1: sync 가 남은 자동 초기화 켜짐을 정리', () => {
+  test.each([
+    ['받기 꺼짐(false) → 자동 초기화 끔', {linked: true, consented: true, pushEnabled: false}, [false]],
+    ['연결 전(null) → 자동 초기화 끔', {}, [false]],
+    ['받는 중(true) → 끄지 않고 등록(getToken 이 켬)', {linked: true, consented: true, pushEnabled: true}, [true]],
+  ])('%s', async (_n, opts, expected) => {
+    android12();
+    const fcm = fakeMessaging();
+    await registerIfConsented({api: createFakeApi(opts), source: fcm.source, store: memoryStore()});
+    expect(fcm.mod.setAutoInitEnabled.mock.calls.map(c => (c as unknown[])[1])).toEqual(expected);
+  });
+
+  test('오프라인(받기 상태 모름)이면 건드리지 않는다', async () => {
+    android12();
+    const fcm = fakeMessaging();
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false});
+    jest.spyOn(api, 'myPushSettings').mockRejectedValue(new Error('offline'));
+    expect(await registerIfConsented({api, source: fcm.source, store: memoryStore()})).toBe('no_consent');
+    expect(fcm.mod.setAutoInitEnabled).not.toHaveBeenCalled();
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
+  });
+
+  test('앱 시작 sync(PushHost)에서도: 동의 없는 계정이면 자동 초기화를 끈다', async () => {
+    android12();
+    const fcm = fakeMessaging();
+    setTokenSourceForTest(fcm.source);
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: false});
+    render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(fcm.mod.setAutoInitEnabled).toHaveBeenCalledWith(expect.anything(), false));
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
+  });
+});

@@ -28,7 +28,11 @@ export function registerToken(deps: PushDeps, consented: boolean): Promise<Regis
   return trackPushRegistration(registerTokenNow(deps)); // 로그아웃이 진행 중인 등록을 기다린다(lib/pushToken)
 }
 
-/** 동의를 모를 때(앱 시작·앞으로 돌아옴·토큰 갱신): 서버 받기 상태를 읽어 true 일 때만 등록. 못 읽으면(오프라인 등) 부르지 않는다 */
+/**
+ * 동의를 모를 때(앱 시작·앞으로 돌아옴·토큰 갱신): 서버 받기 상태를 읽어 true 일 때만 등록. 못 읽으면(오프라인 등) 아무것도 하지 않는다.
+ * 서버가 **분명히** 동의 없음(false·연결 전 null)이면 SDK 자동 초기화도 끈다(#269 QA-3 L1, 멱등) — #262 빌드에서 동의 없이 켜진 기기·
+ * 로그아웃 정리의 끄기가 시간 제한으로 실패한 기기에 남은 '켜짐'을 정리한다.
+ */
 export async function registerIfConsented(deps: PushDeps): Promise<RegisterOutcome> {
   let enabled: boolean | null;
   try {
@@ -36,7 +40,11 @@ export async function registerIfConsented(deps: PushDeps): Promise<RegisterOutco
   } catch {
     return 'no_consent';
   }
-  return registerToken(deps, enabled === true);
+  if (enabled !== true) {
+    await deps.source.stopAutoInit().catch(() => {});
+    return 'no_consent';
+  }
+  return registerToken(deps, true);
 }
 
 async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcome> {
