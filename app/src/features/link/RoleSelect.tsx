@@ -12,6 +12,8 @@ import {PolaroidStack} from './PolaroidStack';
 import {MotionMode, useMotionMode} from './useReduceMotion';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {flightPending, setSplashTarget, useSplashLanded} from '../../app/splash';
+import {isBigText} from '../../ui/bigText';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
 
 const f = copy.first;
 // 소개 순서 = 코스 순서(사진 → 고르기 → 자판). copy 11절 WR-01
@@ -46,6 +48,8 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
   const {height: winH, fontScale} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const showPhoto = fontScale < 1.3;
+  const askFirst = isBigText(fontScale);
+  const fold = useFoldGap(2, ASK_GAP, 1);
   // 감사 M4·디자인 9절(리뷰 M1 리드 결정 11-19): 150% 이상이면 사진·기능 3줄을 숨기고 소개 한 줄('하루 한 장, 우리 집 앨범')은 남긴다.
   // 100%·130% 에서 높이가 모자라면(사진 영역이 남지 않으면) 기능 줄을 셋째 → 둘째 → 첫째 순으로 줄 단위로 숨긴다(반쯤 잘린 줄 금지, onLayout 측정)
   const [itemCount, setItemCount] = useState(fontScale < 1.5 ? 3 : 0);
@@ -141,12 +145,29 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
   );
 
   if (fullScroll) {
-    // 아주 큰 글씨: 하단 고정을 풀고 워드마크 → 질문 → 버튼 순서로 한 번에 스크롤
+    // 큰 글씨: 하단 고정을 풀고 한 번에 스크롤. 글자 1.6배 이상이면 질문 → 두 버튼을 먼저, 워드마크·소개는 그 아래로(대기열 44 M1).
+    //   V4-INDEX 장식 범위 ④ 'FS 200%는 숨기지 말고 순서만 바꾼다'·FS-5 '질문과 두 버튼이 먼저'. 워드마크 먼저면 320×640 200%에서 '자녀 휴대폰이에요'가 반쯤 잘렸다(#272 fs-1)
+    const intro = <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>;
     return (
-      <Screen scrollEnabled>
-        {brand}
-        <Text20 testID="intro-title" size={24} weight="bold">{f.intro_title}</Text20>
-        {ask}
+      <Screen scrollEnabled onViewport={askFirst ? fold.onViewport : undefined}>
+        {askFirst ? (
+          // R-15: 워드마크·소개 묶음이 첫 화면 끝에 걸치면 통째로 접힘 아래로(에뮬레이터 320×640 200%에서 워드마크가 흐림 밑에 반쯤 걸쳤다)
+          <View onLayout={fold.onBlock} style={styles.askBlock}>
+            <View testID="first-ask" onLayout={fold.onItem(0)}>
+              {ask}
+            </View>
+            <View testID="first-brand-after" onLayout={fold.onItem(1)} style={[styles.after, fold.gapStyle(1)]}>
+              {brand}
+              {intro}
+            </View>
+          </View>
+        ) : (
+          <>
+            {brand}
+            {intro}
+            {ask}
+          </>
+        )}
       </Screen>
     );
   }
@@ -197,9 +218,13 @@ export function RoleSelect({onChoose, codeFound}: {onChoose: (role: 'parent' | '
 
 // 사진 영역이 이보다 작으면 기능 줄이 넘친 것으로 본다(질문·버튼 하단 영역 밑으로 반쯤 잘림 방지)
 const AREA_MIN = 8;
+// 큰 글씨 질문·버튼 묶음과 그 뒤 워드마크·소개 사이
+const ASK_GAP = 28;
 
 const styles = StyleSheet.create({
   seatHidden: {opacity: 0},
+  after: {gap: 10}, // 질문·버튼 뒤 워드마크·소개(큰 글씨)
+  askBlock: {gap: ASK_GAP},
   head: {gap: 10},
   question: {color: color.inkBody, marginBottom: 10},
   band: {

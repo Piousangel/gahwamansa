@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View} from 'react-native';
+import {useWindowDimensions, View} from 'react-native';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {useSession} from '../../app/session';
 import {AudienceProvider, Choice, DsScreen, Heading, Text} from '../../ui/ds';
@@ -11,6 +11,14 @@ import {useFoldGap} from '../../ui/ds/useFoldGap';
 import {CHOICE_CHILD_GRID_ROW_GAP} from '../../ui/ds/Choice';
 
 const t = copy.relation;
+const DEFAULT_TITLE = '부모님';
+/**
+ * 호칭 칸 순서. 1열(글자 1.5배 이상 — ds Choice 가 1열로 바꾸는 배율)이면 기본값 '부모님'을 맨 위로(대기열 44 M3):
+ * 7번째라 320×640 150%·200% 첫 화면에 없어 무엇이 골라져 있는지 모른 채 [번호 만들기]를 누르게 됐다(#272 c1-1, 에뮬레이터 실측 150%).
+ * 2열(그 아래 배율)은 시안 순서 그대로(부모님이 첫 화면에 있다)
+ */
+export const ONE_COLUMN_SCALE = 1.5;
+export const relationOrder = (oneColumn: boolean): readonly string[] => (oneColumn ? [DEFAULT_TITLE, ...PARENT_TITLES.filter(p => p !== DEFAULT_TITLE)] : PARENT_TITLES);
 
 // C1 v4: 호칭 1칸(닫힌 목록 7개, 기본 부모님) → 가족 만들기 → 호칭 저장 → 번호 1개 만들기 → C3 연결 기다리는 중.
 // - V9(C3 시안 #42): C2(번호가 만들어졌어요)를 거치지 않고 바로 C3 — C3 가 번호 카드를 맨 위에 둔다. C2 화면은 재연결(설정·끊김 배너)에서만 쓴다
@@ -19,7 +27,8 @@ const t = copy.relation;
 export function RelationScreen() {
   const navigation = useNavigation();
   const {api, resetRole} = useSession();
-  const [title, setTitle] = useState<string>('부모님');
+  const [title, setTitle] = useState<string>(DEFAULT_TITLE);
+  const oneColumn = useWindowDimensions().fontScale >= ONE_COLUMN_SCALE;
   const {busy, begin: beginBusy, end: endBusy} = useBusyLatch(); // 같은 틱 두 번 누름도 막는다(AP-14)
   const [failed, setFailed] = useState<string | null>(null);
   // R-15: 1열(200%)로 넘치면 첫 화면 끝에 걸친 줄을 통째로 아래로(+ DsScreen '더 있음' 띠). 2열이면 두 칸 한 줄 단위
@@ -78,6 +87,8 @@ export function RelationScreen() {
           </>
         }
         onViewport={fold.onViewport}
+        // 글자 1.6배 이상: 머리(제목·설명)와 Dock 안내 줄을 본문으로(대기열 44 M3). 고정 머리 45% + Dock 34%라 본문 창이 15%뿐이었다
+        bigTextBody
         // P-12(전문가 리뷰 r2 H, 3:85): 아이폰 부모님은 링크를 연 뒤에야 '준비 중'을 안다 → 번호를 만들기 전에 한 줄(iOS 출시 때 뺀다).
         //   Dock note 라 늘 보이고, 200%에서 넘치면 DsScreen 이 본문 끝으로 보낸다(R-12)
         dock={{primary: {label: t.next, onPress: next, loading: busy}, note: {text: t.android_only}}}
@@ -88,7 +99,7 @@ export function RelationScreen() {
             columns={2}
             testID="title-group"
             accessibilityLabel={t.title}
-            items={PARENT_TITLES.map(p => ({key: p, label: p}))}
+            items={relationOrder(oneColumn).map(p => ({key: p, label: p}))}
             value={title}
             onSelect={setTitle}
             onItemHeights={fold.onHeights}

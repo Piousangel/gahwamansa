@@ -21,6 +21,8 @@ import {copy, offlineMessage, reasonToMessage, withTitle, Message} from '../../c
 import {useConnectFlow} from './useConnectFlow';
 import {LegalText} from '../../ui/LegalText';
 import {Banner} from '../../ui/Banner';
+import {useFoldGap} from '../../ui/ds/useFoldGap';
+import {isBigText} from '../../ui/bigText';
 import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
 import type {Prefill} from './useConnectFlow';
@@ -36,6 +38,22 @@ function failMessage(reason: FailKind): Message {
   }
   return reasonToMessage(reason === 'locked' ? 'rate_limited' : reason);
 }
+
+// P1c 큰 글자(1.6 이상) Dock 짧은 고지(#274 QA-2 M1 리드 결정): 긴 약관 줄(200%에서 191dp)이 Dock 상한 40%(256dp)를 넘쳐
+// [이 번호로 연결하기]가 Dock 스크롤 뒤로 밀렸다(에뮬레이터 실측). 누르는 순간 보이는 짧은 고지 + '약관' 링크, 긴 문장은 본문에 그대로
+function LegalShort() {
+  const legal = useLegalOpen();
+  const terms = legalLinks()[0];
+  return (
+    <>
+      <LegalText testID="legal-short" style={styles.legal} text={copy.legal.agree_parent_short} links={[{...terms, label: SHORT_TERMS_WORD, a11yLabel: terms.label}]} onOpen={legal.open} />
+      {legal.busy ? <Text20 testID="legal-busy" style={styles.legal} accessibilityLiveRegion="polite">{copy.app.loading}</Text20> : null}
+      {legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
+    </>
+  );
+}
+const SHORT_TERMS_WORD = '약관';
+const CODE_ONE_LINE_CAP = 1.2;
 
 // 번호 칸 묶음 읽기(라이터 확정 11-2 #12)
 function groupA11y(code: string): string {
@@ -364,29 +382,88 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
 function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectState, {kind: 'confirm' | 'redeeming'}>; typed: boolean; onYes: () => void; onOther: () => void}) {
   const c = copy.connect_confirm;
   const busy = state.kind === 'redeeming';
+  // 글자 1.5배 이상(대기열 44 H1·M2): Dock 에는 [이 번호로 연결하기]만 두고 약관 줄·'다른 번호 쓰기'는 본문 끝으로.
+  //   Dock 이 40%(상한)를 채워 본문 창이 41%뿐이라 확인할 번호가 첫 화면에 없었고, 약관 줄이 잘리고 '다른 번호 쓰기'는 Dock 을 밀어야 보였다(#272 p1c-1)
+  // P1c 만 150%부터: 320×640 150%에서도 번호 둘째 줄이 첫 화면 끝에 걸쳤다(에뮬레이터 실측, 대기열 44). 공용 문턱(1.6)보다 낮다
+  const {fontScale} = useWindowDimensions();
+  const big = fontScale >= P1C_BIG_SCALE;
+  const shortLegal = isBigText(fontScale);
+  // 약관 고지는 누르는 순간 보여야 한다(리드 결정 #274 QA-2 M1): 모든 배율에서 Dock 안 [이 번호로 연결하기] 바로 위. 본문 스크롤 아래 금지
+  const other = (
+    <View style={styles.links}>
+      <TextLink label={c.other} touch={64} disabled={busy} onPress={onOther} />
+    </View>
+  );
   const a11y = copy.code.show_a11y.split('{앞}').join(state.code.slice(0, 3).split('').join(' ')).split('{뒤}').join(state.code.slice(3).split('').join(' '));
+  const title = <Text20 size={30} weight="bold" accessibilityRole="header" style={styles.title}>{typed ? c.title_typed : c.title}</Text20>;
+  const from = state.title ? (
+    <Text20 testID="confirm-from" size={22} style={styles.center}>{withTitle(typed ? c.from_typed : c.from, state.title)}</Text20>
+  ) : null;
+  const code = (
+    <View testID="confirm-code" accessible accessibilityLabel={a11y}>
+      {/* 짧은 고지(1.6 이상)로 Dock 이 커진 만큼 본문 창이 줄어(280dp) 두 줄 번호 카드(190)가 걸쳤다(실측) → 번호를 한 줄로(확대 상한 1.2 = 62dp, 100%의 52보다 크다) */}
+      <Text20 size={52} weight="bold" style={[styles.code, shortLegal ? styles.codeOneLine : null]} {...(shortLegal ? {maxFontSizeMultiplier: CODE_ONE_LINE_CAP} : null)}>
+        {formatCode(state.code)}
+      </Text20>
+    </View>
+  );
+  const safe = <Text20>{copy.safe.money}</Text20>;
+  // 큰 글자 본문(대기열 44 H1): 제목 → 번호 카드(번호만) → 단서 줄 → 안심 줄 → 약관 줄·다른 번호 쓰기.
+  //   320×640 200%에서 단서 줄(3줄)이 카드 안 번호 위에 있으면 번호 둘째 줄이 첫 화면 끝에 걸렸다(에뮬레이터 실측). 번호를 카드 첫 자리로 두고
+  //   단서 줄은 카드 바로 아래로. 첫 화면 끝에 걸친 요소는 R-15 로 통째로 민다(제목·카드는 밀지 않음)
+  const items: {key: string; node: React.ReactNode}[] = [
+    {key: 'title', node: title},
+    {
+      key: 'card',
+      node: (
+        <View testID="confirm-card" style={[styles.card, shortLegal ? styles.cardOneLine : null]}>
+          {code}
+        </View>
+      ),
+    },
+    ...(from ? [{key: 'from', node: from}] : []),
+    {key: 'safe', node: safe},
+    {
+      key: 'rest',
+      node: (
+        <View testID="confirm-rest-body" style={styles.restBody}>
+          {/* 짧은 고지를 쓸 때 긴 약관 문장(두 문서 이름·링크)은 본문에 그대로 */}
+          {shortLegal ? <LegalLine /> : null}
+          {other}
+        </View>
+      ),
+    },
+  ];
+  const fold = useFoldGap(items.length, layout.bodyPadding.gap, 2);
   return (
     <Screen
       top={<BackBar onBack={busy ? noop : onOther} to={copy.nav.to.Connect} />}
+      onViewport={big ? fold.onViewport : undefined}
       bottom={
         <>
+          <View testID="confirm-legal-dock">{shortLegal ? <LegalShort /> : <LegalLine />}</View>
           <BigButton label={c.yes} loading={busy} loadingLabel={c.busy} onPress={onYes} />
-          <LegalLine />
-          <View style={styles.links}>
-            <TextLink label={c.other} touch={64} disabled={busy} onPress={onOther} />
-          </View>
+          {big ? null : other}
         </>
       }>
-      <Text20 size={30} weight="bold" accessibilityRole="header" style={styles.title}>{typed ? c.title_typed : c.title}</Text20>
-      <View testID="confirm-card" style={styles.card}>
-        {state.title ? (
-          <Text20 testID="confirm-from" size={22} style={styles.center}>{withTitle(typed ? c.from_typed : c.from, state.title)}</Text20>
-        ) : null}
-        <View testID="confirm-code" accessible accessibilityLabel={a11y}>
-          <Text20 size={52} weight="bold" style={styles.code}>{formatCode(state.code)}</Text20>
+      {big ? (
+        <View testID="confirm-block" onLayout={fold.onBlock} style={styles.bigBlock}>
+          {items.map((it, i) => (
+            <View key={it.key} testID={`confirm-item-${it.key}`} onLayout={fold.onItem(i)} style={fold.gapStyle(i)}>
+              {it.node}
+            </View>
+          ))}
         </View>
-      </View>
-      <Text20>{copy.safe.money}</Text20>
+      ) : (
+        <>
+          {title}
+          <View testID="confirm-card" style={styles.card}>
+            {from}
+            {code}
+          </View>
+          {safe}
+        </>
+      )}
     </Screen>
   );
 }
@@ -399,6 +476,8 @@ const noop = () => {};
 const FIRST_PAD = layout.bodyPadding.top;
 // 0·1단계(Screen fill) 본문 아래 여백 8(ui/Screen styles.fill). 묶음 예정 높이 = 창 − 위 여백 − 이것
 const BODY_BOTTOM = 8;
+/** P1c 큰 글자 배치(번호 먼저·Dock 은 주 버튼만) 문턱 */
+export const P1C_BIG_SCALE = 1.5;
 
 const styles = StyleSheet.create({
   area: {flexGrow: 1, justifyContent: 'center'}, // 남는 높이를 차지하되 키패드보다 작아지지 않는다(줄어들지 않음). 칸·키 사이 여백 뒤 남는 높이는 위·아래 반씩
@@ -413,7 +492,11 @@ const styles = StyleSheet.create({
   belowRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   flex: {flex: 1},
   failed: {gap: 8},
+  restBody: {gap: 8},
+  bigBlock: {gap: layout.bodyPadding.gap},
   card: {backgroundColor: color.card, borderWidth: 3, borderColor: color.action, borderRadius: radius.card, padding: 20, gap: 10},
   center: {textAlign: 'center', color: color.inkTitle},
   code: {letterSpacing: 6, textAlign: 'center', color: color.inkTitle},
+  codeOneLine: {letterSpacing: 1},
+  cardOneLine: {paddingHorizontal: 12}, // 한 줄 번호 칸 폭(320 폭에서 '123 456' 이 한 줄에 들게)
 });

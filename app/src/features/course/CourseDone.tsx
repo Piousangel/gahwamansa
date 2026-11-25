@@ -18,6 +18,7 @@ import {focusLater} from '../../ui/screenTitle';
 import {useCourseBgm} from './useCourseBgm';
 import {AlbumMount, type MountMotion} from './AlbumMount';
 import {WeekStampStrip, showWeekStrip} from './WeekStampStrip';
+import {BIG_TEXT_SCALE, isBigText} from '../../ui/bigText';
 
 const d = copy.done;
 const WEEK_WAIT_MS = 1500;
@@ -36,8 +37,8 @@ const BODY_GAP = 16;
  * 1.5 는 320×640 에서도 본문까지 첫 화면에 들어(에뮬레이터 실측 43 남음) 시안 순서(마운트 먼저)를 그대로 둔다.
  * 접힘 실측으로 고르지 않는 이유: 본문 글은 이번 주 도장 응답 뒤에야 정해져(최대 1.5초) 그때 제목이 위로 튄다.
  */
-export const P7_BODY_FIRST_SCALE = 1.6;
-export const p7BodyFirst = (fontScale: number) => fontScale >= P7_BODY_FIRST_SCALE;
+export const P7_BODY_FIRST_SCALE = BIG_TEXT_SCALE; // 공용 문턱(ui/bigText)
+export const p7BodyFirst = isBigText;
 const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0, easing?: (x: number) => number) =>
   Animated.timing(val, {toValue, duration, delay, easing, useNativeDriver: true}); // 본문 간격(시안 data-body gap 16)
 
