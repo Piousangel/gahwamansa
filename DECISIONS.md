@@ -809,6 +809,10 @@
   - (L2) 360×640 100%에서 사진이 접히는 것은 받아들인다: 입력 칸 첫 화면(#104 ②)이 먼저이고, 사진은 ①에서 이미 크게 봤으며, 보기 판에 따라 쓸 낱말은 남는다. ②식 썸네일(64)은 이번에 넣지 않는다(다시 '작은 띠'가 되고 배치 규칙이 하나 더 생김) — 오너 S25에서 360×640급 화면 사용자가 확인되면 다시 본다.
 - 증거: docs/team/qa/evidence/2026-11-25-p6-clarity, 시험 `p6Clarity`·`p6KeyboardOpen`·`fiveStepsOn`.
 
+## 2026-11-25 푸시 토큰 등록 응답 stored:false(DV-2, #264 QA-1 L2)
+- 0062부터 받기 동의 전 `register_push_token`은 `{ok:true, stored:false}`(서버 저장 없음). 앱은 지금 이것도 성공으로 보고 토큰을 로컬(`lib/pushToken`)에 둔다 — 로그아웃 해제용이라 무해(해제는 removed:0 멱등). 그대로 둔다
+- 앱에 '로컬 토큰과 같으면 서버 등록 호출 생략' 최적화를 넣지 않는다 — 동의 전 등록분은 서버에 없어서, 동의 뒤 재등록(set_push_enabled(true) 직후·앞으로 올 때 sync)이 건너뛰어지면 알림이 오지 않는다. 앱 코드 변경은 이 PR 밖
+
 ## 2026-11-25 개발 빌드 'Error: undefined'(S4) = 무해, 앱 수정 없음 (DV-1, stability/launch-checks)
 - 원인: RN Fast Refresh(HMRClient)가 Metro 웹소켓을 잃을 때 "Cannot connect to Metro … Error: ${e.message}" 를 console.warn 한다. RN WebSocket 은 실패 때 message 없는 `Event('error')` 를 보내서 마지막 줄이 `Error: undefined` 가 된다. release 번들에는 없는 개발 전용 코드다.
 - 선택: 고치지 않고 `LogBox.ignoreLogs` 로도 숨기지 않는다(Metro 끊김 신호가 사라짐). 시험 `devMetroDisconnectWarning` 이 RN·Metro 의 세 사실을 고정한다 — 올렸을 때 바뀌면 다시 판정. 근거 `docs/team/qa/evidence/2026-11-25-stability` 1절
