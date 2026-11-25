@@ -54,8 +54,8 @@ test('동의는 문구 버전을 함께 보낸다', async () => {
   const api = createFakeApi();
   const give = jest.spyOn(api, 'giveConsent');
   await toHome(api, true);
-  expect(CONSENT_VERSION).toBe('v5');
-  expect(give).toHaveBeenCalledWith('v5');
+  expect(CONSENT_VERSION).toBe('v6');
+  expect(give).toHaveBeenCalledWith('v6');
 });
 
 test('fake 서버도 미동의 저장을 거부한다(consent_required)', async () => {

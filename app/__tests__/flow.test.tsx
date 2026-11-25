@@ -11,7 +11,7 @@ setupWarmAppRoot();
 test('Connect -> Consent -> CourseHome 이동', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByTestId('date-line'));
 });

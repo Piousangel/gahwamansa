@@ -84,6 +84,18 @@ describe('문제 1: 코스 홈 지금 행으로 스크롤', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({y: at.hangul.bottom - 300 + 12, animated: true});
   });
 
+  test('#300 QA-1 L1: 첫 인사(keep) 없고 지금 행이 창보다 크면, 행 끝이 아니라 행 위 − 12 에 맞춰 내린다(제목부터 읽힘)', async () => {
+    const {ScrollView} = require('react-native');
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    await home(true, {completedSteps: ['photo', 'recall', 'question']});
+    expect(screen.queryByTestId('first-greeting')).toBeNull(); // keep 없음
+    // 행 320 > 창 300: ④ 1006~1326. 끝 맞춤이면 y = 1326 − 300 + 12 = 1038 로 행 위 32 가 잘린다
+    const at = await layHome(10, 320);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenLastCalledWith({y: at.hangul.top - 12, animated: true});
+  });
+
   test('QA-2 M1 고정: 내린 뒤 높이가 바뀌어(안내 띠가 사라지는 등) 지금 행이 첫 화면에 들어도 접힘 여백을 다시 켜지 않는다', async () => {
     const {ScrollView} = require('react-native');
     const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;

@@ -11,13 +11,14 @@ import {color, radius, shadow} from '../../ui/tokens';
 import {formatAnswerDate} from '../../lib/childFormat';
 import {appCopy, copy, offlineMessage, Message} from '../../copy/copy';
 import {isOffline} from '../types';
-import type {HistoryItem, LatestAnswer} from '../types';
+import type {ChildParent, HistoryItem, LatestAnswer} from '../types';
+import {MonthList} from '../../shared/MonthList';
 
 const pv = copy.settings.preview;
 const ch = copy.child;
 const OLDER_ROWS = 2; // 시안: 최근 답 카드 아래 지난 답 2줄
 
-type Data = {title: string; shared: boolean; latest: LatestAnswer | null; items: HistoryItem[]};
+type Data = {title: string; shared: boolean; latest: LatestAnswer | null; items: HistoryItem[]; me: ChildParent | null};
 type Load = {kind: 'loading'} | {kind: 'ok'; data: Data} | {kind: 'failed'; message: Message; offline: boolean};
 
 // P13 '가족에게 이렇게 보여요'(AP-06, 시안 P13_more '가족에게 이렇게 보여요(자녀 화면과 같은 내용)').
@@ -45,6 +46,7 @@ export function FamilyPreviewScreen() {
           shared: me ? me.shared : summary.shared,
           latest: me?.latest ?? null,
           items: history[0]?.items ?? [],
+          me: me ?? null,
         },
       });
     } catch (e) {
@@ -61,8 +63,11 @@ export function FamilyPreviewScreen() {
   // 보여 주는 중인지는 서버 값(자녀와 같은 shared). 불러오기 전·실패 때는 이 기기의 동의 상태로 소개문만 고른다
   const shared = data ? data.shared : consented;
   const latest = data?.shared ? data.latest : null;
+  // Q13(기획 v2.1): 서버 0068 month 가 있으면(v6 동의) 자녀 C4 와 같은 '최근 한 달 고르신 것' 목록을 지난 답 두 줄 대신 보인다
+  // (키가 있으면 빈 배열이어도 목록 — 빈 상태 문구. 지난 답 줄도 같은 30일이라 함께 비어 있다)
+  const monthOn = !!data?.shared && Array.isArray(data.me?.month);
   // 지난 답 줄: 자녀 C5 목록에서 최근 답 카드와 같은 날을 뺀 앞 2줄(시안)
-  const older = data?.shared
+  const older = data?.shared && !monthOn
     ? data.items.filter(it => !(latest && it.answeredDate === latest.answeredDate && it.choiceLabel === latest.choiceLabel)).slice(0, OLDER_ROWS)
     : [];
   return (
@@ -99,6 +104,8 @@ export function FamilyPreviewScreen() {
               <Text20 size={40} weight="bold" style={styles.ink}>{latest.choiceLabel}</Text20>
               <Text20 weight="bold" style={styles.sub}>{formatAnswerDate(latest.answeredDate)}</Text20>
             </View>
+            {/* 글자는 이 화면을 읽는 어르신 크기(ds 기본 audience elder) — 자녀 크기로 줄이지 않는다(리뷰) */}
+            {monthOn && data?.me ? <MonthList parents={[data.me]} /> : null}
             {older.map(d => (
               <View
                 key={`${d.answeredDate}-${d.choiceLabel}`}

@@ -1,0 +1,123 @@
+// QA-2 #296 탐침(커밋 안 함, 증거 폴더에 사본): 복사 뒤 '권한 창'·'설정 화면' 복귀가 한 장을 띄우는지
+import React from 'react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
+import {AppRoot} from '../src/app/AppRoot';
+import {createFakeApi} from '../src/features/fakeApi';
+import {copy} from '../src/copy/copy';
+import {createFakeTokenSource, setTokenSourceForTest} from '../src/push/tokenSource';
+import {setPushDepsForTest} from '../src/push/runtime';
+import {memoryStore} from '../src/lib/kvStore';
+import {setPushTokenStoreForTest} from '../src/lib/pushToken';
+import * as clipboard from '../src/ui/clipboard';
+
+const RN = require('react-native');
+const orig = {OS: RN.Platform.OS, Version: RN.Platform.Version};
+const setPlatform = (OS: string, Version: number) => {
+  Object.defineProperty(RN.Platform, 'OS', {value: OS, configurable: true, writable: true});
+  Object.defineProperty(RN.Platform, 'Version', {value: Version, configurable: true, writable: true});
+};
+const wj = (x: string) => x.replace(/⁠/g, '').trim();
+const settle = () => act(async () => new Promise<void>(r => setTimeout(() => r(), 80)));
+const handlers: ((s: string) => void)[] = [];
+beforeEach(() => {
+  handlers.length = 0;
+  setPushTokenStoreForTest(memoryStore());
+  setPushDepsForTest(null);
+  jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (s: string) => void) => {
+    if (type === 'change') {
+      handlers.push(h);
+    }
+    return {
+      remove: () => {
+        const i = handlers.indexOf(h);
+        if (i >= 0) {
+          handlers.splice(i, 1);
+        }
+      },
+    };
+  }) as never);
+});
+afterEach(() => {
+  setTokenSourceForTest(null);
+  setPushTokenStoreForTest(null);
+  setPlatform(orig.OS, orig.Version);
+  jest.restoreAllMocks();
+});
+const emit = (s: string) => handlers.slice().forEach(h => h(s));
+
+test('P1 복사 → C3 줄 [알림 켜기] → 시스템 권한 창(background→active) → 허용: 한 장이 또 뜨는가', async () => {
+  setPlatform('android', 34);
+  setTokenSourceForTest(createFakeTokenSource());
+  let allowed = false;
+  jest.spyOn(RN.PermissionsAndroid, 'check').mockImplementation(async () => allowed);
+  jest.spyOn(RN.PermissionsAndroid, 'request').mockImplementation(async () => {
+    emit('background'); // GrantPermissionsActivity 가 앞에 옴 → onHostPause
+    allowed = true;
+    emit('active'); // 창 닫힘 → onHostResume (권한 결과와 거의 동시)
+    return 'granted';
+  });
+  jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+  const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+  const realEn = api.setPushEnabled.bind(api);
+  jest.spyOn(api, 'setPushEnabled').mockImplementation(async (v: boolean) => {
+    await new Promise(r => setTimeout(r, 40)); // 실제 망: 받기 동의 저장이 my_push_settings 읽기보다 늦게 끝날 수 있음
+    return realEn(v);
+  });
+  render(<AppRoot api={api} restore />);
+  await waitFor(() => screen.getByTestId('wait-code'));
+  await act(async () => {
+    fireEvent.press(screen.getAllByTestId('wait-copy')[0]);
+  });
+  await settle();
+  expect(screen.queryByTestId('child-notify')).toBeNull();
+  await act(async () => {
+    fireEvent.press(within(screen.getByTestId('wait-notify')).getByText(wj(copy.child.wait.notify_button), {normalizer: wj}));
+  });
+  await settle();
+  await settle();
+  // 바람직: 줄에서 직접 켠 사람에게 같은 질문 한 장이 다시 뜨면 안 된다
+  expect(screen.queryByTestId('child-notify')).toBeNull();
+});
+
+test('P2 복사 → 설정 화면으로 이동 → 홈 갔다 복귀: 설정 화면 위에 한 장이 뜨는가', async () => {
+  setPlatform('android', 34);
+  setTokenSourceForTest(createFakeTokenSource());
+  jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+  jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+  const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+  render(<AppRoot api={api} restore />);
+  await waitFor(() => screen.getByTestId('wait-code'));
+  await act(async () => {
+    fireEvent.press(screen.getAllByTestId('wait-copy')[0]);
+  });
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('wait-settings'));
+  });
+  await settle();
+  await act(async () => {
+    emit('background');
+    emit('active');
+  });
+  await settle();
+  // 관찰용: 설정 화면에 있는데 Wait 화면의 한 장이 뜨는지
+  expect(screen.queryByTestId('child-notify')).toBeNull();
+});
+
+test('P2-대조 복사 → (설정 안 감) 홈 갔다 복귀: 뜬다', async () => {
+  setPlatform('android', 34);
+  setTokenSourceForTest(createFakeTokenSource());
+  jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+  jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+  const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+  render(<AppRoot api={api} restore />);
+  await waitFor(() => screen.getByTestId('wait-code'));
+  await act(async () => {
+    fireEvent.press(screen.getAllByTestId('wait-copy')[0]);
+  });
+  await settle();
+  await act(async () => {
+    emit('background');
+    emit('active');
+  });
+  await waitFor(() => screen.getByTestId('child-notify'));
+});

@@ -5,8 +5,10 @@ import type {EventName, EventProps, LogEventResult} from '../api/contract/events
 import type {MyPushSettings, RegisterPushTokenResult, SetPushEnabledResult} from '../api/contract/push';
 import type {MyTermsStatus, RecordTermsResult} from '../api/contract/terms';
 import type {DeleteScope} from '../api/contract/deleteScope';
+import type {MonthItem} from '../api/contract/month';
 import type {CourseStep, SavePassOnResult, SaveRecallResult, TodayFiveSteps, PassOnKey} from '../api/contract/fiveSteps';
 export type {DeleteScope};
+export type {MonthItem};
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
 export type CreateFamilyResult = {family_id: string; profile_id: string};
@@ -25,6 +27,8 @@ export type ChildParent = {
   starter: string | null;
   // 이 어르신이 가족에 연결된 날(KST). 서버 0041 child_summary parents[].connected_date(처음 연결된 날, 재연결해도 그대로) — 없으면 null(C4 이름 고르기 시트 날짜 줄 생략)
   connectedDate?: string | null;
+  // '최근 한 달 고르신 것'(서버 0068 month): 이 어르신이 v6 이상 동의일 때만 있다. undefined = 키 없음(v5·미응답) → 지금 화면 그대로, [] = 빈 상태
+  month?: MonthItem[];
 };
 export type ChildSummary = {
   parentTitle: string; // 가족 기본 호칭(어르신이 아직 없을 때·한 명일 때 화면 제목)

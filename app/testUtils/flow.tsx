@@ -80,7 +80,7 @@ export async function enterCode(code: string, confirm = true) {
 export async function toHome(api: Api, accept = true) {
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await press(accept ? '좋아요' : '싫어요');
   if (!accept) {
     await waitFor(() => screen.getByText('고른 답은 저장되지 않아요'));

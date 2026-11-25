@@ -129,7 +129,8 @@ export function nowRowRange(
     if (k === key) {
       const bottom = y + h;
       const overflow = viewport > 0 && bottom > viewport;
-      // 내릴 거리(Screen showRange 와 같은 꼴: 행 끝 − 창 + 간격)가 keep 위 끝을 넘으면 그 위 끝이 잘린다
+      // 내릴 거리(행 끝 − 창 + 간격)가 keep 위 끝을 넘으면 그 위 끝이 잘린다. Screen showRange 는 행+간격이 창을 넘으면
+      // 행 위쪽 − 간격에 맞추므로 실제로는 덜 내린다 — 여기서는 끝 맞춤 기준으로 넉넉히 잘림을 판정해 안 내리는 쪽으로 기운다(#298 QA-1 L1)
       const cutsKeep = keepTop !== null && bottom - viewport + gap > keepTop;
       return {top: y, bottom, scroll: overflow && !cutsKeep};
     }

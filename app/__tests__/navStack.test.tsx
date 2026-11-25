@@ -90,14 +90,14 @@ test('코스 홈 → 번호 쓰기 → 번호 성공 → 동의 → 코스 홈: 
   await press('번호 쓰기');
   await waitFor(() => screen.getByText(CONNECT));
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByTestId(HOME));
   expect(screen.queryByText('번호를 받으면 답이 저장돼요')).toBeNull();
   // 리드 결정 11-20(네이버 패널 r1/4): 연결된 어르신에게 P3 는 뿌리 화면 — 뒤로는 앱을 나가고 P1·동의로 가지 않는다
   await back();
   expect(screen.getByTestId(HOME)).toBeTruthy();
-  expect(screen.queryByText('고른 답을 가족과 나눠요')).toBeNull();
+  expect(screen.queryByText('고르신 답을 가족과 나눠요')).toBeNull();
   expect(screen.queryByText(CONNECT)).toBeNull();
 });
 
@@ -110,7 +110,7 @@ test('회귀(r1/4): 연결된 첫날 P3 에서 뒤로를 두 번 눌러도 P1 �
   const back = captureBack();
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await press('좋아요');
   await waitFor(() => screen.getByTestId(HOME));
   const before = clear.mock.calls.length; // 연결 상태로 처음 불러올 때 지우는 것(useWeekStamps 설계)은 뺀다

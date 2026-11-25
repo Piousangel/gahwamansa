@@ -24,7 +24,7 @@ const STD = Easing.bezier(0.4, 0, 0.2, 1);
 const POP = Easing.bezier(0.2, 0.8, 0.2, 1);
 
 // 의미 단위 줄바꿈: 마지막 세 어절을 붙여 "가요"만 다음 줄로 넘어가지 않게 한다
-// ("고른 답으로 자녀가 / 취향을 알아 가요"). 한 줄에 들어가면 그대로 한 줄.
+// ("고르신 / 답으로 가족과 이야기해요"). 한 줄에 들어가면 그대로 한 줄.
 export const keepTail = (t: string) => {
   const w = t.split(' ');
   return w.length < 4 ? t : `${w.slice(0, -3).join(' ')} ${w.slice(-3).join(' ')}`;

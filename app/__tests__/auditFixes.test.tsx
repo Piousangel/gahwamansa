@@ -91,8 +91,8 @@ test('M3(360 폭 100%): 답 보여 주기 행은 동사 버튼을 다음 줄 전
 test('P2: 넷째 줄(거절 안내)은 카드 밖 한 줄(v4: 점 머리표, ⓘ 없음)', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
-  expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
+  expect(screen.getAllByTestId('consent-point')).toHaveLength(5); // P2 v6 다섯 줄
   expect(screen.getByTestId('consent-decline-note')).toBeTruthy();
 });
 
@@ -113,4 +113,88 @@ test('M3: 확인 패널이 열리면 패널 끝까지 보이게 본문을 스크
     fireEvent(panel, 'layout', {nativeEvent: {layout: {x: 0, y: 500, width: 320, height: 260}}});
   });
   expect(scrollTo).toHaveBeenLastCalledWith({y: 500 + 260 - 300 + 12, animated: true});
+});
+
+// #298 QA-3 M1: '다시 보여 주기' 확인 칸은 v6 동의 글이 들어 있어 창보다 클 수 있다. 칸 아래(좋아요)에 맞추면 제목·첫 줄이 화면 위로 밀린 채
+// 동의가 기록될 수 있다 → 칸이 창보다 크면 칸 위쪽에 맞춘다(제목·첫 줄부터, 버튼은 스크롤로). 창에 들어가면 지금처럼 칸 끝까지
+test('#298 M1: 창보다 큰 확인 칸은 위쪽(제목)에 맞춘다, 창에 들어가면 칸 끝까지', async () => {
+  mockDims = {width: 360, height: 640, scale: 3, fontScale: 2};
+  const {ScrollView} = require('react-native');
+  const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+  scrollTo.mockClear();
+  await home({consented: false});
+  await press('설정');
+  await waitFor(() => screen.getByText('도장 소리'));
+  await act(async () => {
+    fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
+  });
+  await press('다시 보여 주기');
+  const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
+  await act(async () => {
+    fireEvent(panel, 'layout', {nativeEvent: {layout: {x: 0, y: 500, width: 320, height: 900}}});
+  });
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 - 12, animated: true});
+  // 칸이 창에 들어가면(240 ≤ 300) 칸 끝(버튼)까지 보이게 — 이때 위쪽도 함께 보인다
+  await act(async () => {
+    fireEvent(panel, 'layout', {nativeEvent: {layout: {x: 0, y: 500, width: 320, height: 240}}});
+  });
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 + 240 - 300 + 12, animated: true});
+});
+
+// #298 QA-1 L2: 칸이 창과 같거나 간격(12)만큼 모자랄 때(view-12 < 높이 ≤ view) 끝에 맞추면 위쪽이 최대 12 잘린다 → 이 구간도 위쪽에 맞춘다.
+// 다만 이 구간의 칸은 이미 다 보일 수 있으므로, 다 보이면 움직이지 않는다
+test('#298 L2: 높이가 창과 같거나 창-간격보다 크면 위쪽에 맞추고, 이미 다 보이면 그대로', async () => {
+  mockDims = {width: 360, height: 640, scale: 3, fontScale: 2};
+  const {ScrollView} = require('react-native');
+  const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+  await home({consented: false});
+  await press('설정');
+  await waitFor(() => screen.getByText('도장 소리'));
+  await act(async () => {
+    fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
+  });
+  await press('다시 보여 주기');
+  const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
+  const layout = async (y: number, height: number) => {
+    scrollTo.mockClear();
+    await act(async () => {
+      fireEvent(panel, 'layout', {nativeEvent: {layout: {x: 0, y, width: 320, height}}});
+    });
+  };
+  await layout(500, 300); // 창과 같음
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 - 12, animated: true});
+  await layout(500, 289); // 289 + 12 > 300
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 - 12, animated: true});
+  await layout(500, 288); // 288 + 12 = 300 → 지금처럼 끝(버튼)에 맞춤, 위쪽도 함께 보인다
+  expect(scrollTo).toHaveBeenLastCalledWith({y: 500 + 288 - 300 + 12, animated: true});
+  await layout(2, 295); // 큰 쪽 구간이지만 창(0~300) 안에 다 보임 → 움직이지 않음
+  expect(scrollTo).not.toHaveBeenCalled();
+});
+
+// #298 QA-3 L4·L5: 확인 칸은 동의 화면과 같은 제목·다섯 줄을 쓰고(거절 안내는 이 칸 버튼에 맞춘 settings.reshow_note — QA-1 L3), 글머리표 '•'는 화면 읽기가 읽지 않는다(ConsentScreen 과 같은 방식)
+test('#298 L4·L5: 다시 보여 주기 칸 — 동의 제목·다섯 줄·거절 안내, 점은 읽지 않음', async () => {
+  const {copy} = require('../src/copy/copy');
+  await home({consented: false});
+  await press('설정');
+  await press('다시 보여 주기');
+  const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
+  const {within} = require('@testing-library/react-native');
+  expect(within(panel).getByText(copy.consent.title)).toBeTruthy();
+  // #298 QA-1 L3: 이 칸의 버튼은 좋아요·닫기 → 거절 안내도 '닫기'를 말하는 설정 전용 키. 없는 버튼('싫어요')을 말하는 동의 화면 줄은 없다
+  expect(within(panel).getByText(copy.settings.reshow_note)).toBeTruthy();
+  expect(within(panel).queryByText(copy.consent.decline_note)).toBeNull();
+  expect(within(panel).getByText(copy.settings.keep)).toBeTruthy();
+  expect(within(panel).queryByText(copy.consent.decline)).toBeNull();
+  const lines = within(panel).getAllByTestId('resume-consent-point');
+  expect(lines.map((l: {props: {accessibilityLabel?: string}}) => l.props.accessibilityLabel)).toEqual(copy.consent.body);
+  const dots = within(panel).getAllByTestId('resume-consent-dot', {includeHiddenElements: true});
+  expect(dots).toHaveLength(5);
+  for (const d of dots) {
+    // 점을 감싼 칸이 읽기에서 빠진다(안드로이드 no-hide-descendants, iOS accessibilityElementsHidden)
+    let n = d.parent;
+    while (n && n.props?.importantForAccessibility !== 'no-hide-descendants') {
+      n = n.parent;
+    }
+    expect(n?.props.accessibilityElementsHidden).toBe(true);
+  }
 });

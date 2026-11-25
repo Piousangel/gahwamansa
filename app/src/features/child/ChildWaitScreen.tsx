@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Share, StyleSheet, useWindowDimensions, View} from 'react-native';
-import {CommonActions} from '@react-navigation/native';
+import {AppState, Share, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {CommonActions, useIsFocused} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
@@ -17,6 +17,7 @@ import {childErrorMessage} from '../../shared/childError';
 import {buildShareMessage, codeA11y, formatExpiry} from '../../lib/childFormat';
 import {appShareLink} from '../../lib/env';
 import {useNotifyPermission} from './useNotifyPermission';
+import {useChildNotifyAsk} from './ChildNotifyPrompt';
 import {useChildWaitState} from './useChildWaitState';
 import {track} from '../track';
 
@@ -60,6 +61,54 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
 
   const title = state?.parentTitle ?? '부모님';
   const code = state?.code ?? null;
+  // 알림 권한 앞당김(기획 v2.1 0.4): 번호를 보낸(공유 창에서 돌아옴·복사) 직후, 또는 연결 직후 화면에서 우리 말 한 장 → 시스템 창.
+  //   화면에 들어오자마자는 묻지 않는다. 한 장을 어떻게 닫든 C3·연결 직후 [알림 켜기] 줄은 그대로(나중에 켜는 길, C7 토글도)
+  // #296 QA-2 M2: 이 화면이 보일 때만 묻는다. [설정] 등이 위에 쌓여도 C3 는 스택 아래 마운트된 채라, 막지 않으면 설정 화면 위에 한 장이 뜨고
+  //   뒤로가 화면 대신 한 장을 닫아 '오늘은 넘김'으로 기록된다. 연결은 C3 로 돌아와 연결 직후 화면을 처음 볼 때 묻는다
+  //   QA-3 L2: 판정(my_push_settings 읽기)이 끝난 때도 포커스를 다시 본다(읽는 사이 [설정]으로 간 경우)
+  const focused = useIsFocused();
+  const focusedNow = useRef(focused);
+  focusedNow.current = focused;
+  const ask = useChildNotifyAsk(notify, title, focusedNow);
+  const {offer} = ask;
+  useEffect(() => {
+    if (!focused) {
+      return;
+    }
+    if (linked) {
+      offer('done');
+    } else if (sent) {
+      offer('wait');
+    }
+  }, [focused, linked, sent, offer]);
+  // #293 QA-2 L2(리드 결정): 복사한 사람은 곧 메신저로 가서 붙여 넣으려는 참이라 바로 묻지 않는다('복사했어요' 띠도 가린다).
+  //   복사한 뒤 앱을 떠났다(background) 돌아오면(active) 그때 묻는다. 돌아오기 전에 연결됐으면 연결 직후 제목으로(L3와 같은 규칙).
+  //   떠나지 않고 연결되면 위 effect 의 연결 직후 1회가 맡는다.
+  //   M2: 다른 화면(설정 등)에 있다 돌아온 복귀는 버린다(복사의 연속이 아니므로). 복사 기록은 남겨 C3 에서 다시 다녀오면 그때 묻는다
+  const didCopy = useRef(false);
+  const leftAfterCopy = useRef(false);
+  const linkedNow = useRef(linked);
+  linkedNow.current = linked;
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'background') {
+        leftAfterCopy.current = didCopy.current && focusedNow.current;
+      } else if (s === 'active' && leftAfterCopy.current) {
+        leftAfterCopy.current = false;
+        if (focusedNow.current) {
+          offer(linkedNow.current ? 'done' : 'wait');
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [offer]);
+  // #296 QA-2 M1: 복사 뒤 C3 줄 [알림 켜기]를 직접 누름 = 답함. 권한 창에서 돌아오는 복귀(background→active)를 '복사 뒤 복귀'로 보지 않는다
+  //   (그 복귀의 my_push_settings 읽기가 받기 동의 저장보다 먼저 끝나면 방금 켠 사람에게 같은 질문이 뜬다)
+  const openFromRow = () => {
+    didCopy.current = false;
+    leftAfterCopy.current = false;
+    notify.open();
+  };
 
   // 쓸 수 있는 번호가 없을 때만 새로 만든다(만료·받은 적 없음)
   const makeCode = async () => {
@@ -87,7 +136,9 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
       Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))})
         .then(r => {
           if (r?.action !== Share.dismissedAction) {
-            setSent(true); // 공유 창에서 돌아왔다(Android 는 보냈는지 알 수 없어 돌아온 것을 기준으로)
+            // 공유 창에서 돌아왔다. RN Android Share 는 창이 열리는 순간 늘 sharedAction 으로 끝나(dismissedAction 없음) 앱을 고르지 않고
+            //   닫아도 여기로 온다 — 보냈는지 알 수 없어 돌아온 것을 기준으로 한다(#293 QA-2 L1, 결정은 PR 본문)
+            setSent(true);
           }
         })
         .catch(() => {});
@@ -96,6 +147,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const copyCode = () => {
     if (code && copyText(code.code)) {
       track(api, 'invite_share_tapped', {channel: 'copy'}); // AC-05
+      didCopy.current = true;
       setCopied(n => n + 1);
     }
   };
@@ -147,10 +199,11 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
               <Text role="sub" tone="muted">
                 {withTitle(d.notify, title)}
               </Text>
-              <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+              <Button kind="text" size="inline" label={w.notify_button} onPress={openFromRow} />
             </View>
           ) : null}
         </DsScreen>
+        {ask.node}
       </AudienceProvider>
     );
   }
@@ -170,7 +223,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
       <Text role="sub" tone="muted">
         {w.notify}
       </Text>
-      <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+      <Button kind="text" size="inline" label={w.notify_button} onPress={openFromRow} />
     </View>
   ) : null;
   const dock: DockProps = !state
@@ -247,6 +300,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
           </View>
         )}
       </DsScreen>
+      {ask.node}
     </AudienceProvider>
   );
 }

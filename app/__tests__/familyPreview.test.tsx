@@ -46,7 +46,7 @@ test('답 있음: 호칭의 최근 답 카드(고른 답·날짜) + 지난 답 2
   const older = within(device).getAllByTestId('preview-older');
   expect(older.map(o => o.props.accessibilityLabel)).toEqual(['2025년 11월 15일, 산과 바다 중, 바다', '2025년 11월 13일, 곶감과 홍시 중, 홍시']);
   expect(within(device).queryByText(/나무|사진/)).toBeNull();
-  expect(screen.getByTestId('preview-sub').props.children).toBe('최근 한 달 고르신 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요');
+  expect(screen.getByTestId('preview-sub').props.children).toBe('고르신 답과 날짜가 한 달 동안 모여 보여요. 답에 따라 챙겨 드릴 거리 한 줄이 함께 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요');
   expect(screen.getByText('• 사진과 자판으로 쓴 글자는 보이지 않아요')).toBeTruthy();
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('settings-row-preview'));
@@ -73,7 +73,7 @@ test('0050 호칭은 summary.parents[0].title — 가족 기본 호칭(parent_ti
 test('아직 고른 답 없음: "고른 답이 생기면 여기에 보여요", 소개문은 그대로', async () => {
   const device = await openPreview({consented: true, latest: null, history: []});
   expect(within(within(device).getByTestId('preview-empty')).getByText('고르신 답이 생기면 여기에 보여요')).toBeTruthy();
-  expect(screen.getByTestId('preview-sub').props.children).toMatch(/^최근 한 달/);
+  expect(screen.getByTestId('preview-sub').props.children).toMatch(/^고르신 답과 날짜가 한 달 동안 모여/);
 });
 
 test('스와이프 뒤로 자리(iOS 감사 2.4): 지금은 두 플랫폼 모두 기본 동작 그대로(gestureEnabled 를 넣지 않음)', () => {

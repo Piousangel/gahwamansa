@@ -12,6 +12,7 @@ import {clearPushToken, endPushSignOut, releasePushTokenOnSignOut, stopPushAutoI
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
+import {parseMonth} from '../api/contract/month';
 import {parseDeleteScope, type DeleteScope} from '../api/contract/deleteScope';
 import {FOUR_STEP_COURSE_LEN, TODAY_FIVE_STEP_KEYS, parseSavePassOnResult, parseSaveRecallResult, parseTodayFiveSteps, type TodayFiveSteps} from '../api/contract/fiveSteps';
 import {isFeatureOn} from '../lib/features';
@@ -49,6 +50,7 @@ function parseChildSummary(data: Record<string, any>): ChildSummary {
       : null,
     starter: p.shared ? (p.latest?.starter ?? null) : null, // 0027 기능 회의 B3
     connectedDate: typeof p.connected_date === 'string' ? p.connected_date : null, // 0041(처음 연결된 날). 옛 서버면 null
+    month: p.shared ? parseMonth(p.month) : undefined, // 0068(v6 이상 동의만). 키 없음·모양 틀림 = undefined → 지금 화면
   }));
   const first = parents[0];
   return {
