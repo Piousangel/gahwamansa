@@ -14,7 +14,7 @@ import {setupWarmAppRoot} from '../testUtils/warm';
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
 setupWarmAppRoot();
 
-// 대기열 56(#294 리뷰 ⑤): 부하(에뮬레이터 동시) 전체 실행에서 1건 간헐 실패. waitFor 대기는 이미 전역 10초(jest.setup.js, '기본 1초'는 옛 값)라
+// 대기열 56(#294 리뷰 ⑤): 부하(에뮬레이터 동시) 전체 실행에서 1건 간헐 실패. waitFor 대기는 이미 전역 10초(jest.after.js:26 asyncUtilTimeout, '기본 1초'는 옛 값)라
 // 남은 한계는 테스트 하나의 제한(전역 testTimeout 20초)이다 — 이 파일은 테스트마다 AppRoot 를 처음부터 그려 설정까지 옮기고,
 // 고지 두 테스트는 그걸 두 번 한다. 이 파일만 40초로. 조건이 맞으면 바로 끝나므로 통과하는 실행은 느려지지 않는다.
 jest.setTimeout(40000);

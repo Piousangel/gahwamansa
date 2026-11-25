@@ -447,4 +447,32 @@ describe('대기열 53: 2·3단계 묶음 아래 요소(약관 줄·링크)는 �
       insets.mockImplementation(orig);
     }
   });
+
+  // 대조(#297 리뷰 L3): 2단계는 하단 고정(Dock)이 inset 을 이미 먹으므로 묶음·여백에 inset 을 더하지 않는다(noDock 조건의 반대쪽).
+  // 참고: 여기 묶음·여백은 흐림과 시스템 버튼이 **겹치지 않고 쌓이는** 길이라 FADE + inset(덧셈), 4단계 키 줄 접힘(ConnectScreen fadeAt)은
+  // '이 선 아래는 가려짐'의 경계 하나라 max(FADE, inset) — 둘은 재는 것이 다르다.
+  test('대조: 411×914 글자 1.3(inset 48에서 2단계, 하단 고정 있음) inset 48 — 여백 = 28 − 16 = 12, 묶음에 inset 을 빼지 않음', async () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 0, bottom: 48, left: 0, right: 0}));
+    try {
+      const st = pickStage({
+        windowH: 914,
+        windowW: 411,
+        fontScale: 1.3,
+        insets: {top: 0, bottom: 48},
+        text: {title: copy.connect.title, safe: copy.safe.money, below: copy.connect.auto_hint, legal: copy.legal.agree_parent, links: [copy.connect.no_code_link, copy.connect.view_course]},
+      });
+      expect(st.level).toBe(2);
+      dims(411, 914, 1.3);
+      await openConnect();
+      await viewport(600);
+      expect(firstHeight()).toBe(600 - FIRST_PAD - FADE);
+      expect(marginBottom()).toBe(FADE - BODY_GAP);
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
 });
