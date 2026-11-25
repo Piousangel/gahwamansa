@@ -30,6 +30,13 @@ const INK_FROM = 0.1; // 번짐 원 투명도(축하 효과로 보이지 않게,
 // 이징(시안 CSS cubic-bezier 그대로)
 const EASE = {land: Easing.bezier(0.3, 0, 0.8, 0.15), squash: Easing.bezier(0.2, 0.8, 0.2, 1)};
 const BODY_GAP = 16;
+/**
+ * 본문을 마운트보다 먼저 두는 글자 배율(대기열 33). Android 단계 1.5 다음이 1.8 이라 그 사이(1.75)로 가른다.
+ * 150%는 320×640 에서도 본문까지 첫 화면에 들어(에뮬레이터 실측 43 남음) 시안 순서(마운트 먼저)를 그대로 둔다.
+ * 접힘 실측으로 고르지 않는 이유: 본문 글은 이번 주 도장 응답 뒤에야 정해져(최대 1.5초) 그때 제목이 위로 튄다.
+ */
+export const P7_BODY_FIRST_SCALE = 1.75;
+export const p7BodyFirst = (fontScale: number) => fontScale >= P7_BODY_FIRST_SCALE;
 const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0, easing?: (x: number) => number) =>
   Animated.timing(val, {toValue, duration, delay, easing, useNativeDriver: true}); // 본문 간격(시안 data-body gap 16)
 
@@ -209,9 +216,14 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       {body ? <Text role="bodyLg" style={styles.center}>{d.passed_on}</Text> : null}
     </Animated.View>
   ) : null;
-  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
+  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 첫 요소(from 1)는 밀지 않는다.
+  // 글자 1.75배 이상(200%)이면 제목 → 본문 → 마운트로 순서만 바꾼다(대기열 33, FS 200% '숨기지 말고 순서만' 선례): 마운트가 274(캡션 3줄 114)라
+  // 320·360×640 에서 제목 뒤 남는 칸이 30뿐이고 본문(120~160)이 통째로 접힘 아래로 갔다. 캡션을 두 줄로 줄여도 38만 늘어 본문이 들지 않는다.
+  // 이때 마운트는 R-15 대로 통째로 접힘 아래로 간다(스크롤하면 사진·도장·AI 고지가 함께 보인다)
+  const bodyFirst = p7BodyFirst(fontScale);
+  const mount = <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} afterBody={bodyFirst} />;
   const items: React.ReactNode[] = [
-    <AlbumMount key="mount" photoUrl={content?.photo?.image_url ?? null} large={large} motion={mountMotion(v, mode === 'full')} />,
+    ...(bodyFirst ? [] : [mount]),
     // 화면 제목: 들어오면 화면 읽기 포커스를 여기로(캡션보다 먼저, PR #108 리뷰 L1)
     <View
       key="title"
@@ -229,6 +241,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
     <Animated.View key="text" testID="p7-text" style={{opacity: v.text}} accessibilityLiveRegion="polite">
       {body ? <Text role="bodyLg" style={styles.center}>{body}</Text> : null}
     </Animated.View>,
+    ...(bodyFirst ? [mount] : []),
   ];
   const fold = useFoldGap(items.length, BODY_GAP, 1);
 
