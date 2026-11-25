@@ -1,0 +1,59 @@
+# TEMP(H1 캡처, 커밋하지 않음): 어르신 연결·동의 직후 N1, 자녀 C3 [알림 켜기] 줄·연결 직후 줄
+appId: com.bumojasik.app.staging
+name: H1 캡처
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: ../common/wait-first-screen.yaml
+- takeScreenshot: h1-fs
+- tapOn: '부모님 휴대폰이에요.*'
+- extendedWaitUntil:
+    visible: '가족에게 받은.*'
+    timeout: 10000
+- takeScreenshot: h1-p1-0
+- tapOn: '1'
+- tapOn: '2'
+- tapOn: '3'
+- takeScreenshot: h1-p1-3
+# 200%: 키 4~0 줄은 첫 화면 밖(접힘 여백으로 줄째 밀림, #272) → '0' 이 보일 때까지 천천히 민다(100% 는 그대로)
+- runFlow:
+    file: ../common/edge-scroll.yaml
+    env:
+      TARGET: '0'
+- tapOn: '4'
+- tapOn: '5'
+- tapOn: '6'
+- extendedWaitUntil:
+    visible: '이 번호로 연결하기'
+    timeout: 10000
+- takeScreenshot: h1-p1c
+- tapOn: '이 번호로 연결하기'
+- extendedWaitUntil:
+    visible: '고른 답을.*나눠요'
+    timeout: 10000
+- takeScreenshot: h1-p2
+# 200%: '좋아요' 는 본문 끝(스크롤 뒤)
+- runFlow:
+    file: ../common/edge-scroll.yaml
+    env:
+      TARGET: '좋아요'
+- tapOn: '좋아요'
+- extendedWaitUntil:
+    visible: '알려 주세요'
+    timeout: 15000
+- takeScreenshot: h1-parent-n1-after-connect
+- tapOn: '안 받을게요'
+- extendedWaitUntil:
+    visible: '사진 보기.*'
+    timeout: 10000
+- takeScreenshot: h1-parent-p3-after-no
+- runFlow:
+    file: ../common/child-to-wait.yaml
+    env:
+      PREFIX: h1
+- takeScreenshot: h1-child-c3
+- extendedWaitUntil:
+    visible: '연결됐어요'
+    timeout: 60000
+- takeScreenshot: h1-child-connect-done

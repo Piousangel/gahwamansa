@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import {AppState, Platform} from 'react-native';
 import {openNotifySettings, readNotifyPermission, requestNotifyPermission} from '../../push/notifyNative';
-import {childNotifyOptIn} from '../../push/runtime';
+import {childNotifyOptIn, pushReceive} from '../../push/runtime';
 
 export type NotifyState = 'granted' | 'denied' | 'unknown';
 
@@ -20,13 +20,20 @@ export async function readNotifyState(): Promise<NotifyState> {
   return p === 'granted' ? 'granted' : p === 'unknown' ? 'unknown' : 'denied';
 }
 
-// C3 "연결되면 알려 드릴게요 · 알림 켜기"·C7 알림 행이 쓰는 상태. denied 일 때만 켜기 안내를 보인다.
+// C3 "연결되면 알려 드릴게요 · 알림 켜기"·연결 직후 화면·C7 알림 행이 쓰는 상태.
 // '알림 켜기'를 누르면 서버 받기 동의(set_push_enabled true, 0036)·허용이면 토큰 등록은 push/runtime 이 한다(누른 것 = 받기 동의, 리뷰 L2).
-export function useNotifyPermission(): {state: NotifyState; denied: boolean; open: () => void} {
+// consented(H1, 오너 11-25): 서버 받기 동의(my_push_settings). false = 아직 안 누름 → OS 권한이 이미 허용(12 이하 기본 허용 포함)이어도
+//   [알림 켜기]를 보인다(#269 이후 동의 전에는 토큰이 없어 알림이 오지 않으므로). null(프로필 없음)·'offline'·읽는 중은 모름 → 권한 기준만.
+export type NotifyConsent = boolean | null | 'offline' | undefined;
+export function useNotifyPermission(): {state: NotifyState; denied: boolean; consented: NotifyConsent; open: () => void} {
   const [state, setState] = useState<NotifyState>('unknown');
+  const [consented, setConsented] = useState<NotifyConsent>(undefined);
 
   const refresh = useCallback(() => {
     readNotifyState().then(setState);
+    pushReceive()
+      .then(setConsented)
+      .catch(() => setConsented('offline'));
   }, []);
 
   useEffect(() => {
@@ -39,23 +46,49 @@ export function useNotifyPermission(): {state: NotifyState; denied: boolean; ope
     return () => sub.remove();
   }, [refresh]);
 
-  // 켜기: 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)·앱 알림 끔·12 이하면 휴대폰 설정.
+  // 누른 뒤: 동의가 서버에 남았으면 다시 읽고, 못 남겼으면(오프라인 등) 줄을 그대로 둔다(#284 QA-1 L2 — 다시 읽기가 'offline'이라 숨겨지지 않게).
+  const afterOptIn = useCallback(
+    (ok: boolean) => {
+      if (ok) {
+        refresh();
+        return;
+      }
+      readNotifyState().then(setState);
+      setConsented(false);
+    },
+    [refresh],
+  );
+
+  // 켜기: 이미 허용이면(12 이하 기본 허용·전에 허용) 창 없이 받기 동의만, 한 번도 묻지 않았으면 시스템 창, 이미 거절(다시 묻지 않음)·앱 알림 끔이면 휴대폰 설정.
   // 누른 것이 받기 동의(리뷰 L2) → 결과와 상관없이 서버 받기 동의, 허용이면 토큰 등록(push/runtime)
   const open = useCallback(() => {
-    if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-      requestNotifyPermission().then(p => {
-        childNotifyOptIn(p).catch(() => {});
-        if (p === 'granted') {
-          refresh(); // 앱 단위로 꺼져 있을 수도 있어 다시 확인
-        } else if (p === 'blocked' || p === 'unknown') {
-          openNotifySettings();
+    readNotifyPermission()
+      .catch(() => 'unknown' as const)
+      .then(now => {
+        if (now === 'granted') {
+          return childNotifyOptIn('granted').then(afterOptIn);
         }
-      });
-      return;
+        openByAsking();
+      })
+      .catch(() => {});
+    function openByAsking() {
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+        requestNotifyPermission().then(p => {
+          childNotifyOptIn(p)
+            .catch(() => false)
+            .then(afterOptIn);
+          if (p === 'blocked' || p === 'unknown') {
+            openNotifySettings();
+          }
+        });
+        return;
+      }
+      childNotifyOptIn('blocked')
+        .catch(() => false)
+        .then(afterOptIn);
+      openNotifySettings();
     }
-    childNotifyOptIn('blocked').catch(() => {});
-    openNotifySettings();
-  }, [refresh]);
+  }, [afterOptIn]);
 
-  return {state, denied: state === 'denied', open};
+  return {state, denied: state === 'denied', consented, open};
 }

@@ -1,4 +1,4 @@
-// V1 첫날 순서(UX 깊이 회의, DECISIONS 11-19): N1 알림 안내는 첫 코스 완료(P7 도장) 뒤, 음악 권유는 첫날 제외(bgm.test),
+// V1 첫날 순서(UX 깊이 회의, DECISIONS 11-19): N1 알림 안내는 첫 코스 완료(P7 도장) 뒤(H1 오너 11-25부터는 연결 직후에도), 음악 권유는 첫날 제외(bgm.test),
 // 첫 P3 덮개는 해님 인사 1개(P8 응원은 첫 단계를 마치고 돌아온 뒤). 링크 경로는 연결 → 동의 → 코스 홈 순서 그대로.
 import React from 'react';
 import {act, render, screen, waitFor} from '@testing-library/react-native';
@@ -76,11 +76,12 @@ describe('N1 은 첫 코스 완료 뒤', () => {
     expect(screen.getByText('하루 한 번만 알려 드려요', {normalizer: (t: string) => t.replace(/\u2060/g, '').trim()})).toBeTruthy();
   });
 
-  test('링크 경로: 번호 연결 → 동의 → 코스 홈 순서는 그대로, 코스 전에는 N1 없음', async () => {
+  // H1(오너 11-25, push/permission-early): V1 의 '코스 전에는 묻지 않음'을 연결 직후에 한해 바꿨다 — 연결한 날 코스를 안 해도 다음 날 아침 알림이 오게.
+  //   연결 → 동의 순서는 그대로, 코스 홈에 들어온 순간(방금 끝낸 연결의 연속) N1. 앱을 열 때·깨어날 때는 여전히 묻지 않는다(pushClient.test 리드 ⓐ).
+  test('링크 경로: 번호 연결 → 동의 → 코스 홈 순서는 그대로, 코스 홈에 들어오면 N1(H1)', async () => {
     const api = createFakeApi({pushEnabled: false});
     await toHome(api);
-    await settle();
-    expect(n1()).toBeNull();
+    await waitFor(() => expect(n1()).not.toBeNull());
   });
 });
 
