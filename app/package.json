@@ -17,6 +17,7 @@
     "oss:android": "cd android && ./gradlew -q :app:generateOssAndroid"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "5.2.14",
     "@mhpdev/react-native-speech": "1.4.4",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-firebase/app": "27.1.0",
@@ -31,14 +32,17 @@
     "@supabase/supabase-js": "^2.119.0",
     "react": "19.3.0",
     "react-native": "0.88.1",
+    "react-native-gesture-handler": "3.5.0",
     "react-native-get-random-values": "2.0.0",
+    "react-native-reanimated": "4.8.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.30.1",
     "react-native-sound": "0.13.0",
     "react-native-svg": "^15.16.1",
     "react-native-url-polyfill": "4.0.0",
     "react-native-volume-manager": "2.2.0",
-    "react-native-webview": "17.1.0"
+    "react-native-webview": "17.1.0",
+    "react-native-worklets": "0.14.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
