@@ -5,6 +5,9 @@ module.exports = {
   // Reanimated 4·worklets 공식 jest 리졸버(네이티브 대신 웹 구현) → RN preset 리졸버 순으로 잇는다(testUtils/jestResolver.js)
   resolver: '<rootDir>/testUtils/jestResolver.js',
   setupFilesAfterEnv: ['<rootDir>/jest.after.js'],
+  // 맥 유지보수 잠자기(~900초)가 실행 중인 스위트를 한꺼번에 시간 초과시키던 문제(대기열 65): 실행 동안 caffeinate -s, 잠들었으면 끝에 경고
+  globalSetup: '<rootDir>/testUtils/jestGlobalSetup.js',
+  globalTeardown: '<rootDir>/testUtils/jestGlobalTeardown.js',
   // 흐름 테스트는 여러 화면·모션을 지나므로 부하(병렬 워커)에서 기본 5초를 넘을 수 있다(불안정 원인, P7 리뷰 L6)
   testTimeout: 20000,
   // 테스트마다 모든 모의 함수의 호출 기록을 비운다(DV-1 부하 불안정, 2026-11-25).
