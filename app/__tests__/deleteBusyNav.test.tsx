@@ -17,6 +17,10 @@ import {createFakeTokenSource, setTokenSourceForTest} from '../src/push/tokenSou
 import {__resetInviteSourcesForTests} from '../src/lib/linkSources/native';
 import {subscribeInvite, type InviteBanner} from '../src/lib/linkSources';
 import {confirmDeleteAll, press, toHomeConsented} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const never = () => new Promise<never>(() => {});
 const HOST = 'example.test';

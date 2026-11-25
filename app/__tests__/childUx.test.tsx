@@ -17,6 +17,10 @@ import {NewConnectionBanner} from '../src/features/home/NewConnectionBanner';
 import {memoryStore} from '../src/lib/kvStore';
 import {press} from '../testUtils/flow';
 import type {ChildParent} from '../src/features/types';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 jest.setTimeout(20000);
 beforeEach(() => {

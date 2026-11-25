@@ -1,0 +1,11 @@
+-- 로컬 시드(db reset 때만, supabase/config.toml [db.seed]): ② 떠올려 보기 그날 보기 3개(0061 content_recall_options).
+-- 지금은 **형식만** 둔다 — 실제 보기 90개(30일 × 3, docs/team/copy/2026-11-25-recall-options.csv — 90개 모두 2~4자 확인)는 사진 큐레이터·정책 검수를 거쳐 병합된 뒤 별도 PR로 채운다.
+-- 규칙(기획 docs/team/board/2026-11-25-course-five-steps.md 3.2, 서버 check):
+--   - 하루 slot 1~3 세 개, 같은 날 같은 낱말 금지. 낱말은 한글만 2~4자(띄어쓰기·영문·숫자 없음 — ④ 낱말 쓰기에서 그대로 쓴다).
+--   - 셋 다 '그럴 법한 것'(정답 하나 + 오답 둘 금지), 「기억 안 나요」류 금지, 건강·종교·정치·출신 지역·가족사 금지, 그날 ③ 두 보기와 겹치지 않게.
+--   - day_index는 content_photos에 있어야 한다(FK). 게시 뒤 고치거나 지우지 않는다(트리거) — 고칠 땐 새 날로.
+-- 형식(예시는 주석 — 값을 넣지 않는다):
+-- insert into public.content_recall_options (day_index, slot, label) values
+--   (3, 1, '아궁이'), (3, 2, '누룽지'), (3, 3, '가마솥')
+-- on conflict do nothing;
+select 1 where false; -- 빈 시드(형식 자리)

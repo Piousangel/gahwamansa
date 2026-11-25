@@ -8,6 +8,10 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {keypadKeyHeight} from '../src/features/link/keypadFit';
 import {wordKeyScaleMax} from '../src/ui/CodeInput';
 import {press} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const RN = require('react-native');
 afterEach(() => {

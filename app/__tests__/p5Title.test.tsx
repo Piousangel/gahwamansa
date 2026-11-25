@@ -5,6 +5,10 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {roleText} from '../src/ui/ds/roles';
 import {pressCourseNext} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // P5 제목(시안 P3_P4_P5_ds4b): 단계 제목 한 줄 → 질문(title) → '정답은 없어요…'(sub muted, 늘 한 줄). 질문 문장이 없는 날은 공통 문장이 제목.
 async function toQuestion(opts: FakeOptions = {}) {

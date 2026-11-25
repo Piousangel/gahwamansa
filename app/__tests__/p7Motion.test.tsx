@@ -11,6 +11,10 @@ import {P7_T} from '../src/features/course/CourseDone';
 import {kstWeekdayIndex} from '../src/features/course/stamps';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
 afterEach(() => setWeekStripForO6(null));

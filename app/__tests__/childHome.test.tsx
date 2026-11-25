@@ -4,6 +4,10 @@ import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-na
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {formatAnswerDate} from '../src/features/home/formatDate';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const FORBIDDEN = [/아직/, /못 했/, /안 했/, /일째/, /연속/, /참여/, /미완료/];
 

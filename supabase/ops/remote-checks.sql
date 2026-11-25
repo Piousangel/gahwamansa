@@ -38,9 +38,9 @@ with checks(check_name, ok, detail) as (
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')) = 0, null
   union all
-  select '앱 실행 가능 definer 38개(허용 목록과 같은 수, 0051 기준)',
+  select '앱 실행 가능 definer 40개(허용 목록과 같은 수, 0061 기준 — save_recall·save_pass_on)',
          (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 38,
+           where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')) = 40,
          (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute'))
   union all
@@ -161,6 +161,16 @@ with checks(check_name, ok, detail) as (
               then '이 역할(' || current_user || ')은 RLS를 우회하지 못해 판정 불가 — SQL Editor(postgres)에서 다시 실행'
               when coalesce((select enabled from public.server_flags where name = 'dev_reset_enabled'), false)
               then '켜짐 — staging QA 중이면 정상(false 허용), production이면 바로 끄기: update server_flags set enabled = false where name = ''dev_reset_enabled'''
+              else '꺼짐' end
+  union all
+  -- ⑤ 건넨 말 저장 스위치(0061): 법률 L-11 회신 전에는 꺼져 있어야 한다. 켜는 것은 L-11 결과 + 리드 결정 뒤(DECISIONS 11-25).
+  select '⑤ 건넨 말 저장 스위치 꺼짐(pass_on_store_enabled, 0061) — L-11 회신·리드 결정 전에는 true',
+         case when (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then not coalesce((select enabled from public.server_flags where name = 'pass_on_store_enabled'), false) end,
+         case when not (select rolbypassrls or rolsuper from pg_roles where rolname = current_user)
+              then '이 역할(' || current_user || ')은 RLS를 우회하지 못해 판정 불가 — SQL Editor(postgres)에서 다시 실행'
+              when coalesce((select enabled from public.server_flags where name = 'pass_on_store_enabled'), false)
+              then '켜짐 — L-11 승인·리드 결정이 있으면 정상(false 허용). 없으면 끄기: update server_flags set enabled = false where name = ''pass_on_store_enabled'''
               else '꺼짐' end
   union all
   select '프로필 없는 계정 삭제 경로(0049 P20)',
