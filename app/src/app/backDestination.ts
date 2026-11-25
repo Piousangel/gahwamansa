@@ -10,7 +10,7 @@ export type RouteName = Exclude<keyof ParentParams | keyof ChildParams, 'Tabs'> 
 const to = copy.nav.to;
 export const BACK_TO: Record<RouteName, string> = {
   Connect: to.Connect, Consent: to.Consent, CourseHome: to.CourseHome, PhotoStep: to.PhotoStep, QuestionStep: to.QuestionStep,
-  KeyboardStep: to.KeyboardStep, CourseDone: to.CourseDone, TodayReview: to.TodayReview, History: to.History, HistoryDay: to.HistoryDay, Settings: to.Settings,
+  KeyboardStep: to.KeyboardStep, RecallStep: to.RecallStep, PassOnStep: to.PassOnStep, CourseDone: to.CourseDone, TodayReview: to.TodayReview, History: to.History, HistoryDay: to.HistoryDay, Settings: to.Settings,
   Family: to.Family, DeleteAccount: to.DeleteAccount, DeleteDone: to.DeleteDone, Web: to.Web,
   Oss: to.Oss, FamilyPreview: to.FamilyPreview, Gate: to.Gate, Login: to.Login, LoginEmail: to.LoginEmail, LoginCode: to.LoginCode,
   Relation: to.Relation,

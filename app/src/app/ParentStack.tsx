@@ -17,6 +17,8 @@ import {ParentSettings} from '../features/account/ParentSettings';
 import {DeleteDoneScreen} from '../features/account/DeleteDoneScreen';
 import {KeyboardStep} from '../features/course/KeyboardStep';
 import {CourseDone} from '../features/course/CourseDone';
+import {RecallStep} from '../features/course/RecallStep';
+import {PassOnStep} from '../features/course/PassOnStep';
 import {WebScreen, type WebParams} from './WebScreen';
 import {OssScreen} from './OssScreen';
 import {FamilyPreviewScreen} from '../features/account/FamilyPreview';
@@ -26,6 +28,7 @@ export type ParentParams = {
   // prefill: 밖에서 들어온 번호(App Links·Install Referrer, ease-and-joy A②). 연결은 사람이 확인 화면에서 누른다
   Connect: {from?: 'course'; prefill?: Prefill} | undefined; Consent: undefined; CourseHome: undefined;
   PhotoStep: {review?: boolean} | undefined; QuestionStep: {review?: boolean} | undefined; KeyboardStep: {review?: boolean} | undefined; CourseDone: undefined;
+  RecallStep: {review?: boolean} | undefined; PassOnStep: {review?: boolean} | undefined; // 5단계 ②·⑤(기능 스위치 fiveSteps)
   TodayReview: undefined; // D-3 '오늘 코스 다시 보기' 안 A '오늘 한 장'
   History: undefined; HistoryDay: {day: HistoryDay};
   Settings: {expand?: 'resume'} | undefined; Family: undefined; DeleteAccount: undefined; DeleteDone: undefined;
@@ -44,6 +47,8 @@ export function ParentStack({initialRouteName = 'Connect', prefill}: {initialRou
       <Stack.Screen name="PhotoStep" component={PhotoStep} />
       <Stack.Screen name="QuestionStep" component={QuestionStep} />
       <Stack.Screen name="KeyboardStep" component={KeyboardStep} />
+      <Stack.Screen name="RecallStep" component={RecallStep} />
+      <Stack.Screen name="PassOnStep" component={PassOnStep} />
       <Stack.Screen name="CourseDone" component={CourseDone} />
       <Stack.Screen name="TodayReview" component={TodayReviewScreen} />
       <Stack.Screen name="Settings" component={ParentSettings} />

@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {Icon} from '../../ui/assets/icons';
 import {StepHeader} from './StepHeader';
@@ -16,6 +16,8 @@ import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
+import {stepNumber} from './fiveSteps';
+import {SkipInline} from './FiveStepParts';
 
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). 고른 답은 바꿀 수 없고 기록 호출 0, 하단 '돌아가기'.
 export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentParams, 'QuestionStep'>) {
@@ -23,7 +25,10 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   // 코스 진행 중 이전(바·하드웨어 뒤로가기): 확인 없이 코스 홈으로
   const toCourseHome = useCallback(() => navigation.popTo('CourseHome'), [navigation]);
   useBackAction(toCourseHome);
-  const {api, consented, content, applyAnswer} = useSession();
+  // five(스위치 + 서버 지원): 단계 번호 3/5, '오늘은 넘어갈게요'(넘김도 '했어요'), 고른 쪽은 ⑤ 카드가 쓴다(세션 picks). 아니면 아래 분기 모두 없음
+  const {api, consented, content, applyAnswer, setPicks, five} = useSession();
+  const n = stepNumber('question', five);
+  const large = useWindowDimensions().fontScale >= 1.5;
   const {finish, error, setError} = useFinishStep();
   const errorTop = useErrorTop(error);
   useStepStarted('question', review); // AC-05
@@ -35,8 +40,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   const [choiceHeights, setChoiceHeights] = useState<number[] | null>(null);
   const choicePush = choiceTop != null && choiceHeights ? foldPush(viewport, choiceTop, choiceHeights, ds.touch.elder.gap, true) : null;
   const [choice, setChoice] = useState<'A' | 'B' | null>(content?.answered_choice ?? null);
-  // 큰 글자(150% 이상): 단계 제목을 '2 / 3'만(P4와 같은 StepHeader compact) — 200%에서 '둘 중 고르기 · 2 / 3'의 '3'만 다음 줄로 꺾였다. 읽기는 그대로
-  const large = useWindowDimensions().fontScale >= 1.5;
+  // 끊김 뒤 [다시 하기]는 실패한 그 행동을 다시(넘어가기였으면 넘어가기 — 답 저장 금지, QA-2 H1)
+  const lastAction = useRef<'confirm' | 'skip'>('confirm');
   const q = content?.question;
   if (!q) {
     return null;
@@ -44,13 +49,25 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
 
   const confirm = async () => {
     if (!choice || saving) return;
+    lastAction.current = 'confirm';
     setSaving(true);
     setError(null);
     try {
+      // 5단계: 저장 먼저(②·⑤ saveAndFinish 와 같은 순서, 리드 결정 #254 L3). 넘긴 ③을 다시 하면 서버가 예외 'skipped' →
+      // 기록(p_skipped:false) → 재저장 1회
+      let finished = false;
       // 동의한 경우에만 답변 저장. 거부 시 보기만 하고 저장 함수는 호출하지 않는다.
       if (consented) { // 미연결 열람은 consented=false 로 온다
         try {
-          await api.saveAnswer({questionId: q.id, choice});
+          try {
+            await api.saveAnswer({questionId: q.id, choice});
+          } catch (e) {
+            // 넘긴 ③: 기록 → 한 번 더(5단계만)
+            if (!(five && !finished && isServerError(e, 'skipped'))) throw e;
+            if (!(await finish('question'))) return;
+            finished = true;
+            await api.saveAnswer({questionId: q.id, choice});
+          }
           applyAnswer(choice); // 서버가 받은 뒤 화면 상태에도(다시 보기에서 '고른 답'으로 보임)
         } catch (e) {
           // 서버가 동의가 없다고 하면 저장 없이 그대로 진행한다(보기만 하는 흐름). 그 밖의 실패는 알린다.
@@ -60,8 +77,26 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
           }
         }
       }
-      if (await finish('question')) {
+      if (five) {
+        setPicks({question: choice});
+      }
+      if (finished || (await finish('question'))) {
         navigation.popTo('CourseHome'); // 쌓인 코스 홈으로 돌아간다(v7 navigate 는 새로 쌓을 수 있음)
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+  // 5단계 넘어가기: 답을 저장하지 않고 p_skipped 로 '했어요'(서버가 그날 답·choice_like 를 지운다). 넘긴 날 자녀 카드는 '답 없는 날'(표시 없음)
+  const skip = async () => {
+    if (saving) return;
+    lastAction.current = 'skip';
+    setSaving(true);
+    setError(null);
+    try {
+      setPicks({question: null});
+      if (await finish('question', {skipped: true})) {
+        navigation.popTo('CourseHome');
       }
     } finally {
       setSaving(false);
@@ -69,7 +104,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   };
 
   const back = {to: copy.course.to_home, onPress: toCourseHome};
-  const header = <StepHeader name={copy.course.step.question} n={2} review={review} compact={large} />;
+  // 큰 글자(150% 이상): 단계 제목을 'n / 전체'만(P4와 같은 StepHeader compact) — 200%에서 '둘 중 고르기 · 2 / 3'의 '3'만 다음 줄로 꺾였다(#257). 읽기는 그대로
+  const header = <StepHeader name={copy.course.step.question} n={n} review={review} five={five} compact={large} />;
   const title = q.prompt ?? appCopy.question_title;
   // 고정 머리줄(DECISIONS 11-25 R-2): ③은 '요즘 마음'을 묻는다는 것을 질문 위에서 먼저 말한다(콘텐츠 행은 그대로)
   const headline = <Text key="headline" testID="p5-headline" role="label">{copy.question.headline}</Text>;
@@ -98,13 +134,16 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     <DsScreen
       variant="step"
       back={back}
-      stepInfo={stepA11y(copy.course.step.question, 2)}
+      stepInfo={stepA11y(copy.course.step.question, n, false, five)}
       scrollRef={errorTop}
       onViewport={setViewport}
       dock={
         error
-          ? stepErrorDock(error, confirm)
-          : {primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm}}
+          ? stepErrorDock(error, () => (lastAction.current === 'skip' ? skip() : confirm()))
+          : {
+              primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm},
+              ...(five && !large ? {secondary: {kind: 'text' as const, label: copy.keyboard.skip, disabled: saving, onPress: skip, testID: 'five-skip'}} : {}),
+            }
       }>
       <FoldStack viewport={viewport} gap={20} testID="p5-body" split="choice" onTop={setChoiceTop}>
         {error ? <StepErrorBanner key="error" error={error} /> : null}
@@ -133,6 +172,8 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         />
         {/* AP-03 읽어 주기: 선택지 아래. 질문과 두 선택지를 읽는다 */}
         {q.prompt ? <ReadAloud key="read" text={ttsText.question(q.prompt, q.option_a, q.option_b)} onSpeaking={setReading} /> : null}
+        {/* 5단계 200%: 넘어가기는 본문(②·⑤와 같은 규칙, R-12) */}
+        {five && large ? <SkipInline key="skip" onPress={skip} disabled={saving} /> : null}
       </FoldStack>
     </DsScreen>
   );

@@ -168,6 +168,36 @@ const DOCK_CASES: Case[] = [
     audience: 'elder',
     dock: {primary: {label: copy.course.next.hangul, onPress: noop}, note: {text: copy.course.to_home, onPress: noop}},
   },
+  // 5단계(기능 스위치 fiveSteps): 100%는 주 + 넘어가기 글자 버튼, 화면은 150% 이상에서 넘어가기를 본문으로 직접 옮긴다(시안 s2·s3·s4).
+  // ②·⑤는 비활성 이유 줄 없음(시안 — 이유는 읽기 힌트). 이유 줄을 두면 320×640 200%에서 292 > 256 으로 넘친다(이 예산이 잡음)
+  {
+    name: '5단계 ② 떠올려 보기(이걸로 할게요 + 오늘은 넘어갈게요)',
+    screen: 'RecallStep',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.recall.confirm, onPress: noop, disabled: true}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+  },
+  {
+    name: '5단계 ⑤ 이야기 건네기(건넬게요 + 오늘은 넘어갈게요)',
+    screen: 'PassOnStep',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.pass_on.confirm, onPress: noop, disabled: true}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+  },
+  {
+    name: '5단계 ③ 둘 중 고르기(정했어요 + 오늘은 넘어갈게요)',
+    screen: 'QuestionStep',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.next.question, onPress: noop, disabled: true, disabledReason: copy.question.need_choice}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+  },
+  {
+    name: '5단계 P3 ③ 뒤(지금 단계 + 오늘은 여기까지 할게요)',
+    screen: 'CourseHome',
+    variant: 'step',
+    audience: 'elder',
+    dock: {primary: {label: copy.course.step.pass_on, onPress: noop}, secondary: {kind: 'text', label: copy.course.stop_here, onPress: noop}},
+  },
 ];
 
 const SIZES = [

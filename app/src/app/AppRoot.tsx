@@ -24,6 +24,8 @@ import {PushHost} from './PushHost';
 import {trackOnce} from '../features/track';
 import {configureCoverQueue} from '../ui/ds/coverQueue';
 import {prefs} from '../lib/prefs';
+import {EMPTY_PICKS, fiveStepsActive, useFiveSteps, type CoursePicks} from '../features/course/fiveSteps';
+import type {PassOnKey} from '../api/contract/fiveSteps';
 
 // 덮개 하루 하나(A8): 마지막으로 보인 날을 이 기기에 남긴다(ui 는 저장소를 모르므로 조립 계층에서 붙인다)
 configureCoverQueue({load: () => prefs().coverDay(), save: day => prefs().setCoverDay(day)});
@@ -63,6 +65,11 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
   }, [api]);
   const sync = useCallback(() => load(false), [load]);
   const startToday = useCallback(() => load(true), [load]);
+  // 5단계 고른 값(이 기기 화면). 날(day_index)이 바뀌면 비운 값으로 본다
+  const [rawPicks, setRawPicks] = useState<CoursePicks>(EMPTY_PICKS);
+  const picks = content && rawPicks.day === content.day_index ? rawPicks : EMPTY_PICKS;
+  const switchOn = useFiveSteps();
+  const five = fiveStepsActive(switchOn, content);
 
   useEffect(() => {
     if (!restore || role === 'child') {
@@ -112,19 +119,48 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       sync,
       startToday,
       applyAnswer: (choice: 'A' | 'B') => setContent(c => (c ? {...c, answered_choice: choice} : c)),
-      applyStep: (step: StepName, streak: number) =>
+      applyStep: (step: StepName, streak: number, skipped?: boolean) =>
         setContent(c =>
           c
             ? {
                 ...c,
                 streak,
                 completed_steps: c.completed_steps.includes(step) ? c.completed_steps : [...c.completed_steps, step],
+                // 5단계만: 넘김이면 넘긴 목록에, 다시 했으면 빼기(서버 skipped_steps 와 같게). 3단계 호출은 skipped 를 주지 않는다
+                ...(skipped === undefined
+                  ? {}
+                  : {skipped_steps: [...(c.skipped_steps ?? []).filter(x => x !== step), ...(skipped ? [step] : [])]}),
+              }
+            : c,
+        ),
+      five,
+      picks,
+      setPicks: (patch: Partial<Omit<CoursePicks, 'day'>>) => {
+        const day = contentRef.current?.day_index ?? null;
+        setRawPicks(prev => ({...(prev.day === day ? prev : EMPTY_PICKS), ...patch, day}));
+      },
+      applySaved: (patch: {picked_slot?: number | null; picked_key?: PassOnKey | null}) =>
+        setContent(c =>
+          c
+            ? {
+                ...c,
+                ...(patch.picked_slot !== undefined && c.recall ? {recall: {...c.recall, picked_slot: patch.picked_slot}} : {}),
+                ...(patch.picked_key !== undefined && c.pass_on ? {pass_on: {...c.pass_on, picked_key: patch.picked_key}} : {}),
               }
             : c,
         ),
       setConsented: (v: boolean) => {
         if (contentRef.current) {
-          setContent(c => (c ? {...c, consented: v, answered_choice: v ? c.answered_choice : null} : c));
+          setContent(c => {
+            if (!c) {
+              return c;
+            }
+            const next = {...c, consented: v, answered_choice: v ? c.answered_choice : null};
+            // 5단계: 철회면 오늘 저장된 ②·⑤ 값도 비운다(서버가 지운다 — 고른 답과 같은 조건). 칸이 없으면(스위치 꺼짐·옛 서버) 건드리지 않는다
+            return !v && c.recall && c.pass_on
+              ? {...next, recall: {...c.recall, picked_slot: null}, pass_on: {...c.pass_on, picked_key: null}}
+              : next;
+          });
         } else {
           sync(); // 콘텐츠가 없으면(null·불러오는 중) 동의 상태를 서버에서 다시 받는다
         }
@@ -132,6 +168,7 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
       syncError,
       clear: () => {
         setContent(undefined);
+        setRawPicks(EMPTY_PICKS);
         localStamps().clear(); // 모두 지우기: 기기 도장 목록(날짜만)도 지운다(기다리지 않음)
         clearDevSessions(); // 개발자 메뉴가 보관한 역할별 세션도(staging·개발 빌드만, production 은 아무것도 안 함)
       },
@@ -140,11 +177,12 @@ export function AppRoot({api, role, restore = false}: {api: Api; role?: Role; re
         // 기기 도장을 지우는 것은 '모두 지우기'(clear)뿐
         clearDevSessions(); // 로그아웃·처음으로: 개발자 메뉴 보관 세션도 지운다
         setContent(undefined);
+        setRawPicks(EMPTY_PICKS);
         setStart('Connect');
         setWho(null);
       },
     }),
-    [api, content, syncError, sync, startToday],
+    [api, content, syncError, sync, startToday, picks, five],
   );
 
   // 스플래시 이어가기: 시작 대기(어느 경로든 첫 로딩)는 이 한 곳의 심볼 대기 화면만 보인다.

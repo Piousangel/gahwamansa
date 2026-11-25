@@ -5,7 +5,7 @@
 import type {PushKind} from '../api/contract/push';
 
 export type StepName = 'photo' | 'question' | 'hangul';
-export type ParentStepRoute = 'PhotoStep' | 'QuestionStep' | 'KeyboardStep';
+export type ParentStepRoute = 'PhotoStep' | 'QuestionStep' | 'KeyboardStep' | 'RecallStep' | 'PassOnStep'; // 뒤 둘: 5단계(기능 스위치 fiveSteps)
 
 // 코스 순서(CourseHome STEPS 와 같아야 한다 — pushOpen 테스트가 비교)
 export const COURSE_ORDER: {step: StepName; route: ParentStepRoute}[] = [
@@ -17,12 +17,16 @@ export const COURSE_ORDER: {step: StepName; route: ParentStepRoute}[] = [
 /** 어르신 기기에서 처리할 알림인가(아니면 무시) */
 export const isParentKind = (k: PushKind) => k === 'daily' || k === 'cheer_arrived';
 
-type ContentLike = {photo: unknown; question: unknown; completed_steps: StepName[]} | null;
+type ContentLike = {photo: unknown; question: unknown; completed_steps: readonly string[]} | null;
 
-/** 코스 홈 위에 쌓을 단계. null 이면 코스 홈에 머문다 */
-export function parentStepAfterOpen(kind: PushKind, content: ContentLike): ParentStepRoute | null {
+/** 코스 홈 위에 쌓을 단계. null 이면 코스 홈에 머문다. order: 5단계가 켜졌으면 그 순서(PushHost 가 넘긴다), 아니면 3단계 */
+export function parentStepAfterOpen(
+  kind: PushKind,
+  content: ContentLike,
+  order: readonly {step: string; route: ParentStepRoute}[] = COURSE_ORDER,
+): ParentStepRoute | null {
   if (kind !== 'daily' || !content || !content.photo || !content.question) {
     return null;
   }
-  return COURSE_ORDER.find(s => !content.completed_steps.includes(s.step))?.route ?? null;
+  return order.find(s => !content.completed_steps.includes(s.step))?.route ?? null;
 }
