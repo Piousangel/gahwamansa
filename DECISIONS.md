@@ -794,3 +794,7 @@
 - (#263 QA-2 재확인 L2) 1.6·1.7에서는 마운트를 R-15로 밀어, 첫 화면 아래쪽 약 40%가 비어 보인다(본문 아래 ~ '더 있음' 띠). 오너가 빈 화면으로 느끼면 재검토한다(예: 마운트 사진만 줄여 첫 화면에 넣기).
 - 남은 것: 마운트·家 인장은 O-8로 팻말 교체 예정이라, 그때 본문 먼저 배치를 다시 본다.
 - 증거: docs/team/qa/evidence/2026-11-25-p7-200, 시험 `p7BodyFirst200`.
+
+## 2026-11-25 개발 빌드 'Error: undefined'(S4) = 무해, 앱 수정 없음 (DV-1, stability/launch-checks)
+- 원인: RN Fast Refresh(HMRClient)가 Metro 웹소켓을 잃을 때 "Cannot connect to Metro … Error: ${e.message}" 를 console.warn 한다. RN WebSocket 은 실패 때 message 없는 `Event('error')` 를 보내서 마지막 줄이 `Error: undefined` 가 된다. release 번들에는 없는 개발 전용 코드다.
+- 선택: 고치지 않고 `LogBox.ignoreLogs` 로도 숨기지 않는다(Metro 끊김 신호가 사라짐). 시험 `devMetroDisconnectWarning` 이 RN·Metro 의 세 사실을 고정한다 — 올렸을 때 바뀌면 다시 판정. 근거 `docs/team/qa/evidence/2026-11-25-stability` 1절
