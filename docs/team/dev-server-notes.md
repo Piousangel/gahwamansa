@@ -154,13 +154,14 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ### register_push_token(p_token text, p_platform text default 'android') / unregister_push_token(p_token text)  (0032, SV-01)
 ```ts
 // 호출: sb.rpc('register_push_token', { p_token: fcmToken, p_platform: 'android' })
-type RegisterPushToken = { ok: true } | { ok: false; reason: 'invalid_token' | 'invalid_platform' | 'no_profile' };
+type RegisterPushToken = { ok: true; stored?: boolean } | { ok: false; reason: 'invalid_token' | 'invalid_platform' | 'no_profile' }; // stored: 0062부터
 // 호출: sb.rpc('unregister_push_token', { p_token: fcmToken })
 type UnregisterPushToken = { ok: true; removed: number };
 ```
 - 어르신·자녀 모두(가족에 연결된 사용자). 연결 전 기기는 `no_profile` → 앱은 연결 성공 뒤 다시 등록한다.
 - 언제 부르나: 알림 권한 허용 직후·앱 시작 시·FCM 토큰 갱신 시 등록(멱등). 로그아웃·알림 끄기 시 해제. 계정 지우기는 서버가 정리하므로 따로 안 불러도 된다.
 - 같은 토큰을 다른 계정이 등록하면 이전 계정의 행은 지워진다(한 기기 한 역할, 오배달 방지). **연결 전 계정이 등록해도(no_profile) 이전 계정 행은 지워진다**(0036). 토큰은 표 전체에서 유일. 사용자당 최근 5개, 270일 넘게 갱신 안 된 토큰은 파기 배치가 지운다.
+- **0062부터 받기 동의(알림 켬 + `push_consented_at`) 전에는 저장하지 않는다** → `{ok:true, stored:false}`(같은 토큰의 다른 계정 행 정리는 그대로 함). 동의 후 `{ok:true, stored:true}`. 앱은 `set_push_enabled(true)` 직후 다시 등록한다(pushClient `acceptParentPrompt`·`childOptIn`·`setReceive`, `FamilyPushRow`, 다른 기기는 PushHost 앞으로 올 때 sync).
 - 로그아웃 순서: `unregister_push_token` → 그다음 `signOut`(로그아웃 뒤에는 auth.uid가 없어 해제가 실패한다).
 - `device_tokens`는 앱이 직접 쓸 수 없다(읽기는 본인 것만). 기존에 직접 insert하던 코드가 있으면 이 RPC로 바꿔야 한다.
 
@@ -169,7 +170,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 // sb.rpc('set_push_enabled', { p_enabled: true|false }) → { ok: true; enabled: boolean } | { ok: false; reason: 'no_profile' | 'invalid' }
 // sb.rpc('my_push_settings') → { enabled: boolean | null }   // = 실제로 받는 상태(켬 + 받기 시각), 연결 전 기기는 null
 ```
-- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). **0056부터 일일 알림은 답 공유 동의(`consented_at`, P2)를 보지 않는다** — 알림 받기 동의(`push_consented_at`)와 답 공유 동의는 별개라(DECISIONS 11-19), 답을 가족에게 보여 주지 않기로 한 어르신도 알림을 켜면 "오늘의 사진" 알림을 받는다. #10 ④(N1 동의 시각 저장·그 시각이 있는 사람에게만)와 그대로 맞는다: 대상 조건은 알림 켬 + `push_consented_at` + 연결·토큰·심사 아님·08~20시. 자녀에게 가는 알림은 그대로 — 첫 답(0052)은 어르신이 답을 보여 주는 중일 때만, 답 공유 미동의 어르신은 답 저장 자체가 막힌다(`consent_required`). `false`면 시각이 지워진다. `null`은 `invalid`. 0037부터 이미 받기 시각이 있으면 `true`를 다시 불러도 **처음 시각을 유지**(끄고 다시 켜면 새 시각) — 그래도 앱은 N1에서 사용자가 눌렀을 때만 부르는 것을 원칙으로 한다.
+- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). **0056부터 일일 알림은 답 공유 동의(`consented_at`, P2)를 보지 않는다** — 알림 받기 동의(`push_consented_at`)와 답 공유 동의는 별개라(DECISIONS 11-19), 답을 가족에게 보여 주지 않기로 한 어르신도 알림을 켜면 "오늘의 사진" 알림을 받는다. #10 ④(N1 동의 시각 저장·그 시각이 있는 사람에게만)와 그대로 맞는다: 대상 조건은 알림 켬 + `push_consented_at` + 연결·토큰·심사 아님·08~20시. 자녀에게 가는 알림은 그대로 — 첫 답(0052)은 어르신이 답을 보여 주는 중일 때만, 답 공유 미동의 어르신은 답 저장 자체가 막힌다(`consent_required`). `false`면 시각이 지워지고 **0062부터 이 계정의 토큰 행도 모두 지워진다**(다시 켜면 앱이 재등록). `null`은 `invalid`. 0037부터 이미 받기 시각이 있으면 `true`를 다시 불러도 **처음 시각을 유지**(끄고 다시 켜면 새 시각) — 그래도 앱은 N1에서 사용자가 눌렀을 때만 부르는 것을 원칙으로 한다.
 - 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다.
 - 시스템 알림 권한과는 별개다(권한 거부면 애초에 토큰이 없음). 토큰 해제(`unregister_push_token`)는 로그아웃용.
 
@@ -343,6 +344,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 콘솔 경고 2건(익명 로그인 허용·유출 비밀번호 보호)은 DB가 아니라 Auth 설정이라 `docs/team/RELEASE.md` §9 사용자 체크리스트에 적었다.
 
 ## 8. 재생 검증·원격 확인 (SV-09)
+- **푸시 토큰 잠금 경합 재현**(0062, #264): `supabase/ops/push-lock-race.sh` — 자체 임시 스택(project `bumo-race-<pid>`, 557xx)을 띄워 두 연결을 실제로 겹친다. R1·R2(등록 ↔ 철회: 철회한 계정 토큰 행 0), D1~D3(삭제 코어 ↔ 등록·철회, 가족 전체 삭제 ↔ 등록: 교착 없음). 시험용 멈춤 트리거를 설치하므로 **임시 스택 전용**(공유 54322·staging 금지), CI에는 안 넣음(약 2분). `PATCH_SQL=파일`로 다른 정의를 얹어 실패하는지 볼 수 있다(예: register 잠금을 동의 확인 뒤로 옮기면 R2 FAIL, 0058 삭제 순서면 D1~D3 교착 FAIL). 규칙: **profiles와 device_tokens를 함께 잠그는 함수는 profiles를 먼저(여러 행이면 user_id 순서)**. device_tokens만 쓰는 경로(unregister·push_record 무효 토큰·파기 배치·user_delete_core)는 순서 문제 없음.
 - **로컬 순차 재생**: `supabase/ops/replay-check.sh` — 공유 DB(54322)를 건드리지 않고 별도 임시 스택(project_id `bumo-jasik-replay-<pid>` 실행마다 고유, db 55322 — 포트가 같아 동시에 두 개는 못 돌림)에서 `db reset`(0001→끝 + 시드) → `test db` → 스택 삭제. 로그는 저장소 밖 `${TMPDIR}/bumo-replay-check.log`. 11-18 결과: 마이그레이션 31개 재생 + pgTAP 29파일 **446/446 PASS**(리뷰 M3 해소).
 - **원격 확인(staging, 리드·사용자 실행 — SQL Editor)**:
   ```sql
@@ -480,6 +482,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0058 | 계정 삭제 때 프로필 없이 쌓인 이용 기록(device_key)도 삭제 | 브랜치 server-delete-events-by-device(0057 위) | 미반영 |
 | 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | PR #244 | 미반영(언제 반영해도 무해 — 관문은 ③ 자녀 새 시트, DECISIONS 11-25) |
 | 0061 | 오늘 코스 5단계: 완료 판정(옛 3단계·5단계·여기까지·넘어감), ② 떠올린 것·⑤ 건넨 말(스위치 기본 꺼짐) 저장·파기 연쇄, 자녀 recalls·pass_ons | PR(server/five-steps) | 미반영(서버 먼저 무해 — 새 앱보다 먼저) |
+| 0062 | 받기 동의 전 푸시 토큰 저장 안 함·철회 시 토큰 삭제·일회 정리, 잠금 순서 profiles → device_tokens 통일(register·set_push_enabled·account_delete_core) | PR #264 | 미반영(오너 승인 — 반영 전 지울 행 수 세기, 0050~0061과 함께 db push) |
 - **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
