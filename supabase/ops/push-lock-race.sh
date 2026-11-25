@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # 푸시 토큰 잠금 순서 경합 재현(#264 리뷰 QA-3 M1·QA-1 2차 M1). 두 연결을 실제로 겹쳐 돌려 "철회한 계정에 토큰 행이 남지 않는다"와
 # "교착(deadlock detected) 없이 줄을 선다"를 확인한다. 잠금 순서 규칙: families → profiles → device_tokens·invite_codes(0062~0064, dev-server-notes 표).
-#   사용: supabase/ops/push-lock-race.sh                     → 임시 스택(project bumo-race-$$, 557xx)을 띄워 확인하고 지운다
+#   사용: supabase/ops/push-lock-race.sh                     → 임시 스택(project bumo-race-$$, 기본 557xx, 차 있으면 550~599 중 빈 대역)을 띄워 확인하고 지운다
 #         PATCH_SQL=파일 supabase/ops/push-lock-race.sh       → db reset 뒤 그 SQL을 적용하고 확인(예: 잠금을 빼거나 옮긴 정의로 실패하는지)
+#         PORT_BASE=561 supabase/ops/push-lock-race.sh        → 포트 대역을 직접 정함(561xx). 대역 고르기·판정 공용 함수는 temp-stack-lib.sh
 # 전제: Docker. 공유 로컬 DB(54322)·staging·원격에는 절대 쓰지 않는다(임시 스택 전용 — 시험용 트리거를 설치한다). CI에는 넣지 않음(약 2분).
 # 판정: 시나리오마다 PASS/FAIL(두 연결 모두 결과 줄이 있고 기대하지 않은 ERROR·교착 없음·남은 행 0), 하나라도 FAIL이면 종료 코드 1.
 #   R1 등록(커밋 전) ↔ 철회   R2 철회(커밋 전) ↔ 등록         → 철회한 계정 토큰 행 0
@@ -15,6 +16,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+. "$ROOT/supabase/ops/temp-stack-lib.sh"
 WORK="$(mktemp -d)"
 PROJECT="bumo-race-$$"
 C="supabase_db_$PROJECT"
@@ -28,13 +30,11 @@ trap cleanup EXIT
 mkdir -p "$WORK/supabase"
 cp -R "$ROOT/supabase/migrations" "$ROOT/supabase/templates" "$WORK/supabase/"
 cp "$ROOT"/supabase/*.sql "$WORK/supabase/" 2>/dev/null || true
-sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)/= 557\1/' \
-  "$ROOT/supabase/config.toml" >"$WORK/supabase/config.toml"
 
 echo "== 임시 스택 시작($PROJECT)"
-npx --yes supabase start --workdir "$WORK" \
-  -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1 \
-  || { echo "== 시작 실패"; tail -5 "$WORK/start.log" | grep -v -i -E "eyJ|sb_(secret|publishable)_|secret|key"; exit 1; }
+temp_stack_start "$ROOT" "$WORK" "$PROJECT" 557 \
+  || { echo "== 시작 실패"; tail -5 "$WORK/start.log" 2>/dev/null | grep -v -i -E "eyJ|sb_(secret|publishable)_|secret|key"; exit 1; }
+echo "== 포트 대역 ${TEMP_STACK_BASE}xx"
 npx --yes supabase db reset --workdir "$WORK" >"$WORK/reset.log" 2>&1 || { echo "== db reset 실패"; tail -15 "$WORK/reset.log"; exit 1; }
 
 P() { docker exec -i "$C" psql -U postgres -X -q -At -v ON_ERROR_STOP=1 "$@"; }
@@ -115,25 +115,15 @@ as_user() { echo "select set_config('request.jwt.claims', '{\"sub\":\"$1\",\"rol
 rows_of() { P -c "select count(*) from public.device_tokens where user_id::text = any (string_to_array('$1', ','))"; }
 
 FAILS=0
-# 판정(#264 QA-1 L-b, #271 QA-1 L-c): 교착이 없고, 두 연결 모두 결과 줄({"ok"…}·{"scope"…})이 있으며 ERROR가 없어야 PASS.
-#   기대 오류(시나리오별 정규식, 없으면 -)와 맞는 ERROR는 그 연결의 정상 결과로 친다(예: 상대가 먼저 지워 생기는 오류를 의도로 볼 때).
-#   그 다음 남은 토큰 행 수(행을 셀 user_id 목록, 비우면 0)를 본다.
+# 판정(#264 QA-1 L-b, #271 QA-1 L-c): temp-stack-lib.sh judge_outputs — 교착이 없고, 두 연결 모두 결과 줄({"ok"…}·{"scope"…})이
+#   있거나 그 연결의 ERROR가 기대 오류(시나리오별 정규식, 없으면 -)와 맞아야 한다(예: 상대가 먼저 지워 생기는 오류를 의도로 볼 때).
+#   기대 오류 분기는 temp-stack-lib.test.mjs가 가짜 출력 파일로 확인한다(#275 QA-1 L-b). 그 다음 남은 토큰 행 수(행을 셀 user_id 목록, 비우면 0)를 본다.
 judge() { # 이름, 행을 셀 user_id 목록(쉼표), 기대 오류 정규식(-), 출력파일들...
-  local name=$1 users=$2 expect=$3; shift 3
-  local n f err; n=$(rows_of "$users")
-  if cat "$@" | grep -q "deadlock detected"; then
-    echo "FAIL $name: 교착(deadlock detected)"; FAILS=$((FAILS + 1)); return
+  local name=$1 users=$2 expect=$3 n why; shift 3
+  n=$(rows_of "$users")
+  if ! why=$(judge_outputs "$expect" '^\{"(ok|scope)' "$@"); then
+    echo "FAIL $name: $why"; FAILS=$((FAILS + 1)); return
   fi
-  for f in "$@"; do
-    err=$(grep -m1 "ERROR" "$f" || true)
-    if [ -n "$err" ]; then
-      if [ "$expect" = "-" ] || ! printf '%s' "$err" | grep -qE "$expect"; then
-        echo "FAIL $name: $(basename "$f") 쪽 기대하지 않은 오류 — $err"; FAILS=$((FAILS + 1)); return
-      fi
-    elif ! grep -qE '^\{"(ok|scope)' "$f"; then
-      echo "FAIL $name: $(basename "$f") 쪽 결과 줄 없음"; FAILS=$((FAILS + 1)); return
-    fi
-  done
   if [ "$n" != "0" ]; then
     echo "FAIL $name: 철회·삭제된 계정에 토큰 행 ${n}개가 남음"; FAILS=$((FAILS + 1))
   else
