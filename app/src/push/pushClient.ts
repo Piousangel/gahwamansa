@@ -197,6 +197,16 @@ export async function skipParentPromptToday({api, store}: PushDeps, today: strin
   }
 }
 
+/**
+ * 자녀 시작 단계 한 장(child-notify, 알림 권한 앞당김): 어르신 N1 과 같은 판정·같은 저장 키(push_prompt_v1·push_prompt_skip_day_v1).
+ * 이미 답함('no'·C7 토글의 'yes'·'off')·오늘 넘김·받는 중(켜기 성공 = 서버 true)·프로필 없음이면 묻지 않는다.
+ */
+export const childPromptState = (deps: PushDeps) => parentPromptState(deps);
+/** 자녀 한 장 '안 받을게요' = 다시 묻지 않음(켜기는 C3 줄·C7 토글) */
+export const declineChildPrompt = (deps: PushDeps) => declineParentPrompt(deps);
+/** 자녀 한 장을 답 없이 닫음(뒤로) = 오늘은 넘김 */
+export const skipChildPromptToday = (deps: PushDeps) => skipParentPromptToday(deps);
+
 /** N1 '안 받을게요': 서버 호출 없음(받기 시각이 없으면 보내지 않음). 다시 묻지 않는다 — 켜기는 P13 설정에서 */
 export async function declineParentPrompt({api, store}: PushDeps): Promise<void> {
   const tag = await tagOf(api);

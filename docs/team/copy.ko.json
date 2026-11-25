@@ -227,6 +227,14 @@
       "after_share": "번호를 보냈다면 다시 보내지 않아도 돼요",
       "new_code_note": "새 번호를 만들면 보낸 번호는 쓸 수 없어요"
     },
+    "notify_prompt": {
+      "_src": "알림 권한 앞당김(기획 v2.1 0.4·성장 리뷰 2.3, push/permission-at-start): 자녀 시작 단계 '우리 말 한 장 → 시스템 창'. 부모님 쪽 N1(push.permission)의 자녀판. 버튼은 child.wait.notify_button('알림 켜기')·push.permission.no('안 받을게요'), 미리 알림은 push.permission.system_hint 재사용",
+      "_status": "라이터 확인 전. 사실 근거: 자녀에게 가는 알림은 연결(parent_connected·reconnected)과 연결 뒤 첫 답 1회(0052, 보여 주실 때만)뿐 — 매일 알림 없음. 자녀 화면 말투(높임 없음, 부모님께는 '께서')",
+      "title_wait": "{호칭} 폰과 연결되면 알려 드릴까요?",
+      "title_done": "{호칭}께서 첫 답을 보여 주시면 알려 드릴까요?",
+      "body": "연결될 때와 첫 답이 보일 때만 알려 드려요",
+      "optional": "안 받아도 앱은 그대로 쓸 수 있어요"
+    },
     "past": {
       "_src": "copy-v3 6·10절 C5, 시안 C5_history v4",
       "title": "{호칭}의 지난 날",

@@ -2,7 +2,7 @@
 // 자녀는 C3·연결 직후 화면에서 아직 받기 동의(알림 켜기)를 안 했으면 OS 권한이 이미 허용이어도 [알림 켜기]를 보인다.
 // 재촉 금지: '안 받을게요'면 다시 묻지 않고, 뒤로(오늘은 넘김)면 다음 날 P7 뒤에만 다시.
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {copy} from '../src/copy/copy';
@@ -158,8 +158,9 @@ describe('자녀: 받기 동의 전이면 OS 권한과 상관없이 [알림 켜�
     await waitFor(() => screen.getByTestId('done-notify'));
     expect(en).not.toHaveBeenCalled(); // #284 QA-3 L2: 누르기 전에는 0회
     expect(screen.getByText('알림을 켜면 첫 답이 보일 때 알려 드려요', {normalizer: wj})).toBeTruthy();
+    // 연결 직후 한 장(child-notify, push/permission-at-start)도 함께 뜬다 — 여기서는 화면 줄의 [알림 켜기]를 누른다
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', {name: copy.child.wait.notify_button}));
+      fireEvent.press(within(screen.getByTestId('done-notify')).getByRole('button', {name: copy.child.wait.notify_button}));
     });
     await waitFor(() => expect(en).toHaveBeenCalledWith(true));
     await waitFor(() => expect(screen.queryByTestId('done-notify')).toBeNull());
