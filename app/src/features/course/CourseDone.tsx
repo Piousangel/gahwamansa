@@ -48,7 +48,7 @@ const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0
 // - 건너뛰기 안내·화면 누르기 건너뛰기 없음(UX 깊이 V20 — 연출이 1초 안에 끝난다).
 // - 미연결도 같은 연출(도장은 기기에 찍힘, 11-7 #19). 칭찬·연속·하트·숫자 없음.
 export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'CourseDone'>) {
-  const {api, content, five} = useSession();
+  const {api, content} = useSession();
   const linked = !!content?.linked;
   const fetched = useWeekStamps(api, content ? content.linked : undefined, 'done');
   // 이번 주 도장 응답이 1.5초 안에 오지 않으면 도장 줄 없이 진행(둘째 줄이 투명으로 고착되지 않게, 리뷰 후속)
@@ -221,9 +221,8 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 미연결(11-7 #19): 도장은 기기에 찍히고, 가족에게는 번호를 받은 뒤부터 보인다는 것을 말한다
   // 연결(UX U5 승인, 라이터 11-9): '내일 새 사진이 와요'. 시안 보드의 '내일 또 만나요'는 U5 이전 문구라 승인 결정을 따른다.
   // TODO(푸시 0032~): 알림 상태·시각이 생기면 next_photo_time 으로
-  // 5단계(기능 스위치): ⑤에서 건넨 날만 본문 첫 줄 「가족에게 건넸어요」(저장된 날 = 가족에게 실제로 보이는 날). 넘긴 날·'여기까지'로 마친 날은
-  // 이 줄도 대신하는 줄도 없다 — 몇 단계 했는지 말하지 않는다(DECISIONS 5단계 화면·문구 #8)
-  const passedOn = five && linked && !!content?.pass_on?.picked_key;
+  // 4단계(기획 v2.1 Q7, 11-26): ⑤ '이야기 건네기'를 뺐다 → 「가족에게 건넸어요」 줄은 그리지 않는다(어르신 → 가족 전달 없음).
+  // 몇 단계 했는지도 말하지 않는다(DECISIONS 5단계 화면·문구 #8)
   const body =
     week === undefined
       ? null
@@ -231,16 +230,7 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
         ? d.unlinked_body.replace('. ', '.\n')
         : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
   const strip = showWeekStrip() && days ? <WeekStampStrip key="week" testID="p7-week" days={days} /> : null;
-  // 「가족에게 건넸어요」는 본문과 따로 접힘 단위(#254 캡처 문제 3): 한 덩어리 3줄이면 R-15 가 통째로 밀어 첫 화면에 제목만 남았다.
-  // 이 줄이 그날의 새 소식이라 제목 바로 아래(도장 줄보다 위)에 두고, 늘 같은 둘째 줄(도장·내일 사진)만 접힘 아래로 밀릴 수 있게 한다.
-  // 3단계·넘긴 날·'여기까지'로 마친 날은 이 요소가 없어 묶음이 예전과 같다.
-  // 요소는 처음부터 두고 글만 본문과 함께 채운다(useFoldGap 은 첫 요소 수로 잰다 — 나중에 끼우면 뒤 요소를 판정하지 않는다)
-  const passed = passedOn ? (
-    <Animated.View key="passed" testID="p7-passed" style={{opacity: v.text}} accessibilityLiveRegion="polite">
-      {body ? <Text role="bodyLg" style={styles.center}>{d.passed_on}</Text> : null}
-    </Animated.View>
-  ) : null;
-  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → (건넨 줄) → 도장 줄 → 둘째 줄. 첫 요소(from 1)는 밀지 않는다.
+  // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → 도장 줄 → 둘째 줄. 첫 요소(from 1)는 밀지 않는다.
   // 글자 1.6배 이상이면 제목 → 본문 → 마운트로 순서만 바꾼다(대기열 33, FS 200% '숨기지 말고 순서만' 선례): 마운트가 274(캡션 3줄 114)라
   // 320·360×640 에서 제목 뒤 남는 칸이 30뿐이고 본문(120~160)이 통째로 접힘 아래로 갔다. 캡션을 두 줄로 줄여도 38만 늘어 본문이 들지 않는다.
   // 이때 마운트는 R-15 대로 통째로 접힘 아래로 간다(스크롤하면 사진·도장·AI 고지가 함께 보인다)
@@ -259,7 +249,6 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
       accessibilityLabel={d.title}>
       <Text role="title" style={styles.center}>{d.title}</Text>
     </View>,
-    ...(passed ? [passed] : []),
     ...(strip ? [strip] : []),
     <Animated.View key="text" testID="p7-text" style={{opacity: v.text}} accessibilityLiveRegion="polite">
       {body ? <Text role="bodyLg" style={styles.center}>{body}</Text> : null}

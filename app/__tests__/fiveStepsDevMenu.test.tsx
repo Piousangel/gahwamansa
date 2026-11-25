@@ -47,7 +47,7 @@ function OpenMenu() {
   );
 }
 
-test('개발자 메뉴 "오늘 코스 5단계 켜기" → 스위치 켜짐 + 앱을 처음부터 → 코스 홈 5행, 다시 누르면 3행', async () => {
+test('개발자 메뉴 "오늘 코스 4단계 켜기" → 스위치 켜짐 + 앱을 처음부터 → 코스 홈 4행(⑤ 없음), 다시 누르면 3행', async () => {
   const api = createFakeApi({linked: true, consented: true});
   render(
     <DevMenuHost api={api}>
@@ -65,23 +65,24 @@ test('개발자 메뉴 "오늘 코스 5단계 켜기" → 스위치 켜짐 + 앱
     fireEvent.press(screen.getByRole('button', {name: '메뉴 열기'}));
   });
   await act(async () => {
-    fireEvent.press(screen.getByRole('button', {name: '오늘 코스 5단계 켜기(기능 스위치)'}));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스 4단계 켜기(기능 스위치)'}));
   });
   expect(isFeatureOn('fiveSteps')).toBe(true);
   await waitFor(() => screen.getByTestId('step-wait-recall'));
-  expect(screen.getByTestId('step-wait-pass_on')).toBeTruthy();
+  expect(screen.getByTestId('step-wait-hangul')).toBeTruthy();
+  expect(screen.queryByTestId('step-wait-pass_on')).toBeNull(); // 기획 v2.1 Q7: ⑤ 행 없음
   await act(async () => {
     fireEvent.press(screen.getByRole('button', {name: '메뉴 열기'}));
   });
   await act(async () => {
-    fireEvent.press(screen.getByRole('button', {name: '오늘 코스 5단계 끄기(3단계로)'}));
+    fireEvent.press(screen.getByRole('button', {name: '오늘 코스 4단계 끄기(3단계로)'}));
   });
   expect(isFeatureOn('fiveSteps')).toBe(false);
   await waitFor(() => screen.getByTestId('step-wait-hangul'));
   expect(screen.queryByTestId('step-wait-recall')).toBeNull();
 });
 
-test('QA-1 L3: 메뉴가 남긴 "켜짐"은 앱을 그리기 전에 읽는다 — 처음 그린 코스 홈부터 5행, 3단계로 먼저 그리지 않는다', async () => {
+test('QA-1 L3: 메뉴가 남긴 "켜짐"은 앱을 그리기 전에 읽는다 — 처음 그린 코스 홈부터 4행, 3단계로 먼저 그리지 않는다', async () => {
   await mockShared.setItem(DEV_FEATURE_KEY, 'on');
   const api = createFakeApi({linked: true, consented: true});
   const mounts: boolean[] = [];

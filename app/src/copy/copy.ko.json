@@ -457,8 +457,6 @@
     "stop_here": "오늘은 여기까지 할게요",
     "review_recall": "먼저 떠올리신 것",
     "review_recall_a11y": "먼저 떠올리신 것, {값}",
-    "review_pass_on": "건넨 말",
-    "review_pass_on_a11y": "건넨 말, {문장}",
     "_status_five": "5단계(기능 스위치 fiveSteps, 기본 꺼짐) — 라이터 확정 docs/team/copy/2026-11-25-five-steps-copy.md 1절(#252). step.recall·step.pass_on 이름은 '관찰 테스트 뒤 확정' 상태 그대로. review_*_a11y 는 오늘 한 장 읽기(보이는 글 그대로 쉼표로 잇기)"
   },
   "recall": {
@@ -480,7 +478,7 @@
     "ask_which_sub": "{보기 A} · {보기 B}",
     "need_choice": "한 줄을 고르면 눌려요. 넘어가려면 '오늘은 넘어갈게요'를 눌러 주세요",
     "_status_need_choice": "대기열 34(DS-1 11-25): ⑤ 꺼진 [건넬게요]의 화면 읽기 힌트만(보이는 글 아님). 넘어가기를 ②처럼 카드 아래 본문으로 옮겨 첫 화면 밖이 되므로 그 길을 알린다(recall.need_choice 꼴). 옛 힌트는 question.need_choice(「한쪽을」 — 카드 3장과 어긋남). 라이터 확정 11-25(#277): 제안 그대로. '한 줄'은 이 화면 제목 「가족에게 건넬 한 줄을 골라요」와 같은 말이라 카드를 가리키기에 자연스럽다('건넬 말'은 제목과 어긋나고 '하나'는 무엇인지 흐림). recall·question 힌트와 같은 꼴",
-    "_status": "⑤ 이야기 건네기 — 라이터 확정(five-steps-copy 1절 #3·#4, 4.2절 틀 문장 5개). 키 이름 = api/contract/fiveSteps.ts PASS_ON_KEYS(서버 레인이 정하면 맞춤). 보조 버튼은 keyboard.skip"
+    "_status": "기획 v2.1 Q7(11-26)로 화면에서 쓰지 않음(4단계, PassOnStep 등록 안 함) — 대체 콘텐츠가 정해지면 정리. 옛 메모: ⑤ 이야기 건네기 — 라이터 확정(five-steps-copy 1절 #3·#4, 4.2절 틀 문장 5개). 키 이름 = api/contract/fiveSteps.ts PASS_ON_KEYS(서버 레인이 정하면 맞춤). 보조 버튼은 keyboard.skip"
   },
   "keyboard": {
     "_status": "copy-v3-confirmed 10절·11절(11-2 16번 card_a11y) 확정. 단계 제목 읽기는 course.step_a11y",
@@ -522,8 +520,7 @@
     "skip_hint": "화면을 누르면 바로 넘어가요",
     "stamped": "도장을 찍었어요",
     "next_photo": "내일 새 사진이 와요",
-    "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요",
-    "passed_on": "가족에게 건넸어요"
+    "next_photo_time": "내일 {시각}에 새 사진을 알려 드려요"
   },
   "question": {
     "headline": "요즘 마음 가는 쪽을 골라요",

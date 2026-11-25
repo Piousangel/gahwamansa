@@ -13,13 +13,16 @@ export type StepEntry = {readonly step: StepName; readonly route: StepRoute};
 
 /** 옛 3단계(서버 완료 판정 R-3 '옛 3단계 모두 포함'의 기준이기도 하다) */
 export const LEGACY_STEPS: readonly LegacyStepName[] = ['photo', 'question', 'hangul'];
-/** 5단계 순서: 보기 → 떠올리기 → 고르기 → 쓰기 → 건네기(R-1 안 A) */
+/**
+ * 스위치 경로 순서(이름은 옛 '5단계' 그대로): 보기 → 떠올리기 → 고르기 → 쓰기. 기획 v2.1 Q7(오너 확정 11-26)로 ⑤ '이야기 건네기'를 뺀 4단계.
+ * 서버(0061)는 course_len 3|5 만 받아 5단계 세션 완료에 pass_on 기록이 필요하다 → 앱이 ④까지 마치면 pass_on 을 넘어감으로 대신 기록한다
+ * (useFinishStep.completeServerCourse, 0061 계약 규칙 '⑤ 스위치가 꺼진 날도 p_skipped:true 로 기록'과 같은 길). 화면·단계 수에는 ⑤가 없다.
+ */
 export const FIVE_STEP_ORDER: readonly StepEntry[] = [
   {step: 'photo', route: 'PhotoStep'} as const,
   {step: 'recall', route: 'RecallStep'} as const,
   {step: 'question', route: 'QuestionStep'} as const,
   {step: 'hangul', route: 'KeyboardStep'} as const,
-  {step: 'pass_on', route: 'PassOnStep'} as const,
 ];
 const FIVE_NAMES: readonly StepName[] = FIVE_STEP_ORDER.map(s => s.step);
 
