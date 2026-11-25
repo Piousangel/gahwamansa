@@ -82,19 +82,21 @@ test('fake 콘텐츠의 ② 보기 = 라이터 CSV(날·사진 이름·보기1~3
 });
 
 describe('단계 순서', () => {
-  test('꺼짐 3단계 / 켜짐 5단계(보기 → 떠올리기 → 고르기 → 쓰기 → 건네기)', () => {
+  test('꺼짐 3단계 / 켜짐 4단계(보기 → 떠올리기 → 고르기 → 쓰기, 기획 v2.1 Q7 로 ⑤ 건네기 뺌)', () => {
     expect(courseStepNames(false)).toEqual(['photo', 'question', 'hangul']);
-    expect(courseStepNames(true)).toEqual(['photo', 'recall', 'question', 'hangul', 'pass_on']);
+    expect(courseStepNames(true)).toEqual(['photo', 'recall', 'question', 'hangul']);
+    expect(FIVE_STEP_ORDER.map(s => s.route)).not.toContain('PassOnStep');
     expect([1, 2, 3].map(i => courseStepNames(false)[i - 1]).map(s => stepNumber(s, false))).toEqual([1, 2, 3]);
     expect(stepNumber('question', true)).toBe(3);
     expect(stepNumber('hangul', true)).toBe(4);
     expect(allStepsDone(['photo', 'question', 'hangul'], false)).toBe(true);
     expect(allStepsDone(['photo', 'question', 'hangul'], true)).toBe(false);
+    expect(allStepsDone(['photo', 'recall', 'question', 'hangul'], true)).toBe(true); // ⑤ 없이 다 마침
   });
-  test('알림 열기: 5단계 순서를 넘기면 ②·⑤로도 간다(꺼짐 기본은 3단계)', () => {
+  test('알림 열기: 켜짐 순서를 넘기면 ②로도 가고, ④까지 마쳤으면 단계 화면으로 가지 않는다(⑤ 없음, 꺼짐 기본은 3단계)', () => {
     const c = (done: string[]) => ({photo: {}, question: {}, completed_steps: done});
     expect(parentStepAfterOpen('daily', c(['photo']), FIVE_STEP_ORDER)).toBe('RecallStep');
-    expect(parentStepAfterOpen('daily', c(['photo', 'recall', 'question', 'hangul']), FIVE_STEP_ORDER)).toBe('PassOnStep');
+    expect(parentStepAfterOpen('daily', c(['photo', 'recall', 'question', 'hangul']), FIVE_STEP_ORDER)).toBeNull();
     expect(parentStepAfterOpen('daily', c(['photo']))).toBe('QuestionStep');
     expect(COURSE_ORDER.map(s => s.step)).toEqual(['photo', 'question', 'hangul']);
   });
@@ -163,9 +165,9 @@ test('문구: 라이터 확정 값 그대로(five-steps-copy 1절·4.2절)', () 
   expect(copy.keyboard.skip).toBe('오늘은 넘어갈게요'); // ②③⑤ 보조 버튼도 이 키(#2 통일)
   expect(copy.keyboard.guide_recall).toBe('떠올리신 낱말을 아래 칸에 써요');
   expect(copy.course.stop_here).toBe('오늘은 여기까지 할게요');
-  expect(copy.done.passed_on).toBe('가족에게 건넸어요');
+  expect((copy.done as Record<string, string>).passed_on).toBeUndefined(); // 기획 v2.1 Q7: P7 「가족에게 건넸어요」 줄 없음
   expect(copy.course.review_recall).toBe('먼저 떠올리신 것');
-  expect(copy.course.review_pass_on).toBe('건넨 말');
+  expect((copy.course as Record<string, unknown>).review_pass_on).toBeUndefined(); // 오늘 한 장 '건넨 말' 없음
   expect([copy.pass_on.recall_story, copy.pass_on.photo_memory, copy.pass_on.choice_like, copy.pass_on.photo_like, copy.pass_on.ask_which]).toEqual([
     '{떠올린 것} 얘기할게요',
     '사진 보니 옛 생각 나요',

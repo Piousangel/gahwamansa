@@ -27,7 +27,7 @@ import {stepA11y} from './StepHeader';
 import {useStopHere} from './useFinishStep';
 
 const c = copy.course;
-// 3단계(기본). 기능 스위치 fiveSteps 가 켜지면 fiveSteps.FIVE_STEP_ORDER(5행)
+// 3단계(기본). 기능 스위치 fiveSteps 가 켜지면 fiveSteps.FIVE_STEP_ORDER(4행 — 기획 v2.1 Q7 로 ⑤ 뺌)
 const STEPS: StepEntry[] = [
   {step: 'photo', route: 'PhotoStep'},
   {step: 'question', route: 'QuestionStep'},
@@ -43,7 +43,7 @@ const STEPS: StepEntry[] = [
 // - Dock: 지금 단계 이름(주). 다 마치면 보조 '오늘 코스 다시 보기' → '오늘 한 장'(TodayReviewScreen, D-3).
 export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'CourseHome'>) {
   const {api, done, content, consented, syncError, sync, five} = useSession();
-  // 5단계(기능 스위치, 기본 꺼짐): 5행 · A′(다음 행은 이름만) · ③ 뒤 '오늘은 여기까지' · 다 마치면 제목 옆 도장 1개 · 열릴 때 지금 행으로 스크롤.
+  // 5단계 스위치 경로(기본 꺼짐, 기획 v2.1 Q7 로 4행): 4행 · A′(다음 행은 이름만) · ③ 뒤 '오늘은 여기까지' · 다 마치면 제목 옆 도장 1개 · 열릴 때 지금 행으로 스크롤.
   // 꺼져 있으면 아래 five 분기는 모두 지나가고 3단계 화면 그대로다
   const steps = five ? FIVE_STEP_ORDER : STEPS;
   const {stop, error: stopError, busy: stopping} = useStopHere();
@@ -172,10 +172,9 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       navigation.navigate('CourseDone'); // P7: 몇 단계 했는지 말하지 않는다
     }
   };
-  // 다 마친 뒤 넘긴 ④·⑤는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로). 넘긴 목록은 서버 skipped_steps(앱을 다시 켜도 남는다)
-  // 앱이 스스로 넘긴 단계(⑤ 서버 스위치 꺼짐 — 할 수도 없다)는 열지 않는다(리드 결정 #254 QA-1 L3: 행은 '했어요'로 두고 누르면 보기 전용). ②는 원래 다시 하기 대상이 아니다
-  const reopen = (step: StepName) =>
-    five && all && (step === 'hangul' || (step === 'pass_on' && !!content.pass_on?.enabled)) && skippedOf(content).includes(step);
+  // 다 마친 뒤 넘긴 ④는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로). 넘긴 목록은 서버 skipped_steps(앱을 다시 켜도 남는다)
+  // ⑤는 4단계(기획 v2.1 Q7)로 행이 없다. ②는 원래 다시 하기 대상이 아니다
+  const reopen = (step: StepName) => five && all && step === 'hangul' && skippedOf(content).includes(step);
   const dock: DockProps | undefined = current
     ? {
         primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')},

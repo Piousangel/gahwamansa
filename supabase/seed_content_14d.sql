@@ -16,6 +16,11 @@
 --     ② 보기 적재 뒤라면 사진 삭제가 보기 → 고른 ②(recall_picks) → ⑤ recall_story까지 cascade로 지운다 → A는 ② 적재 전에.
 --   길 B(새 day_index 끝에 추가 + 옛 날 retired_at): 손실 없음. 다만 ② 보기 적재 SQL·CSV가 날 1~30 고정이라 31일 이후 날의 ② 보기 확장 작업이 따로 필요.
 --   권장: staging 테스트 가족 데이터(8·14일 답·해당 날 세션)가 거의 없으면 A, ② 적재 전에.
+-- 2026-11-26(기획 v2.1 콘텐츠 갈래, 설계서 docs/team/2026-11-26-content-axes.md — #283 설계·#285 라이터 확정): production 게시 전이라 이 파일에서 직접 고쳤다.
+--   ③ 8·9·13일 보기·질문 교체(행동으로 이어지는 짝으로), 14일분 '챙겨 드릴 거리' care_a·care_b(0065) 추가. 글자는 설계서 2·3절 그대로
+--   — supabase/ops/content-care-seed.test.mjs 가 대조한다. staging은 #261 재시드와 한 번에(길 A, 오너 승인 — 범위·순서는 server/content-axes PR 본문).
+--   게시된 날의 care는 **두 칸(care_a·care_b) 모두 비어 있고** ③ 보기가 같을 때만 아래 UPDATE가 채운다(care는 0024 수정 금지 대상이 아님).
+--   한 칸이라도 값이 있으면 손대지 않는다 — 운영자가 따로 고친 문장을 시드가 덮지 않게(의도, #286 QA-1 L3).
 begin;
 
 
@@ -39,25 +44,30 @@ insert into seed_photos values
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions)
 select * from seed_photos on conflict (day_index) do nothing;
 
-create temp table seed_questions (day_index int, option_a text, option_b text, prompt text) on commit drop;
+create temp table seed_questions (day_index int, option_a text, option_b text, prompt text, care_a text, care_b text) on commit drop;
+-- care_a·care_b = '챙겨 드릴 거리'(0065, 설계서 2절 확정 열 그대로). 8·9·13일 ③ 짝·질문은 2026-11-26 갈래 재설계로 교체(설계서 3절).
 insert into seed_questions values
-  (1,  '봄',          '가을',          '어느 계절이 더 좋으세요?'),
-  (2,  '라디오 듣기', '텔레비전 보기', '편하게 즐기는 쪽은요?'),
-  (3,  '구수한 숭늉', '달콤한 식혜',   '마시고 싶은 건요?'),
-  (4,  '단감',        '홍시',          '어느 맛이 더 좋으세요?'),
-  (5,  '가을 산',     '봄 산',         '걷고 싶은 산은요?'),
-  (6,  '떡',          '과일',          '명절에 먼저 집는 건요?'),
-  (7,  '밤 산책',     '낮 산책',       '걷고 싶은 때는 언제예요?'),
-  (8,  '일기 쓰기',   '편지 쓰기',     '쓰신다면 어느 쪽이 좋으세요?'),
-  (9,  '편한 슬리퍼', '튼튼한 운동화', '신고 싶은 신발은요?'),
-  (10, '김밥',        '주먹밥',        '소풍 도시락은 어느 쪽이요?'),
-  (11, '부침개',      '따뜻한 차',     '비 오는 날 생각나는 건요?'),
-  (12, '된장찌개',    '김치찌개',      '오늘 먹고 싶은 찌개는요?'),
-  (13, '시원한 물',   '따뜻한 물',     '마시고 싶은 물은요?'),
-  (14, '수박',        '참외',          '여름엔 어느 과일이 좋으세요?')
+  (1, '봄', '가을', '어느 계절이 더 좋으세요?', '봄꽃 필 때 꽃길 나들이', '가을볕 좋은 날 공원 나들이'),
+  (2, '라디오 듣기', '텔레비전 보기', '편하게 즐기는 쪽은요?', '작은 라디오 하나 선물', '옛날 드라마 같이 다시 보기'),
+  (3, '구수한 숭늉', '달콤한 식혜', '마시고 싶은 건요?', '누룽지 한 봉지 챙겨 가기', '식혜 한 병 사 가기'),
+  (4, '단감', '홍시', '어느 맛이 더 좋으세요?', '단감 한 상자 챙겨 가기', '홍시 한 상자 챙겨 가기'),
+  (5, '가을 산', '봄 산', '걷고 싶은 산은요?', '가을에 가까운 산 단풍 구경', '봄에 가까운 산 꽃구경'),
+  (6, '떡', '과일', '명절에 먼저 집는 건요?', '명절에 떡 한 접시 챙겨 가기', '명절에 과일 바구니 챙겨 가기'),
+  (7, '밤 산책', '낮 산책', '걷고 싶은 때는 언제예요?', '저녁에 동네 한 바퀴 같이 걷기', '볕 좋은 낮에 공원 같이 걷기'),
+  (8, '손편지', '사진 앨범', '받으시면 반가운 건요?', '손편지 한 장 부쳐 드리기', '가족사진 뽑아 앨범 만들기'),
+  (9, '바닷가 길', '숲길', '걸어 보고 싶으신 길은요?', '가까운 바닷가 길 같이 걷기', '가까운 숲길 같이 걷기'),
+  (10, '김밥', '주먹밥', '소풍 도시락은 어느 쪽이요?', '나들이 때 김밥 싸 가기', '나들이 때 주먹밥 싸 가기'),
+  (11, '부침개', '따뜻한 차', '비 오는 날 생각나는 건요?', '비 오는 날 부침개 같이 먹기', '차 한 상자 선물'),
+  (12, '된장찌개', '김치찌개', '오늘 먹고 싶은 찌개는요?', '된장찌개 집에 같이 가기', '김치찌개 집에 같이 가기'),
+  (13, '계곡 물가', '바닷가 모래밭', '더운 날 쉬러 가고 싶으신 곳은요?', '여름에 계곡 그늘로 나들이', '바닷가 모래밭 산책 같이 가기'),
+  (14, '수박', '참외', '여름엔 어느 과일이 좋으세요?', '여름에 수박 한 통 사 가기', '여름에 참외 한 봉지 사 가기')
 ;
-insert into public.content_questions (day_index, option_a, option_b, prompt)
+insert into public.content_questions (day_index, option_a, option_b, prompt, care_a, care_b)
 select * from seed_questions on conflict (day_index) do nothing;
+-- 이미 게시된 날: '챙겨 드릴 거리'가 비어 있고 ③ 보기가 시드와 같을 때만 채운다(care는 0024 수정 금지 대상이 아님, 0065). 이미 있으면 건드리지 않는다.
+update public.content_questions c set care_a = s.care_a, care_b = s.care_b
+  from seed_questions s
+ where c.day_index = s.day_index and c.care_a is null and c.care_b is null and (c.option_a, c.option_b) = (s.option_a, s.option_b);
 
 -- 변경 감지: 게시된 행과 시드 문구가 다르면 조용히 무시하지 않고 경고한다(사진 주소는 업로드로 바뀌므로 비교하지 않음)
 do $$

@@ -57,16 +57,15 @@ async function toDone3() {
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByTestId('p7-mount'));
 }
-/** 5단계: ⑤에서 건넨 날 P7 */
-async function toPassedOn() {
+/** 4단계(스위치 켜짐, 기획 v2.1 Q7): ④를 마치면 바로 P7 — ⑤ 없음 */
+async function toDone4() {
   setFeature('fiveSteps', true);
-  render(<AppRoot api={createFakeApi({linked: true, consented: true, realImage: true, completedSteps: ['photo', 'recall', 'question', 'hangul']})} role="parent" restore />);
+  render(<AppRoot api={createFakeApi({linked: true, consented: true, realImage: true, completedSteps: ['photo', 'recall', 'question']})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-choice'));
-  fireEvent.press(screen.getAllByRole('radio')[0]);
-  await press('건넬게요');
-  await waitFor(() => screen.getByText('가족에게 건넸어요'));
+  await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
+  await press('오늘은 넘어갈게요');
+  await waitFor(() => screen.getByTestId('p7-mount'));
 }
 const ids = () =>
   screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && n.props.testID.startsWith('p7-item-') && typeof n.type === 'string').map(n => n.props.testID as string);
@@ -90,10 +89,11 @@ describe('배율별 배치', () => {
     expect(P7_MOUNT.margin.afterBody).toBeGreaterThan(-P7_MOUNT.tape.top); // 테이프(-12)가 마운트 칸 위로 나가지 않게
   });
 
-  test('건넨 날 200%: 제목 → 「가족에게 건넸어요」 → 둘째 줄 → 마운트', async () => {
+  test('4단계 200%: 「가족에게 건넸어요」 줄 없이 3단계와 같은 순서(제목 → 둘째 줄 → 마운트)', async () => {
     mockFontScale = 2;
-    await toPassedOn();
-    expect(ids()).toEqual(['p7-item-title', 'p7-item-passed', 'p7-item-text', 'p7-item-mount']);
+    await toDone4();
+    expect(ids()).toEqual(['p7-item-title', 'p7-item-text', 'p7-item-mount']);
+    expect(screen.queryByText('가족에게 건넸어요')).toBeNull();
   });
 
   test('200%에서도 마운트 안은 그대로: 272 폭·캡션은 법무 고지 두 문장(AI 표기 → 실제 장소 아님)', async () => {
@@ -105,7 +105,7 @@ describe('배율별 배치', () => {
 });
 
 describe('R-15 (320×640 200% 실측 높이)', () => {
-  // 접힘 = 본문 영역 470 − '더 있음' 띠 24 = 446, 묶음 위 끝 12. 높이: 제목 97·본문 160·건넨 줄 40·마운트 287(위 여백 20 포함)
+  // 접힘 = 본문 영역 470 − '더 있음' 띠 24 = 446, 묶음 위 끝 12. 높이: 제목 97·본문 160·마운트 287(위 여백 20 포함)
   test('3단계: 제목·본문은 첫 화면에 남고, 접힘에 걸친 마운트만 통째로 민다', async () => {
     mockFontScale = 2;
     await toDone3();
@@ -122,21 +122,6 @@ describe('R-15 (320×640 200% 실측 높이)', () => {
     expect(marginTop('p7-item-mount')).toBe(446 - 301 + 1); // 에뮬레이터 실측 146 과 같다
   });
 
-  test('건넨 날: 「가족에게 건넸어요」와 둘째 줄이 모두 첫 화면, 마운트만 민다', async () => {
-    mockFontScale = 2;
-    await toPassedOn();
-    await act(async () => {
-      lay('screen-body-area', 0, 470);
-      lay('p7-stage', 12, 0);
-      lay('p7-item-title', 0, 97); // 12~109
-      lay('p7-item-passed', 0, 40); // 125~165
-      lay('p7-item-text', 0, 160); // 181~341
-      lay('p7-item-mount', 0, 287); // 357~644 → 걸림
-    });
-    expect(marginTop('p7-item-passed')).toBe(0);
-    expect(marginTop('p7-item-text')).toBe(0);
-    expect(marginTop('p7-item-mount')).toBe(446 - 357 + 1); // 실측 90
-  });
 });
 
 describe('도장 촉각·소리 때 (리드 결정 M2)', () => {

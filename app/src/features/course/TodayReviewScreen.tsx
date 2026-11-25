@@ -14,7 +14,7 @@ import {photoFit, photoFrame} from './photoFrame';
 import {usePhotoLoad} from './usePhotoLoad';
 import {PhotoZoom} from './PhotoZoom';
 import {ReadAloudNotice, useReadAloudAction} from './ReadAloud';
-import {passOnLine, questionLabelOf, recallWordOf} from './fiveSteps';
+import {recallWordOf} from './fiveSteps';
 
 const c = copy.course;
 const fill = (tpl: string, vars: Record<string, string>) => Object.keys(vars).reduce((s, k) => s.split(`{${k}}`).join(vars[k]), tpl);
@@ -54,26 +54,17 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
   const date = kstDateLine();
   const chosen = q && content?.answered_choice ? (content.answered_choice === 'A' ? q.option_a : q.option_b) : null;
   const other = q && content?.answered_choice ? (content.answered_choice === 'A' ? q.option_b : q.option_a) : null;
-  // 5단계(기능 스위치): ②를 한 날은 '먼저 떠올리신 것' 한 줄이 '오늘 낱말' 줄을 대신(④ 낱말 = ② 낱말이라 같은 낱말 두 번 금지, 문구 #7),
-  // ⑤에서 건넨 날은 맨 아래 '건넨 말' + 문장(먹 글자, 노랑 없음). 넘긴 단계의 줄은 없다
+  // 5단계 스위치 경로(4단계, 기획 v2.1 Q7): ②를 한 날은 '먼저 떠올리신 것' 한 줄이 '오늘 낱말' 줄을 대신(④ 낱말 = ② 낱말이라 같은 낱말 두 번 금지, 문구 #7).
+  // ⑤ '건넨 말'은 뺐다(어르신 → 가족 전달 없음). 넘긴 단계의 줄은 없다
   const recallWord = five ? recallWordOf(content, picks) : null;
-  const key = five ? content?.pass_on?.picked_key ?? null : null;
-  const passed = key ? passOnLine(key, recallWord, questionLabelOf(content, picks), q) : null;
   const baseRead = photo
     ? chosen
       ? fill(c.review_read, {날짜: date, 사진: photo.caption, 답: chosen, 낱말: photo.keyword})
       : fill(c.review_read_no_choice, {날짜: date, 사진: photo.caption, 낱말: photo.keyword})
     : '';
-  // 읽어 주기도 보이는 순서 그대로: '오늘 낱말' 대신 '먼저 떠올리신 것', 끝에 '건넨 말'
+  // 읽어 주기도 보이는 순서 그대로: '오늘 낱말' 대신 '먼저 떠올리신 것'
   const readText =
-    photo && (recallWord || passed)
-      ? [
-          recallWord ? baseRead.replace(fill(c.review_word_a11y, {낱말: photo.keyword}), fill(c.review_recall_a11y, {값: recallWord})) : baseRead,
-          passed ? `${fill(c.review_pass_on_a11y, {문장: passed.sub ? `${passed.text}, ${passed.sub}` : passed.text})}.` : null,
-        ]
-          .filter(Boolean)
-          .join(' ')
-      : baseRead;
+    photo && recallWord ? baseRead.replace(fill(c.review_word_a11y, {낱말: photo.keyword}), fill(c.review_recall_a11y, {값: recallWord})) : baseRead;
   const read = useReadAloudAction(readText);
   if (!photo) {
     return null;
@@ -156,18 +147,6 @@ export function TodayReviewScreen({navigation}: {navigation: {goBack(): void}}) 
             <Text role="title">{photo.keyword}</Text>
           </View>
         )}
-        {passed ? (
-          <View
-            key="pass-on"
-            testID="review-pass-on"
-            accessible
-            accessibilityLabel={fill(c.review_pass_on_a11y, {문장: passed.sub ? `${passed.text}, ${passed.sub}` : passed.text})}
-            style={styles.tight}>
-            <Text role="sub" tone="muted">{c.review_pass_on}</Text>
-            <Text role="bodyLg">{passed.text}</Text>
-            {passed.sub ? <Text role="body">{passed.sub}</Text> : null}
-          </View>
-        ) : null}
         {/* 안내가 있을 때만 칸을 둔다 — 없을 때 빈 칸이 묶음 간격 16을 낱말 아래에 남겼다(QA-1 재확인 L2) */}
         {read.notice ? <ReadAloudNotice key="read-notice" notice={read.notice} /> : null}
       </FoldStack>

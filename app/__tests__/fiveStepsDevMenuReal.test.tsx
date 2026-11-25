@@ -23,13 +23,13 @@ function OpenMenu() {
   );
 }
 
-test('실서버 모드: "오늘 코스 5단계 켜기"는 비활성 + "서버 준비 뒤 켤 수 있어요" 안내, 눌러도 꺼진 채', async () => {
+test('실서버 모드: "오늘 코스 4단계 켜기"는 비활성 + "서버 준비 뒤 켤 수 있어요" 안내, 눌러도 꺼진 채', async () => {
   render(<DevMenuHost api={createFakeApi()}>{() => <OpenMenu />}</DevMenuHost>);
   await waitFor(() => screen.getByRole('button', {name: '메뉴 열기'}));
   await act(async () => {
     fireEvent.press(screen.getByRole('button', {name: '메뉴 열기'}));
   });
-  const btn = screen.getByRole('button', {name: '오늘 코스 5단계 켜기(기능 스위치)'});
+  const btn = screen.getByRole('button', {name: '오늘 코스 4단계 켜기(기능 스위치)'});
   expect(btn.props.accessibilityState?.disabled).toBe(true);
   expect(screen.getByText(/서버 준비 뒤 켤 수 있어요/)).toBeTruthy();
   await act(async () => {

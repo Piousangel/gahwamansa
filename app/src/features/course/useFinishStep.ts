@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {useSession} from '../../app/session';
 import {copy, offlineMessage, Message} from '../../copy/copy';
-import {isOffline, isServerError, StepName} from '../types';
+import {isOffline, isServerError, StepName, type Api} from '../types';
 import {track} from '../track';
 import {localStamps} from '../../lib/localStamps';
 import {useBusyLatch} from '../../ui/useBusyLatch';
@@ -39,6 +39,13 @@ export function useStepStarted(step: StepName, review: boolean) {
     }
   }, [ready, api, step, dayIndex]);
 }
+
+/**
+ * 4단계(기획 v2.1 Q7): 화면에는 ⑤가 없지만 서버 0061 은 course_len 3|5 만 받고 5단계 세션 완료에 pass_on 기록이 필요하다.
+ * 그래서 ①~④를 다 마친 순간 pass_on 을 p_skipped:true 로 한 번 기록해 도장을 찍게 한다(0061 계약 규칙 '⑤ 스위치가 꺼진 날도 넘어감으로 기록'과 같은 길).
+ * 사람이 한 단계가 아니라 계측(course_step_completed)은 보내지 않는다. 서버가 course_len 4 를 받게 되면 이 함수를 지운다.
+ */
+export const completeServerCourse = (api: {recordSessionStep: Api['recordSessionStep']}) => api.recordSessionStep('pass_on', 0, {skipped: true});
 
 export type FinishOptions = {
   hangul?: {attemptNo: number; result: HangulResult};
@@ -80,7 +87,10 @@ export function useFinishStep() {
     const wasAll = five && allStepsDone(done, five);
     try {
       const sec = Math.min(7200, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
-      const r = five ? await api.recordSessionStep(step, sec, {skipped: !!skipped}) : await api.recordSessionStep(step, sec);
+      let r = five ? await api.recordSessionStep(step, sec, {skipped: !!skipped}) : await api.recordSessionStep(step, sec);
+      if (five && !r.completed && allStepsDone([...done, step], five)) {
+        r = await completeServerCourse(api); // 4단계를 다 마쳤는데 서버(course_len 5)는 아직 → ⑤를 넘어감으로 대신 기록
+      }
       applyStep(step, r.streak, skipped);
       // 계측(0022): 서버가 기록을 인정한 뒤에만. 미연결 열람은 기록하지 않으므로 보내지 않는다
       track(api, 'course_step_completed', {step, duration_sec: sec, ...(hangul ? {attempt_no: hangul.attemptNo, result: hangul.result} : {})});

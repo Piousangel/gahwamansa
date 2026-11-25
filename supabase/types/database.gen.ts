@@ -140,14 +140,14 @@ isOneToOne: false
                   ]
                 },"content_questions": {
                   Row: {
-                    "day_index": number,"id": string,"option_a": string,"option_b": string,"prompt": string | null,"retired_at": string | null,"starter_a": string | null,"starter_b": string | null
+                    "care_a": string | null,"care_b": string | null,"day_index": number,"id": string,"option_a": string,"option_b": string,"prompt": string | null,"retired_at": string | null,"starter_a": string | null,"starter_b": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "day_index": number,"id"?: string,"option_a": string,"option_b": string,"prompt"?: string | null,"retired_at"?: string | null,"starter_a"?: string | null,"starter_b"?: string | null
+                    "care_a"?: string | null,"care_b"?: string | null,"day_index": number,"id"?: string,"option_a": string,"option_b": string,"prompt"?: string | null,"retired_at"?: string | null,"starter_a"?: string | null,"starter_b"?: string | null
                   }
                   Update: {
-                    "day_index"?: number,"id"?: string,"option_a"?: string,"option_b"?: string,"prompt"?: string | null,"retired_at"?: string | null,"starter_a"?: string | null,"starter_b"?: string | null
+                    "care_a"?: string | null,"care_b"?: string | null,"day_index"?: number,"id"?: string,"option_a"?: string,"option_b"?: string,"prompt"?: string | null,"retired_at"?: string | null,"starter_a"?: string | null,"starter_b"?: string | null
                   }
                   Relationships: [
                     
@@ -705,6 +705,12 @@ isOneToOne: true
                            },
 "anon_last_activity":
 { Args: { "p_user": string }; Returns: string
+                           },
+"care_line_ok":
+{ Args: { "p_line": string }; Returns: boolean
+                           },
+"care_lines_visible":
+{ Args: { "p_parent": string }; Returns: boolean
                            },
 "cheer_key_ok":
 { Args: { "p_key": string }; Returns: boolean
