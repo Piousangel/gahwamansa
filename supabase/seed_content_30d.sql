@@ -13,21 +13,21 @@ begin;
 
 create temp table seed_photos (day_index int, image_url text, caption text, keyword text, recall_questions text[]) on commit drop;
 insert into seed_photos values
-  (15, 'pending://day-15', '장날 아침', '바구니', array['장에 가면 제일 먼저 어디를 보셨어요?', '장바구니에 꼭 담던 건 뭐예요?']),  -- 원본 2 · season=any(none) place=country era=7080 city_ok=y
-  (16, 'pending://day-16', '버스 오는 길', '버스', array['버스를 기다리며 뭘 하셨어요?', '버스 타고 가던 곳이 있어요?']),  -- 원본 4 · season=any(none) place=country era=7080 city_ok=n
-  (17, 'pending://day-17', '수업 시작 종', '학교종', array['종소리를 들으면 뭐가 떠올라요?', '쉬는 시간이나 쉬는 날엔 뭘 하셨어요?']),  -- 원본 6 · season=any(none) place=any era=7080 city_ok=n
-  (18, 'pending://day-18', '마당 쓰는 아침', '빗자루', array['아침에 제일 먼저 하던 일이 뭐예요?', '마당 쓸던 기억이 있어요?']),  -- 원본 17 · season=any(none) place=country era=7080 city_ok=n
-  (19, 'pending://day-19', '방과 후 교실', '칠판', array['칠판을 보면 뭐가 떠올라요?', '무언가 배울 때 즐거웠던 적이 있어요?']),  -- 원본 12 · season=any(none) place=any era=7080 city_ok=n
-  (20, 'pending://day-20', '둥근 밥상', '숟가락', array['밥상에 꼭 오르던 반찬은 뭐였어요?', '둥근 밥상에서 밥을 먹어 본 적 있어요?']),  -- 원본 21 · season=any(none) place=any era=7080 city_ok=y
-  (21, 'pending://day-21', '대청마루 여름', '선풍기', array['더운 날 어떻게 시원하게 지내셨어요?', '마루에서 낮잠 자 봤어요?']),  -- 원본 19 · season=summer(text) place=country era=7080 city_ok=n
-  (22, 'pending://day-22', '등굣길 책가방', '책가방', array['어디 갈 때 꼭 챙기시는 게 있어요?', '멀리 가 본 곳 중 좋았던 데가 있어요?']),  -- 원본 22 · season=any(none) place=any era=7080 city_ok=n
-  (23, 'pending://day-23', '장터 국밥집', '국자', array['장터에서 뭘 드셔 보셨어요?', '따끈한 국물 하면 뭐가 떠올라요?']),  -- 원본 20 · season=any(none) place=country era=7080 city_ok=y
-  (24, 'pending://day-24', '한복 걸린 방', '한복', array['한복을 입어 본 날이 있어요?', '좋아하는 색이 있으세요?']),  -- 원본 14 · season=any(none) place=any era=7080 city_ok=n
+  (15, 'pending://day-15', '장날 아침', '바구니', array['장에 가면 제일 먼저 어디를 보셨어요?', '장바구니에 꼭 담으시던 건 뭐예요?']),  -- 원본 2 · season=any(none) place=country era=7080 city_ok=y
+  (16, 'pending://day-16', '버스 오는 길', '버스', array['버스를 기다리며 뭘 하셨어요?', '버스 타고 가시던 곳이 있으세요?']),  -- 원본 4 · season=any(none) place=country era=7080 city_ok=n
+  (17, 'pending://day-17', '수업 시작 종', '학교종', array['종소리를 들으면 뭐가 떠오르세요?', '쉬는 시간이나 쉬는 날엔 뭘 하셨어요?']),  -- 원본 6 · season=any(none) place=any era=7080 city_ok=n
+  (18, 'pending://day-18', '마당 쓰는 아침', '빗자루', array['아침에 제일 먼저 하시던 일이 뭐예요?', '마당을 쓸어 보신 적 있으세요?']),  -- 원본 17 · season=any(none) place=country era=7080 city_ok=n
+  (19, 'pending://day-19', '방과 후 교실', '칠판', array['칠판을 보면 뭐가 떠오르세요?', '무언가 배울 때 즐거우셨던 적이 있으세요?']),  -- 원본 12 · season=any(none) place=any era=7080 city_ok=n
+  (20, 'pending://day-20', '둥근 밥상', '숟가락', array['밥상에 꼭 오르던 반찬은 뭐였어요?', '둥근 밥상에서 밥을 드셔 보신 적 있으세요?']),  -- 원본 21 · season=any(none) place=any era=7080 city_ok=y
+  (21, 'pending://day-21', '대청마루 여름', '선풍기', array['더운 날 어떻게 시원하게 지내셨어요?', '마루에서 낮잠 주무셔 보셨어요?']),  -- 원본 19 · season=summer(text) place=country era=7080 city_ok=n
+  (22, 'pending://day-22', '등굣길 책가방', '책가방', array['어디 갈 때 꼭 챙기시는 게 있으세요?', '멀리 가 보신 곳 중 좋았던 데가 있으세요?']),  -- 원본 22 · season=any(none) place=any era=7080 city_ok=n
+  (23, 'pending://day-23', '장터 국밥집', '국자', array['장터에서 뭘 드셔 보셨어요?', '따끈한 국물 하면 뭐가 떠오르세요?']),  -- 원본 20 · season=any(none) place=country era=7080 city_ok=y
+  (24, 'pending://day-24', '한복 걸린 방', '한복', array['한복을 입어 보신 날이 있으세요?', '좋아하는 색이 있으세요?']),  -- 원본 14 · season=any(none) place=any era=7080 city_ok=n
   (25, 'pending://day-25', '가마솥 김', '가마솥', array['가마솥에 무엇을 끓이면 좋을까요?', '김이 오르는 걸 보면 뭐가 생각나세요?']),  -- 원본 24 · season=any(none) place=country era=7080 city_ok=n
   (26, 'pending://day-26', '냇가 낚시', '낚싯대', array['냇가에서 놀아 보신 적 있으세요?', '물소리는 어떻게 들렸어요?']),  -- 원본 28 · season=summer(image) place=country era=7080 city_ok=n
-  (27, 'pending://day-27', '탁자 위 꽃다발', '꽃다발', array['꽃다발을 받아 본 날이 있어요?', '꽃 하면 어떤 꽃이 먼저 떠올라요?']),  -- 원본 25 · season=any(none) place=any era=7080 city_ok=y
-  (28, 'pending://day-28', '잔치하는 앞마당', '앞마당', array['마을 잔치에 가 보신 적 있으세요?', '잔치 음식 중 뭐가 먼저 떠올라요?']),  -- 원본 26 · season=any(none) place=country era=7080 city_ok=n
-  (29, 'pending://day-29', '닭장 아침', '닭장', array['아침에 닭 울음소리를 들어 보셨어요?', '달걀을 꺼내 본 적 있어요?']),  -- 원본 29 · season=any(none) place=country era=7080 city_ok=n
+  (27, 'pending://day-27', '탁자 위 꽃다발', '꽃다발', array['꽃다발을 받아 보신 날이 있으세요?', '꽃 하면 어떤 꽃이 먼저 떠오르세요?']),  -- 원본 25 · season=any(none) place=any era=7080 city_ok=y
+  (28, 'pending://day-28', '잔치하는 앞마당', '앞마당', array['마을 잔치에 가 보신 적 있으세요?', '잔치 음식 중 뭐가 먼저 떠오르세요?']),  -- 원본 26 · season=any(none) place=country era=7080 city_ok=n
+  (29, 'pending://day-29', '닭장 아침', '닭장', array['아침에 닭 울음소리를 들어 보셨어요?', '달걀을 꺼내 보신 적 있으세요?']),  -- 원본 29 · season=any(none) place=country era=7080 city_ok=n
   (30, 'pending://day-30', '흙담 골목 저녁', '흙담', array['저녁이 되면 어떤 소리가 들렸어요?', '골목에서 놀아 보신 적 있으세요?'])  -- 원본 30 · season=any(none) place=country era=7080 city_ok=n
 ;
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions)
@@ -38,9 +38,9 @@ insert into seed_questions values
   (15, '시장 구경', '공원 산책', '나들이를 간다면 어느 쪽이요?', '장 구경 가면 제일 먼저 보시던 게 무엇인지 여쭤봐요', '산책하기 좋아하시는 길이 있는지 여쭤봐요'),
   (16, '버스 타고', '걸어서', '가까운 곳은 어떻게 가세요?', '버스 타고 자주 가시던 곳이 있었는지 여쭤봐요', '걷기 좋아하시는 길이 어디인지 여쭤봐요'),
   (17, '신나는 노래', '잔잔한 노래', '듣고 싶은 노래는요?', '신나게 부르시던 노래가 있는지 여쭤봐요', '편하게 들으시는 노래가 있는지 여쭤봐요'),
-  (18, '아침에 정리', '저녁에 정리', '정리는 언제 하는 게 좋아요?', '아침에 하시는 일 중 좋아하시는 게 있는지 여쭤봐요', '저녁에 즐겨 하시는 일이 있는지 여쭤봐요'),
+  (18, '아침에 정리', '저녁에 정리', '정리는 언제 하시는 게 좋으세요?', '아침에 하시는 일 중 좋아하시는 게 있는지 여쭤봐요', '저녁에 즐겨 하시는 일이 있는지 여쭤봐요'),
   (19, '노래하기', '그림 그리기', '해 보고 싶은 쪽은요?', '좋아하시는 노래가 무엇인지 여쭤봐요', '그려 보고 싶은 게 있는지 여쭤봐요'),
-  (20, '조용히 먹기', '도란도란 먹기', '밥 먹을 때는 어느 쪽이 좋아요?', '조용히 드실 때 즐겨 드시는 음식이 있는지 여쭤봐요', '같이 먹고 싶은 음식이 있는지 여쭤봐요'),
+  (20, '조용히 먹기', '도란도란 먹기', '밥 드실 때는 어느 쪽이 좋으세요?', '조용히 드실 때 즐겨 드시는 음식이 있는지 여쭤봐요', '같이 먹고 싶은 음식이 있는지 여쭤봐요'),
   (21, '선풍기 바람', '부채 바람', '시원한 쪽은요?', '더운 날 어디서 쉬시는지 여쭤봐요', '부채 바람 하면 떠오르는 곳이 있는지 여쭤봐요'),
   (22, '짐은 가볍게', '짐은 넉넉히', '여행 갈 때는요?', '가볍게 다녀오고 싶은 곳이 있는지 여쭤봐요', '여행 갈 때 꼭 챙기시는 게 무엇인지 여쭤봐요'),
   (23, '국밥', '칼국수', '먹고 싶은 한 그릇은요?', '좋아하시는 국밥집이 있는지 여쭤봐요', '칼국수는 어떤 국물을 좋아하시는지 여쭤봐요'),

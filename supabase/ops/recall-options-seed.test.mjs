@@ -107,3 +107,25 @@ test('① 첫 질문(#249로 첫 질문만 보임)은 30일 모두 \'기억\'을
   assert.equal(PHOTOS.size, 30);
   for (const [d, p] of PHOTOS) assert.ok(!/기억/.test(p.recall[0]), `${d}일 첫 질문: ${p.recall[0]}`);
 });
+
+// 라이터 확정 11-25(#261, writer.md 2절): 어르신께 묻는 시드 문장(① 회상 두 질문·③ 질문)은 주체 높임, '기억'을 묻지 않음.
+// 둘째 질문은 지금(#249) 화면에 안 보이지만 다시 보이게 될 때를 위해 함께 막는다. 꼴만 보는 좁은 검사다(맞춤법 검사기가 아님).
+const NO_HONORIFIC = [
+  [/(적|날이?) 있어요\?/, "'~보신 적 있으세요?'"],
+  [/떠올라요\?/, "'떠오르세요?'"],
+  [/봤어요\?/, "'~보셨어요?'"],
+  [/좋아요\?$/, "'좋으세요?'"],
+  [/[^시]던 (일|곳|건|게)(?=[ ?])/, "'~하시던'"],
+];
+test('어르신께 묻는 시드 문장(① 두 질문·③ 질문)은 높임 꼴, \'기억\'을 묻지 않음', () => {
+  const asks = [];
+  for (const [d, p] of PHOTOS) for (const q of p.recall) asks.push([d, q]);
+  for (const [d, q] of QUESTIONS) asks.push([d, q.prompt]);
+  assert.equal(asks.length, 90);
+  const bad = [];
+  for (const [d, q] of asks) {
+    if (/기억/.test(q)) bad.push(`${d}일 '기억': ${q}`);
+    for (const [re, want] of NO_HONORIFIC) if (re.test(q)) bad.push(`${d}일 높임(${want}): ${q}`);
+  }
+  assert.deepEqual(bad, []);
+});
