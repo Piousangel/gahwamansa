@@ -43,14 +43,16 @@ const BottomSheet = React.forwardRef(function BottomSheetMock(props, ref) {
     animatedIndex.value = index;
   }, [animatedIndex, index]);
   const {backdropComponent: Backdrop, backgroundComponent: Background, handleComponent: Handle, footerComponent: Footer} = props;
+  // 그리는 순서는 실제 gorhom 5.2.14(BottomSheet.tsx render)와 같게: 배경 → 바탕 → 내용(children + footer) → 손잡이.
+  // 손잡이는 맨 뒤 형제이고 화면 위치만 column-reverse 로 위에 보인다 → 화면 읽기 순서도 손잡이가 맨 뒤(QA-2 M2, DECISIONS)
   return React.createElement(
     View,
     {testID: 'gorhom-sheet', style: props.style},
     Backdrop ? React.createElement(Backdrop, {animatedIndex, animatedPosition, style: StyleSheet.absoluteFill}) : null,
     Background ? React.createElement(Background, {animatedIndex, animatedPosition, style: props.backgroundStyle}) : null,
-    Handle ? React.createElement(Handle, {animatedIndex, animatedPosition}) : null,
     props.children,
     Footer ? React.createElement(Footer, {animatedFooterPosition}) : null,
+    Handle ? React.createElement(Handle, {animatedIndex, animatedPosition}) : null,
   );
 });
 
@@ -64,10 +66,16 @@ function BottomSheetFooter({children, style}) {
   return React.createElement(View, {style}, children);
 }
 
+// 공식 목에 없다: gorhom 기본 제스처 처리기. 시험이 우리 래퍼(useSheetGestureHandlers)가 넘기는 값을 보게 jest.fn
+const defaultHandlers = {handleOnStart: jest.fn(), handleOnChange: jest.fn(), handleOnEnd: jest.fn(), handleOnFinalize: jest.fn()};
+const useGestureEventsHandlersDefault = () => defaultHandlers;
+
 module.exports = {
   ...official,
   BottomSheetScrollView,
   BottomSheetFooter,
+  useGestureEventsHandlersDefault,
+  __defaultHandlers: defaultHandlers,
   __esModule: true,
   default: BottomSheet,
   BottomSheet,

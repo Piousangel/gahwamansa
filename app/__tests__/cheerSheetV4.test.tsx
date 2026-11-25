@@ -38,6 +38,7 @@ test('시트 머리: 손잡이(끌기, 오너 C-3 — V14 ① 바뀜) + 제목(�
   expect(st.minHeight).toBeGreaterThanOrEqual(48);
   // 칸이 하나인 응원 시트: 손잡이는 화면 읽기에서 닫기 버튼(두 번 누르기)
   const handle = screen.getByTestId('sheet-handle');
+  expect(handle.props.accessible).toBe(true); // 없으면 iOS 에서 손잡이가 접근성 요소가 아니다(QA-2 M1)
   expect(handle.props.accessibilityRole).toBe('button');
   expect(handle.props.accessibilityLabel).toBe('시트 손잡이');
   expect(handle.props.accessibilityHint).toBe('두 번 누르면 닫혀요');
@@ -198,6 +199,26 @@ test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(
   expect(bandShown()).toBe(true);
   act(() => {
     fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {x: 0, y: 300}, contentSize: {width: 360, height: 700}, layoutMeasurement: {width: 360, height: 400}}});
+  });
+  expect(bandShown()).toBe(false);
+});
+
+test('ds Sheet: 관성 스크롤이 끝에서 멈춘 위치(onMomentumScrollEnd)로도 띠를 숨긴다 — onScroll 쓰로틀로 마지막 위치가 안 올 수 있음(QA-2 L3)', () => {
+  render(
+    <AudienceProvider value="child">
+      <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>
+    </AudienceProvider>,
+  );
+  const scroll = screen.getByTestId('s-scroll');
+  act(() => {
+    fireEvent(scroll, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 400}}});
+    fireEvent(scroll, 'contentSizeChange', 360, 700);
+  });
+  expect(bandShown()).toBe(true);
+  act(() => {
+    fireEvent(scroll, 'momentumScrollEnd', {nativeEvent: {contentOffset: {x: 0, y: 300}}});
   });
   expect(bandShown()).toBe(false);
 });

@@ -14,9 +14,13 @@ import {
 import BottomSheet, {
   BottomSheetFooter,
   BottomSheetScrollView,
+  GESTURE_SOURCE,
+  useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
   type BottomSheetBackgroundProps,
   type BottomSheetFooterProps,
+  type GestureEventHandlerCallbackType,
+  type GestureEventsHandlersHookType,
 } from '@gorhom/bottom-sheet';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import Animated, {Extrapolation, interpolate, ReduceMotion, useAnimatedStyle} from 'react-native-reanimated';
@@ -100,6 +104,37 @@ export function resolveSnapPoints(snaps: readonly SnapPoint[], windowH: number, 
   return {points, dynamic, count: points.length + (dynamic ? 1 : 0)};
 }
 
+/**
+ * 내용 끌기 최소 거리(dp, 리드 결정 #255 QA-2 M3 — #232 MIN_CLOSE_DRAG 와 같은 뜻). 선택지를 누르다 미끄러진 손가락이 시트를 닫지 않게.
+ * gorhom 은 놓을 때 '위치 + 0.2초 × 속도'에 가장 가까운 칸으로 가므로 15dp 만 움직여도 빠르면(짧은 시트에서 약 1000dp/s 이상) 닫힌다.
+ * 내용에서 시작해 이만큼 내려가지 않은 끌기는 놓은 속도를 버려 위치만으로 가까운 칸(= 거의 제자리)에 돌아가게 한다. 손잡이 끌기는 제한 없음.
+ */
+export const CONTENT_MIN_DRAG = 24;
+const CONTENT_SOURCE = GESTURE_SOURCE.CONTENT;
+
+/** 놓을 때 gorhom 에 넘길 값. 내용 끌기가 CONTENT_MIN_DRAG 보다 짧으면 속도 0(worklet — UI 스레드에서 돈다) */
+export function limitShortContentFling<P extends {translationY: number; velocityY: number}>(source: GESTURE_SOURCE, payload: P): P {
+  'worklet';
+  if (source === CONTENT_SOURCE && payload.translationY < CONTENT_MIN_DRAG) {
+    return {...payload, velocityY: 0};
+  }
+  return payload;
+}
+
+/** gorhom 기본 제스처 처리기를 그대로 쓰고 놓을 때(handleOnEnd)만 limitShortContentFling 을 거친다(gorhom 공식 확장점 gestureEventsHandlersHook) */
+export const useSheetGestureHandlers: GestureEventsHandlersHookType = () => {
+  const base = useGestureEventsHandlersDefault();
+  const baseEnd = base.handleOnEnd;
+  const handleOnEnd = useCallback<GestureEventHandlerCallbackType>(
+    function sheetOnEnd(source, payload) {
+      'worklet';
+      baseEnd(source, limitShortContentFling(source, payload));
+    },
+    [baseEnd],
+  );
+  return useMemo(() => ({...base, handleOnEnd}), [base, handleOnEnd]);
+};
+
 type HandleCtx = {multi: boolean; level: number; max: number; onAction: (e: AccessibilityActionEvent) => void};
 const SheetHandleContext = createContext<HandleCtx>({multi: false, level: 1, max: 1, onAction: () => {}});
 const SheetCloseContext = createContext<() => void>(() => {});
@@ -148,7 +183,7 @@ function SheetBackdrop({animatedIndex, style}: BottomSheetBackdropProps) {
  * 위로 과도 당김의 바닥 틈은 gorhom 이 내용 칸 아래 여백(overDragSafePaddingBottom)으로 이미 채운다.
  */
 function SheetBackground({style}: BottomSheetBackgroundProps) {
-  return <View pointerEvents="none" style={style} accessible={false} importantForAccessibility="no-hide-descendants" />;
+  return <View testID="sheet-bg" pointerEvents="none" style={style} accessible={false} importantForAccessibility="no-hide-descendants" />;
 }
 
 /**
@@ -211,10 +246,23 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
   const [view, setView] = useState(0);
   // 스크롤 내용 높이(gorhom 이 더한 아래 줄 여백 포함) = 손잡이 아래 시트 몸통의 자연 높이
   const [content, setContent] = useState(0);
-  const [y, setY] = useState(0);
+  // 끝까지 내렸나(띠 숨김). 스크롤 위치 자체는 상태로 두지 않는다 — 스크롤 프레임마다 시트 전체를 다시 그리지 않게,
+  // 띠 표시가 바뀔 때만 상태가 바뀐다(같은 값이면 React 가 다시 그리지 않음, QA-2 L4)
+  const [atEnd, setAtEnd] = useState(false);
+  const scrollY = useRef(0);
+  const dims = useRef({view: 0, content: 0});
+  const atEndRef = useRef(false);
+  const recomputeEnd = useCallback(() => {
+    const {view: v, content: ct} = dims.current;
+    const end = scrollY.current + v >= ct - 2;
+    if (end !== atEndRef.current) {
+      atEndRef.current = end; // 같은 값 setState 도 한 번 다시 그릴 수 있어 직접 비교한다
+      setAtEnd(end);
+    }
+  }, []);
   const canScroll = content > view + 1;
   // 넘칠 때만, 끝까지 내리면 숨긴다(옛 Screen measure 와 같은 식, PR #93 L1)
-  const more = canScroll && y + view < content - 2;
+  const more = canScroll && !atEnd;
 
   const maxSheet = Math.floor(height * SHEET_MAX_RATIO);
   const sheetH = content > 0 ? Math.min(maxSheet, content + SHEET_HANDLE_H) : 0;
@@ -249,6 +297,18 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
     },
     [],
   );
+  // 부모가 닫으면(visible false) 기다리던 되돌리기를 버린다 — 곧바로 다시 열어도 새 시트가 엉뚱한 칸으로 튀지 않게(QA-2 L2)
+  useEffect(() => {
+    if (!visible && guard.current) {
+      clearTimeout(guard.current);
+      guard.current = null;
+    }
+    if (!visible) {
+      scrollY.current = 0; // 다시 열면 스크롤은 맨 위부터(Modal 이 내용을 내려 새 스크롤로 연다)
+      atEndRef.current = false;
+      setAtEnd(false);
+    }
+  }, [visible]);
 
   const onChange = useCallback((i: number) => {
     setIdx(i);
@@ -291,9 +351,29 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
   const footerCtx = useMemo<FooterCtx>(() => ({testID, footer, canScroll, more, insetBottom: insets.bottom}), [testID, footer, canScroll, more, insets.bottom]);
 
   // gorhom 스크롤 처리기가 이 함수를 의존성으로 가지므로 한 번만 만든다(스크롤마다 처리기 재등록 방지, 리뷰)
-  const track = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => setY(Math.round(e.nativeEvent.contentOffset.y)), []);
-  const onScrollLayout = useCallback((e: LayoutChangeEvent) => setView(Math.round(e.nativeEvent.layout.height)), []);
-  const onContentSize = useCallback((_w: number, h: number) => setContent(Math.round(h)), []);
+  const track = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollY.current = Math.round(e.nativeEvent.contentOffset.y);
+      recomputeEnd();
+    },
+    [recomputeEnd],
+  );
+  const onScrollLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      dims.current.view = Math.round(e.nativeEvent.layout.height);
+      setView(dims.current.view);
+      recomputeEnd();
+    },
+    [recomputeEnd],
+  );
+  const onContentSize = useCallback(
+    (_w: number, h: number) => {
+      dims.current.content = Math.round(h);
+      setContent(dims.current.content);
+      recomputeEnd();
+    },
+    [recomputeEnd],
+  );
 
   return (
     <Modal
@@ -322,6 +402,7 @@ function SheetInner({visible, title, sub, onClose, returnFocusRef, children, foo
                   maxDynamicContentSize={maxSheet}
                   topInset={insets.top}
                   enablePanDownToClose
+                  gestureEventsHandlersHook={useSheetGestureHandlers}
                   animateOnMount={false}
                   onChange={onChange}
                   onClose={onSheetClosed}
