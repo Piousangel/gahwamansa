@@ -5,6 +5,8 @@
 --     금지어(copyBan BANNED_EVERYWHERE + guardrails 1절 + 설계서 W7 효능·풀이·기억 + W6 '몸에 좋')가 없을 것.
 --     #286 QA-3 M1: 효능 꼴('~에 좋'·높이/낮추·잘되·되살)·병명·신체 부위(혈압·당뇨·관절·무릎·면역·소화 등)·'약'도 막고,
 --     **공백을 모두 지운 값**으로 검사한다(띄어 써서 피하기 '몸 에 좋은'·'기 억' 차단 — 그래서 정규식 낱말에는 공백이 없다).
+--     낱말 단위 예외(#286 QA-3 재확인 L1, 오탐): 약과·약밥·약수(터)·조약(돌)·허리띠·'높이 날(리기)'은 검사 전에 지운다.
+--     '~에 좋아하시는'은 예외로 두지 않는다 — 부모님 풀이(설계서 4.1 '좋아하시니까' 금지와 같은 뜻)라 막히는 것이 맞다. 라이터 메모는 설계서 7절.
 --     정본 목록과 막혀야 할 예시는 supabase/ops/content-care-seed.test.mjs·pgTAP content_care_lines 가 대조한다(두 목록 어긋남 방지).
 -- (2) 게시 뒤 수정: 0024 content_immutable_guard는 day_index·option_a·option_b·prompt만 막는다. care_a·care_b는 그 목록에 넣지 않는다
 --     = 첫마디(0027 starter_a/b)와 같은 꼴의 예외. 게시된 1~14일에 문장을 나중에 채울 수 있다(staging 재시드 범위의 UPDATE). 트리거는 바꾸지 않는다.
@@ -19,7 +21,7 @@
 create function public.care_line_ok(p_line text) returns boolean
 language sql immutable set search_path = ''
 as $$ select p_line is null or (char_length(p_line) between 1 and 17
-                                 and regexp_replace(p_line, '\s+', '', 'g') !~ '아직|못했|미완료|[0-9]+일째|틀렸|치매|치료|예방|효도|안부|안심|건강|뇌|노인|숙제|잘하셨|확인|지켜|실시간|효능|좋아하시니까|기억|몸에좋|에좋|높이|낮추|낮춰|잘되|되살|혈압|혈당|당뇨|관절|무릎|허리|면역|소화|변비|불면|약|뼈|근육|살빠|다이어트|피로') $$;
+                                 and regexp_replace(regexp_replace(p_line, '\s+', '', 'g'), '약과|약밥|약수|조약|허리띠|높이날', '', 'g') !~ '아직|못했|미완료|[0-9]+일째|틀렸|치매|치료|예방|효도|안부|안심|건강|뇌|노인|숙제|잘하셨|확인|지켜|실시간|효능|좋아하시니까|기억|몸에좋|에좋|높이|낮추|낮춰|잘되|되살|혈압|혈당|당뇨|관절|무릎|허리|면역|소화|변비|불면|약|뼈|근육|살빠|다이어트|피로') $$;
 
 -- #286 QA-1 L1: 검사 함수는 앱 역할이 부를 일이 없다(0061 pass_on_key_ok와 같은 꼴 — 표 검사·서비스 역할 쓰기용으로 service_role은 남김)
 revoke execute on function public.care_line_ok(text) from public, anon, authenticated;
@@ -32,8 +34,9 @@ alter table public.content_questions
 --   '앱 표시 약속'이 아니라 데이터 수준 차단이 되게. 표 단위 select를 회수하고 care 두 열을 뺀 열만 다시 준다(RLS 정책 questions_read는 그대로).
 --   자녀·어르신 RPC는 security definer라 영향 없음. 앱(src)·Edge Function은 이 표를 직접 읽지 않는다(PR 본문 확인).
 --   주의: 앞으로 이 표에 열을 더하면 앱에 보일 열은 따로 grant해야 한다(표 단위 select가 없으므로 자동으로 보이지 않음).
-revoke select on public.content_questions from authenticated, anon;
-grant select (id, day_index, option_a, option_b, prompt, retired_at, starter_a, starter_b) on public.content_questions to authenticated, anon;
+--   anon은 0002 뒤로 이 표 권한이 0이다 — 건드리지 않는다(#286 QA-3 재확인 M1).
+revoke select on public.content_questions from authenticated;
+grant select (id, day_index, option_a, option_b, prompt, retired_at, starter_a, starter_b) on public.content_questions to authenticated;
 
 -- 스위치 이름 추가(0061 목록 + care_lines_enabled). 마이그레이션은 행을 넣지 않는다 = 모든 환경 꺼짐.
 alter table public.server_flags drop constraint server_flags_name_check,

@@ -21,7 +21,9 @@ select 'recall_picks', rp.day_index, count(*) from public.recall_picks rp
  where rp.day_index in (2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14) group by rp.day_index
 order by 1, 2;
 
--- [2] 지울 답 백업(#286 QA-3 L2). [1]의 answers_on_q 합이 0이면 건너뛴다. 0이 아니면 이 백업을 만든 뒤에만 [4]로 간다
+-- [2] 지울 답 백업(#286 QA-3 L2). **보관용 기록일 뿐 그대로 복원할 수 없다** — 백업 행은 지워진 옛 question_id를 가리킨다(새 행과 id가 다름).
+--     복원이 필요하면 backup_day_index로 새 행 id에 매핑해 넣는다. 백업 표는 답 31일 보관 원칙대로 **2026-12-27(재시드 31일 뒤)까지 지운다**(실행 날이 다르면 그날 + 31일).
+--     [1]의 answers_on_q 합이 0이면 건너뛴다. 0이 아니면 이 백업을 만든 뒤에만 [4]로 간다
 --     (백업 없이 진행하지 않는다 — 오너가 '버려도 된다'고 한 경우만 예외). 백업 표는 확인 뒤 운영자가 지운다(31일 파기 대상 밖이므로 남기지 않는다).
 create table if not exists public._backup_answers_20261126 as
 select a.*, q.day_index as backup_day_index
@@ -38,7 +40,8 @@ select nq.id, nq.family_id, nq.payload, nq.created_at
                 where q.day_index in (8, 9, 13, 14) and a.parent_id = (nq.payload ->> 'parent_id')::uuid);
 -- update public.notification_queue set sent_at = now() where id in (/* 위에서 나온 id */);
 
--- [4] 길 A 삭제(한 트랜잭션). daily_sessions.question_id는 FK on delete set null(세션 행은 남음).
+-- [4] 길 A 삭제(한 트랜잭션). **한 번만 실행 — 14d 시드를 넣은 뒤 다시 돌리면 새로 넣은 8·9·13·14일 행과 그 뒤 생긴 답까지 지운다(멱등 아님).**
+--     daily_sessions.question_id는 FK on delete set null(세션 행은 남음).
 begin;
 select set_config('bumo.allow_content_delete', 'on', true);
 delete from public.answers where question_id in (select id from public.content_questions where day_index in (8, 9, 13, 14));

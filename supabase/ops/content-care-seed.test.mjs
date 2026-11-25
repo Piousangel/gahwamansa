@@ -123,21 +123,31 @@ test('금지어 0 — 챙겨 드릴 거리 60줄 + 바뀐 9일 ③ 보기·질�
   assert.deepEqual(hits, []);
 });
 
-const SQL_RE = MIG.match(/regexp_replace\(p_line, '\\s\+', '', 'g'\) !~ '([^']*)'/);
+const SQL_RE = MIG.match(/regexp_replace\(regexp_replace\(p_line, '\\s\+', '', 'g'\), '([^']*)', '', 'g'\) !~ '([^']*)'/);
+// SQL과 같은 순서로: 공백 지움 → 낱말 단위 예외 지움 → 금지 정규식
+const sqlBlocks = (t) => new RegExp(SQL_RE[2]).test(squash(t).replace(new RegExp(SQL_RE[1], 'g'), ''));
+// 낱말 단위 예외(#286 QA-3 재확인 L1): 통과해야 할 일상 표현 / 예외가 있어도 막혀야 할 것
+const MUST_PASS = ['약과 한 접시', '약밥 지어 드리기', '약수터 산책', '연 높이 날리기', '허리띠 선물', '조약돌 줍기'];
+const STILL_BLOCK = ['약 챙겨 드리기', '명절에 좋아하시는 떡', '관절약 사 드리기'];
 
 test('0065 SQL 금지어 정규식이 독립 목록의 낱말을 모두 잡고, 공백을 지운 값으로 검사한다', () => {
   assert.ok(SQL_RE, 'care_line_ok 정규식(공백 지운 값 검사)을 찾지 못함');
-  const sqlBan = new RegExp(SQL_RE[1].replace('[0-9]+일째', '([0-9]+)?일째'));
+  const sqlBan = new RegExp(SQL_RE[2].replace('[0-9]+일째', '([0-9]+)?일째'));
   assert.deepEqual(BANNED.filter((w) => !sqlBan.test(w)), []);
-  assert.ok(new RegExp(SQL_RE[1]).test('3일째'), 'N일째');
-  assert.ok(!/ /.test(SQL_RE[1]), '공백을 지운 값과 맞추므로 정규식 낱말에 공백이 없어야 함');
+  assert.ok(new RegExp(SQL_RE[2]).test('3일째'), 'N일째');
+  assert.ok(!/ /.test(SQL_RE[2]) && !/ /.test(SQL_RE[1]), '공백을 지운 값과 맞추므로 정규식 낱말에 공백이 없어야 함');
   assert.match(MIG, /char_length\(p_line\) between 1 and 17/);
 });
 
 test('효능·풀이 예시는 SQL 정규식(공백 지운 값)에 막히고, 확정 60줄은 통과(#286 QA-3 M1)', () => {
-  const sqlBan = new RegExp(SQL_RE[1]);
-  assert.deepEqual(MUST_BLOCK.filter((t) => !sqlBan.test(squash(t))), []);
-  assert.deepEqual(CARE.filter((t) => sqlBan.test(squash(t))), []);
+  assert.deepEqual(MUST_BLOCK.filter((t) => !sqlBlocks(t)), []);
+  assert.deepEqual(CARE.filter((t) => sqlBlocks(t)), []);
+});
+
+test('낱말 단위 예외: 약과·약밥·약수·조약·허리띠·높이 날은 통과, 약·~에 좋아하시는·관절약은 그대로 막힘(QA-3 재확인 L1)', () => {
+  assert.deepEqual(MUST_PASS.filter((t) => sqlBlocks(t)), []);
+  assert.deepEqual(STILL_BLOCK.filter((t) => !sqlBlocks(t)), []);
+  assert.ok(DOC.includes('약과·약밥·약수(터)·조약(돌)·허리띠'), '설계서 7절 라이터 메모');
 });
 
 // #286 QA-1 L2: staging 재시드 [5] 첫마디 UPDATE(손으로 옮긴 4줄) = seed_content_30d.sql seed_starters 글자 그대로
