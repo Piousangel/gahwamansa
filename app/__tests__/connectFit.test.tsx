@@ -397,3 +397,26 @@ describe('키패드 남는 높이', () => {
     expect(one.lineHeight * del.props.maxFontSizeMultiplier + 4).toBeLessThanOrEqual(k + 0.01);
   });
 });
+
+// 대기열 53: 411×914 글자 130%(에뮬레이터 실측 2단계)에서 첫 화면 묶음 아래 약관 줄 첫 줄이 '더 있음' 흐림(28) 안에 12 걸쳐
+// 반쯤 잘린 채 보였다(묶음 끝 = 창 − 흐림, 그 뒤 본문 간격 16 → 다음 요소 위 끝 = 창 − 12). 다음 요소는 첫 화면 끝(창 아래 끝)부터 시작해야 한다(R-15)
+describe('대기열 53: 2·3단계 묶음 아래 요소(약관 줄·링크)는 첫 화면 밖에서 시작', () => {
+  const BODY_GAP = 16;
+  const FIRST_PAD = 4;
+  const marginBottom = () => (StyleSheet.flatten(screen.getByTestId('connect-first').props.style).marginBottom as number | undefined) ?? 0;
+  for (const [w, h, f, lv] of [
+    [360, 740, 1, 3],
+    [360, 914, 1.3, 2],
+  ] as const) {
+    test(`${w}×${h} 글자 ${f}(${lv}단계): 묶음 끝 + 여백 + 간격 = 창 아래 끝`, async () => {
+      expect(stageOf(w, h, f).level).toBe(lv);
+      dims(w, h, f);
+      await openConnect();
+      await viewport(600);
+      const first = firstHeight() as number;
+      expect(first).toBe(600 - FIRST_PAD - FADE);
+      // 고치기 전: 4 + 568 + 0 + 16 = 588 → 약관(2단계)·링크(3단계) 위 12 가 첫 화면 흐림 안에 보였다
+      expect(FIRST_PAD + first + marginBottom() + BODY_GAP).toBe(600);
+    });
+  }
+});

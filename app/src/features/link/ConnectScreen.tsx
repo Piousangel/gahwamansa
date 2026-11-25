@@ -171,6 +171,9 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
   const viewH = view && view.dock === dockConfig && view.for === inputKey ? view.h : 0; // 다른 구성·다른 판정 입력에서 잰 창은 쓰지 않는다
   const firstH = viewH > 0 ? Math.max(0, viewH - FIRST_PAD - SCREEN_FADE_H - (noDock ? insets.bottom : 0)) : firstBlockGuess(level, input);
   const fillExpected = viewH > 0 ? viewH - FIRST_PAD - BODY_BOTTOM : 0;
+  // 대기열 53: 2·3단계 묶음 끝은 창 − 흐림(− inset)이라, 본문 간격 16 만 두면 다음 요소(약관 줄·링크) 위 12 가 첫 화면 '더 있음' 흐림 안에
+  //   반쯤 잘린 채 보였다(411×914 글자 130% 실측). 묶음 아래 여백으로 흐림을 채워 다음 요소가 첫 화면 끝(창 아래 끝)부터 시작하게 한다(R-15)
+  const foldPush = Math.max(0, SCREEN_FADE_H + (noDock ? insets.bottom : 0) - layout.bodyPadding.gap);
   const onViewport = (h: number) => setView(v => (v && v.h === h && v.dock === dockConfig && v.for === inputKey ? v : {h, dock: dockConfig, for: inputKey}));
 
   // 재확인 5 M9: 넘침은 묶음 컨테이너 높이(minHeight·flexGrow 로 늘어난 값)가 아니라 **내용 높이**로 잰다.
@@ -342,7 +345,7 @@ export function ConnectScreen({navigation, route}: NativeStackScreenProps<Parent
       {/* 첫 화면 묶음: 0·1단계는 본문(fill)을 채우고, 2·3단계는 잰 창 높이로 고정(그 아래 약관·링크는 스크롤 밖), 4단계는 보통 배치 */}
       <View
         testID="connect-first"
-        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {minHeight: firstH} : null, !scroll ? styles.fillFirst : null]}>
+        style={[styles.first, overflow ? styles.firstDense : null, scroll && !overflow ? {minHeight: firstH, marginBottom: foldPush} : null, !scroll ? styles.fillFirst : null]}>
         <Text20 size={level >= 1 ? 22 : 28} weight="bold" accessibilityRole="header" textBreakStrategy="balanced" style={styles.title}>
           {TITLE}
         </Text20>

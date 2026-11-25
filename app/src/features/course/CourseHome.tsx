@@ -70,9 +70,11 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [viewH, setViewH] = useState(0); // R-15 접힘 기준 창(FoldBody)
   // 5단계: 홈이 열리거나 지금 행이 바뀌면 그 행이 보이게(시안 리스크 1 — 360×640 100%에서도 ③ 뒤 지금 행이 첫 화면 끝에 걸린다)
   const nowStep = five && content ? steps.find(s => !done.includes(s.step))?.step ?? null : null;
+  // 첫날 해님 인사 카드는 위 끝이 잘리게 내리지 않는다(대기열 54: 320×640 200%에서 카드 윗부분이 반쯤 잘린 채 멈췄다)
+  const greetKeep = firstGreeting ? 'greet' : undefined;
   // 행 위치는 자연 위치(접힘 여백 없음). 내려야 하는 날은 아래 FoldStack 이 여백을 끄므로 실제 위치와 같다(#254 캡처 문제 1)
   const nowAt = (): ReturnType<typeof nowRowRange> =>
-    nowStep && rowsAt ? nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH) : null;
+    nowStep && rowsAt ? nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH, greetKeep) : null;
   // 내릴지는 지금 행마다 한 번, 열린 뒤 첫 측정 묶음(모든 요소를 처음 다 잰 때)으로 정하고 고정한다(#259 QA-2 M1·재확인 M, 리드 결정).
   // - 내렸으면: 뒤에 높이가 바뀌어도 접힘 여백을 다시 켜지 않는다(켜면 내린 화면 안에 빈칸).
   // - 안 내렸으면: 뒤에 위쪽 안내(여기까지 실패·동기화 오류)가 끼어들어 행이 밀려도 내리지 않는다 — 막 뜬 실패 안내가 화면에 보여야 한다.
@@ -83,7 +85,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     if (!nowStep || !rowsAt || viewH <= 0 || decided?.step === nowStep) {
       return;
     }
-    const at = nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH);
+    const at = nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH, greetKeep);
     if (!at) {
       return; // 아직 다 재지 않음
     }
@@ -91,7 +93,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
       scrollRef.current?.showRange(at.top, at.bottom);
     }
     setDecided({step: nowStep, scrolled: at.scroll});
-  }, [nowStep, rowsAt, viewH, decided]);
+  }, [nowStep, rowsAt, viewH, decided, greetKeep]);
   useEffect(() => {
     if (content === undefined) {
       return;
