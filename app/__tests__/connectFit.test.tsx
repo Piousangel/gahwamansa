@@ -419,4 +419,32 @@ describe('대기열 53: 2·3단계 묶음 아래 요소(약관 줄·링크)는 �
       expect(FIRST_PAD + first + marginBottom() + BODY_GAP).toBe(600);
     });
   }
+
+  // 대기열 55(#294 리뷰 L1): 3단계는 하단 고정이 없어 3버튼 내비(inset 48)가 창 아래를 덮는다 → 묶음·여백에 inset 을 더해야 한다
+  test('360×740 글자 1(3단계) 3버튼 내비 inset 48: 여백 = 흐림 28 + 48 − 간격 16 = 60, 위 여백 + 묶음 + 여백 + 간격 = 창', async () => {
+    const SafeArea = require('react-native-safe-area-context');
+    const insets = SafeArea.useSafeAreaInsets as jest.Mock;
+    const orig = insets.getMockImplementation();
+    insets.mockImplementation(() => ({top: 0, bottom: 48, left: 0, right: 0}));
+    try {
+      const st = pickStage({
+        windowH: 740,
+        windowW: 360,
+        fontScale: 1,
+        insets: {top: 0, bottom: 48},
+        text: {title: copy.connect.title, safe: copy.safe.money, below: copy.connect.auto_hint, legal: copy.legal.agree_parent, links: [copy.connect.no_code_link, copy.connect.view_course]},
+      });
+      expect(st.level).toBe(3);
+      dims(360, 740);
+      await openConnect();
+      await viewport(600);
+      const first = firstHeight() as number;
+      expect(first).toBe(600 - FIRST_PAD - FADE - 48);
+      expect(marginBottom()).toBe(60);
+      expect(FIRST_PAD + first + marginBottom() + BODY_GAP).toBe(600);
+    } finally {
+      screen.unmount();
+      insets.mockImplementation(orig);
+    }
+  });
 });

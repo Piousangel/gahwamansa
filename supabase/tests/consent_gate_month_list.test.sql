@@ -4,7 +4,7 @@
 --             기간 D-29..D(D-30은 파기 전이어도 안 보임, 파기 0023은 D-31부터 지움) / 항목 키 7개뿐 — 횟수·순위·갈래 없음 /
 --             게이트 함수는 내부 전용 / 어르신 미리보기(0050)도 같은 게이트.
 begin;
-select plan(22);
+select plan(28);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 
 insert into auth.users (id, aud, role, is_anonymous) values
@@ -111,6 +111,20 @@ select ok(not (pg_temp.par('down5', '70680000-0000-0000-0000-00000000a006') ? 'm
 update public.profiles set consent_version = 'v6', consented_at = null where id = '70680000-0000-0000-0000-00000000a006';
 select ok(not public.parent_month_scope('70680000-0000-0000-0000-00000000a006'), '버전이 v6이어도 철회(consented_at null)면 게이트 false');
 update public.profiles set consented_at = now() where id = '70680000-0000-0000-0000-00000000a006';
+
+-- 대기열 59 ③(#292 후속): 'v<숫자>' 꼴이 아닌 이상한 버전은 동의 중이어도 게이트 false(형식이 다르면 0 → 6 미만).
+-- give_consent(0035)가 막는 값이지만 게이트는 저장 값만 보므로 따로 고정한다(대문자·소수·앞뒤 공백·빈 값).
+create function pg_temp.scope_with(p_ver text) returns boolean language plpgsql as $$
+begin
+  update public.profiles set consent_version = p_ver where id = '70680000-0000-0000-0000-00000000a006';
+  return public.parent_month_scope('70680000-0000-0000-0000-00000000a006');
+end $$;
+select ok(not pg_temp.scope_with('V6'), '버전 V6(대문자) → 게이트 false');
+select ok(not pg_temp.scope_with('v6.1'), '버전 v6.1(소수) → 게이트 false');
+select ok(not pg_temp.scope_with(' v6'), '버전 앞 공백 → 게이트 false');
+select ok(not pg_temp.scope_with('v6 '), '버전 뒤 공백 → 게이트 false');
+select ok(not pg_temp.scope_with(''), '빈 버전 → 게이트 false');
+select ok(pg_temp.scope_with('v6'), '같은 행을 v6으로 되돌리면 다시 true(위 false가 다른 까닭 때문이 아님)');
 
 -- 파기(0023)와 경계: D-31은 지워지고 D-30은 남지만 목록에는 없다
 select public.purge_expired_data(now());

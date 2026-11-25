@@ -1,10 +1,16 @@
 -- 0068 되돌리기(수동). 원칙은 앞으로 고치기(dev-server-notes §18) — 이 파일은 비상용이다. 파일 전체를 한 번에 실행한다(begin … commit, 한 트랜잭션).
--- 순서: 읽는 함수 둘을 0065 정의로(게이트 함수를 부르지 않게) → 게이트 함수 삭제. 데이터 변경 없음(consent_version 값은 그대로).
--- 되돌린 뒤: 자녀 요약에 month 키가 사라지고, care는 다시 스위치만 따른다 — v5·미응답 어르신에게도 켜면 보이므로 스위치 상태를 먼저 확인한다.
+-- 순서: ① 스위치 care_lines_enabled 끄기 → ② 읽는 함수 둘을 0065 정의로(게이트 함수를 부르지 않게) → ③ 게이트 함수 삭제.
+-- ①이 먼저인 까닭(#292 리뷰): 되돌린 뒤 care는 다시 스위치만 따른다 — 켜져 있으면 v5·미응답 어르신의 '챙겨 드릴 거리'까지 자녀에게 보인다.
+--    그래서 같은 트랜잭션 맨 앞에서 끈다(행이 없으면 아무 일 없음 = 이미 꺼짐). 다시 켜는 것은 0068을 다시 올린 뒤 운영자 판단.
+-- 데이터 변경은 ①의 스위치 한 줄뿐(consent_version 값은 그대로). 되돌린 뒤 자녀 요약에 month 키가 사라진다.
 -- 함수는 0065 정의 그대로 붙여 넣었다(create or replace라 권한은 그대로: 둘 다 앱·anon·service_role 실행 불가).
 
 begin;
 
+-- ① 스위치 끄기(되돌린 뒤 care가 게이트 없이 보이지 않게)
+update public.server_flags set enabled = false, updated_at = now() where name = 'care_lines_enabled';
+
+-- ② 읽는 함수 둘을 0065 정의로
 create or replace function public.care_lines_visible(p_parent uuid) returns boolean
 language sql stable security definer set search_path = ''
 as $$ select public.server_flag('care_lines_enabled') and p_parent is not null $$;
@@ -36,6 +42,7 @@ as $$
       where p.family_id = p_family and p.role = 'parent' and (p_parent is null or p.id = p_parent)), '[]'::jsonb))
 $$;
 
+-- ③ 게이트 함수 삭제
 drop function public.parent_month_scope(uuid);
 
 commit;
