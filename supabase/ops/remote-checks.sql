@@ -58,7 +58,9 @@ with checks(check_name, ok, detail) as (
                            'public.discard_anonymous_session()'::regprocedure)), null
   union all
   -- 7. 발송 문구(법률 리뷰 뒤 load-push-copy로 적재). 없으면 알림은 보내지 않는다(의도)
-  select '푸시 문구 4종 적재', (select count(*) from public.push_copy) = 4,
+  -- 필수 4종만 센다. 0052 첫 답(parent_first_answer)은 선택 종류라 적재되면 5행이 정상(detail 에 보임)
+  select '푸시 문구 필수 4종 적재',
+         (select count(*) from public.push_copy where kind in ('daily', 'cheer_arrived', 'parent_connected', 'parent_reconnected')) = 4,
          (select coalesce(string_agg(kind, ', ' order by kind), '없음 — 발송 안 함') from public.push_copy)
   union all
   select '응원 문장 4개 적재', (select count(*) from public.cheer_texts) = 4, null
