@@ -13,6 +13,13 @@ import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
+// RN jest 기본 화면 값은 글자 2배라 P7 이 '본문 먼저'(1.6 이상, #263) 분기로 들어간다. 이 파일은 시안 타임라인(마운트 먼저)을 보므로 100%로 고정한다.
+// 본문 먼저일 때의 도장 때는 p7BodyFirst200.test
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({width: 360, height: 640, scale: 3, fontScale: 1}),
+}));
+
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
 setupWarmAppRoot();
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
