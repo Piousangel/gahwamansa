@@ -1,321 +1,328 @@
-// ds Sheet 끌기(오너 C-3, 11-24): 손잡이·내용 끌기, 속도 스냅, 끌어 닫기, 안쪽 스크롤 소유권, 모션 줄이기, 스크린리더 손잡이.
-// 계산 자체는 sheetMath.test.ts(몽망이 92ff492 에서 옮김)가 고정하고, 여기서는 Sheet 가 그 계산을 손가락·화면 읽기에 제대로 잇는지 본다.
-// PanResponder 는 touchHistory 로 dy·vy 를 계산하므로 같은 모양의 사건을 만들어 panHandlers 를 직접 부른다
-// (RNTL fireEvent 는 터치 응답자의 onMoveShouldSetResponder 를 인자 없이 불러 PanResponder 와 맞지 않는다).
+// ds Sheet 끌기 계약(오너 C-3·O-3, 11-25 gorhom 이전). 손가락 끌기·스냅 모션·안쪽 스크롤 동시 인식은 gorhom(UI 스레드)이 하므로
+// jest 는 우리 Sheet 가 gorhom 에 넘기는 설정과 gorhom 이 돌려주는 사건(onChange·onClose)을 제대로 잇는지 본다.
+// 실제 끌기(200% 넘치는 시트 내용 끌어 닫기 포함)는 에뮬레이터 증거: docs/team/qa/evidence/2026-11-25-gorhom/
+// gorhom 목: testUtils/gorhomMock.js(공식 목 + 손잡이·배경·밖 누르기 그리기, __last 로 props·ref 호출 확인)
 import React from 'react';
-import {Text as RNText} from 'react-native';
-import {act, fireEvent, render, screen} from '@testing-library/react-native';
-import {Sheet} from '../src/ui/ds';
+import {StyleSheet, Text as RNText} from 'react-native';
+import {act, fireEvent, render, renderHook, screen} from '@testing-library/react-native';
+import {getAnimatedStyle as getAnimatedStyleUntyped, ReduceMotion} from 'react-native-reanimated';
+import {Sheet, SHEET_HANDLE_H} from '../src/ui/ds';
+import {CONTENT_MIN_DRAG, limitShortContentFling, resolveSnapPoints, useSheetGestureHandlers} from '../src/ui/ds/Sheet';
 
 const RN = require('react-native');
+// Reanimated 4.8 의 기본 타입은 웹 대역(인자 없음)이라 jest(네이티브 판) 서명으로 맞춘다. 같은 이유로 toHaveAnimatedStyle 매처도 tsc 가 모른다(리뷰)
+const getAnimatedStyle = getAnimatedStyleUntyped as unknown as (el: unknown) => Record<string, unknown>;
+const gorhom = require('@gorhom/bottom-sheet');
 const opener = {current: null};
 const WIN_H = 640;
-const SHEET_H = 500;
 
 beforeEach(() => {
   jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({width: 360, height: WIN_H, scale: 2.75, fontScale: 1});
 });
 afterEach(() => {
   jest.restoreAllMocks();
-  // preset 의 isReduceMotionEnabled 는 jest.fn 이라 spyOn 이 같은 함수를 돌려준다 → 기본(false)으로 직접 되돌린다
-  RN.AccessibilityInfo.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(false));
   jest.useRealTimers();
 });
 
-/** 모션 줄이기 켜기: 놓은 뒤 바로 그 자리(0ms)라 결과를 곧장 본다 */
-async function reduceMotion() {
-  RN.AccessibilityInfo.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(true));
-}
-
-async function open(props: Partial<React.ComponentProps<typeof Sheet>> = {}, onClose = jest.fn()) {
-  render(
-    <Sheet visible title="제목" testID="s" onClose={onClose} returnFocusRef={opener} {...props}>
-      <RNText>내용</RNText>
-    </Sheet>,
-  );
-  await act(async () => {}); // useReduceMotion 의 Promise
-  fireEvent(screen.getByTestId('s'), 'layout', {nativeEvent: {layout: {height: SHEET_H}}});
+type Props = Partial<React.ComponentProps<typeof Sheet>>;
+const el = (props: Props, onClose: () => void) => (
+  <Sheet visible title="제목" testID="s" onClose={onClose} returnFocusRef={opener} {...props}>
+    <RNText>내용</RNText>
+  </Sheet>
+);
+function open(props: Props = {}, onClose = jest.fn()) {
+  render(el(props, onClose));
   return onClose;
 }
-
-/**
- * 한 손가락 세로 끌기: dys = 시작점에서의 누적 이동(px), 한 걸음 step ms. 반환 = 캡처 판정(시트가 손가락을 가졌나).
- * end: 'release' = 손을 뗌, 'terminate' = 다른 응답자(Android 네이티브 스크롤 등)에 빼앗김, 'hold' = 쥔 채로 둠
- */
-function drag(testID: string, dys: number[], step = 16, end: 'release' | 'terminate' | 'hold' = 'release'): boolean {
-  const el = screen.getByTestId(testID);
-  let t = 0;
-  let prev = 0;
-  const ev = (y: number) => {
-    t += step;
-    const touch = {
-      touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0,
-      currentPageX: 0, currentPageY: y, currentTimeStamp: t, previousPageX: 0, previousPageY: prev, previousTimeStamp: t - step,
-    };
-    prev = y;
-    return {nativeEvent: {touches: [], changedTouches: [], pageX: 0, pageY: y, timestamp: t}, touchHistory: {numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: t, touchBank: [touch]}};
-  };
-  const [first, ...rest] = dys;
-  const e0 = ev(first);
-  const took = !!el.props.onMoveShouldSetResponderCapture(e0);
-  if (!took) {
-    return false;
-  }
-  act(() => {
-    el.props.onResponderGrant(e0);
-    let last = e0;
-    for (const y of rest) {
-      last = ev(y);
-      el.props.onResponderMove(last);
-    }
-    if (end === 'release') {
-      el.props.onResponderRelease(last);
-    } else if (end === 'terminate') {
-      el.props.onResponderTerminate(last);
-    }
-  });
-  return true;
-}
-
+const last = () => gorhom.__last() as {props: Record<string, any>; api: Record<string, jest.Mock>; index: number};
 const handle = () => screen.getByTestId('sheet-handle');
-/** 지금 그려진 시트 위치(translateY) */
-const shownY = () => {
-  const st = screen.getByTestId('s-mover').props.style;
-  return (Array.isArray(st) ? Object.assign({}, ...st) : st).transform[0].translateY as number;
-};
-/** 화면 읽기 동작(두 번 누르기 = activate, 위·아래 쓸기 = increment·decrement). 손잡이 props 를 직접 부른다(위 drag 와 같은 이유) */
 const a11y = (actionName: string) => act(() => handle().props.onAccessibilityAction({nativeEvent: {actionName}}));
+/** 몸통(손잡이 아래)을 잰다 → 시트 높이 = 몸통 + 손잡이 48 */
+const measure = (sheetH: number) => fireEvent(screen.getByTestId('s-scroll'), 'contentSizeChange', 360, sheetH - SHEET_HANDLE_H);
 
-describe('손잡이 끌기', () => {
-  test('손잡이는 누르는 순간 응답자가 되고, 내용은 누르는 순간 잡지 않는다(안의 버튼 누르기 보호)', async () => {
-    // 에뮬레이터 실측(11-24): 누르는 순간 응답자가 없으면 Android 에서 이동의 '잡을까' 질문이 손잡이까지 오지 않아 손잡이 끌기가 죽어 있었다
-    await open();
-    const start = {nativeEvent: {touches: [], changedTouches: [], pageX: 0, pageY: 0, timestamp: 1}, touchHistory: {numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: 1, touchBank: []}};
-    expect(handle().props.onStartShouldSetResponder(start)).toBe(true);
-    expect(screen.getByTestId('s-content').props.onStartShouldSetResponder(start)).toBe(false);
+describe('gorhom 설정', () => {
+  test('기본(칸 하나 = 내용 높이): 동적 높이, 끌어 닫기 켬, 88% 상한, 모션 줄이기는 시스템 설정을 따름', () => {
+    open();
+    const p = last().props;
+    expect(p.enableDynamicSizing).toBe(true);
+    expect(p.snapPoints).toEqual([]);
+    expect(p.index).toBe(0);
+    expect(p.enablePanDownToClose).toBe(true);
+    expect(p.maxDynamicContentSize).toBe(Math.floor(WIN_H * 0.88));
+    expect(p.overrideReduceMotion).toBe(ReduceMotion.System);
+    // 여는 모션은 불투명도만(공용 모션 규칙 §0-6) — gorhom 아래에서 올라오기는 끈다
+    expect(p.animateOnMount).toBe(false);
+    // 스크롤 밖 아래 줄(더 있음 띠·footer·아래 inset)은 gorhom footerComponent 로, 스크롤 아래 여백을 gorhom 이 맞춘다
+    expect(p.footerComponent).toBeTruthy();
+    expect(screen.UNSAFE_getByType(gorhom.BottomSheetScrollView).props.enableFooterMarginAdjustment).toBe(true);
   });
 
-  test('빠르게 아래로 튕기면 닫힌다(500px/s 이상 = 그 방향 한 칸 = 닫힌 자리)', async () => {
-    await reduceMotion();
-    const onClose = await open();
-    expect(drag('sheet-handle', [6, 30, 60])).toBe(true); // 30px / 16ms ≈ 1875px/s
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('스크롤은 시트의 바로 아래 자식(BottomSheetView 로 감싸지 않음) — 감싸면 gorhom 이 내용을 "스크롤 없음"으로 덮어써 넘치는 시트에서 스크롤 대신 시트가 들린다', () => {
+    open();
+    const scroll = screen.UNSAFE_getByType(gorhom.BottomSheetScrollView);
+    // 목의 BottomSheet 는 자식을 'gorhom-sheet' View 바로 안에 그린다(BottomSheetView 목이 끼면 그 컴포넌트가 부모가 된다)
+    expect(scroll.parent?.props.testID).toBe('gorhom-sheet');
   });
 
-  test('천천히 조금 내렸다 놓으면 제자리로(닫히지 않음)', async () => {
-    await reduceMotion();
-    const onClose = await open();
-    expect(drag('sheet-handle', [6, 40, 60, 80], 200)).toBe(true); // 20px / 200ms = 100px/s, 투영 80 + 20 = 100 → 0 쪽
-    expect(onClose).not.toHaveBeenCalled();
+  test('스크린리더: gorhom 기본(시트 전체 = "Bottom Sheet" 조절 막대 하나)을 끄고, 바탕도 읽지 않는다', () => {
+    open();
+    expect(last().props.accessible).toBe(false);
+    // gorhom 은 null 을 '없음'으로 받는다(undefined 면 기본값 'Bottom Sheet'·adjustable 이 Android 에 남는다, 리뷰)
+    expect(last().props.accessibilityLabel).toBeNull();
+    expect(last().props.accessibilityRole).toBeNull();
+    expect(last().props.backgroundComponent).toBeTruthy(); // 기본 바탕(accessible adjustable)을 쓰지 않는다
+    expect(screen.queryByLabelText('Bottom Sheet')).toBeNull();
+    // 제목·닫기는 따로 읽힌다(시트 하나로 묶이지 않음)
+    expect(screen.getAllByRole('header').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', {name: '닫기'})).toBeTruthy();
   });
 
-  test('천천히라도 절반 넘게 내리면 닫힌다(0.2초 투영이 닫힌 자리에 더 가깝다)', async () => {
-    await reduceMotion();
-    const onClose = await open();
-    drag('sheet-handle', [6, 200, 300, 320], 200);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  test('가로로 움직인 손가락이나 아주 작은 떨림은 잡지 않는다', async () => {
-    await open();
-    expect(drag('sheet-handle', [3])).toBe(false);
-  });
-
-  test('모션 줄이기가 아니면 남은 거리·놓은 속도에 맞춘 140~280ms 모션으로 자리 잡는다(네이티브 드라이버)', async () => {
-    const timing = jest.spyOn(RN.Animated, 'timing');
-    await open();
-    drag('sheet-handle', [6, 30, 60]);
-    expect(timing).toHaveBeenCalledTimes(1);
-    const cfg = timing.mock.calls[0][1] as {toValue: number; duration: number; useNativeDriver: boolean};
-    expect(cfg.toValue).toBe(SHEET_H);
-    expect(cfg.duration).toBeGreaterThanOrEqual(140);
-    expect(cfg.duration).toBeLessThanOrEqual(280);
-    expect(cfg.useNativeDriver).toBe(true);
-  });
-
-  test('모션 줄이기면 모션 없이 바로 그 자리(Animated.timing 을 부르지 않는다)', async () => {
-    await reduceMotion();
-    const timing = jest.spyOn(RN.Animated, 'timing');
-    const onClose = await open();
-    drag('sheet-handle', [6, 30, 60]);
-    expect(timing).not.toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('손잡이 줄은 48 높이(최소 누르기 크기), 손잡이는 gorhom handleComponent 로 그려진다', () => {
+    open();
+    expect(StyleSheet.flatten(handle().props.style).height).toBe(48);
+    expect(last().props.handleComponent).toBeTruthy();
   });
 });
 
-describe('끌기 모양', () => {
-  test('손잡이를 위로 넘겨 끌면 sqrt 저항으로 조금만 올라간다(손가락 100px → 30px 미만)', async () => {
-    await open();
-    drag('sheet-handle', [-6, -60, -106], 16, 'hold');
-    expect(shownY()).toBeLessThan(0);
-    expect(shownY()).toBeGreaterThan(-30);
+describe('끌어 닫기(gorhom onClose)', () => {
+  test('끌어 내려 닫힌 자리에 가면 onClose 한 번', () => {
+    const onClose = open();
+    act(() => last().props.onClose());
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  test('아래로 끄는 동안 배경이 위치에 따라 옅어진다(맨 위 1 → 닫힌 자리 0)', async () => {
-    await open();
-    const scrim = () => {
-      const st = screen.getByTestId('sheet-scrim-fade', {includeHiddenElements: true}).props.style;
-      return (Array.isArray(st) ? Object.assign({}, ...st) : st).opacity as number;
-    };
-    expect(scrim()).toBe(1);
-    drag('sheet-handle', [6, 256], 16, 'hold'); // 위치 250 = 시트 500 의 절반
-    expect(scrim()).toBeCloseTo(0.5, 2);
-  });
-
-  test('끌어 닫은 뒤 다시 열면 또 끌 수 있다(닫힘 상태가 남지 않는다)', async () => {
+  test('호출부가 닫기를 막으면(visible 그대로) 잠시 뒤 마지막 칸으로 되돌린다 — 보이지 않는 Modal 이 화면을 막지 않게', () => {
     jest.useFakeTimers();
-    await reduceMotion();
+    const onClose = open({snapPoints: ['50%', 'content']});
+    measure(500);
+    act(() => last().props.onChange(0)); // 사용자가 낮은 칸으로 내렸다
+    act(() => last().props.onClose());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(last().api.snapToIndex).toHaveBeenCalledWith(0);
+  });
+
+  test('부모가 닫으면(visible false) 되돌리지 않는다', () => {
+    jest.useFakeTimers();
     const onClose = jest.fn();
-    const el = (visible: boolean) => (
-      <Sheet visible={visible} title="제목" testID="s" onClose={onClose} returnFocusRef={opener}>
-        <RNText>내용</RNText>
-      </Sheet>
-    );
-    await open({}, onClose);
-    drag('sheet-handle', [6, 30, 60]);
-    expect(onClose).toHaveBeenCalledTimes(1);
-    screen.rerender(el(false)); // 부모가 닫음
+    open({}, onClose);
+    const api = last().api;
+    act(() => last().props.onClose());
+    screen.rerender(el({visible: false}, onClose));
     act(() => {
       jest.advanceTimersByTime(200);
     });
-    screen.rerender(el(true)); // 다시 엶
-    fireEvent(screen.getByTestId('s'), 'layout', {nativeEvent: {layout: {height: SHEET_H}}});
-    expect(drag('sheet-handle', [6, 30, 60])).toBe(true);
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(api.snapToIndex).not.toHaveBeenCalled();
+  });
+
+  test('부모가 닫고 120ms 안에 다시 열어도 기다리던 되돌리기가 새 시트를 움직이지 않는다(닫히면 가드를 버림, QA-2 L2)', () => {
+    jest.useFakeTimers();
+    const onClose = jest.fn();
+    open({}, onClose);
+    act(() => last().props.onClose());
+    screen.rerender(el({visible: false}, onClose));
+    screen.rerender(el({visible: true}, onClose)); // 곧바로 다시 엶
+    const api = last().api;
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(api.snapToIndex).not.toHaveBeenCalled();
+  });
+
+  test('끌어 닫은 뒤 다시 열면 처음 칸으로 다시 연다(닫힘 상태가 남지 않는다)', () => {
+    const onClose = jest.fn();
+    open({snapPoints: ['50%', 'content']}, onClose);
+    measure(500);
+    act(() => last().props.onChange(-1));
+    act(() => last().props.onClose());
+    screen.rerender(el({visible: false, snapPoints: ['50%', 'content']}, onClose));
+    screen.rerender(el({visible: true, snapPoints: ['50%', 'content']}, onClose));
+    expect(last().props.index).toBe(1);
+    expect(handle().props.accessibilityValue.now).toBe(2);
   });
 });
 
-describe('잘못 닫지 않기(리뷰)', () => {
-  test('선택지를 누르다 살짝 튕긴 손가락(24px 미만)은 빨라도 닫지 않는다', async () => {
-    await reduceMotion();
-    const onClose = await open();
-    expect(drag('s-content', [10, 20])).toBe(true); // 10px / 16ms ≈ 625px/s, 움직인 거리 10px
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  test('빼앗긴 손가락(terminate)은 절반 넘게 내렸어도 닫지 않는다(빼앗긴 순간의 위치로 닫기 금지)', async () => {
-    await reduceMotion();
-    const onClose = await open();
-    drag('sheet-handle', [6, 200, 300, 320], 200, 'terminate'); // 놓았다면 닫혔을 위치(위 '절반 넘게' 시험)
-    expect(onClose).not.toHaveBeenCalled();
-    expect(shownY()).toBe(0);
-  });
-
-  test('빼앗긴 손가락은 빼앗긴 순간의 속도를 버린다(빠르게 조금 내리다 빼앗기면 가까운 위 칸으로)', async () => {
-    await reduceMotion();
-    await open({snapPoints: ['50%', 'content']}); // 위치 [0, 180]
-    drag('sheet-handle', [6, 30, 40], 16, 'terminate'); // 위치 34, 속도 625px/s — 놓았다면 아래 칸(180)으로 튕김
-    expect(handle().props.accessibilityValue.now).toBe(2);
-    expect(shownY()).toBe(0);
-  });
-
-  test('안쪽 버튼 누르기 보호: 8px 이하 움직임은 내용 끌기로 잡지 않는다', async () => {
-    await open();
-    expect(drag('s-content', [8])).toBe(false); // 넘으면 잡는 쪽은 '스크롤할 게 없는 내용은 … 시트가 받는다'(10px)가 본다
-  });
-
-  test('호출부가 닫기를 막으면(visible 그대로) 잠시 뒤 시트가 제자리로 돌아와 다시 끌 수 있다', async () => {
-    jest.useFakeTimers();
-    await reduceMotion();
-    const onClose = await open(); // onClose 가 visible 을 끄지 않는다
-    drag('sheet-handle', [6, 30, 60]);
+describe('밖 누르기 배경', () => {
+  test('누르면 onClose, 화면 읽기에서는 숨김(X 가 같은 일)', () => {
+    const onClose = open();
+    const scrim = screen.getByTestId('sheet-scrim', {includeHiddenElements: true});
+    expect(scrim.props.importantForAccessibility).toBe('no');
+    fireEvent.press(scrim);
     expect(onClose).toHaveBeenCalledTimes(1);
-    const timing = jest.spyOn(RN.Animated, 'timing');
+  });
+
+  test('진하기는 gorhom 칸 번호를 따른다: 열린 칸 1, 닫힌 자리(-1) 0', () => {
+    jest.useFakeTimers(); // Reanimated jest 는 공유 값 바뀜을 다음 프레임(가짜 시계)에 스타일로 옮긴다
+    open();
+    const fade = () => screen.getByTestId('sheet-scrim-fade', {includeHiddenElements: true});
+    expect(getAnimatedStyle(fade())).toMatchObject({opacity: 1});
+    act(() => last().api.close());
     act(() => {
-      jest.advanceTimersByTime(200);
+      jest.advanceTimersByTime(50);
     });
-    expect(timing).not.toHaveBeenCalled(); // 모션 줄이기라 바로 제자리
-    expect(drag('sheet-handle', [6, 30, 60])).toBe(true); // 닫히는 중으로 묶여 있지 않다
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(getAnimatedStyle(fade())).toMatchObject({opacity: 0});
   });
 });
 
 describe('여러 칸(snapPoints)', () => {
-  const snaps = ['50%', 'content'] as const; // 화면 640 → 320, 시트 500 → 위치 [0, 180]
+  const snaps = ['50%', 'content'] as const; // 화면 640 → 320, 시트 500
 
-  test('여러 칸이면 손잡이 두 번 누르기(activate)로 닫지 않는다(조절 막대 — 닫기는 X·뒤로)', async () => {
-    const onClose = await open({snapPoints: snaps});
-    a11y('activate');
-    expect(onClose).not.toHaveBeenCalled();
+  test('우리 칸 → gorhom 칸: 내용 칸은 동적 높이, 나머지는 px(시트 높이로 자름), 낮은 것부터', () => {
+    open({snapPoints: snaps});
+    measure(500);
+    expect(last().props.snapPoints).toEqual([320]);
+    expect(last().props.enableDynamicSizing).toBe(true);
+    expect(last().props.index).toBe(1); // 기본 = 가장 높은 칸
   });
 
-  test('손잡이는 조절 막대: 값(2단계 중 2단계), 위아래 쓸기로 한 칸씩, 끝에서 멈춤', async () => {
-    await reduceMotion();
-    await open({snapPoints: snaps});
+  test('손잡이는 조절 막대: 값(2단계 중 2단계), 위아래 쓸기로 한 칸씩, 가장 낮은 칸에서 멈춤(조절로는 닫지 않음)', () => {
+    const onClose = open({snapPoints: snaps});
+    measure(500);
     expect(handle().props.accessibilityRole).toBe('adjustable');
     expect(handle().props.accessibilityValue).toEqual({min: 1, max: 2, now: 2, text: '2단계 중 2단계'});
     a11y('increment');
-    expect(handle().props.accessibilityValue.now).toBe(2);
+    expect(last().api.snapToIndex).not.toHaveBeenCalled(); // 이미 맨 위
     a11y('decrement');
+    expect(last().api.snapToIndex).toHaveBeenLastCalledWith(0);
     expect(handle().props.accessibilityValue.now).toBe(1);
     a11y('decrement');
-    expect(handle().props.accessibilityValue.now).toBe(1); // 조절로는 닫지 않는다(닫기는 X·뒤로)
-  });
-
-  test('initialSnap 0 이면 낮은 칸으로 열리고, 낮은 칸에서는 안쪽 스크롤을 꺼 둔다(손가락은 시트 몫)', async () => {
-    await open({snapPoints: snaps, initialSnap: 0});
-    expect(handle().props.accessibilityValue.now).toBe(1);
-    expect(screen.getByTestId('s-scroll').props.scrollEnabled).toBe(false);
-  });
-
-  test('다른 칸으로 자리 잡는 모션이 칸 번호가 바뀐 다시 그리기에 끊기지 않는다(순간 이동 없음)', async () => {
-    await open({snapPoints: snaps});
-    const timing = jest.spyOn(RN.Animated, 'timing');
-    const stop = jest.spyOn(RN.Animated.Value.prototype, 'stopAnimation');
-    drag('sheet-handle', [6, 150, 160], 200); // 위치 160, 느림 → 180(낮은 칸)으로 모션
-    expect(timing.mock.calls.map(c => (c[1] as {toValue: number}).toValue)).toEqual([180]);
-    expect(handle().props.accessibilityValue.now).toBe(1);
-    expect(stop).toHaveBeenCalledTimes(1); // 잡을 때 한 번뿐 — 놓은 뒤 배치 효과가 모션을 멈추고 180으로 건너뛰지 않는다
-  });
-
-  test('느리게 중간쯤 놓으면 가까운 칸, 위로 튕기면 위 칸', async () => {
-    await reduceMotion();
-    const onClose = await open({snapPoints: snaps});
-    drag('sheet-handle', [6, 150, 160], 200); // 위치 160, 느림 → 180(낮은 칸)
-    expect(handle().props.accessibilityValue.now).toBe(1);
-    drag('sheet-handle', [-6, -30, -60]); // 위로 튕김 → 0(높은 칸)
-    expect(handle().props.accessibilityValue.now).toBe(2);
+    expect(last().api.snapToIndex).toHaveBeenCalledTimes(1);
+    a11y('activate'); // 여러 칸이면 두 번 누르기로 닫지 않는다(닫기는 X·뒤로)
     expect(onClose).not.toHaveBeenCalled();
   });
-});
 
-describe('안쪽 내용 끌기와 스크롤', () => {
-  async function scrollable(scrollY: number) {
-    await reduceMotion();
-    const onClose = await open();
-    const scroll = screen.getByTestId('s-scroll');
-    fireEvent(scroll, 'layout', {nativeEvent: {layout: {height: 300}}});
-    fireEvent(scroll, 'contentSizeChange', 360, 900);
-    fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {y: scrollY}}});
-    return onClose;
-  }
-
-  test('스크롤이 맨 위면 아래로 당기는 손가락은 시트를 내린다(빠르게 → 닫힘)', async () => {
-    const onClose = await scrollable(0);
-    expect(drag('s-content', [10, 40, 70])).toBe(true);
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('열려 있는 동안 gorhom index 는 열 때 정한 값(바뀌면 gorhom 이 그 칸으로 강제 스냅, 리뷰) — 칸 수가 줄어 범위를 벗어날 때만 자른다', () => {
+    open({snapPoints: [100, '50%', 'content'], initialSnap: 1});
+    measure(500);
+    expect(last().props.snapPoints).toEqual([100, 320]);
+    expect(last().props.index).toBe(1);
+    measure(600); // 내용이 길어져도(칸 수 그대로) index 는 그대로
+    expect(last().props.index).toBe(1);
+    measure(300); // 내용이 짧아 320 칸이 내용 칸과 겹침 → [100, 내용] 2칸 — 1 은 아직 범위 안
+    expect(last().props.snapPoints).toEqual([100]);
+    expect(last().props.index).toBe(1);
+    measure(120); // 100 칸도 겹침 직전 → 그대로 2칸
+    measure(60); // 100 칸이 내용 칸보다 높아짐 → 내용 칸 하나 → 0 으로 자름
+    expect(last().props.index).toBe(0);
   });
 
-  test('스크롤이 내려가 있으면 아래로 당겨도 스크롤 몫(시트는 잡지 않는다)', async () => {
-    await scrollable(120);
-    expect(drag('s-content', [10, 40])).toBe(false);
+  test('initialSnap 0 이면 낮은 칸으로 연다', () => {
+    open({snapPoints: snaps, initialSnap: 0});
+    expect(last().props.index).toBe(0);
+    expect(handle().props.accessibilityValue.now).toBe(1);
   });
 
-  test('맨 위 칸에서 위로 미는 손가락은 스크롤 몫', async () => {
-    await scrollable(0);
-    expect(drag('s-content', [-10, -40])).toBe(false);
-  });
-
-  test('스크롤할 게 없는 내용은 손잡이처럼 위아래 모두 시트가 받는다', async () => {
-    await reduceMotion();
-    await open();
-    expect(drag('s-content', [-10, -20], 200)).toBe(true);
+  test('손가락으로 옮긴 칸(gorhom onChange)이 조절 막대 값에 반영된다 — gorhom index 는 그대로(바꾸면 gorhom 이 다시 스냅, QA-2 L1)', () => {
+    open({snapPoints: snaps});
+    measure(500);
+    act(() => last().props.onChange(0));
+    expect(handle().props.accessibilityValue.now).toBe(1);
+    expect(last().props.index).toBe(1);
   });
 });
 
-test('칸이 하나면 손잡이는 화면 읽기에서 닫기 버튼(두 번 누르기 = activate)', async () => {
-  const onClose = await open();
+describe('resolveSnapPoints', () => {
+  test('잰 뒤: % → px, 시트 높이를 넘는 칸은 자르고, 내용 칸과 겹치는 칸은 뺀다', () => {
+    expect(resolveSnapPoints(['50%', 'content'], 640, 500)).toEqual({points: [320], dynamic: true, count: 2});
+    expect(resolveSnapPoints([700, 'content'], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
+    expect(resolveSnapPoints([600, 200], 640, 500)).toEqual({points: [200, 500], dynamic: false, count: 2});
+    expect(resolveSnapPoints(['content'], 640, 0)).toEqual({points: [], dynamic: true, count: 1});
+  });
+
+  test('쓸 칸이 하나도 없으면 내용 칸 하나(gorhom 은 빈 칸 목록에서 멈춘다, 리뷰)', () => {
+    expect(resolveSnapPoints([], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
+    expect(resolveSnapPoints([0], 640, 500)).toEqual({points: [], dynamic: true, count: 1});
+  });
+
+  test('재기 전에는 자르지 않는다', () => {
+    expect(resolveSnapPoints(['50%', 'content'], 640, 0)).toEqual({points: [320], dynamic: true, count: 2});
+  });
+});
+
+test('칸이 하나면 손잡이는 화면 읽기에서 닫기 버튼(두 번 누르기 = activate)', () => {
+  const onClose = open();
+  // accessible 이 없으면 iOS VoiceOver 가 손잡이를 건너뛰어 '닫기 버튼·조절 막대' 계약이 통째로 사라진다(QA-2 M1)
+  expect(handle().props.accessible).toBe(true);
   expect(handle().props.accessibilityRole).toBe('button');
+  expect(handle().props.accessibilityHint).toBe('두 번 누르면 닫혀요');
   a11y('activate');
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test('화면 읽기 순서(실제 gorhom 과 같은 목): 제목·닫기·내용·아래 줄 → 손잡이가 맨 뒤(QA-2 M2, DECISIONS 기록, S25 TalkBack 확인 목록)', () => {
+  open({footer: <RNText testID="foot">저장</RNText>});
+  const order = screen.root
+    .findAll(n => typeof n.type === 'string' && ['sheet-close', 's-scroll', 's-footer', 'sheet-handle'].includes(n.props.testID))
+    .map(n => n.props.testID);
+  expect(order).toEqual(['s-scroll', 'sheet-close', 's-footer', 'sheet-handle']);
+});
+
+describe('내용 끌기 최소 거리(리드 결정 #255 QA-2 M3, #232 MIN_CLOSE_DRAG 와 같은 뜻)', () => {
+  const {GESTURE_SOURCE} = gorhom;
+  test('최소 거리는 24dp(#232 MIN_CLOSE_DRAG 와 같은 값, 리드 결정) — 값이 바뀌면 이 시험부터 고친다(QA-2 재확인 L2)', () => {
+    expect(CONTENT_MIN_DRAG).toBe(24);
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: 30, velocityY: 2000}).velocityY).toBe(2000);
+  });
+
+  test('내용에서 24dp 미만으로 끈 손가락은 놓은 속도를 버린다 → gorhom 이 위치만으로 가까운 칸(제자리)을 고른다', () => {
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: 15, velocityY: 2000})).toEqual({translationY: 15, velocityY: 0});
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -15, velocityY: -2000})).toEqual({translationY: -15, velocityY: 0});
+  });
+  test('24dp 이상 끈 내용, 손잡이 끌기는 그대로(손잡이는 제한 없음)', () => {
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: CONTENT_MIN_DRAG, velocityY: 2000}).velocityY).toBe(2000);
+    expect(limitShortContentFling(GESTURE_SOURCE.HANDLE, {translationY: 5, velocityY: 2000}).velocityY).toBe(2000);
+  });
+  test('위로 크게(24dp 이상) 튕긴 내용은 속도 유지 — 낮은 칸에서 위 칸으로 올라갈 수 있게(QA-1 재확인 L1)', () => {
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -CONTENT_MIN_DRAG, velocityY: -2000}).velocityY).toBe(-2000);
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -80, velocityY: -2000}).velocityY).toBe(-2000);
+  });
+  test('시트는 gorhom 기본 처리기를 감싼 훅을 쓰고, 놓을 때만 위 규칙을 거쳐 기본 처리기에 넘긴다', () => {
+    open();
+    expect(last().props.gestureEventsHandlersHook).toBe(useSheetGestureHandlers);
+    const {result} = renderHook(() => useSheetGestureHandlers());
+    const base = gorhom.__defaultHandlers;
+    expect(result.current.handleOnStart).toBe(base.handleOnStart);
+    result.current.handleOnEnd(GESTURE_SOURCE.CONTENT, {translationY: 15, velocityY: 2000} as never);
+    expect(base.handleOnEnd).toHaveBeenLastCalledWith(GESTURE_SOURCE.CONTENT, {translationY: 15, velocityY: 0});
+    result.current.handleOnEnd(GESTURE_SOURCE.HANDLE, {translationY: 15, velocityY: 2000} as never);
+    expect(base.handleOnEnd).toHaveBeenLastCalledWith(GESTURE_SOURCE.HANDLE, {translationY: 15, velocityY: 2000});
+  });
+});
+
+test('바탕은 화면 읽기에서 자손까지 숨긴다(gorhom 기본 바탕은 "Bottom Sheet" 조절 막대, QA-2 L3)', () => {
+  open();
+  const bg = screen.getByTestId('sheet-bg', {includeHiddenElements: true});
+  expect(bg.props.importantForAccessibility).toBe('no-hide-descendants');
+  expect(bg.props.accessible).toBe(false);
+});
+
+test('스크롤 프레임마다 시트를 다시 그리지 않는다 — 띠 표시가 바뀔 때만(QA-2 L4)', () => {
+  let renders = 0;
+  render(
+    <React.Profiler id="sheet" onRender={() => (renders += 1)}>
+      <Sheet visible title="제목" testID="s" onClose={jest.fn()} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>
+    </React.Profiler>,
+  );
+  const scroll = screen.getByTestId('s-scroll');
+  act(() => {
+    fireEvent(scroll, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
+    fireEvent(scroll, 'contentSizeChange', 360, 900);
+  });
+  const before = renders;
+  const at = (y: number) => act(() => fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {x: 0, y}}}));
+  [10, 50, 120, 300].forEach(at); // 아직 끝이 아님 → 띠 그대로
+  expect(renders).toBe(before);
+  at(600); // 끝 → 띠 숨김(한 번 다시 그림)
+  expect(renders).toBeGreaterThan(before);
+});
+
+test('안쪽 스크롤은 gorhom 스크롤(BottomSheetScrollView)이라 끌기와 동시에 인식된다', () => {
+  // RN ScrollView 를 쓰면 Android 네이티브 스크롤이 손가락을 가져가 넘치는 시트를 내용으로 끌어 닫지 못한다(#232 남은 한계)
+  open();
+  const scroll = screen.UNSAFE_getByType(gorhom.BottomSheetScrollView);
+  expect(scroll.props.testID).toBe('s-scroll');
 });
