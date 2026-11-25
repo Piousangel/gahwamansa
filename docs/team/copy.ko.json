@@ -116,7 +116,7 @@
     "photo_placeholder": "사진을 준비하고 있어요",
     "photo_load_failed": "사진이 열리지 않아요. 잠시 뒤에 다시 해요",
     "question_title": "마음에 드는 쪽을 골라 주세요",
-    "question_hint": "정답은 없어요. 마음 가는 쪽을 눌러 주세요",
+    "question_hint": "정답은 없어요. 하나를 눌러 주세요",
     "loading": "잠시만요",
     "ai_photo_label": "AI가 만든 그림",
     "not_real_place": "실제 장소가 아니에요"
@@ -523,7 +523,7 @@
   },
   "question": {
     "headline": "요즘 마음 가는 쪽을 골라요",
-    "need_choice": "하나를 골라 주세요",
+    "need_choice": "한쪽을 고르면 눌려요",
     "chosen": "골랐어요"
   },
   "cheer": {

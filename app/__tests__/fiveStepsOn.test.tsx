@@ -449,6 +449,14 @@ describe('200%', () => {
     expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
     expect(screen.getByTestId('five-skip-inline')).toBeTruthy();
   });
+  test('③ 단계 표시는 "3 / 5"만(P4와 같은 짧은 표시, #257), 읽기는 그대로', async () => {
+    await home({completedSteps: ['photo', 'recall']});
+    await pressCourseNext();
+    await waitFor(() => screen.getByTestId('choice-group'));
+    expect(screen.getByText('3 / 5')).toBeTruthy();
+    expect(screen.queryByText('둘 중 고르기 · 3 / 5')).toBeNull();
+    expect(screen.getByTestId('step-header').props.accessibilityLabel).toBe('둘 중 고르기, 5단계 중 3단계');
+  });
   test('⑤ 넘어가기는 본문, "골랐어요"는 늘 문장 아래 줄', async () => {
     await home({completedSteps: ['photo', 'recall', 'question', 'hangul']});
     await pressCourseNext();

@@ -742,3 +742,10 @@
 - (QA-1 L2~L4) iOS: 새 Pod 3개(RNReanimated·RNWorklets·RNGestureHandler) → iOS 첫 빌드 때 `pod install` 필요, Privacy Manifest 는 worklets 에만 있음(ios-readiness-audit 2.2 표에 추가). **RN 올림 제약**: RNGH 3.5.x 호환표 상한이 RN 0.88 이다(reanimated 4.8 은 0.89 까지) → 다음 RN 올림 때 RNGH 호환표를 먼저 본다. **gorhom 유지보수 위험**: 5.2.14 는 RNGH 3 이전 릴리스라 옛 Gesture API 호환 경로로 돌고, #2785 에 메인테이너 응답이 없다 → RNGH 가 옛 API 를 걷어 내는 메이저가 나오면 gorhom 새 판 또는 대체가 생길 때까지 RNGH 를 올리지 않는다. (L5) jest.after 의 Reanimated setUpTests 는 모든 스위트에 돈다 — 부하 시간 초과가 생기면 첫 의심 후보.
 - 남은 위험: 에뮬레이터 주입 터치로 내용을 빠르게 튕기면 일부가 닫히지 않음(Android 네이티브 스크롤이 먼저 손가락을 가져가는 경합으로 보임, 근거 docs/team/qa/evidence/2026-11-25-gorhom/README.md). 오너 S25 실손가락 확인 대상.
 - 지운 것: `ui/ds/sheetMath.ts`·`__tests__/sheetMath.test.ts`. 출처는 몽망이 DS-2 apps/mobile/src/ui/BottomSheet/sheetMath.ts(커밋 92ff492 = 68863b8 리뷰 반영판, 팀 간 공유 첫 사례 C-3). gorhom 이 같은 일(투영 스냅·과도 당김 저항·스크롤 소유권)을 UI 스레드에서 한다. 되살릴 때는 git 에서 #232 판을 꺼낸다.
+
+## 2026-11-25 P5 안내 문구 중복 정리(라이터 WR-1)
+- 맥락: #249 머리줄 「요즘 마음 가는 쪽을 골라요」 바로 아래 안내 「정답은 없어요. 마음 가는 쪽을 눌러 주세요」 — '마음 가는 쪽'이 두 번(QA 증거 2026-11-25-launch-polish).
+- 선택: 머리줄은 그대로, 안내(`app.question_hint`)를 「정답은 없어요. 하나를 눌러 주세요」로. 「정답은 없어요」는 writer.md 원칙 5대로 남기고, 뒷말은 할 일(누르기)만 말한다(칭찬·재촉 없음, 해요체). writer.md 1-4 표 3번도 같은 문장으로.
+- 버린 안: 「둘 중 하나를 눌러 주세요」(단계 이름 '둘 중 고르기'와 또 겹침), 안내 줄 삭제(정답 없음 안내가 사라짐).
+- 함께: 큰 글자(150% 이상)에서 P5 단계 제목도 P4처럼 '2 / 3'만(StepHeader compact). 읽기 문구는 그대로.
+- 함께(#257 QA-2 L2): [정했어요] 비활성 이유(`question.need_choice`) 「하나를 골라 주세요」 → 「한쪽을 고르면 눌려요」. 안내 「…하나를 눌러 주세요」와 화면 읽기에서 거의 같은 말로 들려, 이유는 할 일 대신 버튼 상태를 말한다(P6 「한 글자라도 쓰면 눌려요」와 같은 꼴). 안내는 그대로.
