@@ -220,3 +220,29 @@ test('QA-1 L1: course_completed 는 처음 완료될 때 한 번만 — 다 마�
   expect(await s.rec.mock.results[s.rec.mock.results.length - 1].value).toMatchObject({completed: true});
   expect(log.mock.calls.filter(c => c[0] === 'course_completed')).toHaveLength(1);
 });
+
+test('QA-2 M1: ② save_recall 이 값 거절(consent_required)이면 오류 문구 없이 recall 을 한 번 기록하고 다음으로', async () => {
+  const s = await home({completedSteps: ['photo']});
+  s.recall.mockResolvedValue({ok: false, reason: 'consent_required'});
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('recall-question'));
+  fireEvent.press(screen.getByText('참새'));
+  await press('이걸로 할게요');
+  await backHome();
+  expect(recArgs(s.rec)).toEqual([['recall', false]]);
+  expect(screen.queryByText(copy.errors.server.title)).toBeNull();
+  expect(within(screen.getByTestId('step-now-row')).getByText('둘 중 고르기')).toBeTruthy();
+});
+
+test('QA-2 M1: ⑤ save_pass_on 이 값 거절(consent_required)이면 오류 문구 없이 pass_on 을 한 번 기록하고 P7(첫 줄 없음)', async () => {
+  const s = await home({completedSteps: ['photo', 'recall', 'question', 'hangul']});
+  s.passOn.mockResolvedValue({ok: false, reason: 'consent_required'});
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('pass-on-title'));
+  fireEvent.press(screen.getByText('오늘 사진이 좋아요'));
+  await press('건넬게요');
+  await waitFor(() => screen.getByText(/도장을 찍었어요/));
+  expect(recArgs(s.rec)).toEqual([['pass_on', false]]);
+  expect(screen.queryByText(copy.errors.server.title)).toBeNull();
+  expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
+});
