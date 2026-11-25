@@ -199,7 +199,7 @@ describe('C3 연결 대기', () => {
     expect(screen.getByText(/까지 쓸 수 있어요$/, {includeHiddenElements: true})).toBeTruthy();
     expect(screen.getByText('엄마 폰에 가화만사성을 설치하고 열어요')).toBeTruthy();
     expect(screen.getByText("링크로 열면 번호를 확인하고 '이 번호로 연결하기'를 눌러요")).toBeTruthy();
-    expect(screen.getByText('답을 보여 줄지 고르면 돼요')).toBeTruthy();
+    expect(screen.getByText('답을 보여 줄지 고르시면 돼요')).toBeTruthy();
     expect(screen.queryByTestId('wait-example')).toBeNull(); // V9: 예시 카드 없음
     expect(screen.queryByTestId('wait-chip')).toBeNull(); // V9: 연결 칩 삭제
     // Dock = 주 '번호 보내기' + 보조 '복사하기'
