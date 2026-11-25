@@ -5,6 +5,10 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {DateStamp} from '../src/ui/ds';
 import {ds} from '../src/ui/ds/roles';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // D-2(DECISIONS 2026-11-24 오너 전면 위임): P3 '했어요' 옆 ✓ → 먹 두 겹 원 날짜 도장('24일').
 // 시안 docs/design/2026-11-24-d2-d3-c4/d2-done-mark.html ①안: 지름 56, '24일' 20/700, −3° 고정, 확대 상한 1.3(200% 지름 73).

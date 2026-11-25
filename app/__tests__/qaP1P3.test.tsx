@@ -8,6 +8,10 @@ import {StepRow} from '../src/ui/StepRow';
 import {BigButton} from '../src/ui/BigButton';
 import {color} from '../src/ui/tokens';
 import {press, toHomeConsented} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const flat = (el: {props: Record<string, any>}) => {
   const st = typeof el.props.style === 'function' ? (el.props.style as (s: {pressed: boolean}) => unknown)({pressed: false}) : el.props.style;

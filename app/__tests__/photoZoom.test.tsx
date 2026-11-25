@@ -8,6 +8,10 @@ import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {EVENT_NAMES} from '../src/api/contract/events';
 import {press, pressCourseNext, pressBackLink} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // AP-05 B1 사진 크게 보기(시안 P4_zoom_review + 디자인 W0 DZ-06):
 // 폴라로이드 전체가 누름 영역, '닫기'(64)·시스템 뒤로로만 닫음(사진 다시 눌러 닫기 없음), 첫 안내는 한 번 열 때까지·최대 P4 세 번째 방문,

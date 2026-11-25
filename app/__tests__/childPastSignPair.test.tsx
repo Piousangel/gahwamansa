@@ -10,6 +10,10 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {AudienceProvider, Sign, SignPair} from '../src/ui/ds';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 import {signViolations} from '../testUtils/designRules';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const ITEMS = [
   {answeredDate: '2020-11-24', promptShort: '곱게 차려입기와 편하게 입기 중', optionA: '곱게 차려입기', optionB: '편하게 입기', choiceLabel: '곱게 차려입기'},

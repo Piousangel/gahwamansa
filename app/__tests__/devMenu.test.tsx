@@ -14,6 +14,10 @@ import {App as DevApp} from '../testUtils/devApp';
 import {AppRoot} from '../src/app/AppRoot';
 import {DevMenuHost as StubDevMenuHost} from '../src/dev/DevMenuHost.stub';
 import {GoTrueClient} from '@supabase/auth-js';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 declare const __dirname: string;
 const path: {join(...p: string[]): string} = require('path');

@@ -5,6 +5,10 @@ import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import type {Api} from '../src/features/types';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // P6 자판으로 쓰기(시안 P6_keyboard v4, copy-v3 10절, 설계 B + 리뷰 B항). 오늘 낱말: 1일차 "나무".
 let mockFontScale = 1;
