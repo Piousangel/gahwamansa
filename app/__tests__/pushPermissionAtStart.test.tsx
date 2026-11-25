@@ -3,7 +3,7 @@
 // - 자녀: 번호를 보낸(공유·복사) 직후, 또는 연결 직후 화면에서 자녀용 한 장(child-notify) → 시스템 창(13+).
 //   거절('안 받을게요')·뒤로(오늘은 넘김)는 기존 저장 키(push_prompt_v1·push_prompt_skip_day_v1)를 그대로 써서 다시 묻지 않는다.
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {copy, withTitle} from '../src/copy/copy';
@@ -40,19 +40,29 @@ afterEach(() => {
 function mockShare() {
   return jest.spyOn(RN.Share, 'share').mockResolvedValue({action: RN.Share.sharedAction});
 }
-/** 깨어남(설정·연결 확인) 흉내용 AppState 구독 가로채기 */
+/** 깨어남(설정·연결 확인) 흉내용 AppState 구독 가로채기. remove 는 실제로 구독을 뗀다(#296 QA-2 L1 — 언마운트 뒤 호출 0 고정) */
 function captureAppState() {
   const handlers: ((s: string) => void)[] = [];
   jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(((type: string, h: (s: string) => void) => {
     if (type === 'change') {
       handlers.push(h);
     }
-    return {remove: () => {}};
+    return {
+      remove: () => {
+        const i = handlers.indexOf(h);
+        if (i >= 0) {
+          handlers.splice(i, 1);
+        }
+      },
+    };
   }) as never);
-  return (state: string = 'active') =>
+  /** act 없이 바로 알림(다른 목 안에서 부를 때) */
+  const emit = (state: string) => handlers.slice().forEach(h => h(state));
+  const fire = (state: string = 'active') =>
     act(async () => {
-      handlers.forEach(h => h(state));
+      emit(state);
     });
+  return Object.assign(fire, {emit, count: () => handlers.length});
 }
 async function shareCode() {
   await act(async () => {
@@ -354,5 +364,94 @@ describe('자녀 한 장 — QA-2 후속', () => {
     expect(screen.queryByText(withTitle(cp.title_wait, '엄마'), {normalizer: wj})).toBeNull();
     expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
     expect(announce.mock.calls.map(c => wj(String(c[0])))).toContain(wj(withTitle(cp.title_done, '엄마')));
+  });
+});
+
+// #296 QA-2 M1·M2·L1
+describe('자녀 한 장 — #296 QA-2 후속', () => {
+  const HID = {includeHiddenElements: true};
+  const copyCode = () =>
+    act(async () => {
+      fireEvent.press(screen.getAllByTestId('wait-copy')[0]);
+    });
+
+  test('M1 복사 뒤 C3 줄 [알림 켜기]로 직접 켜면 권한 창에서 돌아와도 한 장이 다시 뜨지 않는다(받기 동의 저장이 늦어도)', async () => {
+    setPlatform('android', 34);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const app = captureAppState();
+    let allowed = false;
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockImplementation(async () => allowed);
+    jest.spyOn(RN.PermissionsAndroid, 'request').mockImplementation(async () => {
+      app.emit('background'); // 권한 창이 앞에 옴
+      allowed = true;
+      app.emit('active'); // 창이 닫히며 돌아옴 — 권한 결과와 거의 동시
+      return 'granted';
+    });
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const realEn = api.setPushEnabled.bind(api);
+    jest.spyOn(api, 'setPushEnabled').mockImplementation(async (v: boolean) => {
+      await new Promise<void>(r => setTimeout(() => r(), 40)); // 실제 망: 받기 동의 저장이 my_push_settings 읽기보다 늦게 끝날 수 있다
+      return realEn(v);
+    });
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await copyCode();
+    await act(async () => {
+      fireEvent.press(within(screen.getByTestId('wait-notify')).getByText(wj(copy.child.wait.notify_button), {normalizer: wj}));
+    });
+    await settle();
+    await settle();
+    expect(screen.queryByTestId('child-notify', HID)).toBeNull();
+  });
+
+  test('M2 복사 → [설정] → 앱 밖 → 복귀: 설정 화면 위에 묻지 않고(판정도 읽지 않음), 그 복귀는 버린다. C3 에서 다시 다녀오면 그때 묻는다', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const app = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await copyCode();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('wait-settings'));
+    });
+    await settle();
+    await app('background');
+    await app('active');
+    await settle();
+    expect(screen.queryByTestId('child-notify', HID)).toBeNull(); // 아래 깔린 C3 의 한 장도 그리지 않는다
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: copy.nav.to.Wait}));
+    });
+    await settle();
+    expect(screen.queryByTestId('child-notify', HID)).toBeNull(); // C3 로 돌아온 것만으로는 묻지 않는다(화면에 들어오자마자 묻지 않음)
+    await app('background');
+    await app('active');
+    await waitFor(() => screen.getByTestId('child-notify'));
+  });
+
+  test('L1 언마운트 뒤에는 C3 의 AppState 구독이 떨어져 복귀해도 판정 읽기 0회', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const app = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const my = jest.spyOn(api, 'myPushSettings');
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await copyCode();
+    await settle();
+    expect(app.count()).toBeGreaterThan(0);
+    screen.unmount();
+    expect(app.count()).toBe(0);
+    my.mockClear();
+    await app('background');
+    await app('active');
+    await settle();
+    expect(my).not.toHaveBeenCalled();
   });
 });

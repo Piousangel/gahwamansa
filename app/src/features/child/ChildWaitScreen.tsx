@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {AppState, Share, StyleSheet, useWindowDimensions, View} from 'react-native';
-import {CommonActions} from '@react-navigation/native';
+import {CommonActions, useIsFocused} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
@@ -65,16 +65,25 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   //   화면에 들어오자마자는 묻지 않는다. 한 장을 어떻게 닫든 C3·연결 직후 [알림 켜기] 줄은 그대로(나중에 켜는 길, C7 토글도)
   const ask = useChildNotifyAsk(notify, title);
   const {offer} = ask;
+  // #296 QA-2 M2: 이 화면이 보일 때만 묻는다. [설정] 등이 위에 쌓여도 C3 는 스택 아래 마운트된 채라, 막지 않으면 설정 화면 위에 한 장이 뜨고
+  //   뒤로가 화면 대신 한 장을 닫아 '오늘은 넘김'으로 기록된다. 연결은 C3 로 돌아와 연결 직후 화면을 처음 볼 때 묻는다
+  const focused = useIsFocused();
+  const focusedNow = useRef(focused);
+  focusedNow.current = focused;
   useEffect(() => {
+    if (!focused) {
+      return;
+    }
     if (linked) {
       offer('done');
     } else if (sent) {
       offer('wait');
     }
-  }, [linked, sent, offer]);
+  }, [focused, linked, sent, offer]);
   // #293 QA-2 L2(리드 결정): 복사한 사람은 곧 메신저로 가서 붙여 넣으려는 참이라 바로 묻지 않는다('복사했어요' 띠도 가린다).
   //   복사한 뒤 앱을 떠났다(background) 돌아오면(active) 그때 묻는다. 돌아오기 전에 연결됐으면 연결 직후 제목으로(L3와 같은 규칙).
   //   떠나지 않고 연결되면 위 effect 의 연결 직후 1회가 맡는다.
+  //   M2: 다른 화면(설정 등)에 있다 돌아온 복귀는 버린다(복사의 연속이 아니므로). 복사 기록은 남겨 C3 에서 다시 다녀오면 그때 묻는다
   const didCopy = useRef(false);
   const leftAfterCopy = useRef(false);
   const linkedNow = useRef(linked);
@@ -82,14 +91,23 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   useEffect(() => {
     const sub = AppState.addEventListener('change', s => {
       if (s === 'background') {
-        leftAfterCopy.current = didCopy.current;
+        leftAfterCopy.current = didCopy.current && focusedNow.current;
       } else if (s === 'active' && leftAfterCopy.current) {
         leftAfterCopy.current = false;
-        offer(linkedNow.current ? 'done' : 'wait');
+        if (focusedNow.current) {
+          offer(linkedNow.current ? 'done' : 'wait');
+        }
       }
     });
     return () => sub.remove();
   }, [offer]);
+  // #296 QA-2 M1: 복사 뒤 C3 줄 [알림 켜기]를 직접 누름 = 답함. 권한 창에서 돌아오는 복귀(background→active)를 '복사 뒤 복귀'로 보지 않는다
+  //   (그 복귀의 my_push_settings 읽기가 받기 동의 저장보다 먼저 끝나면 방금 켠 사람에게 같은 질문이 뜬다)
+  const openFromRow = () => {
+    didCopy.current = false;
+    leftAfterCopy.current = false;
+    notify.open();
+  };
 
   // 쓸 수 있는 번호가 없을 때만 새로 만든다(만료·받은 적 없음)
   const makeCode = async () => {
@@ -180,7 +198,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
               <Text role="sub" tone="muted">
                 {withTitle(d.notify, title)}
               </Text>
-              <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+              <Button kind="text" size="inline" label={w.notify_button} onPress={openFromRow} />
             </View>
           ) : null}
         </DsScreen>
@@ -204,7 +222,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
       <Text role="sub" tone="muted">
         {w.notify}
       </Text>
-      <Button kind="text" size="inline" label={w.notify_button} onPress={notify.open} />
+      <Button kind="text" size="inline" label={w.notify_button} onPress={openFromRow} />
     </View>
   ) : null;
   const dock: DockProps = !state
