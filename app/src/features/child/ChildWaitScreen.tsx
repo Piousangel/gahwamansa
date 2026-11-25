@@ -63,13 +63,14 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const code = state?.code ?? null;
   // 알림 권한 앞당김(기획 v2.1 0.4): 번호를 보낸(공유 창에서 돌아옴·복사) 직후, 또는 연결 직후 화면에서 우리 말 한 장 → 시스템 창.
   //   화면에 들어오자마자는 묻지 않는다. 한 장을 어떻게 닫든 C3·연결 직후 [알림 켜기] 줄은 그대로(나중에 켜는 길, C7 토글도)
-  const ask = useChildNotifyAsk(notify, title);
-  const {offer} = ask;
   // #296 QA-2 M2: 이 화면이 보일 때만 묻는다. [설정] 등이 위에 쌓여도 C3 는 스택 아래 마운트된 채라, 막지 않으면 설정 화면 위에 한 장이 뜨고
   //   뒤로가 화면 대신 한 장을 닫아 '오늘은 넘김'으로 기록된다. 연결은 C3 로 돌아와 연결 직후 화면을 처음 볼 때 묻는다
+  //   QA-3 L2: 판정(my_push_settings 읽기)이 끝난 때도 포커스를 다시 본다(읽는 사이 [설정]으로 간 경우)
   const focused = useIsFocused();
   const focusedNow = useRef(focused);
   focusedNow.current = focused;
+  const ask = useChildNotifyAsk(notify, title, focusedNow);
+  const {offer} = ask;
   useEffect(() => {
     if (!focused) {
       return;
