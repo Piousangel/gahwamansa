@@ -2,6 +2,9 @@
 import {
   COURSE_STEPS,
   EVENT_STEP_VALUES,
+  SAVE_PASS_ON_REASONS,
+  SAVE_RECALL_REASONS,
+  TODAY_FIVE_STEP_KEYS,
   PASS_ON_KEYS,
   isPassOnKey,
   parseChildFiveSteps,
@@ -53,6 +56,31 @@ test('서버 completed_steps check 단계 = COURSE_STEPS, 이벤트 step 값 = �
   expect([...EVENT_STEP_VALUES]).toEqual([...COURSE_STEPS, 'stop_here']);
 });
 
+// 마지막으로 정의한 마이그레이션에서 함수 본문(첫 $$ … $$)
+function fnBody(name: string): {file: string; body: string} {
+  const re = new RegExp(`create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${name}\\s*\\(`, 'i');
+  const {file, sql} = lastFileMatching(re);
+  const start = sql.search(re);
+  const open = sql.indexOf('$$', start);
+  return {file, body: sql.slice(open + 2, sql.indexOf('$$', open + 2))};
+}
+
+test('저장 RPC reason 목록 = 서버 함수가 돌려주는 reason(글자까지)', () => {
+  for (const [fn, list] of [['save_recall', SAVE_RECALL_REASONS], ['save_pass_on', SAVE_PASS_ON_REASONS]] as const) {
+    const {file, body} = fnBody(fn);
+    const reasons = [...new Set([...body.matchAll(/'reason',\s*'([a-z_]+)'/g)].map(m => m[1]))];
+    expect([file, fn, [...reasons].sort()]).toEqual([file, fn, [...list].sort()]);
+  }
+});
+
+test('get_today_content 의 0061 키 = TODAY_FIVE_STEP_KEYS(서버 최상위 키에 모두 있음)', () => {
+  const {file, body} = fnBody('get_today_content');
+  const top = [...body.matchAll(/^ {4}'([a-z_]+)',/gm)].map(m => m[1]);
+  for (const k of TODAY_FIVE_STEP_KEYS) {
+    expect([file, k, top.includes(k)]).toEqual([file, k, true]);
+  }
+});
+
 test('get_today_content 5단계 값 파서: 새 서버·옛 서버·틀린 모양', () => {
   expect(
     parseTodayFiveSteps({
@@ -62,12 +90,15 @@ test('get_today_content 5단계 값 파서: 새 서버·옛 서버·틀린 모�
       pass_on: {enabled: true, picked_key: 'recall_story'},
     }),
   ).toEqual({
+    five_steps_supported: false,
     skipped_steps: ['pass_on'],
     recall: {options: [{slot: 1, label: '아궁이'}, {slot: 2, label: '누룽지'}], picked_slot: 2},
     pass_on: {enabled: true, picked_key: 'recall_story'},
   });
   // 옛 서버(0061 전): 키 없음 → ② 보기 없음, ⑤ 꺼짐
+  expect(parseTodayFiveSteps({day_index: 3, five_steps_supported: true})?.five_steps_supported).toBe(true);
   expect(parseTodayFiveSteps({day_index: 3})).toEqual({
+    five_steps_supported: false,
     skipped_steps: [],
     recall: {options: [], picked_slot: null},
     pass_on: {enabled: false, picked_key: null},
@@ -84,6 +115,8 @@ test('저장 결과 파서: 정해진 이유만', () => {
   expect(parseSaveRecallResult({ok: true})).toEqual({ok: true});
   expect(parseSaveRecallResult({ok: false, reason: 'consent_required'})).toEqual({ok: false, reason: 'consent_required'});
   expect(parseSaveRecallResult({ok: false, reason: 'disabled'})).toBeNull(); // ②에는 스위치 없음
+  expect(parseSaveRecallResult({ok: false, reason: 'skipped'})).toEqual({ok: false, reason: 'skipped'});
+  expect(parseSavePassOnResult({ok: false, reason: 'skipped'})).toEqual({ok: false, reason: 'skipped'});
   expect(parseSavePassOnResult({ok: false, reason: 'disabled'})).toEqual({ok: false, reason: 'disabled'});
   expect(parseSavePassOnResult({ok: false, reason: 'missing_value'})).toEqual({ok: false, reason: 'missing_value'});
   expect(parseSavePassOnResult({ok: false, reason: 'nope'})).toBeNull();

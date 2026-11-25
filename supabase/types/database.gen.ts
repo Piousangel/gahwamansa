@@ -751,6 +751,9 @@ isOneToOne: true
 "first_answer_backfill":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"five_steps_skipped":
+{ Args: { "p_parent": string,"p_step": string }; Returns: boolean
+                           },
 "get_my_cheers":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

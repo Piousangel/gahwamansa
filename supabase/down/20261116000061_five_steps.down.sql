@@ -12,13 +12,17 @@ drop table if exists public.content_recall_options;
 drop function if exists public.five_steps_consent_withdrawn();
 drop function if exists public.recall_pick_deleted();
 drop function if exists public.content_recall_options_guard();
+drop function if exists public.five_steps_skipped(uuid, text); -- save_answer를 0052로 되돌린 뒤
 drop function if exists public.pass_on_key_ok(text);
 delete from public.server_flags where name = 'pass_on_store_enabled';
 alter table public.server_flags drop constraint server_flags_name_check,
   add constraint server_flags_name_check check (name in ('dev_reset_enabled'));
 
 drop function public.record_session_step(text, int, boolean, int);
--- 여기서 0024의 record_session_step(p_step text, p_duration int default 0) 정의를 복사해 실행하고 grant execute … to authenticated.
+-- 여기서 0024의 record_session_step(p_step text, p_duration int default 0) 정의를 복사해 실행한 뒤 아래 두 줄(새로 만든 함수에는 기본 권한이 붙는다, 리뷰 QA-3 M2):
+-- revoke execute on function public.record_session_step(text, int) from public, anon;
+-- grant execute on function public.record_session_step(text, int) to authenticated;
+-- save_answer는 0052 정의를 다시 실행한다(create or replace라 권한은 그대로).
 
 alter table public.daily_sessions drop constraint daily_sessions_skipped_steps_check,
   drop constraint daily_sessions_course_len_check,

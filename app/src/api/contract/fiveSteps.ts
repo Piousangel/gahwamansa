@@ -35,7 +35,22 @@ export const isPassOnKey = (k: unknown): k is PassOnKey => typeof k === 'string'
 
 // ---- 어르신: get_today_content·start_today 추가 키(0061) ----
 export type RecallOption = {slot: number; label: string};
+/**
+ * get_today_content·start_today 가 0061 에서 더한 최상위 키(계약 시험이 마이그레이션과 대조).
+ * five_steps_supported 가 없는 서버(0061 전)면 앱은 3단계로 돈다 — 새 인자(p_skipped·p_course_len)를 보내면 함수 없음 오류.
+ */
+export const TODAY_FIVE_STEP_KEYS = ['five_steps_supported', 'skipped_steps', 'recall', 'pass_on'] as const;
+
+/**
+ * 앱 계약 규칙(서버 리뷰 QA-1 M1·L6, 리드 결정):
+ * - ② 보기가 없는 날(recall.options = [])·⑤ 스위치가 꺼진 날(pass_on.enabled = false)에도 그 단계를 p_skipped:true 로 기록한다.
+ *   기록하지 않으면 5단계 세션은 도장이 찍히지 않는다(서버는 stop_here 때만 빠진 ②를 채운다).
+ * - stop_here 가 예외 stop_before_question 이면(③ 전, 또는 자정을 넘겨 새 날 세션) 오늘 콘텐츠를 다시 불러 홈에서 이어 하게 한다.
+ * - 넘긴 단계의 저장은 서버가 거부한다: save_recall·save_pass_on → reason 'skipped', save_answer → 예외 'skipped'.
+ *   넘김 뒤 홈에서 다시 하면 record_session_step(p_skipped:false)을 먼저 보내고 저장한다.
+ */
 export type TodayFiveSteps = {
+  five_steps_supported: boolean;
   skipped_steps: CourseStep[];
   recall: {options: RecallOption[]; picked_slot: number | null};
   /** enabled=false: 서버 스위치 꺼짐(법률 L-11 전). 저장은 disabled 로 거부되고 자녀에게도 안 보인다 → ⑤를 '건넸어요'로 보여 주면 안 된다 */
@@ -55,6 +70,7 @@ export function parseTodayFiveSteps(v: unknown): TodayFiveSteps | null {
   if (!isObj(v)) {
     return null;
   }
+  const supported = v.five_steps_supported === true;
   const skipped = v.skipped_steps ?? [];
   const recall = v.recall ?? {options: [], picked_slot: null};
   const passOn = v.pass_on ?? {enabled: false, picked_key: null};
@@ -71,6 +87,7 @@ export function parseTodayFiveSteps(v: unknown): TodayFiveSteps | null {
     return null;
   }
   return {
+    five_steps_supported: supported,
     skipped_steps: skipped,
     recall: {options: opts.map(o => ({slot: o.slot as number, label: o.label as string})), picked_slot: picked},
     pass_on: {enabled: passOn.enabled, picked_key: key},
@@ -78,11 +95,11 @@ export function parseTodayFiveSteps(v: unknown): TodayFiveSteps | null {
 }
 
 // ---- 어르신: 저장 RPC ----
-/** sb.rpc('save_recall', {p_day_index, p_slot}) — p_day_index 는 화면에 보여 준 콘텐츠 day_index */
-export const SAVE_RECALL_REASONS = ['consent_required', 'no_content', 'stale_day', 'invalid_option'] as const;
+/** sb.rpc('save_recall', {p_day_index, p_slot}) — p_day_index 는 화면에 보여 준 콘텐츠 day_index. no_content = 콘텐츠 또는 그날 ② 보기 없음 */
+export const SAVE_RECALL_REASONS = ['consent_required', 'no_content', 'stale_day', 'skipped', 'invalid_option'] as const;
 export type SaveRecallResult = {ok: true} | {ok: false; reason: (typeof SAVE_RECALL_REASONS)[number]};
 /** sb.rpc('save_pass_on', {p_day_index, p_key}). missing_value = 끼울 값(② 고른 것·③ 답)이 오늘 없음 */
-export const SAVE_PASS_ON_REASONS = ['disabled', 'consent_required', 'invalid_key', 'no_content', 'stale_day', 'missing_value'] as const;
+export const SAVE_PASS_ON_REASONS = ['disabled', 'consent_required', 'invalid_key', 'no_content', 'stale_day', 'skipped', 'missing_value'] as const;
 export type SavePassOnResult = {ok: true} | {ok: false; reason: (typeof SAVE_PASS_ON_REASONS)[number]};
 
 function parseOkReason<R extends string>(v: unknown, reasons: readonly R[]): {ok: true} | {ok: false; reason: R} | null {

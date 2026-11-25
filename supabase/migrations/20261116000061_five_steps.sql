@@ -24,6 +24,10 @@
 -- (5) 어르신 읽기 — get_today_content(start_today)·preview_content에 recall{options, picked_slot}·pass_on{enabled, picked_key}·skipped_steps,
 --     parent_history 날마다 recall_label·pass_on_key(키 추가만).
 -- (6) 이벤트 step 값에 recall·pass_on·stop_here(event_prop_ok, 앱 계약 events.ts). 값은 단계 이름뿐 — 고른 낱말·문장은 싣지 않는다.
+-- 앱 계약 규칙(리뷰 QA-1 M1·L6, 리드 결정): ② 보기가 없는 날(recall.options = [])·⑤ 스위치가 꺼진 날(pass_on.enabled = false)에도
+--   앱은 그 단계를 p_skipped = true로 기록한다(안 하면 5단계 세션은 도장이 안 찍힌다). 서버 방어로 stop_here는 빠진 ②까지 채운다.
+--   stop_before_question은 자정을 넘겨 새 날 세션이 된 경우에도 난다 → 앱은 오늘 콘텐츠를 다시 불러 홈에서 이어 하게 한다.
+--   넘긴 단계는 저장 RPC가 skipped로 거부한다(save_answer는 예외 'skipped') — 저장 뒤 넘김이든 넘김 뒤 저장이든 넘긴 날 무표시.
 -- 콘텐츠 값(② 보기 90개)은 넣지 않는다 — 라이터 PR 병합 뒤 별도 적재. 형식은 supabase/seed_recall_options.sql 머리말.
 
 -- ---- (1) 단계·넘어감·코스 길이 ----
@@ -185,7 +189,8 @@ begin
     if v_prev is null or not ('question' = any(v_prev)) then
       raise exception 'stop_before_question'; -- '오늘은 여기까지'는 ③을 마친(또는 넘긴) 뒤에만(R-3)
     end if;
-    v_add := array(select s from unnest(array['hangul', 'pass_on']) s where not (s = any(v_prev)));
+    -- 빠진 ②까지 채운다(리뷰 QA-1 M1: ② 기록이 빠진 날도 여기까지로 도장이 찍히게 — 서버 방어)
+    v_add := array(select s from unnest(array['recall', 'hangul', 'pass_on']) s where not (s = any(v_prev)));
     v_addskip := v_add;
     v_unskip := '{}';
   else
@@ -214,6 +219,8 @@ begin
   end if;
   if 'question' = any(v_addskip) then
     delete from public.answers where parent_id = v_me and session_date = v_today;
+    -- 그 답을 끼운 ⑤ choice_like도 지운다(리뷰 QA-3 L1·QA-1 L2, ②의 recall_pick_deleted 트리거와 같은 뜻)
+    delete from public.pass_on_picks where parent_id = v_me and session_date = v_today and line_key = 'choice_like';
   end if;
 
   if v_completed is null
@@ -229,8 +236,48 @@ end $$;
 revoke execute on function public.record_session_step(text, int, boolean, int) from public, anon;
 grant execute on function public.record_session_step(text, int, boolean, int) to authenticated;
 
+-- 오늘(KST) 그 단계가 넘어감으로 기록돼 있는가(내부, 저장 RPC 공통)
+create function public.five_steps_skipped(p_parent uuid, p_step text) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (select 1 from public.daily_sessions ds
+                  where ds.parent_id = p_parent and ds.session_date = public.kst_today() and p_step = any(ds.skipped_steps))
+$$;
+revoke execute on function public.five_steps_skipped(uuid, text) from public, anon, authenticated, service_role;
+
+-- save_answer(0052) + ③을 넘긴 날은 저장 거부(리뷰 QA-3 M1·QA-1 M2, 리드 결정). 반환형(void)·예외 계약을 그대로 두려고
+-- 다른 거부(consent_required·invalid_choice)처럼 예외 'skipped'로 알린다. 옛 앱은 넘어감을 보내지 않으므로 만나지 않는다.
+create or replace function public.save_answer(p_question uuid, p_choice text) returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_me uuid := public.my_profile_id();
+  v_family uuid := public.my_family_id();
+  v_new boolean;
+begin
+  if public.my_role() is distinct from 'parent' then raise exception 'parent_required'; end if;
+  perform 1 from public.profiles where id = v_me for update; -- 철회와 직렬화
+  if not public.my_consented() then raise exception 'consent_required'; end if;
+  if p_choice is null or p_choice not in ('A', 'B') then raise exception 'invalid_choice'; end if;
+  if public.five_steps_skipped(v_me, 'question') then raise exception 'skipped'; end if; -- 0061
+  insert into public.answers (family_id, parent_id, question_id, choice, session_date)
+  values (v_family, v_me, p_question, p_choice, public.kst_today())
+  on conflict (parent_id, question_id, session_date) do update set choice = excluded.choice, answered_at = now()
+  returning (xmax = 0) into v_new; -- true = 새 답(고치기 아님)
+  if v_new
+     and not exists (select 1 from public.families f where f.id = v_family and f.is_review)
+     and exists (select 1 from public.profiles c where c.family_id = v_family and c.role = 'child'
+                  and not exists (select 1 from public.first_answer_notices n where n.child_id = c.id))
+     and not exists (select 1 from public.notification_queue q where q.family_id = v_family and q.kind = 'parent_first_answer' and q.sent_at is null) then
+    insert into public.notification_queue (family_id, kind, payload) values (v_family, 'parent_first_answer', jsonb_build_object('parent_id', v_me));
+  end if;
+end $$;
+
 -- ---- (2) save_recall: ② 고른 보기 저장 ----
--- {ok:true} | {ok:false, reason:'consent_required'|'no_content'|'stale_day'|'invalid_option'}. 역할 오류는 예외 parent_required.
+-- {ok:true} | {ok:false, reason:'consent_required'|'no_content'|'stale_day'|'skipped'|'invalid_option'}. 역할 오류는 예외 parent_required.
+-- no_content: 오늘 콘텐츠가 없거나 그날 ② 보기가 없음(앱은 ②를 p_skipped로 기록 — 계약 규칙, 리뷰 QA-1 M1).
+-- skipped: 오늘 ②가 넘어감으로 기록돼 있음(넘긴 날 무표시를 호출 순서에 기대지 않고 서버가 강제, 리뷰 QA-3 M1).
+--   넘김 뒤 '다시 하기'로 실제로 하면 record_session_step(p_skipped=false)이 skipped에서 빼므로 그 뒤 저장은 정상.
 -- p_day_index = 앱이 보여 준 콘텐츠 날(자정을 넘겨 어제 보기로 저장되는 것 방지). 같은 날 다시 고르면 바꾼다.
 create function public.save_recall(p_day_index int, p_slot int) returns jsonb
 language plpgsql security definer set search_path = ''
@@ -248,6 +295,10 @@ begin
   select ds.day_index into v_day from public.daily_sessions ds where ds.parent_id = v_me and ds.session_date = v_today;
   if v_day is null then return jsonb_build_object('ok', false, 'reason', 'no_content'); end if;
   if p_day_index is distinct from v_day then return jsonb_build_object('ok', false, 'reason', 'stale_day'); end if;
+  if not exists (select 1 from public.content_recall_options o where o.day_index = v_day) then
+    return jsonb_build_object('ok', false, 'reason', 'no_content');
+  end if;
+  if public.five_steps_skipped(v_me, 'recall') then return jsonb_build_object('ok', false, 'reason', 'skipped'); end if;
   if not exists (select 1 from public.content_recall_options o where o.day_index = v_day and o.slot = p_slot) then
     return jsonb_build_object('ok', false, 'reason', 'invalid_option');
   end if;
@@ -260,7 +311,8 @@ revoke execute on function public.save_recall(int, int) from public, anon;
 grant execute on function public.save_recall(int, int) to authenticated;
 
 -- ---- (3) save_pass_on: ⑤ 건넨 말 틀 키 저장(스위치 꺼짐 = 거부) ----
--- {ok:true} | {ok:false, reason:'disabled'|'consent_required'|'invalid_key'|'no_content'|'stale_day'|'missing_value'}.
+-- {ok:true} | {ok:false, reason:'disabled'|'consent_required'|'invalid_key'|'no_content'|'stale_day'|'skipped'|'missing_value'}.
+-- skipped: 오늘 ⑤가 넘어감(여기까지 포함)으로 기록돼 있음(리뷰 QA-3 M1). 스위치가 꺼진 날 앱은 ⑤를 p_skipped로 기록한다(계약 규칙, QA-1 M1).
 -- missing_value: recall_story인데 오늘 ② 고른 것이 없음, choice_like인데 오늘 ③ 답이 없음(끼울 값 없는 문장 방지).
 create function public.save_pass_on(p_day_index int, p_key text) returns jsonb
 language plpgsql security definer set search_path = ''
@@ -280,6 +332,7 @@ begin
   select ds.day_index into v_day from public.daily_sessions ds where ds.parent_id = v_me and ds.session_date = v_today;
   if v_day is null then return jsonb_build_object('ok', false, 'reason', 'no_content'); end if;
   if p_day_index is distinct from v_day then return jsonb_build_object('ok', false, 'reason', 'stale_day'); end if;
+  if public.five_steps_skipped(v_me, 'pass_on') then return jsonb_build_object('ok', false, 'reason', 'skipped'); end if;
   if (p_key = 'recall_story' and not exists (select 1 from public.recall_picks r where r.parent_id = v_me and r.session_date = v_today))
      or (p_key = 'choice_like' and not exists (select 1 from public.answers a where a.parent_id = v_me and a.session_date = v_today)) then
     return jsonb_build_object('ok', false, 'reason', 'missing_value');
@@ -373,6 +426,7 @@ begin
   if v_idx is null then return null; end if;
   return jsonb_build_object(
     'day_index', v_idx,
+    'five_steps_supported', true, -- 0061 계약 표지(리뷰 QA-1 L5): 키가 없는 서버면 앱은 3단계로 돈다
     'photo', (select jsonb_build_object('caption', p.caption, 'image_url', p.image_url, 'keyword', p.keyword,
                                          'recall_questions', to_jsonb(p.recall_questions))
                 from public.content_photos p where p.day_index = v_idx),
@@ -430,6 +484,7 @@ begin
       'options', coalesce((select jsonb_agg(jsonb_build_object('slot', o.slot, 'label', o.label) order by o.slot)
                              from public.content_recall_options o where o.day_index = v_idx), '[]'::jsonb),
       'picked_slot', null),
+    'five_steps_supported', true,
     'linked', false);
 end $$;
 

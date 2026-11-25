@@ -25,7 +25,7 @@ select is(((public.preview_content()) ->> 'day_index')::int, mod(greatest(0, pub
 select ok((public.preview_content()) -> 'photo' ->> 'caption' in ('cap1', 'cap2'), '사진을 돌려준다');
 select ok((public.preview_content()) -> 'question' ->> 'prompt' in ('p1', 'p2'), '질문을 돌려준다');
 select is((public.preview_content()) ->> 'linked', 'false', '연결되지 않았다는 표시를 돌려준다');
-select is(((public.preview_content()) - 'day_index' - 'photo' - 'question' - 'linked' - 'recall'), '{}'::jsonb, '답·동의·세션·연속일은 포함하지 않는다');
+select is(((public.preview_content()) - 'day_index' - 'photo' - 'question' - 'linked' - 'recall' - 'five_steps_supported'), '{}'::jsonb, '답·동의·세션·연속일은 포함하지 않는다');
 select is((public.preview_content()) -> 'recall', '{"options": [], "picked_slot": null}'::jsonb, '0061: ② 보기만(고른 것 없음 — 연결 전은 저장 안 함)');
 
 select throws_like($$ select public.save_answer('73c00000-0000-0000-0000-000000000001', 'A') $$, '%parent_required%', '연결 안 된 기기는 답을 저장할 수 없다');

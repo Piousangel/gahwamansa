@@ -6,7 +6,7 @@
 --   (4) 지우는 길: 그만 보여 주기·31일 파기·관리자 계정 삭제·오늘 다시 하기(dev_reset_today)에 모두 포함.
 --   (5) 자녀 읽기 범위: 동의 중·같은 가족·30일, 넘긴 날 무표시, 스위치 꺼짐이면 ⑤ 없음. 앱·anon·서비스 역할의 표 직접 접근 불가.
 begin;
-select plan(69);
+select plan(85);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 
 -- ---- 스위치 기본 꺼짐(픽스처가 손대기 전, 마이그레이션·로컬 시드 그대로) ----
@@ -23,15 +23,17 @@ insert into auth.users (id, aud, role, is_anonymous) values
   ('70610000-0000-0000-0000-0000000000a2', 'authenticated', 'authenticated', true),
   ('70610000-0000-0000-0000-0000000000a3', 'authenticated', 'authenticated', true),
   ('70610000-0000-0000-0000-0000000000a4', 'authenticated', 'authenticated', true),
-  ('70610000-0000-0000-0000-0000000000b1', 'authenticated', 'authenticated', true);
+  ('70610000-0000-0000-0000-0000000000b1', 'authenticated', 'authenticated', true),
+  ('70610000-0000-0000-0000-0000000000e5', 'authenticated', 'authenticated', true);
 insert into public.families (id, created_by, parent_title) values
   ('70610000-0000-0000-0000-0000000000f1', '70610000-0000-0000-0000-0000000000c1', '엄마'),
   ('70610000-0000-0000-0000-0000000000f2', '70610000-0000-0000-0000-0000000000c2', '엄마');
 insert into public.content_photos (day_index, image_url, caption, keyword) values
-  (1, 'u1', '시골집 부엌', '부엌'), (2, 'u2', '마을 입구', '나무');
+  (1, 'u1', '시골집 부엌', '부엌'), (2, 'u2', '마을 입구', '나무'), (3, 'u3', '감 익는 마당', '감'); -- 3일은 ② 보기 없음
 insert into public.content_questions (id, day_index, option_a, option_b, prompt) values
   ('70610000-0000-0000-0000-0000000000d1', 1, '숭늉', '식혜', '무엇이 당기세요?'),
-  ('70610000-0000-0000-0000-0000000000d2', 2, '봄', '가을', '어느 계절이 좋으세요?');
+  ('70610000-0000-0000-0000-0000000000d2', 2, '봄', '가을', '어느 계절이 좋으세요?'),
+  ('70610000-0000-0000-0000-0000000000d3', 3, '단감', '홍시', '어느 쪽이 좋으세요?');
 insert into public.content_recall_options (day_index, slot, label) values
   (1, 1, '아궁이'), (1, 2, '누룽지'), (1, 3, '가마솥'), (2, 1, '정자'), (2, 2, '장독');
 -- a1 새 앱(동의) · a2 옛 앱(동의) · a3 미동의 · a4 새 앱(동의, 넘기기) — 가족 f1. b1 다른 가족(동의).
@@ -42,7 +44,8 @@ insert into public.profiles (id, user_id, family_id, role, consented_at, content
   ('70610000-0000-0000-0000-00000000a002', '70610000-0000-0000-0000-0000000000a2', '70610000-0000-0000-0000-0000000000f1', 'parent', now(), 1, public.kst_today(), '2026-11-03 00:00+00'),
   ('70610000-0000-0000-0000-00000000a003', '70610000-0000-0000-0000-0000000000a3', '70610000-0000-0000-0000-0000000000f1', 'parent', null, 1, public.kst_today(), '2026-11-04 00:00+00'),
   ('70610000-0000-0000-0000-00000000a004', '70610000-0000-0000-0000-0000000000a4', '70610000-0000-0000-0000-0000000000f1', 'parent', now(), 1, public.kst_today(), '2026-11-05 00:00+00'),
-  ('70610000-0000-0000-0000-00000000b001', '70610000-0000-0000-0000-0000000000b1', '70610000-0000-0000-0000-0000000000f2', 'parent', now(), 1, public.kst_today(), '2026-11-06 00:00+00');
+  ('70610000-0000-0000-0000-00000000b001', '70610000-0000-0000-0000-0000000000b1', '70610000-0000-0000-0000-0000000000f2', 'parent', now(), 1, public.kst_today(), '2026-11-06 00:00+00'),
+  ('70610000-0000-0000-0000-00000000e005', '70610000-0000-0000-0000-0000000000e5', '70610000-0000-0000-0000-0000000000f2', 'parent', now(), 3, public.kst_today(), '2026-11-07 00:00+00');
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -140,11 +143,36 @@ select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
 select is(public.save_pass_on(1, '오늘 잘 지내요'), '{"ok": false, "reason": "invalid_key"}'::jsonb, '자유 문장 거부(틀 키만)');
 select is(public.save_pass_on(1, 'love_you'), '{"ok": false, "reason": "invalid_key"}'::jsonb, '응원 키는 ⑤ 키가 아니다(다른 목록)');
 select is(public.save_pass_on(2, 'ask_which'), '{"ok": false, "reason": "stale_day"}'::jsonb, '⑤도 오늘 콘텐츠 날만');
-select is(public.save_pass_on(1, 'recall_story'), '{"ok": true}'::jsonb, '스위치 켬 + 동의 + ② 있음 → ⑤ 저장');
+select is(public.save_pass_on(1, 'recall_story'), '{"ok": false, "reason": "skipped"}'::jsonb, '⑤를 넘긴 날은 저장 거부(넘김 → 저장 순서도 무표시, QA-3 M1)');
+select public.record_session_step('pass_on', 5, false, 5); -- 홈에서 다시 하기: 실제로 하면 skipped에서 빠진다
+select is(public.save_pass_on(1, 'recall_story'), '{"ok": true}'::jsonb, '다시 한 ⑤는 스위치 켬 + 동의 + ② 있음 → 저장');
 select is(public.get_today_content() -> 'pass_on', '{"enabled": true, "picked_key": "recall_story"}'::jsonb, '어르신 오늘 콘텐츠에 건넨 키');
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000b1', true);
 select is(public.save_pass_on(1, 'recall_story'), '{"ok": false, "reason": "missing_value"}'::jsonb, '② 없이 recall_story 거부(빈 자리 문장 방지)');
 select is(public.save_pass_on(1, 'choice_like'), '{"ok": false, "reason": "missing_value"}'::jsonb, '③ 답 없이 choice_like 거부');
+select public.save_answer('70610000-0000-0000-0000-0000000000d1', 'B');
+select is(public.save_pass_on(1, 'choice_like'), '{"ok": true}'::jsonb, '③ 답이 있으면 choice_like 저장');
+select public.record_session_step('question', 5, true, 5);
+reset role;
+select is((select count(*)::int from public.answers where parent_id = '70610000-0000-0000-0000-00000000b001' and session_date = public.kst_today())
+        + (select count(*)::int from public.pass_on_picks where parent_id = '70610000-0000-0000-0000-00000000b001'), 0,
+          '③ 넘김 → 오늘 답과 그 답을 끼운 ⑤ choice_like 삭제(QA-1 M3·QA-3 L1)');
+select pg_temp.act_as('70610000-0000-0000-0000-0000000000b1', true);
+select throws_like($$ select public.save_answer('70610000-0000-0000-0000-0000000000d1', 'A') $$, '%skipped%', '③을 넘긴 날은 save_answer도 거부(예외 skipped)');
+select is(public.save_pass_on(1, 'ask_which'), '{"ok": true}'::jsonb, 'ask_which 저장');
+select public.record_session_step('pass_on', 5, true, 5);
+reset role;
+select is((select count(*)::int from public.pass_on_picks where parent_id = '70610000-0000-0000-0000-00000000b001'), 0, '⑤ 넘김 → ⑤ 행 삭제(QA-1 M3)');
+-- ② 보기가 없는 날(3일, e5): no_content. 앱은 ②를 p_skipped로 기록(계약 규칙), stop_here는 빠진 ②까지 채운다(QA-1 M1)
+select pg_temp.act_as('70610000-0000-0000-0000-0000000000e5', true);
+select public.record_session_step('photo', 5, false, 5);
+select is(public.save_recall(3, 1), '{"ok": false, "reason": "no_content"}'::jsonb, '② 보기가 없는 날 save_recall은 no_content');
+select is(public.get_today_content() -> 'recall' -> 'options', '[]'::jsonb, '보기 없는 날 options는 빈 배열');
+select is(public.get_today_content() ->> 'five_steps_supported', 'true', '0061 계약 표지(QA-1 L5)');
+select public.record_session_step('question', 5, false, 5);
+select is(public.record_session_step('stop_here', 0, false, 5) ->> 'completed', 'true', '② 기록이 빠진 날도 여기까지면 도장(빠진 ②를 넘어감으로 채움)');
+reset role;
+select is((pg_temp.sess('70610000-0000-0000-0000-00000000e005')).skipped_steps, array['hangul', 'pass_on', 'recall'], '여기까지가 채운 넘어감 = ②·④·⑤');
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000c1', false);
 select throws_like($$ select public.save_recall(1, 1) $$, '%parent_required%', '자녀는 ② 저장 불가');
 select throws_like($$ select public.save_pass_on(1, 'ask_which') $$, '%parent_required%', '자녀는 ⑤ 저장 불가');
@@ -188,12 +216,17 @@ select is((select count(*)::int from public.recall_picks where parent_id = '7061
         + (select count(*)::int from public.pass_on_picks where parent_id = '70610000-0000-0000-0000-00000000a001'), 0,
           '② 넘김 → ② 행과 recall_story ⑤ 행 삭제(넘긴 날 무표시)');
 select is((pg_temp.sess('70610000-0000-0000-0000-00000000a001')).completed_at is not null, true, '이미 찍힌 도장은 그대로');
+select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
+select is(public.save_recall(1, 2), '{"ok": false, "reason": "skipped"}'::jsonb, '②를 넘긴 날은 ② 저장 거부(QA-3 M1)');
+reset role;
+select is((select count(*)::int from public.recall_picks where parent_id = '70610000-0000-0000-0000-00000000a001'), 0, '넘김 뒤 저장 시도 → ② 행 0(자녀 무표시)');
 
 -- ======== (4) 지우는 길 ========
 -- 그만 보여 주기
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000a1', true);
-select public.save_recall(1, 3);
-select public.save_pass_on(1, 'ask_which');
+select public.record_session_step('recall', 1, false, 5); -- 다시 하기
+select is(public.save_recall(1, 3), '{"ok": true}'::jsonb, '넘김 뒤 다시 하기로 실제로 하면 ② 저장 정상');
+select is(public.save_pass_on(1, 'ask_which'), '{"ok": true}'::jsonb, '⑤ 저장(철회 전)');
 select public.withdraw_consent();
 reset role;
 select is((select count(*)::int from public.recall_picks where parent_id = '70610000-0000-0000-0000-00000000a001')
@@ -218,6 +251,8 @@ select is((select array_agg(session_date order by session_date) from public.pass
 select pg_temp.act_as('70610000-0000-0000-0000-0000000000c1', false);
 select is((select p -> 'recalls' from jsonb_array_elements(public.child_answer_history() -> 'parents') p
             where p ->> 'parent_id' = '70610000-0000-0000-0000-00000000a002'), '[]'::jsonb, '자녀 목록은 최근 30일(오늘 포함)만');
+select is((select p -> 'pass_ons' from jsonb_array_elements(public.child_answer_history() -> 'parents') p
+            where p ->> 'parent_id' = '70610000-0000-0000-0000-00000000a002'), '[]'::jsonb, '자녀 ⑤도 최근 30일만(30일 전 행은 남아 있어도 안 나감, QA-3 L2)');
 reset role;
 -- 관리자 계정 삭제(웹 요청, 공통 삭제 함수)
 select public.admin_delete_account('70610000-0000-0000-0000-00000000a002', '#61', 'owner');
@@ -254,7 +289,7 @@ select ok(not exists (select 1 from unnest(array['public.save_recall(int,int)', 
                                                  'public.record_session_step(text,int,boolean,int)']) f(fn)
                        where has_function_privilege('anon', f.fn, 'execute')), 'anon은 새 RPC를 실행하지 못한다');
 select ok(not exists (select 1 from unnest(array['public.pass_on_key_ok(text)', 'public.five_steps_consent_withdrawn()', 'public.recall_pick_deleted()',
-                                                 'public.content_recall_options_guard()']) f(fn),
+                                                 'public.content_recall_options_guard()', 'public.five_steps_skipped(uuid,text)']) f(fn),
                              unnest(array['anon', 'authenticated']) r(role)
                        where has_function_privilege(r.role, f.fn, 'execute')), '내부 함수는 앱·anon이 못 부른다');
 select ok((select bool_and(proconfig = array['search_path=""']) from pg_proc
