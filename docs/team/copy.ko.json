@@ -478,6 +478,8 @@
     "photo_like": "오늘 사진이 좋아요",
     "ask_which": "어느 쪽일지 궁금해요",
     "ask_which_sub": "{보기 A} · {보기 B}",
+    "need_choice": "한 줄을 고르면 눌려요. 넘어가려면 '오늘은 넘어갈게요'를 눌러 주세요",
+    "_status_need_choice": "대기열 34(DS-1 11-25): ⑤ 꺼진 [건넬게요]의 화면 읽기 힌트만(보이는 글 아님). 넘어가기를 ②처럼 카드 아래 본문으로 옮겨 첫 화면 밖이 되므로 그 길을 알린다(recall.need_choice 꼴). 옛 힌트는 question.need_choice(「한쪽을」 — 카드 3장과 어긋남). 라이터 확인 전",
     "_status": "⑤ 이야기 건네기 — 라이터 확정(five-steps-copy 1절 #3·#4, 4.2절 틀 문장 5개). 키 이름 = api/contract/fiveSteps.ts PASS_ON_KEYS(서버 레인이 정하면 맞춤). 보조 버튼은 keyboard.skip"
   },
   "keyboard": {
@@ -526,6 +528,8 @@
   "question": {
     "headline": "요즘 마음 가는 쪽을 골라요",
     "need_choice": "한쪽을 고르면 눌려요",
+    "need_choice_five": "한쪽을 고르면 눌려요. 넘어가려면 '오늘은 넘어갈게요'를 눌러 주세요",
+    "_status_need_choice_five": "대기열 35(DS-1 11-25): 5단계 ③ 꺼진 [정했어요]의 화면 읽기 힌트만(보이는 글 아님). 5단계에만 넘어가기가 있어 그 길을 알린다(recall.need_choice 꼴). 3단계는 need_choice 그대로. 라이터 확인 전",
     "chosen": "골랐어요"
   },
   "cheer": {

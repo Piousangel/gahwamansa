@@ -141,7 +141,11 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
         error
           ? stepErrorDock(error, () => (lastAction.current === 'skip' ? skip() : confirm()))
           : {
-              primary: {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm},
+              // 대기열 35: 5단계는 넘어가기가 있으므로 꺼진 [정했어요]의 읽기 힌트가 그 길까지 말한다(need_choice_five, ②⑤ need_choice 꼴).
+              // 5단계에서는 ②⑤처럼 보이는 이유 줄 없이 힌트만(시안 s2·s3 Dock 예산 — 긴 문장이 Dock 을 키운다). 3단계는 그대로(이유 줄 + 힌트 「한쪽을 고르면 눌려요」)
+              primary: five
+                ? {label: copy.course.next.question, disabled: !choice, accessibilityHint: choice ? undefined : copy.question.need_choice_five, loading: saving, onPress: confirm}
+                : {label: copy.course.next.question, disabled: !choice, disabledReason: copy.question.need_choice, loading: saving, onPress: confirm},
               ...(five && !large ? {secondary: {kind: 'text' as const, label: copy.keyboard.skip, disabled: saving, onPress: skip, testID: 'five-skip'}} : {}),
             }
       }>

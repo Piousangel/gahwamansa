@@ -178,18 +178,19 @@ const DOCK_CASES: Case[] = [
     dock: {primary: {label: copy.recall.confirm, onPress: noop, disabled: true}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
   },
   {
-    name: '5단계 ⑤ 이야기 건네기(건넬게요 + 오늘은 넘어갈게요)',
+    name: '5단계 ⑤ 이야기 건네기(건넬게요 — 넘어가기는 본문, 대기열 34)',
     screen: 'PassOnStep',
     variant: 'step',
     audience: 'elder',
-    dock: {primary: {label: copy.pass_on.confirm, onPress: noop, disabled: true}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+    dock: {primary: {label: copy.pass_on.confirm, onPress: noop, disabled: true}},
   },
   {
     name: '5단계 ③ 둘 중 고르기(정했어요 + 오늘은 넘어갈게요)',
     screen: 'QuestionStep',
     variant: 'step',
     audience: 'elder',
-    dock: {primary: {label: copy.course.next.question, onPress: noop, disabled: true, disabledReason: copy.question.need_choice}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
+    // 대기열 35: 5단계는 보이는 이유 줄 없이 힌트만(need_choice_five)
+    dock: {primary: {label: copy.course.next.question, onPress: noop, disabled: true, accessibilityHint: copy.question.need_choice_five}, secondary: {kind: 'text', label: copy.keyboard.skip, onPress: noop}},
   },
   {
     name: '5단계 P3 ③ 뒤(지금 단계 + 오늘은 여기까지 할게요)',

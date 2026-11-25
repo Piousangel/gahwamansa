@@ -1,5 +1,5 @@
 import React, {useCallback, useState} from 'react';
-import {useWindowDimensions} from 'react-native';
+import {StyleSheet, useWindowDimensions, View} from 'react-native';
 import {useSession} from '../../app/session';
 import {Choice, DsScreen, Text, type DockProps} from '../../ui/ds';
 import {ds} from '../../ui/ds/roles';
@@ -111,12 +111,13 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
     ? stepErrorDock(error, () => (lastAction.current === 'skip' ? skip() : confirm()))
     : {
         // 비활성 이유 줄은 두지 않는다(시안 s2·s3, 320×640 200% Dock 예산 — 이유는 읽기 힌트로만)
-          primary: {label: p.confirm, disabled: !choice, accessibilityHint: choice ? undefined : copy.question.need_choice, loading: saving, onPress: confirm, testID: 'pass-on-confirm'},
-        secondary: large ? undefined : {kind: 'text', label: copy.keyboard.skip, disabled: saving, onPress: skip, testID: 'five-skip'},
+        // 대기열 34: 넘어가기는 배율과 상관없이 카드 아래 본문(②와 같은 자리, #254·#259 M2). 100% 360×640 에서 Dock 보조 줄(56 + 4)이
+        // 본문 창을 줄여 첫 화면에 카드가 1장만 보였다. 넘어가기가 첫 화면 밖이 되므로 꺼진 주 버튼 힌트가 그 길을 알린다(pass_on.need_choice)
+        primary: {label: p.confirm, disabled: !choice, accessibilityHint: choice ? undefined : p.need_choice, loading: saving, onPress: confirm, testID: 'pass-on-confirm'},
       };
   return (
     <DsScreen variant="step" back={back} stepInfo={stepA11y(name, n, false, five)} scrollRef={errorTop} onViewport={setViewport} dock={dock}>
-      <FoldStack viewport={viewport} gap={12} testID="pass-on-body" split="choice" onTop={setChoiceTop}>
+      <FoldStack viewport={viewport} gap={BODY_GAP} testID="pass-on-body" split="choice" onTop={setChoiceTop}>
         {error ? <StepErrorBanner key="error" error={error} /> : null}
         <StepHeader key="header" name={name} n={n} compact={large} five={five} />
         <Text key="title" testID="pass-on-title" role="title">{p.title}</Text>
@@ -137,8 +138,16 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
           disabled={saving}
           onSelect={k => setChoice(k as PassOnKey)}
         />
-        {large ? <SkipInline key="skip" onPress={skip} disabled={saving} /> : null}
+        {/* 마지막 카드와 넘어가기 사이 = 묶음 간격(section 32) — ②(recall-skip-gap)와 같다: 마지막 카드를 누르려다 넘어가기를 누르지 않게 */}
+        <View key="skip" testID="pass-on-skip-gap" style={styles.skipGap}>
+          <SkipInline onPress={skip} disabled={saving} />
+        </View>
       </FoldStack>
     </DsScreen>
   );
 }
+
+const BODY_GAP = 12;
+const styles = StyleSheet.create({
+  skipGap: {paddingTop: ds.space.section - BODY_GAP},
+});

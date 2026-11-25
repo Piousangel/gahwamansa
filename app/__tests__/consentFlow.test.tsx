@@ -1,6 +1,6 @@
 import {fireEvent, screen, waitFor} from '@testing-library/react-native';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
+import {press, pressWhenEnabled, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 import {pressLast} from '../testUtils/flow';
 
 async function runCourse() {
@@ -14,8 +14,9 @@ async function runCourse() {
   await press('정했어요');
   await waitFor(() => screen.getByTestId('date-line'));
   await pressCourseNext();
+  // 대기열 49: '다 썼어요'는 꺼진 채 화면 도착 표지로만 쓴다(누르지 않음). 누르는 '오늘은 넘어갈게요'는 저장 중(busy) 꺼질 수 있어 켜질 때까지 기다린다(#276)
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('오늘은 넘어갈게요');
+  await pressWhenEnabled('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
 }
 
