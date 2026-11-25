@@ -92,5 +92,8 @@ delete from public.server_flags where name = 'care_lines_enabled';
 alter table public.server_flags drop constraint server_flags_name_check,
   add constraint server_flags_name_check check (name in ('dev_reset_enabled', 'pass_on_store_enabled'));
 drop function if exists public.care_lines_visible(uuid);
+-- 열 단위 읽기 권한 → 표 단위로 되돌림(0065 전과 같음)
+revoke select (id, day_index, option_a, option_b, prompt, retired_at, starter_a, starter_b) on public.content_questions from authenticated, anon;
+grant select on public.content_questions to authenticated, anon;
 alter table public.content_questions drop column if exists care_a, drop column if exists care_b;
 drop function if exists public.care_line_ok(text);

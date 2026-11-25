@@ -17,7 +17,7 @@
 - `latest`는 **session_date(그 답의 날)** 기준 최신 1개. answered_date = session_date(답을 고친 시각 아님).
 - 어르신이 2명 이상이면 반드시 parent_id·title로 행을 나눠 보여 준다(섞이면 오표시).
 - `starter`(0027, 첫마디 한 줄): 어르신이 **고른 쪽** 선택지의 대화 시작 문장(`content_questions.starter_a/b`). 문장이 아직 없으면 null → 앱은 줄을 숨긴다. 문장은 라이터가 채우며 시드는 비어 있다.
-- `care`(0065, 챙겨 드릴 거리 한 줄): 어르신이 **고른 쪽** 보기의 '챙겨 드릴 거리'(`content_questions.care_a/b`, 1~17자 명사구). 키는 늘 있고, 서버 스위치 `care_lines_enabled`가 꺼져 있으면(기본, 모든 환경) **늘 null**. 다음 단계에서 '그 어르신의 답 공유 동의 v6 이상' 조건이 내부 함수 `care_lines_visible`에 더해진다(설계서 `docs/team/2026-11-26-content-axes.md` 5절). 고르지 않은 쪽 문장·갈래·횟수는 돌려주지 않는다. null이면 앱은 줄을 숨긴다.
+- `care`(0065, 챙겨 드릴 거리 한 줄): 어르신이 **고른 쪽** 보기의 '챙겨 드릴 거리'(`content_questions.care_a/b`, 1~17자 명사구). 키는 늘 있고, 서버 스위치 `care_lines_enabled`가 꺼져 있으면(기본, 모든 환경) **늘 null**. 다음 단계에서 '그 어르신의 답 공유 동의 v6 이상' 조건이 내부 함수 `care_lines_visible`에 더해진다(설계서 `docs/team/2026-11-26-content-axes.md` 5절). 고르지 않은 쪽 문장·갈래·횟수는 돌려주지 않는다. null이면 앱은 줄을 숨긴다. **앱 역할은 `content_questions.care_a/b`를 표에서 직접 못 읽는다**(0065 열 단위 권한 — 나머지 열만 grant, 이 표에 열을 더하면 앱에 보일 열은 따로 grant). 문장 검사 `care_line_ok`: 1~17자, 공백을 지운 값에 금지어·효능 꼴·병명·신체 부위 없음.
 
 ### child_answer_history() → jsonb  (0021, C5 지난 답)
 ```json

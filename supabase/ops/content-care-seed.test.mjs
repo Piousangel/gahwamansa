@@ -101,9 +101,16 @@ test('챙겨 드릴 거리 60줄: 모두 다르고 1~17자(0065 care_line_ok 상
 });
 
 // 금지어 독립 목록(설계서 W7: copyBan BANNED_EVERYWHERE + guardrails 1절 + 이번 원칙, W6 '몸에 좋'). SQL 정규식을 읽어 쓰지 않는다.
+// #286 QA-3 M1: 효능 꼴('~에 좋'·높이/낮추·잘되·되살)·병명·신체 부위·'약'. 검사는 공백을 지운 값으로(띄어 써서 피하기 차단).
 const BANNED = ['아직', '못했', '미완료', '일째', '틀렸', '치매', '치료', '예방',
   '효도', '안부', '안심', '건강', '뇌', '노인', '숙제', '잘하셨', '확인', '지켜', '실시간',
-  '효능', '좋아하시니까', '기억', '몸에 좋'];
+  '효능', '좋아하시니까', '기억', '몸에좋',
+  '에좋', '높이', '낮추', '낮춰', '잘되', '되살', '혈압', '혈당', '당뇨', '관절', '무릎', '허리', '면역', '소화',
+  '변비', '불면', '약', '뼈', '근육', '살빠', '다이어트', '피로'];
+const squash = (t) => t.replace(/\s+/g, '');
+// 막혀야 할 예시(QA-3가 0065 첫 정규식을 통과시킨 문장 — 고치기 전 통과, 고친 뒤 거부)
+const MUST_BLOCK = ['관절에 좋은 산책', '무릎에 좋은 걷기', '당뇨에 좋은 잡곡밥', '혈압 낮추는 나물', '면역력 높이는 차',
+  '소화 잘되는 죽', '몸 에 좋은 차', '기 억 되살리기'];
 
 test('금지어 0 — 챙겨 드릴 거리 60줄 + 바뀐 9일 ③ 보기·질문 + 첫마디 18줄', () => {
   const texts = [...CARE];
@@ -112,17 +119,35 @@ test('금지어 0 — 챙겨 드릴 거리 60줄 + 바뀐 9일 ③ 보기·질�
     texts.push(q.a, q.b, q.prompt, ...q.starters);
   }
   assert.equal(texts.length, 60 + 9 * 5);
-  const hits = texts.flatMap((t) => BANNED.filter((w) => t.includes(w)).map((w) => `${t} ← ${w}`));
+  const hits = texts.flatMap((t) => BANNED.filter((w) => squash(t).includes(w)).map((w) => `${t} ← ${w}`));
   assert.deepEqual(hits, []);
 });
 
-test('0065 SQL 금지어 정규식이 독립 목록의 낱말을 모두 잡는다', () => {
-  const m = MIG.match(/p_line !~ '([^']*)'/);
-  assert.ok(m, 'care_line_ok 정규식을 찾지 못함');
-  const sqlBan = new RegExp(m[1].replace('[0-9]+일째', '([0-9]+)?일째'));
+const SQL_RE = MIG.match(/regexp_replace\(p_line, '\\s\+', '', 'g'\) !~ '([^']*)'/);
+
+test('0065 SQL 금지어 정규식이 독립 목록의 낱말을 모두 잡고, 공백을 지운 값으로 검사한다', () => {
+  assert.ok(SQL_RE, 'care_line_ok 정규식(공백 지운 값 검사)을 찾지 못함');
+  const sqlBan = new RegExp(SQL_RE[1].replace('[0-9]+일째', '([0-9]+)?일째'));
   assert.deepEqual(BANNED.filter((w) => !sqlBan.test(w)), []);
-  assert.ok(new RegExp(m[1]).test('3일째'), 'N일째');
+  assert.ok(new RegExp(SQL_RE[1]).test('3일째'), 'N일째');
+  assert.ok(!/ /.test(SQL_RE[1]), '공백을 지운 값과 맞추므로 정규식 낱말에 공백이 없어야 함');
   assert.match(MIG, /char_length\(p_line\) between 1 and 17/);
+});
+
+test('효능·풀이 예시는 SQL 정규식(공백 지운 값)에 막히고, 확정 60줄은 통과(#286 QA-3 M1)', () => {
+  const sqlBan = new RegExp(SQL_RE[1]);
+  assert.deepEqual(MUST_BLOCK.filter((t) => !sqlBan.test(squash(t))), []);
+  assert.deepEqual(CARE.filter((t) => sqlBan.test(squash(t))), []);
+});
+
+// #286 QA-1 L2: staging 재시드 [5] 첫마디 UPDATE(손으로 옮긴 4줄) = seed_content_30d.sql seed_starters 글자 그대로
+test('staging 재시드 SQL의 첫마디 4줄 = 30d 시드 seed_starters(8·9·13·14일)', () => {
+  const R = read('supabase/ops/staging-reseed-2026-11-26.sql');
+  const block = R.slice(R.indexOf('update public.content_questions c set starter_a'));
+  const rows = [...block.slice(0, block.indexOf(') s(day_index')).matchAll(new RegExp(`\\((\\d+), ${s}, ${s}\\)`, 'g'))]
+    .map((m) => [Number(m[1]), m[2], m[3]]);
+  assert.deepEqual(rows.map((r) => r[0]), [8, 9, 13, 14]);
+  for (const [d, a, b] of rows) assert.deepEqual([a, b], SEED.get(d).starters, `${d}일`);
 });
 
 test('뺀 낱말·옛 짝이 시드에 남지 않음(온천·스카프·오일장, 바뀐 9일의 옛 보기)', () => {
