@@ -28,6 +28,18 @@ test('parseCheerKeys: 주석 안의 따옴표는 무시하고, 모양이 바뀌�
   assert.throws(() => parseCheerKeys("export const CHEER_KEYS = ['Bad-Key'] as const;"), /읽지 못했어요/);
 });
 
+// 대기열 15: 주석 속 선언 글자(예: 사용법 설명)를 진짜 선언보다 먼저 잡던 약점. 주석은 건너뛰고, 문자열 속 주석 기호는 주석으로 보지 않는다.
+test('parseCheerKeys: 주석 속 선언 글자는 건너뛰고 진짜 선언을 읽는다', () => {
+  const real = "export const CHEER_KEYS = [\n  'love_you', 'warm_day',\n] as const;";
+  const block = "/**\n * 예: export const CHEER_KEYS = ['fake_block'] as const;\n */\n" + real;
+  const line = "// export const CHEER_KEYS = ['fake_line'] as const;\n" + real;
+  const strings = "const u = 'http://x'; const s = \"/* not a comment\";\n" + real + "\nconst t = `*/`;";
+  for (const src of [block, line, strings]) assert.deepEqual(parseCheerKeys(src), ['love_you', 'warm_day'], src);
+  // 주석 안에만 선언이 있으면(진짜 선언이 사라짐) 조용히 읽지 않고 예외
+  assert.throws(() => parseCheerKeys("/* export const CHEER_KEYS = ['fake'] as const; */"), /찾지 못했어요/);
+  assert.throws(() => parseCheerKeys("// export const CHEER_KEYS = ['fake'] as const;\n"), /찾지 못했어요/);
+});
+
 test('법률 승인 키는 계약 안에 있고, 지금은 기존 4키뿐이다', () => {
   for (const k of LEGAL_APPROVED_CHEER_KEYS) assert.ok(CONTRACT.includes(k), k);
   assert.deepEqual(LEGAL_APPROVED_CHEER_KEYS, PRE_0060_CHEER_KEYS);
