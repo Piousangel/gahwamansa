@@ -322,6 +322,34 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     }
   });
 
+  test('QA-3 재확인 L1: getToken 이 기다림 시간을 넘기고 로그아웃 정리가 시작된 뒤 끝나면 서버에 등록하지 않는다', async () => {
+    setAndroid(34);
+    setSettleMsForTest(30);
+    const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    let releaseToken: (t: string) => void = () => {};
+    fcm.mod.getToken.mockImplementationOnce(
+      () =>
+        new Promise<string>(r => {
+          releaseToken = r;
+        }),
+    );
+    setPushDevice(fcm.source);
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    await waitFor(() => expect(fcm.mod.getToken).toHaveBeenCalledTimes(1));
+    const out = api.signOut(); // 30ms 기다림을 넘김 → 기기 토큰을 읽어 해제·무효화
+    try {
+      await waitFor(() => expect(fcm.mod.deleteToken).toHaveBeenCalledTimes(1));
+    } finally {
+      releaseToken(TOKEN_A); // 정리 중에 늦게 도착한 토큰
+    }
+    expect(await reg).toBe('stale');
+    await out;
+    expect(rpc).not.toHaveBeenCalledWith('register_push_token', expect.anything());
+    expect(await readPushToken()).toBeNull();
+  });
+
   test('QA-1 L2: 로그아웃 중에 새로 시작한 등록은 서버를 부르지 않고, 로그아웃이 끝나면 다시 등록한다', async () => {
     setAndroid(34);
     let releaseUnregister: () => void = () => {};

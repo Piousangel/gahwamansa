@@ -35,6 +35,10 @@ async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcom
   if (!isPushTokenShape(token)) {
     return 'no_token';
   }
+  // 토큰을 받는 동안 로그아웃 정리가 시작됐으면 서버에 보내지 않는다(#262 QA-3 재확인 L1: 늦은 getToken 이 옛 세션으로 등록하는 길)
+  if (pushSigningOut() || gen !== pushGeneration()) {
+    return 'stale';
+  }
   try {
     const r = await api.registerPushToken(token);
     if (r.ok) {
