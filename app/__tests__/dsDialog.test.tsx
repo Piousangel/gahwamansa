@@ -331,3 +331,27 @@ test('리뷰 #160 M1: effect 가 다시 돌아도(원함 꺼졌다 켜짐) 첫 �
   });
   expect(h.result.current.visible).toBe(true); // 수정 전: 첫 허락을 '내려간 화면'으로 보고 놓아 둘째 요청이 하루 하나에 걸려 false
 });
+
+// #293 QA-2 L4(대기열 61): statusBarTranslucent·navigationBarTranslucent 라 Modal 이 상태 표시줄·내비게이션 막대 밑까지 그린다
+// → 위·아래 안전 영역만큼 더 띄운다(320×640·200%에서 카드 위 끝이 시계와 겹쳤다, N1 포함 공용)
+describe('ds Dialog 안전 영역', () => {
+  const {SafeAreaProvider} = require('react-native-safe-area-context');
+  const flat = (s: unknown) => require('react-native').StyleSheet.flatten(s);
+  const metrics = (top: number, bottom: number) => ({frame: {x: 0, y: 0, width: 320, height: 640}, insets: {top, bottom, left: 0, right: 0}});
+  test('상태 표시줄(위 36)·내비게이션 막대(아래 24)가 있으면 카드가 그 안쪽에서 시작한다', () => {
+    render(
+      <SafeAreaProvider initialMetrics={metrics(36, 24)}>
+        <Dialog visible title="알림을 받을까요?" body="본문" dismiss="close" onDismiss={noop} returnFocusRef={null} />
+      </SafeAreaProvider>,
+    );
+    const st = flat(screen.getByTestId('ds-dialog-scrim').props.style);
+    expect(st.paddingTop).toBeGreaterThanOrEqual(36 + 12);
+    expect(st.paddingBottom).toBeGreaterThanOrEqual(24 + 12);
+  });
+  test('안전 영역이 작으면(0) 지금처럼 위아래 32 — 다른 대화상자 회귀 없음', () => {
+    render(<Dialog visible title="알림을 받을까요?" body="본문" dismiss="close" onDismiss={noop} returnFocusRef={null} />);
+    const st = flat(screen.getByTestId('ds-dialog-scrim').props.style);
+    expect(st.paddingTop).toBe(32);
+    expect(st.paddingBottom).toBe(32);
+  });
+});

@@ -1,6 +1,7 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Platform} from 'react-native';
 import {copy, withTitle} from '../../copy/copy';
+import {announce} from '../../ui/a11y';
 import {Dialog, Text} from '../../ui/ds';
 import {focusTopScreenTitle} from '../../ui/screenTitle';
 import {childPromptState, declineChildPrompt, skipChildPromptToday} from '../../push/pushClient';
@@ -9,7 +10,7 @@ import type {NotifyState} from './useNotifyPermission';
 
 const p = copy.child.notify_prompt;
 
-/** 묻는 자리: wait = 번호를 보낸(공유·복사) 직후, done = 연결 직후 화면 */
+/** 묻는 자리: wait = 번호를 보낸 직후(공유 창에서 돌아옴 · 복사하고 앱을 떠났다 돌아옴), done = 연결 직후 화면 */
 export type ChildAskMoment = 'wait' | 'done';
 
 /**
@@ -25,17 +26,29 @@ export type ChildAskMoment = 'wait' | 'done';
 export function useChildNotifyAsk(notify: {state: NotifyState; open: () => void}, title: string) {
   const [moment, setMoment] = useState<ChildAskMoment | null>(null);
   const asked = useRef(false);
+  // 띄울(띄운) 자리. 판정을 기다리는 사이에 연결돼도 연결 직후 제목으로 뜨게 ref 로 둔다
+  const want = useRef<ChildAskMoment | null>(null);
 
   const offer = useCallback((m: ChildAskMoment) => {
     const d = pushDeps();
-    if (asked.current || Platform.OS !== 'android' || !d) {
+    if (Platform.OS !== 'android' || !d) {
+      return;
+    }
+    if (asked.current) {
+      // #293 QA-2 L3: 'wait' 한 장이 열린(또는 뜨려는) 채 연결되면 새로 묻지 않고 제목만 연결 직후 것으로 바꾼다.
+      //   닫았다가 다시 띄우면 한 화면에서 두 번 묻는 셈이고, 몸말('연결될 때와 첫 답이 보일 때만')은 두 자리가 같다
+      if (m === 'done' && want.current === 'wait') {
+        want.current = 'done';
+        setMoment(cur => (cur === 'wait' ? 'done' : cur));
+      }
       return;
     }
     asked.current = true;
+    want.current = m;
     childPromptState(d)
       .then(s => {
         if (s === 'ask') {
-          setMoment(m);
+          setMoment(want.current);
         } else if (s === 'retry') {
           asked.current = false; // 확인 못 함: 다음 자리(연결 직후 등)에서 다시
         }
@@ -44,6 +57,16 @@ export function useChildNotifyAsk(notify: {state: NotifyState; open: () => void}
         asked.current = false;
       });
   }, []);
+
+  // 열린 채 제목이 바뀌면(L3) 화면 읽기 사용자는 초점이 그대로라 모른다 → 바뀐 제목을 한 번 읽어 준다(처음 열릴 때는 제목 초점이 읽음)
+  const shown = useRef<ChildAskMoment | null>(null);
+  const doneTitle = withTitle(p.title_done, title);
+  useEffect(() => {
+    if (shown.current === 'wait' && moment === 'done') {
+      announce(doneTitle);
+    }
+    shown.current = moment;
+  }, [moment, doneTitle]);
 
   const close = () => {
     setMoment(null);
