@@ -92,7 +92,7 @@
 | S3 | release 빌드 콜드 스타트 10회(강제 종료 포함) 크래시 0 | S25 staging release로 10회, 시간 기록(G-13, D-36) | 필수 | ❌ | D-36 '열림'. 11-19 첫 실행 1회 237ms만 있음. S25 확인 목록으로 넘김(`qa/evidence/2026-11-25-stability` 6절) |
 | S4 | 개발 빌드 'Error: undefined' 경고 원인 확인 | logcat 재현 → 원인 → 고침 또는 무해 판정 | 필수 | ⚠️ | 원인 찾음·무해 판정: RN Fast Refresh 가 Metro 웹소켓을 잃을 때 내는 경고의 마지막 줄(WebSocket 오류 Event 에 message 없음). release 에 없는 코드, 앱 수정 없음, 시험 `devMetroDisconnectWarning` 으로 고정. logcat 재현 1회만 남음(`qa/evidence/2026-11-25-stability` 1절) |
 | S5 | 느린 기기에서 첫 화면·코스가 끊기지 않는다 | 저사양 에뮬레이터 프로필(또는 저가 실기기) 첫 화면·P3·P4 녹화 | 함께 | ❌ | D-36 '저가 기기' 열림 |
-| S6 | release 번들에 비밀값·개발 메뉴 없음 | release-gates A9 grep 0건 | 필수 | ⚠️ | JS release 번들(staging·production) 비밀 키 모양 0건, production 개발 메뉴 0건. A9 식의 `localhost` 는 라이브러리 기본값 7건이라 식 수정 제안. APK(Hermes) 산출물 검사는 출시 빌드 때(`qa/evidence/2026-11-25-stability` 2·3절) |
+| S6 | release 번들에 비밀값·개발 메뉴 없음 | release-gates A9 grep 0건 | 필수 | ⚠️ | JS release 번들(staging·production) 비밀 키 모양 0건, production 개발 메뉴 0건. A9 식은 `localhost`(라이브러리 기본값 7건) → `:54321` 로 고침(리드 결정, #268), 새 식으로 JS 번들 0건. APK(Hermes) 산출물 검사는 출시 빌드 때(`qa/evidence/2026-11-25-stability` 2·3절) |
 
 ### 1.7 푸시
 
