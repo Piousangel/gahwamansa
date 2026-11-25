@@ -95,7 +95,7 @@ test('입력칸은 비제어(value 재주입 없음), 시스템 자판 설정 �
   expect(input().props.value).toBeUndefined();
   expect(input().props.autoCorrect).toBeUndefined();
   expect(input().props.placeholder).toBeUndefined(); // v4 2-8 placeholder 금지(PR #14 리뷰 M1) — 안내는 칸 위 글·읽기 힌트
-  expect(input().props.accessibilityHint).toBe('나무를 써 주세요. 여기를 누르면 자판이 나와요'); // #265 QA-2 L1: 힌트에 따라 쓸 낱말
+  expect(input().props.accessibilityHint).toBe('나무를 써 보세요. 여기를 누르면 자판이 나와요'); // #265 QA-2 L1: 힌트에 따라 쓸 낱말
   await type('나');
   expect(input().props.value).toBeUndefined();
 });

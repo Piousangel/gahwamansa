@@ -127,7 +127,7 @@ test('#265 QA-2 M1: 사진을 넣어도 입력 칸 아래 끝과 접힘(\'더 �
 test('#265 QA-2 L1: 입력 칸 라벨은 그대로, 힌트에 따라 쓸 낱말(조사 자동)', async () => {
   const input = await toP6();
   expect(input.props.accessibilityLabel).toBe('낱말 쓰는 칸');
-  expect(input.props.accessibilityHint).toBe('나무를 써 주세요. 여기를 누르면 자판이 나와요');
+  expect(input.props.accessibilityHint).toBe('나무를 써 보세요. 여기를 누르면 자판이 나와요');
 });
 
 test('사진 준비 중(pending)이면 보기 판에 낱말만, AI 고지도 없다', async () => {

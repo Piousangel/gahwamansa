@@ -154,7 +154,7 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   // P6 회의 11-25: ④도 같은 영역 구분 — 보기 판에 고른 낱말, 쓰기 칸 이름표는 떠올리신 낱말 안내
   expect(within(screen.getByTestId('kb-look')).getByLabelText('따라 쓸 낱말, 참새')).toBeTruthy();
   expect(within(screen.getByTestId('kb-card')).getByTestId('kb-guide')).toHaveTextContent('떠올리신 낱말을 아래 칸에 써요');
-  expect(screen.getByLabelText('낱말 쓰는 칸').props.accessibilityHint).toBe('참새를 써 주세요. 여기를 누르면 자판이 나와요'); // #265 L1: ②에서 고른 낱말, 조사 자동
+  expect(screen.getByLabelText('낱말 쓰는 칸').props.accessibilityHint).toBe('참새를 써 보세요. 여기를 누르면 자판이 나와요'); // #265 L1: ②에서 고른 낱말, 조사 자동
   await act(async () => {
     fireEvent.changeText(screen.getByLabelText('낱말 쓰는 칸'), '참새');
   });
