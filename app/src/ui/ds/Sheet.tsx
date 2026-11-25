@@ -115,7 +115,8 @@ const CONTENT_SOURCE = GESTURE_SOURCE.CONTENT;
 /** 놓을 때 gorhom 에 넘길 값. 내용 끌기가 CONTENT_MIN_DRAG 보다 짧으면 속도 0(worklet — UI 스레드에서 돈다) */
 export function limitShortContentFling<P extends {translationY: number; velocityY: number}>(source: GESTURE_SOURCE, payload: P): P {
   'worklet';
-  if (source === CONTENT_SOURCE && payload.translationY < CONTENT_MIN_DRAG) {
+  // 위아래 모두 '짧게 움직인' 끌기만(위로 크게 튕긴 내용은 속도를 지켜 위 칸으로 갈 수 있게, QA-1 재확인 L1)
+  if (source === CONTENT_SOURCE && Math.abs(payload.translationY) < CONTENT_MIN_DRAG) {
     return {...payload, velocityY: 0};
   }
   return payload;

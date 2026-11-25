@@ -269,6 +269,10 @@ describe('내용 끌기 최소 거리(리드 결정 #255 QA-2 M3, #232 MIN_CLOSE
     expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: CONTENT_MIN_DRAG, velocityY: 2000}).velocityY).toBe(2000);
     expect(limitShortContentFling(GESTURE_SOURCE.HANDLE, {translationY: 5, velocityY: 2000}).velocityY).toBe(2000);
   });
+  test('위로 크게(24dp 이상) 튕긴 내용은 속도 유지 — 낮은 칸에서 위 칸으로 올라갈 수 있게(QA-1 재확인 L1)', () => {
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -CONTENT_MIN_DRAG, velocityY: -2000}).velocityY).toBe(-2000);
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -80, velocityY: -2000}).velocityY).toBe(-2000);
+  });
   test('시트는 gorhom 기본 처리기를 감싼 훅을 쓰고, 놓을 때만 위 규칙을 거쳐 기본 처리기에 넘긴다', () => {
     open();
     expect(last().props.gestureEventsHandlersHook).toBe(useSheetGestureHandlers);
