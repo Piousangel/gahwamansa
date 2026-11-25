@@ -37,12 +37,14 @@ REDUCE_MOTION=1 app/e2e/run.sh audit/audit-points.yaml   # 애니메이션 0(동
   ANDROID_SERIAL=emulator-5556 AVD=gahwa_small METRO_PORT=8091 app/e2e/run.sh
   ```
 - **run.sh 가 도는 동안 run.sh 를 고치지 않는다**(bash 는 실행 중 스크립트를 이어 읽어, 고친 뒤 엉뚱한 줄을 실행할 수 있다).
-`run.sh` 순서: fake 설정 확인 → 기기가 없으면 AVD `gahwa_parent` 를 화면 없이 켬 → `assembleStagingDebug -PreactNativeDevServerPort=$METRO_PORT` → 설치 → `adb reverse tcp:$METRO_PORT tcp:$METRO_PORT`(실기기용, 끝나면 지움) → Metro 없으면 켬(끝나면 끔) → `maestro test` → `e2e/out/<시각>/`(캡처 PNG·`report.xml`, gitignore).
+`run.sh` 순서: fake 설정 확인 → 기기가 없으면 AVD `gahwa_parent` 를 화면 없이 켬 → `assembleStagingDebug -PreactNativeDevServerPort=$METRO_PORT` → 설치 → `adb reverse tcp:$METRO_PORT tcp:$METRO_PORT`(실기기용, 시작 전에 없었을 때만 걸고 끝나면 그것만 지움) → Metro 없으면 켬(끝나면 끔) → `maestro test` → `e2e/out/<시각>/`(캡처 PNG·`report.xml`, gitignore).
 
 - **Metro 포트**(2026-11-25, #272에서 발견): 에뮬레이터의 디버그 앱은 `adb reverse` 가 아니라 **10.0.2.2:<포트>(맥)** 로 붙는다(RN `AndroidInfoHelpers`: 에뮬레이터 → 10.0.2.2). 그래서 예전 `adb reverse tcp:8081 tcp:8091` 은 효과가 없었고, 맥 8081 에 다른 Metro(다른 worktree·프로젝트)가 떠 있으면 앱이 그쪽에 붙어 **404**('The development server returned response error code: 404')가 났다.
   - 지금은 `--metro-port`(또는 `METRO_PORT`) 값을 빌드 때 `-PreactNativeDevServerPort` 로 APK 리소스(`react_native_dev_server_port`)에 넣는다. 앱 코드 기본값(8081)과 다른 빌드 방법은 그대로다 — e2e 빌드만 바뀐다.
   - 개발 메뉴의 서버 주소(`debug_http_host`)를 손으로 바꾸는 방법은 `clearState` 가 지운다. 빌드에 넣은 포트는 지워지지 않는다.
   - APK 옆 `app-staging-debug.apk.metro-port` 에 빌드한 포트를 적는다. `SKIP_BUILD=1` 로 다른 포트의 APK 를 쓰려 하면 멈춘다(표시가 없으면 8081 로 본다).
+  - **같은 worktree 에서 포트만 바꿔 두 실행을 겹치지 않는다**: APK 경로가 포트와 상관없이 하나(`android/app/build/.../app-staging-debug.apk`)라 뒤 실행의 빌드가 앞 실행의 APK·포트 표시를 덮는다. 동시에 돌리려면 worktree 를 나눈다(#278 QA-1 L3).
+  - 포트는 `--metro-port 8091`·`--metro-port=8091`·`METRO_PORT=8091` 모두 1024~65535 숫자만 받는다(아니면 빌드 전에 멈춤). `adb reverse` 는 시작 전에 같은 기기 포트가 없을 때만 걸고, 끝나면 **우리가 건 것만** 지운다(#278 QA-1 L1·L2, 판단 도우미 `lib.sh`, 셸 시험 `bash app/e2e/lib.test.sh`).
 - 빌드는 **stagingDebug + config.local.ts fake**: 디버그 빌드에서만 config.local.ts 가 env 값을 덮으므로 서버에 붙지 않는다(RELEASE.md 2절). fake 코드 규칙(123456 성공, 000000 used …)은 dev-app-notes 6a.
 - 캡처는 Maestro `takeScreenshot`(기기 화면)만 쓴다. 맥 화면 캡처(screencapture 등)는 쓰지 않는다 — 다른 창이 찍힐 수 있다. 에뮬레이터 창을 직접 찍어야 하면 우리 앱이 최상단인지 먼저 확인.
 - 실패하면 `~/.maestro/tests/<시각>/` 에 Maestro 자체 로그·실패 캡처가 남는다.

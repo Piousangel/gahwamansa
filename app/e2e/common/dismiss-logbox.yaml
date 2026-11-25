@@ -1,6 +1,7 @@
 # 공용: RN 개발 빌드의 LogBox 알림 'Open debugger to view warnings.' 를 닫는다. 없으면 아무것도 하지 않는다.
 # 왜(2026-11-25 F5 실패, out/20261125-205040 step-044): C3 '복사하기'가 경고(app/src/ui/clipboard.ts 의 react-native 깊은 import 경고)를 한 번 내고,
 # 화면 아래 알림이 자녀 설정의 '앱 정보' 행을 덮어 탭이 알림에 들어갔다. 알림을 누르면 맥에서 디버거를 열려 하므로(LogBoxData openDebugger) 누르지 않고 오른쪽 X 만 누른다.
+# 대기열 51(chore/dev-cleanup-1125): clipboard.ts 가 공개 API(TurboModuleRegistry)로 바뀌어 이 경고는 더 나지 않는다. 다른 개발 경고 대비 안전망으로 둔다.
 # X 는 글자·라벨이 없어 Maestro 가 찾지 못한다(rightOf 실패) → 좌표. 1080×2340·글자 100%(기본 크기) 실측 X 중심 = 92%, 91%.
 # 다른 화면 크기·배율에서는 좌표가 맞지 않을 수 있다 — 그때는 알림이 남고 다음 단계가 실패로 알려 준다.
 appId: com.bumojasik.app.staging

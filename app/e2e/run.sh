@@ -2,19 +2,21 @@
 # Maestro E2E 실행(에뮬레이터, fake API 디버그 빌드). 사용법·전제: app/e2e/README.md
 #   app/e2e/run.sh                 # flows/ 전부
 #   app/e2e/run.sh flows/f1-parent-connect-course.yaml
-#   app/e2e/run.sh --metro-port 8091 flows/f6-cheer-roundtrip.yaml   # 맥 8081 을 다른 Metro 가 쓰고 있을 때
+#   app/e2e/run.sh --metro-port 8091 flows/f6-cheer-roundtrip.yaml   # 맥 8081 을 다른 Metro 가 쓰고 있을 때(--metro-port=8091 도 됨)
 # 환경변수: AVD(기본 gahwa_parent) · ANDROID_SERIAL(기기 고정, 예 emulator-5556) · METRO_PORT(기본 8081, --metro-port 와 같음) · SKIP_INSTALL=1 · SKIP_BUILD=1
 # 두 실행을 동시에: 서로 다른 ANDROID_SERIAL·AVD·METRO_PORT 를 준다(README 2절).
 set -euo pipefail
 
-# --metro-port <n>: 맨 앞 인자로 받는다(나머지는 maestro 대상)
-if [ "${1:-}" = "--metro-port" ]; then
-  [ -n "${2:-}" ] || { echo "e2e: --metro-port 뒤에 포트 번호를 주세요" >&2; exit 1; }
-  METRO_PORT="$2"
-  shift 2
-fi
-
 E2E_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib.sh
+source "$E2E_DIR/lib.sh"
+
+# --metro-port <n> 또는 --metro-port=<n>: 맨 앞 인자로 받는다(나머지는 maestro 대상). 숫자 1024~65535 만(#278 QA-1 L1)
+PARSED="$(e2e_parse_metro_port "$@")" || exit 1
+if [ "$(sed -n 2p <<<"$PARSED")" != "0" ]; then
+  METRO_PORT="$(sed -n 1p <<<"$PARSED")"
+  shift "$(sed -n 2p <<<"$PARSED")"
+fi
 APP_DIR="$(cd "$E2E_DIR/.." && pwd)"
 ROOT_DIR="$(cd "$APP_DIR/.." && pwd)"
 
@@ -26,6 +28,8 @@ export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 
 AVD="${AVD:-gahwa_parent}"
 METRO_PORT="${METRO_PORT:-8081}"
+# 환경변수로 준 값도 같은 검사(빈 값·글자·범위 밖이면 빌드 전에 멈춤)
+e2e_valid_port "$METRO_PORT" || { echo "e2e: METRO_PORT 는 1024~65535 숫자여야 해요(받은 값: '$METRO_PORT')" >&2; exit 1; }
 APP_ID="com.bumojasik.app.staging"
 APK="$APP_DIR/android/app/build/outputs/apk/staging/debug/app-staging-debug.apk"
 OUT_DIR="$E2E_DIR/out/$(date +%Y%m%d-%H%M%S)"
@@ -94,8 +98,10 @@ fi
 METRO_PID=""
 HIDE_CHANGED=0
 PREV_HIDE_DIALOGS=""
+REVERSE_ADDED=0
 cleanup() {
-  adb reverse --remove "tcp:$METRO_PORT" >/dev/null 2>&1 || true
+  # 우리가 건 reverse 만 지운다(시작 전부터 있던 것은 다른 실행·사람 것, #278 QA-1 L2)
+  if [ "$REVERSE_ADDED" = "1" ]; then adb reverse --remove "tcp:$METRO_PORT" >/dev/null 2>&1 || true; fi
   if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi
 }
 restore_dialogs() {
@@ -109,7 +115,14 @@ restore_dialogs() {
 trap 'restore_dialogs; cleanup' EXIT
 
 # Metro: 에뮬레이터는 10.0.2.2:$METRO_PORT 로 바로 붙는다. 실기기(USB)는 localhost:$METRO_PORT 라 같은 포트로 reverse. 이미 떠 있으면 그대로 쓴다
-adb reverse "tcp:$METRO_PORT" "tcp:$METRO_PORT" >/dev/null
+# 시작 전에 같은 기기 포트의 reverse 가 있었으면 건드리지 않는다(맥 쪽 대상이 다르면 알리고 그대로 둠)
+PREV_REVERSE="$(e2e_reverse_target "$METRO_PORT" "$(adb reverse --list 2>/dev/null || true)")"
+if [ -z "$PREV_REVERSE" ]; then
+  adb reverse "tcp:$METRO_PORT" "tcp:$METRO_PORT" >/dev/null
+  REVERSE_ADDED=1
+elif [ "$PREV_REVERSE" != "tcp:$METRO_PORT" ]; then
+  echo "e2e: 기기 tcp:$METRO_PORT 는 이미 맥 $PREV_REVERSE 로 reverse 돼 있어 그대로 둬요(실기기면 다른 Metro 에 붙을 수 있음. 에뮬레이터는 10.0.2.2 라 무관)" >&2
+fi
 if ! curl -fs "http://localhost:$METRO_PORT/status" | grep -q running; then
   echo "e2e: Metro 시작(port $METRO_PORT)"
   (cd "$APP_DIR" && nohup npx react-native start --port "$METRO_PORT" >"$E2E_DIR/out-metro.log" 2>&1) &

@@ -19,6 +19,15 @@ jest.mock('./src/lib/env.generated', () => ({
 }), {virtual: true});
 jest.mock('./src/lib/config.local', () => ({default: {}}), {virtual: true});
 
+// 복사(src/ui/clipboard.ts)는 공개 API TurboModuleRegistry.get('Clipboard') 로 네이티브 모듈을 부른다(대기열 51 — 깊은 import 경고 제거).
+// jest 에는 네이티브가 없어 null 이 되므로, 예전 깊은 import 가 받던 preset 의 Clipboard 목(setString = jest.fn)을 같은 이름으로 돌려준다
+{
+  const {TurboModuleRegistry} = require('react-native');
+  const realGet = TurboModuleRegistry.get;
+  // eslint-disable-next-line @react-native/no-deep-imports
+  TurboModuleRegistry.get = name => (name === 'Clipboard' ? require('react-native/Libraries/Components/Clipboard/Clipboard').default : realGet(name));
+}
+
 // 오디오 네이티브 모듈 모킹(AU-03, 실기기 확인은 QA-04). speech 는 라이브러리가 주는 jest 모의
 jest.mock('@mhpdev/react-native-speech', () => require('@mhpdev/react-native-speech/jest'));
 jest.mock('react-native-sound', () => {
