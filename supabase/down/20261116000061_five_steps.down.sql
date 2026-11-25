@@ -8,17 +8,22 @@
 --   pass_on_key_ok는 pass_on_picks의 check가 쓰므로 표 뒤, 트리거 함수는 트리거(표·profiles) 뒤, 새 열은 그 열을 쓰는 함수가 모두 옛 정의로 돌아간 뒤.
 -- 주의: ② 고른 것·⑤ 건넨 것(recall_picks·pass_on_picks)이 함께 지워진다(되살릴 수 없음). 5단계 세션 행의 completed_steps에 recall·pass_on이
 --       있으면 옛 check를 다시 걸 수 없으므로 그 값을 빼 준다(완료 시각 completed_at은 그대로 둔다 — 도장은 이미 찍힌 것).
--- 검사: ②를 빠뜨렸으면 아무것도 지우지 않고 멈춘다. 0061이 지울 것(아래 drop 대상)을 아직 부르는 다른 public 함수가 있으면 예외.
+-- 검사: ②를 빠뜨렸으면 아무것도 지우지 않고 멈춘다. (가) 0061이 지울 것(아래 drop 대상)을 아직 부르는 다른 public 함수가 있거나
+--   (나) event_prop_ok가 아직 0061 정의(step에 stop_here)이면 예외. 제외 대상은 이름이 아니라 인자까지(regprocedure)로 고른다.
 do $$
 declare v text;
 begin
   select string_agg(p.oid::regprocedure::text, ', ') into v
     from pg_proc p
    where p.pronamespace = 'public'::regnamespace
-     and p.prosrc ~ '(five_steps_skipped|pass_on_key_ok|recall_picks|pass_on_picks|content_recall_options|skipped_steps|course_len|stopped_here|pass_on_store_enabled)'
-     and p.proname not in ('save_pass_on', 'save_recall', 'five_steps_consent_withdrawn', 'recall_pick_deleted',
-                           'content_recall_options_guard', 'five_steps_skipped', 'pass_on_key_ok')
-     and not (p.proname = 'record_session_step' and p.pronargs = 4);
+     and (p.prosrc ~ '(five_steps_skipped|pass_on_key_ok|recall_picks|pass_on_picks|content_recall_options|skipped_steps|course_len|stopped_here|pass_on_store_enabled)'
+          or (p.oid = to_regprocedure('public.event_prop_ok(text, jsonb)') and p.prosrc ~ 'stop_here'))
+     and p.oid <> all (array_remove(array[
+           to_regprocedure('public.save_pass_on(int, text)'), to_regprocedure('public.save_recall(int, int)'),
+           to_regprocedure('public.five_steps_consent_withdrawn()'), to_regprocedure('public.recall_pick_deleted()'),
+           to_regprocedure('public.content_recall_options_guard()'), to_regprocedure('public.five_steps_skipped(uuid, text)'),
+           to_regprocedure('public.pass_on_key_ok(text)'), to_regprocedure('public.record_session_step(text, int, boolean, int)')
+         ]::oid[], null));
   if v is not null then raise exception '0061 down: ②를 먼저(옛 정의로 되돌릴 함수): %', v; end if;
 end $$;
 drop trigger if exists profiles_consent_withdrawn_picks on public.profiles;
