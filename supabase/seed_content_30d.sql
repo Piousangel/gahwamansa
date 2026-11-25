@@ -15,9 +15,9 @@ create temp table seed_photos (day_index int, image_url text, caption text, keyw
 insert into seed_photos values
   (15, 'pending://day-15', '장날 아침', '바구니', array['장에 가면 제일 먼저 어디를 보셨어요?', '장바구니에 꼭 담으시던 건 뭐예요?']),  -- 원본 2 · season=any(none) place=country era=7080 city_ok=y
   (16, 'pending://day-16', '버스 오는 길', '버스', array['버스를 기다리며 뭘 하셨어요?', '버스 타고 가시던 곳이 있으세요?']),  -- 원본 4 · season=any(none) place=country era=7080 city_ok=n
-  (17, 'pending://day-17', '수업 시작 종', '학교종', array['종소리를 들으면 뭐가 떠오르세요?', '쉬는 시간이나 쉬는 날엔 뭘 하셨어요?']),  -- 원본 6 · season=any(none) place=any era=7080 city_ok=n
+  (17, 'pending://day-17', '수업 시작 종', '학교종', array['종소리를 들으면 마음이 어떠세요?', '쉬는 시간이나 쉬는 날엔 뭘 하셨어요?']),  -- 원본 6 · season=any(none) place=any era=7080 city_ok=n
   (18, 'pending://day-18', '마당 쓰는 아침', '빗자루', array['아침에 제일 먼저 하시던 일이 뭐예요?', '마당을 쓸어 보신 적 있으세요?']),  -- 원본 17 · season=any(none) place=country era=7080 city_ok=n
-  (19, 'pending://day-19', '방과 후 교실', '칠판', array['칠판을 보면 뭐가 떠오르세요?', '무언가 배울 때 즐거우셨던 적이 있으세요?']),  -- 원본 12 · season=any(none) place=any era=7080 city_ok=n
+  (19, 'pending://day-19', '방과 후 교실', '칠판', array['칠판에 글씨를 써 보신 적 있으세요?', '무언가 배울 때 즐거우셨던 적이 있으세요?']),  -- 원본 12 · season=any(none) place=any era=7080 city_ok=n
   (20, 'pending://day-20', '둥근 밥상', '숟가락', array['밥상에 꼭 오르던 반찬은 뭐였어요?', '둥근 밥상에서 밥을 드셔 보신 적 있으세요?']),  -- 원본 21 · season=any(none) place=any era=7080 city_ok=y
   (21, 'pending://day-21', '대청마루 여름', '선풍기', array['더운 날 어떻게 시원하게 지내셨어요?', '마루에서 낮잠 주무셔 보셨어요?']),  -- 원본 19 · season=summer(text) place=country era=7080 city_ok=n
   (22, 'pending://day-22', '등굣길 책가방', '책가방', array['어디 갈 때 꼭 챙기시는 게 있으세요?', '멀리 가 보신 곳 중 좋았던 데가 있으세요?']),  -- 원본 22 · season=any(none) place=any era=7080 city_ok=n
