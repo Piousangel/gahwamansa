@@ -261,6 +261,11 @@ test('화면 읽기 순서(실제 gorhom 과 같은 목): 제목·닫기·내용
 
 describe('내용 끌기 최소 거리(리드 결정 #255 QA-2 M3, #232 MIN_CLOSE_DRAG 와 같은 뜻)', () => {
   const {GESTURE_SOURCE} = gorhom;
+  test('최소 거리는 24dp(#232 MIN_CLOSE_DRAG 와 같은 값, 리드 결정) — 값이 바뀌면 이 시험부터 고친다(QA-2 재확인 L2)', () => {
+    expect(CONTENT_MIN_DRAG).toBe(24);
+    expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: 30, velocityY: 2000}).velocityY).toBe(2000);
+  });
+
   test('내용에서 24dp 미만으로 끈 손가락은 놓은 속도를 버린다 → gorhom 이 위치만으로 가까운 칸(제자리)을 고른다', () => {
     expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: 15, velocityY: 2000})).toEqual({translationY: 15, velocityY: 0});
     expect(limitShortContentFling(GESTURE_SOURCE.CONTENT, {translationY: -15, velocityY: -2000})).toEqual({translationY: -15, velocityY: 0});
