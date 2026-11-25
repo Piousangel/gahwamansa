@@ -13,6 +13,7 @@
 --   2) content_photos 에 있는 날만 넣는다(FK). 아직 게시 안 된 날(예: staging 15~30일)은 건너뛰고 NOTICE로 알린다 → 그날을 게시한 뒤 다시 실행하면 채워진다.
 --   3) 사후 확인: 넣은 날마다 DB의 3개가 이 파일과 똑같아야 한다. 이미 다른 보기가 있던 날이 하나라도 있으면 예외 → 이번 실행 전체를 되돌린다
 --      (게시 뒤 수정은 트리거가 막는다 — 고치는 길은 dev-server-notes '오타 수정').
+--   4) 커밋 뒤 결과 한 행(loaded_days | skipped_days)을 돌려준다.
 --   다시 실행해도 안전(on conflict do nothing, 같은 값이면 변화 없음). 한 트랜잭션이라 중간에 실패해도 반쪽만 들어가지 않는다.
 begin;
 
@@ -133,3 +134,9 @@ begin
 end $$;
 
 commit;
+
+-- 4) 결과 한 행(#261 QA-1 L1 — SQL Editor 결과 칸에 남는다). 커밋 뒤 DB 기준: 보기 3개가 다 있는 날 수·콘텐츠가 없어 건너뛴 날.
+select (select count(*) from (select day_index from public.content_recall_options where day_index between 1 and 30
+                               group by day_index having count(*) = 3) d) as loaded_days,
+       coalesce((select string_agg(d::text, ',' order by d) from generate_series(1, 30) d
+                  where not exists (select 1 from public.content_photos p where p.day_index = d)), '없음') as skipped_days;

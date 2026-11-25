@@ -67,12 +67,35 @@ test('날 1~30 빠짐없이, 날마다 slot 1·2·3, 같은 날 같은 낱말 �
   }
 });
 
-test('금지어 0(SQL 사전 확인과 같은 목록, 조약돌의 약은 예외)', () => {
-  const sql = SEED.match(/~ '(기억\|[^']+)'/);
-  assert.ok(sql, 'SQL 금지어 정규식을 찾지 못함');
-  const ban = new RegExp(sql[1]);
-  assert.ok(ban.test('기억') && ban.test('약') && ban.test('막걸리'), '금지어 정규식이 기본 낱말을 잡아야 한다');
-  for (const [d, , label] of SEED_ROWS) assert.ok(!ban.test(label.replace('조약', '')), `${d}일 ${label}`);
+// 금지어 독립 목록(#261 QA-1 L3): SQL 정규식을 읽어 쓰지 않고 여기서 따로 적는다 — SQL 쪽이 줄어도 이 시험은 그대로 잡는다.
+// 묶음: 기억 시험 · 건강 · 종교·의례·장례 · 전쟁·피난 · 결혼·고향 · 술 · 가족 구성원 · 형편 · 연속/칭찬(라이터 문서 6절·팀 규칙)
+const BANNED = [
+  '기억', '모르', '안나',
+  '건강', '병원', '아프', '치매', '약',
+  '교회', '성당', '부처', '제사', '차례', '장례', '국화', '무덤', '산소',
+  '피난', '전쟁',
+  '결혼', '환갑', '고향',
+  '술', '막걸리', '소주',
+  '엄마', '아빠', '어머니', '아버지', '할머니', '할아버지', '남편', '아내',
+  '형편',
+  '연속', '최고', '잘하',
+];
+const BAN_EXCEPT = ['조약돌']; // '약'과 무관(라이터 예외 (?<!조)약)
+
+test('금지어 0 — 독립 목록과 대조(조약돌의 약만 예외)', () => {
+  for (const [d, , label] of SEED_ROWS) {
+    if (BAN_EXCEPT.includes(label)) continue;
+    const hit = BANNED.filter((w) => label.includes(w));
+    assert.deepEqual(hit, [], `${d}일 ${label}`);
+  }
+});
+
+test('SQL 사전 확인 정규식도 독립 목록의 낱말을 모두 잡는다(두 목록 어긋남 방지)', () => {
+  const m = SEED.match(/~ '([^']*기억[^']*)'/);
+  assert.ok(m, 'SQL 금지어 정규식을 찾지 못함');
+  const sqlBan = new RegExp(m[1]);
+  const missing = BANNED.filter((w) => !sqlBan.test(w));
+  assert.deepEqual(missing, []);
 });
 
 test('30일 모두 그날 ③ 두 보기·사진 낱말·사진 이름과 겹치지 않음(콘텐츠 시드 기준)', () => {

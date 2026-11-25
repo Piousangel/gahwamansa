@@ -7,8 +7,15 @@
 -- 전제: content_photos.recall_questions(text[], 2개), content_questions.prompt(text) 컬럼이 이미 있어야 한다.
 -- 다시 실행해도 안전: 이미 있는 day_index는 건너뛰고(게시 후 수정 금지, 0024 트리거), 시드 문구가 DB와 다르면 WARNING으로 알린다.
 -- 문구를 고치려면 이 파일을 고치지 말고 새 day_index 행을 끝에 추가하고 옛 행에 retired_at을 넣는다(docs/team/dev-server-notes.md §5).
--- 예외(2026-11-25, DECISIONS '5단계 문구 확정' 리드 결정, 대기열 25): production 게시 전이라 ① 첫 질문(#249로 첫 질문만 보임)이 '기억'을 묻던 2·3·8·12일을
---   이 파일에서 직접 고쳤다(라이터 확정 11-25: 어르신께 묻는 존대 '~보신 적 있으세요?', 숨은 둘째 질문의 '기억'·정답형도 뺌). staging에 이미 게시된 1~14일과 달라졌다 → 재시드는 오너 승인 사항(이 시드를 staging에 다시 돌리면 WARNING만 나고 바뀌지 않는다).
+-- 예외(2026-11-25, DECISIONS '콘텐츠 시드 수정·② 보기 적재' 대기열 25·#261): production 게시 전이라 이 파일에서 직접 고쳤다
+--   (라이터 확정 11-25: ① 첫 질문 '기억' 금지(#249로 첫 질문만 보임), 어르신께 묻는 존대 '~보신 적 있으세요?', 숨은 둘째 질문의 '기억'·정답형도 뺌).
+-- staging 재시드(오너 승인 필요, #261 QA-1 M1 — DECISIONS·PR 본문과 같은 글):
+--   범위: staging 1~14일 중 ① 사진 질문 12일(2·3·4·5·7·8·9·10·11·12·13·14) + ③ 질문 문장 8·14일. 이 시드를 staging에 다시 돌리면 WARNING만 나고 바뀌지 않는다.
+--   길 A(같은 day_index 삭제 후 재시드, bumo.allow_content_delete): ③ 행(8·14일)은 answers.question_id FK에 막혀 그날 답을 먼저 지워야 한다(실제 손실).
+--     사진 행을 지우면 daily_sessions는 남고 photo_id·word_id가 NULL → 그날 기록에서 사진이 빠진다.
+--     ② 보기 적재 뒤라면 사진 삭제가 보기 → 고른 ②(recall_picks) → ⑤ recall_story까지 cascade로 지운다 → A는 ② 적재 전에.
+--   길 B(새 day_index 끝에 추가 + 옛 날 retired_at): 손실 없음. 다만 ② 보기 적재 SQL·CSV가 날 1~30 고정이라 31일 이후 날의 ② 보기 확장 작업이 따로 필요.
+--   권장: staging 테스트 가족 데이터(8·14일 답·해당 날 세션)가 거의 없으면 A, ② 적재 전에.
 begin;
 
 
