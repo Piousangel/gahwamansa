@@ -521,12 +521,12 @@ describe('C5 지난 답', () => {
     render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', history: items})} role="child" />);
     await openTab('지난 날');
     await waitFor(() => screen.getByText('엄마의 지난 날'));
-    expect(screen.getByText('최근 한 달 동안 고른 답이에요')).toBeTruthy();
+    expect(screen.getByText('최근 한 달 동안 고르신 답이에요')).toBeTruthy();
     const rows = screen.getAllByTestId('child-past-item');
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent(/2020년 11월 16일.*봄과 가을 중.*가을/);
     expect(rows[1]).toHaveTextContent(/라디오와 텔레비전 중/);
-    expect(screen.getByLabelText('2020년 11월 16일, 봄과 가을 중, 고른 답 가을')).toBeTruthy();
+    expect(screen.getByLabelText('2020년 11월 16일, 봄과 가을 중, 고르신 답 가을')).toBeTruthy();
     expect(screen.getByTestId('child-past-topic')).toHaveTextContent(/이야기 주제 추천.*곧 유료/);
     expect(screen.queryByText(/개|번째|연속|일째/)).toBeNull(); // 집계 없음
   });

@@ -124,7 +124,7 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기로, 저장은 동�
   const order = screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && /^recall-body:/.test(n.props.testID) && typeof n.type === 'string').map(n => n.props.testID);
   expect(order.slice(-2)).toEqual(['recall-body:choice', 'recall-body:skip']);
   fireEvent.press(screen.getByText('참새'));
-  expect(screen.getByText('골랐어요', {includeHiddenElements: true})).toBeTruthy(); // ✓ 표시(읽기는 radio 선택 상태가 맡음)
+  expect(screen.getByText('고르셨어요', {includeHiddenElements: true})).toBeTruthy(); // ✓ 표시(읽기는 radio 선택 상태가 맡음)
   await press('이걸로 할게요');
   await backHome();
   expect(s.recall).toHaveBeenCalledWith(1, 2); // save_recall(p_day_index, p_slot)
@@ -228,7 +228,7 @@ test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남
     fireEvent.press(screen.getByTestId('step-done-recall'));
   });
   await waitFor(() => screen.getByTestId('five-review-1'));
-  expect(screen.getByLabelText('고른 답, 그늘')).toBeTruthy();
+  expect(screen.getByLabelText('고르신 답, 그늘')).toBeTruthy();
   expect(screen.queryByRole('button', {name: '이걸로 할게요'})).toBeNull();
 });
 

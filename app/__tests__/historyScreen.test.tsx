@@ -54,7 +54,7 @@ test('코스 홈 날짜 줄 아래 "지난 날 보기" → 목록(제목·보조
   expect(first.getByText('감나무', {includeHiddenElements: true})).toBeTruthy();
   // 보여 주지 않은 날: 고른 답 줄 없음, 문구 없음
   const second = within(items[1]);
-  expect(second.queryByText('고른 답', {includeHiddenElements: true})).toBeNull();
+  expect(second.queryByText('고르신 답', {includeHiddenElements: true})).toBeNull();
   expect(second.getByText('느티나무', {includeHiddenElements: true})).toBeTruthy();
   expect(screen.queryByText(/저장되지 않았|못|아직/)).toBeNull();
 });
@@ -63,11 +63,11 @@ test('한 날: 날짜 제목·사진(캡션·AI가 만든 그림)·"봄과 가�
   await home({parentDays: [d1, d2]});
   await press('지난 날 보기');
   await waitFor(() => screen.getByTestId('history-item-2026-11-19'));
-  await press('11월 19일 목요일, 고른 답 가을, 낱말 감나무');
+  await press('11월 19일 목요일, 고르신 답 가을, 낱말 감나무');
   await waitFor(() => screen.getByRole('header', {name: '11월 19일 목요일'}));
   expect(screen.getByText('감 익는 마당')).toBeTruthy();
   expect(screen.getByText('AI가 만든 그림')).toBeTruthy();
-  expect(screen.getByLabelText('봄과 가을 중 고른 답, 가을')).toBeTruthy();
+  expect(screen.getByLabelText('봄과 가을 중 고르신 답, 가을')).toBeTruthy();
   expect(screen.getByLabelText('낱말, 감나무')).toBeTruthy();
   await press('지난 날로');
   await waitFor(() => screen.getByText('최근 한 달 동안 본 사진이에요'));
@@ -79,7 +79,7 @@ test('한 날 · 보여 주지 않은 날: 고른 답 줄만 빠진다', async (
   await waitFor(() => screen.getByTestId('history-item-2026-11-18'));
   await press('11월 18일 수요일, 낱말 느티나무');
   await waitFor(() => screen.getByRole('header', {name: '11월 18일 수요일'}));
-  expect(screen.queryByText(/고른 답/)).toBeNull();
+  expect(screen.queryByText(/고르신 답/)).toBeNull();
   expect(screen.getByLabelText('낱말, 느티나무')).toBeTruthy();
 });
 

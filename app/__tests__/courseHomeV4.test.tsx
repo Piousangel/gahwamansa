@@ -163,7 +163,7 @@ describe('코스 홈 v4', () => {
     const before = counts(spies);
     await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
-    expect(screen.getByLabelText('고른 답, 봄')).toBeTruthy();
+    expect(screen.getByLabelText('고르신 답, 봄')).toBeTruthy();
     expect(screen.getByText('가을')).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull(); // 누를 수 없음
     expect(screen.queryByRole('button', {name: '정했어요'})).toBeNull();
@@ -176,7 +176,7 @@ describe('코스 홈 v4', () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], consented: false});
     await press(/^둘 중 고르기, 했어요, \d+일$/);
     await waitFor(() => screen.getByLabelText('둘 중 고르기, 다시 보는 중'));
-    expect(screen.queryByText('고른 답')).toBeNull();
+    expect(screen.queryByText('고르신 답')).toBeNull();
   });
 
   test('P6 보기 전용: "오늘의 낱말이에요" + 낱말(읽기 "오늘의 낱말, 나무"), 입력칸 없음, 기록 0', async () => {
@@ -217,7 +217,7 @@ describe('코스 홈 v4', () => {
 
   test('동의 거부: 날짜 아래 한 줄 띠 "고른 답은 저장되지 않아요" + "다시 정하기"(설정으로)', async () => {
     await home({consented: false});
-    expect(screen.getByText('고른 답은 저장되지 않아요')).toBeTruthy();
+    expect(screen.getByText('고르신 답은 저장되지 않아요')).toBeTruthy();
     const strip = StyleSheet.flatten(screen.getByTestId('course-declined').props.style);
     expect(strip.borderWidth ?? 0).toBe(0);
     await press('다시 정하기');
@@ -272,10 +272,10 @@ describe('미연결', () => {
     await pressCourseNext();
     await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
     await press('오늘은 넘어갈게요');
-    await waitFor(() => screen.getByText(/도장을 찍었어요\.\s*번호를 받으면 그때부터 고른 답이 가족에게 보여요/)); // P7
+    await waitFor(() => screen.getByText(/도장을 찍었어요\.\s*번호를 받으면 그때부터 고르신 답이 가족에게 보여요/)); // P7
     expect(screen.getByLabelText(/이번 주 도장, .*찍었어요/)).toBeTruthy();
     await press('알겠어요');
-    await waitFor(() => screen.getByText('번호를 받으면 그때부터 고른 답이 가족에게 보여요'));
+    await waitFor(() => screen.getByText('번호를 받으면 그때부터 고르신 답이 가족에게 보여요'));
     expect(screen.getByText('오늘 코스를 마쳤어요')).toBeTruthy();
     expect(screen.getByLabelText(/이번 주 도장, .*찍었어요/)).toBeTruthy();
     expect(await localStamps().read()).toHaveLength(1);
@@ -355,12 +355,12 @@ describe('보기 전용 재검토(N1·N2·N3, 낮음)', () => {
   test('N3: P5 보기 전용(v4) — 질문 title, 선택 칸 최소 높이 96, 고른 칸 체크 아이콘, 이름표 doneInk', async () => {
     await home({completedSteps: ['photo', 'question', 'hangul'], answeredChoice: 'B'});
     await press(/^둘 중 고르기, 했어요, \d+일$/);
-    await waitFor(() => screen.getByLabelText('고른 답, 가을'));
+    await waitFor(() => screen.getByLabelText('고르신 답, 가을'));
     expect(StyleSheet.flatten(screen.getByText('더 좋아하는 계절은요?').props.style).fontSize).toBe(roleText('title', 'elder').style.fontSize);
-    const chosen = screen.getByLabelText('고른 답, 가을');
+    const chosen = screen.getByLabelText('고르신 답, 가을');
     expect(StyleSheet.flatten(chosen.props.style).minHeight).toBe(96);
     expect(within(chosen).getByTestId('icon-check', {includeHiddenElements: true})).toBeTruthy();
-    expect(StyleSheet.flatten(within(chosen).getByText('고른 답', {includeHiddenElements: true}).props.style).color).toBe(ds.color.doneInk);
+    expect(StyleSheet.flatten(within(chosen).getByText('고르신 답', {includeHiddenElements: true}).props.style).color).toBe(ds.color.doneInk);
     expect(StyleSheet.flatten(screen.getByLabelText('봄').props.style).minHeight).toBe(96);
   });
 });

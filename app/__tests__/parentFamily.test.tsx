@@ -56,7 +56,7 @@ test('그만두기 시트: 그만 보여 주기는 확인 없이 바로 실행 +
   expect(within(sheet).getAllByRole('button', {name: '닫기'})).toHaveLength(2); // 아래 안전한 쪽(밑줄 링크) + 위 X, 둘 다 상태를 바꾸지 않으므로 '닫기'(A5)
   await press('그만 보여 주기, 지난 답은 지워져요. 연결은 그대로예요');
   expect(withdraw).toHaveBeenCalledTimes(1);
-  await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요'));
+  await waitFor(() => screen.getByText('이제 고르신 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요'));
   expect(screen.queryByTestId('family-stop-sheet')).toBeNull();
   expect(screen.getByText('가족 1명과 연결돼 있어요')).toBeTruthy(); // 연결은 그대로
 });
@@ -66,7 +66,7 @@ test('그만두기 시트: 모두 지우기는 P9 두 단계 확인으로 이어
   const del = jest.spyOn(api, 'deleteMyAccount');
   await openFamily(api);
   await press('그만두기, 답 보여 주기만 그만두거나, 모두 지울 수 있어요');
-  await press('모두 지우기, 고른 답과 도장이 지워지고 연결도 끊겨요');
+  await press('모두 지우기, 고르신 답과 도장이 지워지고 연결도 끊겨요');
   await waitFor(() => screen.getByText('모두 지울까요?'));
   expect(del).not.toHaveBeenCalled();
 });

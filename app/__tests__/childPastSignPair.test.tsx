@@ -75,7 +75,7 @@ describe('C-4 두 칸 나란히', () => {
       expect(within(within(card).getByTestId(other)).getByTestId('sign-other')).toBeTruthy();
     });
     // 화면 읽기: 카드 한 줄(날짜·질문·고른 답) 그대로
-    expect(screen.getByLabelText('2020년 11월 23일, 국밥과 칼국수 중, 고른 답 칼국수')).toBeTruthy();
+    expect(screen.getByLabelText('2020년 11월 23일, 국밥과 칼국수 중, 고르신 답 칼국수')).toBeTruthy();
   });
 
   test('고른 칸 = 팻말 row(노랑 + 먹 테두리 2·반경 3, 글자 20/700 상한 1.5), 안 고른 칸 = 면 없음·옅은 선 1.5·inkSubChild 16/400 상한 1.5', async () => {
@@ -188,7 +188,7 @@ describe('QA-1 #239', () => {
     expect(screen.queryAllByLabelText('곱게 차려입기', {includeHiddenElements: false})).toHaveLength(0); // 팻말 판 이름이 따로 읽히지 않는다
     const old = screen.getAllByTestId('child-past-item')[1];
     expect(within(old).queryAllByTestId('sign', {includeHiddenElements: false})).toHaveLength(0);
-    expect(old.props.accessibilityLabel).toBe('2020년 11월 16일, 봄과 가을 중, 고른 답 가을');
+    expect(old.props.accessibilityLabel).toBe('2020년 11월 16일, 봄과 가을 중, 고르신 답 가을');
   });
 
   test('L1: 두 보기 글자가 같으면 어느 쪽인지 모르니 팻말 하나만(왼쪽을 노랑으로 칠하지 않는다)', () => {

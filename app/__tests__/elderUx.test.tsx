@@ -205,7 +205,7 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
   test('구역 제목 가족·알림과 소리·앱, 안심 줄, 행 순서, 위험 행은 맨 아래', async () => {
     await toHomeConsented(createFakeApi({linked: true, consented: true}));
     await press('설정');
-    await waitFor(() => screen.getByText('가족에게는 고른 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요'));
+    await waitFor(() => screen.getByText('가족에게는 고르신 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요'));
     for (const h of ['가족', '알림과 소리', '앱']) {
       expect(screen.getByRole('header', {name: h})).toBeTruthy();
     }
@@ -241,9 +241,9 @@ describe('리뷰 낮음 반영', () => {
     render(<AppRoot api={api} role="parent" restore />);
     await waitFor(() => screen.getByTestId('date-line'));
     await press('다시 정하기');
-    await waitFor(() => screen.getByText('오늘부터 고른 답이 가족에게 보여요'));
+    await waitFor(() => screen.getByText('오늘부터 고르신 답이 가족에게 보여요'));
     await waitFor(() =>
-      expect(send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '오늘부터 고른 답이 가족에게 보여요')).toBe(true),
+      expect(send.mock.calls.some(c => (c[0] as unknown as {props?: {accessibilityLabel?: string}})?.props?.accessibilityLabel === '오늘부터 고르신 답이 가족에게 보여요')).toBe(true),
     );
     await press('좋아요');
     expect(give).toHaveBeenCalledTimes(1);
@@ -262,6 +262,6 @@ describe('리뷰 낮음 반영', () => {
     const row = await waitFor(() => screen.getByTestId('settings-row-share'));
     expect(within(row).queryByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeNull();
     await press('다시 보여 주기');
-    await waitFor(() => screen.getByText('오늘부터 고른 답이 가족에게 보여요'));
+    await waitFor(() => screen.getByText('오늘부터 고르신 답이 가족에게 보여요'));
   });
 });

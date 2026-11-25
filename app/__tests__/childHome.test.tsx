@@ -62,7 +62,7 @@ test('C4 첫날 빈 상태 안 B(#59): 한 줄 + 흐린 예시 카드 2장(예�
   expect(chip.fontSize).toBeGreaterThanOrEqual(16);
   expect(chip.lineHeight).toBe(24);
   expect(screen.queryByText('아빠의 최근 답')).toBeNull(); // 예시에는 실제 호칭을 쓰지 않는다(가짜 개인정보 없음)
-  expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
+  expect(screen.queryByText('고르신 답이 생기면 여기에 보여요')).toBeNull();
   expectNoPressure();
 });
 
@@ -160,7 +160,7 @@ test('리뷰 L1: 연결 0명(새 계약 parents 빈 배열)이면 빈 상태 B �
   const get = api.fetchChildSummary.bind(api);
   jest.spyOn(api, 'fetchChildSummary').mockImplementation(async () => ({...(await get()), parents: []}));
   render(<AppRoot api={api} role="child" />);
-  await waitFor(() => screen.getByText('고른 답이 생기면 여기에 보여요'));
+  await waitFor(() => screen.getByText('고르신 답이 생기면 여기에 보여요'));
   expect(screen.queryByTestId('child-home-empty')).toBeNull();
 });
 

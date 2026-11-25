@@ -13,12 +13,12 @@ type Props = {
   state?: SelectCardState;
   errorText?: string;
   selectedLabel?: string;
-  /** 공간이 모자랄 때(P5 3단계): 높이 132 → 96, '골랐어요'는 같은 줄 오른쪽. 글자 32 유지 */
+  /** 공간이 모자랄 때(P5 3단계): 높이 132 → 96, '고르셨어요'는 같은 줄 오른쪽. 글자 32 유지 */
   compact?: boolean;
 };
 
 // 화면 읽기는 라디오(talkback-spec R9): 묶음은 쓰는 쪽에서 accessibilityRole="radiogroup" 으로 감싼다.
-// 명세 §2: minHeight 132, 반경 24, 테두리 4, 패딩 16, 글자 32 / 배지 20 굵게. 선택은 색 + 굵은 테두리 + 글자("골랐어요").
+// 명세 §2: minHeight 132, 반경 24, 테두리 4, 패딩 16, 글자 32 / 배지 20 굵게. 선택은 색 + 굵은 테두리 + 글자("고르셨어요").
 export function SelectCard({label, selected, onPress, state, errorText, selectedLabel = copy.question.chosen, compact}: Props) {
   const s: SelectCardState = state ?? (selected ? 'selected' : 'default');
   const on = selected || s === 'selected';
