@@ -152,16 +152,36 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"daily_sessions": {
+                },"content_recall_options": {
                   Row: {
-                    "completed_at": string | null,"completed_steps": (string)[],"day_index": number | null,"duration_sec": number,"family_id": string,"id": string,"parent_id": string,"photo_id": string | null,"question_id": string | null,"session_date": string,"word_id": string | null
+                    "day_index": number,"label": string,"slot": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "completed_at"?: string | null,"completed_steps"?: (string)[],"day_index"?: number | null,"duration_sec"?: number,"family_id": string,"id"?: string,"parent_id": string,"photo_id"?: string | null,"question_id"?: string | null,"session_date": string,"word_id"?: string | null
+                    "day_index": number,"label": string,"slot": number
                   }
                   Update: {
-                    "completed_at"?: string | null,"completed_steps"?: (string)[],"day_index"?: number | null,"duration_sec"?: number,"family_id"?: string,"id"?: string,"parent_id"?: string,"photo_id"?: string | null,"question_id"?: string | null,"session_date"?: string,"word_id"?: string | null
+                    "day_index"?: number,"label"?: string,"slot"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_recall_options_day_index_fkey"
+      columns: ["day_index"]
+isOneToOne: false
+      referencedRelation: "content_photos"
+      referencedColumns: ["day_index"]
+    }
+                  ]
+                },"daily_sessions": {
+                  Row: {
+                    "completed_at": string | null,"completed_steps": (string)[],"course_len": number,"day_index": number | null,"duration_sec": number,"family_id": string,"id": string,"parent_id": string,"photo_id": string | null,"question_id": string | null,"session_date": string,"skipped_steps": (string)[],"stopped_here": boolean,"word_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completed_at"?: string | null,"completed_steps"?: (string)[],"course_len"?: number,"day_index"?: number | null,"duration_sec"?: number,"family_id": string,"id"?: string,"parent_id": string,"photo_id"?: string | null,"question_id"?: string | null,"session_date": string,"skipped_steps"?: (string)[],"stopped_here"?: boolean,"word_id"?: string | null
+                  }
+                  Update: {
+                    "completed_at"?: string | null,"completed_steps"?: (string)[],"course_len"?: number,"day_index"?: number | null,"duration_sec"?: number,"family_id"?: string,"id"?: string,"parent_id"?: string,"photo_id"?: string | null,"question_id"?: string | null,"session_date"?: string,"skipped_steps"?: (string)[],"stopped_here"?: boolean,"word_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -368,6 +388,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"pass_on_picks": {
+                  Row: {
+                    "day_index": number,"family_id": string,"line_key": string,"parent_id": string,"picked_at": string,"session_date": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day_index": number,"family_id": string,"line_key": string,"parent_id": string,"picked_at"?: string,"session_date": string
+                  }
+                  Update: {
+                    "day_index"?: number,"family_id"?: string,"line_key"?: string,"parent_id"?: string,"picked_at"?: string,"session_date"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "pass_on_picks_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pass_on_picks_parent_id_fkey"
+      columns: ["parent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pass_on_picks_parent_id_session_date_fkey"
+      columns: ["parent_id","session_date"]
+isOneToOne: true
+      referencedRelation: "daily_sessions"
+      referencedColumns: ["parent_id","session_date"]
+    }
+                  ]
                 },"plans": {
                   Row: {
                     "id": string,"name": string,"price_krw": number | null
@@ -469,6 +521,44 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"recall_picks": {
+                  Row: {
+                    "day_index": number,"family_id": string,"parent_id": string,"picked_at": string,"session_date": string,"slot": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day_index": number,"family_id": string,"parent_id": string,"picked_at"?: string,"session_date": string,"slot": number
+                  }
+                  Update: {
+                    "day_index"?: number,"family_id"?: string,"parent_id"?: string,"picked_at"?: string,"session_date"?: string,"slot"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recall_picks_day_index_slot_fkey"
+      columns: ["day_index","slot"]
+isOneToOne: false
+      referencedRelation: "content_recall_options"
+      referencedColumns: ["day_index","slot"]
+    },{
+      foreignKeyName: "recall_picks_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recall_picks_parent_id_fkey"
+      columns: ["parent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recall_picks_parent_id_session_date_fkey"
+      columns: ["parent_id","session_date"]
+isOneToOne: true
+      referencedRelation: "daily_sessions"
+      referencedColumns: ["parent_id","session_date"]
+    }
                   ]
                 },"redeem_attempts": {
                   Row: {
@@ -661,6 +751,9 @@ isOneToOne: false
 "first_answer_backfill":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"five_steps_skipped":
+{ Args: { "p_parent": string,"p_step": string }; Returns: boolean
+                           },
 "get_my_cheers":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -733,6 +826,9 @@ isOneToOne: false
 "parent_titles":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"pass_on_key_ok":
+{ Args: { "p_key": string }; Returns: boolean
+                           },
 "peek_invite_code":
 { Args: { "p_code": string }; Returns: Json
                            },
@@ -782,7 +878,7 @@ isOneToOne: false
 { Args: { "p": string }; Returns: boolean
                            },
 "record_session_step":
-{ Args: { "p_duration"?: number,"p_step": string }; Returns: Json
+{ Args: { "p_course_len"?: number,"p_duration"?: number,"p_skipped"?: boolean,"p_step": string }; Returns: Json
                            },
 "record_terms_agreement":
 { Args: { "p_privacy_version": string,"p_terms_version": string }; Returns: Json
@@ -795,6 +891,12 @@ isOneToOne: false
                            },
 "save_answer":
 { Args: { "p_choice": string,"p_question": string }; Returns: undefined
+                           },
+"save_pass_on":
+{ Args: { "p_day_index": number,"p_key": string }; Returns: Json
+                           },
+"save_recall":
+{ Args: { "p_day_index": number,"p_slot": number }; Returns: Json
                            },
 "send_cheer":
 { Args: { "p_key": string,"p_parent": string,"p_request_id"?: string }; Returns: Json

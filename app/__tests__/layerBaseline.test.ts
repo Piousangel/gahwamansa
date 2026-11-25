@@ -9,7 +9,7 @@ type LintResult = {messages: LintMessage[]};
 const {ESLint}: {ESLint: new (o: {cwd: string}) => {lintFiles(p: string[]): Promise<LintResult[]>}} = require('eslint');
 const path: {join(...p: string[]): string} = require('path');
 
-const BASELINE = {app: 59, crossFeature: 5, uiDeps: 1}; // app 58→59: D-3 TodayReviewScreen 의 app/session(다른 단계 화면과 같은 콘텐츠 읽기, AU-10 에서 함께 옮길 대상); // crossFeature 6→5: P3 v4 가 link/TextLink 대신 ui/ds Button; // app 59→58: CG v4 가 app/BackBar 대신 DsScreen back; // app 61→59: C1 v4 가 app/ChildStack 타입·app/BackBar 대신 CommonActions·DsScreen back; // crossFeature 7→6: C0 v4 가 link/TextLink 대신 ui/ds Button; // app 59→61: features/account/FamilyPreview 의 session·BackBar(PR #11 리뷰 L1 권고, AU-10 에서 ui/shared 로 옮길 대상)
+const BASELINE = {app: 61, crossFeature: 5, uiDeps: 1}; // app 59→61: 5단계 ②·⑤ RecallStep·PassOnStep 의 app/session(다른 단계 화면과 같은 세션 읽기 — 내비·뒤로는 app/ 없이, AU-10 에서 함께 옮길 대상); // app 58→59: D-3 TodayReviewScreen 의 app/session(다른 단계 화면과 같은 콘텐츠 읽기, AU-10 에서 함께 옮길 대상); // crossFeature 6→5: P3 v4 가 link/TextLink 대신 ui/ds Button; // app 59→58: CG v4 가 app/BackBar 대신 DsScreen back; // app 61→59: C1 v4 가 app/ChildStack 타입·app/BackBar 대신 CommonActions·DsScreen back; // crossFeature 7→6: C0 v4 가 link/TextLink 대신 ui/ds Button; // app 59→61: features/account/FamilyPreview 의 session·BackBar(PR #11 리뷰 L1 권고, AU-10 에서 ui/shared 로 옮길 대상)
 
 jest.setTimeout(120000);
 

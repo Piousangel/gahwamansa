@@ -7,6 +7,10 @@ import {createRealApi} from '../src/features/realApi';
 import {parseMyTermsStatus, parseRecordTerms, PRIVACY_VERSION, TERMS_VERSION, TERMS_VERSION_RE} from '../src/api/contract/terms';
 import {parseDeleteScope} from '../src/api/contract/deleteScope';
 import {enterCode} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 declare const __dirname: string;
 const fs: {readFileSync(f: string, e: 'utf8'): string} = require('fs');

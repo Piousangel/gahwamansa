@@ -39,7 +39,7 @@ const tween = (val: Animated.Value, toValue: number, duration: number, delay = 0
 // - 건너뛰기 안내·화면 누르기 건너뛰기 없음(UX 깊이 V20 — 연출이 1초 안에 끝난다).
 // - 미연결도 같은 연출(도장은 기기에 찍힘, 11-7 #19). 칭찬·연속·하트·숫자 없음.
 export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'CourseDone'>) {
-  const {api, content} = useSession();
+  const {api, content, five} = useSession();
   const linked = !!content?.linked;
   const fetched = useWeekStamps(api, content ? content.linked : undefined, 'done');
   // 이번 주 도장 응답이 1.5초 안에 오지 않으면 도장 줄 없이 진행(둘째 줄이 투명으로 고착되지 않게, 리뷰 후속)
@@ -190,12 +190,15 @@ export function CourseDone({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 미연결(11-7 #19): 도장은 기기에 찍히고, 가족에게는 번호를 받은 뒤부터 보인다는 것을 말한다
   // 연결(UX U5 승인, 라이터 11-9): '내일 새 사진이 와요'. 시안 보드의 '내일 또 만나요'는 U5 이전 문구라 승인 결정을 따른다.
   // TODO(푸시 0032~): 알림 상태·시각이 생기면 next_photo_time 으로
+  // 5단계(기능 스위치): ⑤에서 건넨 날만 본문 첫 줄 「가족에게 건넸어요」(저장된 날 = 가족에게 실제로 보이는 날). 넘긴 날·'여기까지'로 마친 날은
+  // 이 줄도 대신하는 줄도 없다 — 몇 단계 했는지 말하지 않는다(DECISIONS 5단계 화면·문구 #8)
+  const passedOn = five && linked && !!content?.pass_on?.picked_key;
   const body =
     week === undefined
       ? null
       : !linked
         ? d.unlinked_body.replace('. ', '.\n')
-        : `${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
+        : `${passedOn ? `${d.passed_on}\n` : ''}${firstStamp ? d.first_stamp : d.stamped}.\n${d.next_photo}`;
   const strip = showWeekStrip() && days ? <WeekStampStrip key="week" testID="p7-week" days={days} /> : null;
   // 본문 묶음(R-15 접힘 경계): 마운트 → 제목 → 도장 줄 → 둘째 줄. 마운트는 늘 첫 화면(from 1)
   const items: React.ReactNode[] = [

@@ -5,6 +5,7 @@ import type {EventName, EventProps, LogEventResult} from '../api/contract/events
 import type {MyPushSettings, RegisterPushTokenResult, SetPushEnabledResult} from '../api/contract/push';
 import type {MyTermsStatus, RecordTermsResult} from '../api/contract/terms';
 import type {DeleteScope} from '../api/contract/deleteScope';
+import type {CourseStep, SavePassOnResult, SaveRecallResult, TodayFiveSteps, PassOnKey} from '../api/contract/fiveSteps';
 export type {DeleteScope};
 
 // 서버 RPC 형태와 맞춤 (리드 확인: 2026-11-17)
@@ -57,7 +58,9 @@ export type ChildState =
       hadExpired: boolean; // 살아 있는 번호가 없고, 쓰지 않은 지난 번호가 있다(만료·무효화) → "새 번호 받기"
     };
 export type WeekStamps = {weekStart: string; doneDates: string[]}; // YYYY-MM-DD(KST)
-export type StepName = 'photo' | 'question' | 'hangul'; // 서버 허용 step 값은 미확인(가정)
+// 옛 3단계 + 5단계(서버 0061 COURSE_STEPS — recall·pass_on 은 기능 스위치 fiveSteps 가 켜지고 서버가 지원할 때만 쓴다)
+export type LegacyStepName = 'photo' | 'question' | 'hangul';
+export type StepName = CourseStep;
 export type RecordStepResult = {completed: boolean; streak: number; steps?: StepName[]};
 
 // 서버 get_today_content 형태 (null 이면 콘텐츠 없음)
@@ -72,7 +75,7 @@ export type TodayContent = {
   streak: number;
   // false = 미연결 열람(preview_content). 답·기록을 저장하지 않는다.
   linked: boolean;
-};
+} & Partial<TodayFiveSteps>; // 5단계 칸(서버 0061, api/contract/fiveSteps.ts parseTodayFiveSteps). 옛 서버면 없다 → 앱은 3단계
 
 // 인터넷 문제(연결 실패·시간 초과)를 다른 서버 오류와 구분하기 위한 오류
 export class OfflineError extends Error {}
@@ -126,7 +129,12 @@ export interface Api {
   logEvent(name: EventName, props?: EventProps): Promise<LogEventResult>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
-  recordSessionStep(step: StepName, durationSec: number): Promise<RecordStepResult>;
+  // record_session_step(0061). opts 없이 부르면 옛 2인자 그대로. 5단계(스위치 켜짐 + 서버 지원)면 realApi 한 곳이 모든 호출에 p_course_len 5 를 붙인다.
+  // skipped = 「오늘은 넘어갈게요」(p_skipped). step 'stop_here' = 「오늘은 여기까지 할게요」(③ 뒤만, 아니면 예외 stop_before_question)
+  recordSessionStep(step: StepName | 'stop_here', durationSec: number, opts?: {skipped?: boolean}): Promise<RecordStepResult>;
+  // 5단계 ② 저장 save_recall(p_day_index, p_slot) / ⑤ save_pass_on(p_day_index, p_key). 거절은 값({ok:false, reason})
+  saveRecall(dayIndex: number, slot: number): Promise<SaveRecallResult>;
+  savePassOn(dayIndex: number, key: PassOnKey): Promise<SavePassOnResult>;
   // 자녀 홈: 서버 child_summary(). 단계·연속일·참여 여부는 자녀에게 주지 않는다.
   fetchChildSummary(): Promise<ChildSummary>;
   // 가족 기본 호칭(연결 전, 어르신이 아직 없어 set_parent_title_for 를 쓸 수 없을 때만). 0035부터 겹치면 duplicate_title.

@@ -6,6 +6,10 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {ServerError} from '../src/features/types';
 import {press, pressLast} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 const EMAIL_CODE = '246810'; // fake 의 올바른 메일 인증번호
 

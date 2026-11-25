@@ -3,6 +3,10 @@ import {fireEvent, render, screen, waitFor} from '@testing-library/react-native'
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, toHomeConsented, pressCourseNext} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // @types/node 가 없어 필요한 부분만 선언한다(jest 는 node 에서 돈다)
 declare const __dirname: string;

@@ -7,6 +7,10 @@ import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {kstDateLine} from '../src/features/course/stamps';
 import {createPrefs, setPrefsForTest} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // P8 응원 도착(시안 P8_cheer, copy 5·6절). 앱을 열면 코스 홈 위 대화상자, "알겠어요"로만 닫힘(읽음 처리).
 // 서버 계약(0020)은 가정: getUnreadCheers / markCheersRead.

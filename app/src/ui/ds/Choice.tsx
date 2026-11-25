@@ -45,6 +45,10 @@ export type ChoiceProps = {
    * 글자 150% 이상이거나 한 칸 폭에서 글이 줄바꿈되면 저절로 1열(칸이 좁아 글이 꺾이지 않게)
    */
   columns?: 1 | 2;
+  /** answer 모양의 행 최소 높이(기본 96). 5단계 ②·⑤ 카드는 64(시안 docs/design/2026-11-25-five-steps s2·s3) */
+  minItemHeight?: number;
+  /** answer 모양에서 '✓ 골랐어요'를 늘 글 아래 줄로(⑤ 문장 카드·② 200% — 옆에 두면 글이 한 글자씩 꺾인다, 시안 s2·s3) */
+  tagBelow?: boolean;
 };
 
 /** 2열을 쓸 수 있는지: 글자 150% 미만이고 모든 글(이름·보조 줄)이 한 칸 폭에서 한 줄 */
@@ -78,7 +82,7 @@ const GRID_CHECK_W = 28 + GRID_GAP;
 
 // 선택지(SUMMARY 2-6 C4·Q5): 1열, 같은 면(흰 카드), 테두리 line(3:1), 사물 아이콘만 다르게, 글은 두 줄까지 줄바꿈(말줄임 없음).
 // 고른 것은 면 actionSoft + 굵은 테두리 + 체크 아이콘(색만으로 구분하지 않음).
-export function Choice({items, mode, value, onSelect, accessibilityLabel, testID = 'choice', look = 'list', selectedLabel, disabled, onItemHeights, push, columns = 1}: ChoiceProps) {
+export function Choice({items, mode, value, onSelect, accessibilityLabel, testID = 'choice', look = 'list', selectedLabel, disabled, onItemHeights, push, columns = 1, minItemHeight, tagBelow}: ChoiceProps) {
   const a = useAudience();
   const answer = look === 'answer';
   const {width: winW, fontScale} = useWindowDimensions();
@@ -131,7 +135,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
             style={({pressed}) => [
               styles.item,
               a === 'child' && !answer ? styles.itemChild : null,
-              {minHeight: answer ? ANSWER_MIN_H : minTouch('choice', a)},
+              {minHeight: answer ? minItemHeight ?? ANSWER_MIN_H : minTouch('choice', a)},
               answer ? styles.answer : null,
               pressed ? styles.pressed : null,
               selected ? (answer ? styles.answerSelected : styles.selected) : null,
@@ -140,7 +144,7 @@ export function Choice({items, mode, value, onSelect, accessibilityLabel, testID
               item.disabled ? styles.itemOff : null,
             ]}>
             {item.icon ? <Icon name={item.icon} size={a === 'elder' ? 32 : 28} color={c.action} /> : null}
-            <View style={answer ? styles.answerBody : styles.body}>
+            <View style={answer ? [styles.answerBody, tagBelow ? styles.answerBodyFull : null] : styles.body}>
               <Text role={answer ? 'title' : 'bodyLg'} onLines={onLines}>
                 {item.label}
               </Text>
@@ -181,6 +185,8 @@ const styles = StyleSheet.create({
   selected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 4},
   body: {flex: 1, gap: 2},
   answerBody: {flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 2},
+  // 한 줄 전체 + 줄어들지 않음: flexShrink 1 이면 Yoga 가 줄을 바꾸지 않고 글 칸을 줄여 한 글자씩 꺾는다(#254 실기기 320×640 200% 캡처)
+  answerBodyFull: {flexBasis: '100%', flexShrink: 0},
   // 테두리가 1.5 → 5 로 굵어져도 내용 자리가 움직이지 않게 안쪽 여백을 그만큼 줄인다(가로·세로). 좁으면 '✓ 골랐어요'가 다음 줄로
   answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14, flexWrap: 'wrap', alignContent: 'center'},
   answerSelected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 5, paddingHorizontal: 16.5, paddingVertical: 10.5},

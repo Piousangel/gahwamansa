@@ -15,6 +15,8 @@ import {cleanupTestFamily, createTestFamily, supabaseDevAuth} from './testFamily
 import {DEV_RESET_REASON_TEXT, devResetTodayChecked} from './devResetToday';
 import type {FakeDevHooks} from '../features/fakeApi';
 import {bgmPreview, setBgmPreview} from '../lib/bgmAsset';
+import {DEV_FEATURE_KEY, isFeatureOn, setFeature} from '../lib/features';
+import {defaultStore} from '../lib/kvStore';
 
 // 번들 검사 표식(scripts/check-dev-menu-bundle.sh): production 번들에 이 글자가 있으면 실패
 export const DEV_MENU_IMPL_MARKER = 'bumojasik-dev-menu-impl';
@@ -46,6 +48,10 @@ const T = {
   nothing: '정리할 테스트 가족이 없어요',
   clearSlots: '보관 세션 모두 지우기',
   failed: '실패했어요',
+  fiveOn: '오늘 코스 5단계 켜기(기능 스위치)',
+  fiveOff: '오늘 코스 5단계 끄기(3단계로)',
+  fiveHint: '이 기기에 남아 다시 열어도 유지돼요. staging 서버에 5단계(0061)가 반영되기 전이라 fake 모드에서만 켤 수 있어요',
+  fiveRealOff: '서버 준비 뒤 켤 수 있어요(staging 에 5단계(0061) 반영 전)',
 };
 
 type Role = 'parent' | 'child';
@@ -80,6 +86,35 @@ export function DevMenuHost({api, children}: Props) {
   const [busy, setBusy] = useState(false);
   const fake = env.API_MODE === 'fake';
   const dev = (api as Api & {__dev?: FakeDevHooks}).__dev;
+  const [five, setFive] = useState(isFeatureOn('fiveSteps'));
+  // 기능 스위치(5단계, 리드 결정 #254 M1): 서버 계약(server/five-steps) 병합 전에는 fake 모드에서만 켤 수 있다.
+  // 메뉴가 남긴 값은 앱을 그리기 전에 읽는다(QA-1 L3 — 3단계로 먼저 그렸다가 다시 그리면 알림으로 연 이동을 잃을 수 있다).
+  // 읽는 동안은 아무것도 그리지 않아 시작 스플래시가 그대로 덮는다. 이 파일은 production 번들에 없다 — 스위치는 늘 기본 꺼짐
+  const canFive = allowed && fake;
+  const [flagsReady, setFlagsReady] = useState(!canFive);
+  useEffect(() => {
+    if (!canFive) {
+      return;
+    }
+    let alive = true;
+    defaultStore()
+      .getItem(DEV_FEATURE_KEY)
+      .then(v => {
+        if (alive && v === 'on') {
+          setFeature('fiveSteps', true);
+          setFive(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) {
+          setFlagsReady(true);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [canFive]);
 
   const restart = useCallback((r?: Role) => {
     setVisible(false);
@@ -186,7 +221,7 @@ export function DevMenuHost({api, children}: Props) {
 
   return (
     <DevMenuContext.Provider value={ctx}>
-      {children({appKey, role})}
+      {flagsReady ? children({appKey, role}) : null}
       {allowed && visible ? (
         <Modal visible transparent animationType="none" onRequestClose={() => setVisible(false)}>
           <View style={styles.scrim}>
@@ -247,6 +282,21 @@ export function DevMenuHost({api, children}: Props) {
                   await localStamps().clear();
                   setMsg(T.done);
                 })} />
+
+                {/* 기능 스위치: 오늘 코스 5단계(DECISIONS 2026-11-25). 켜고 끄면 앱을 처음부터 */}
+                <BigButton
+                  variant="secondary"
+                  label={five ? T.fiveOff : T.fiveOn}
+                  disabled={!canFive && !five}
+                  onPress={() => {
+                    const next = !five;
+                    setFeature('fiveSteps', next);
+                    setFive(next);
+                    defaultStore().setItem(DEV_FEATURE_KEY, next ? 'on' : 'off').catch(() => {});
+                    restart(role);
+                  }}
+                />
+                <Text20>{canFive ? T.fiveHint : T.fiveRealOff}</Text20>
 
                 {/* AP-04: 음원 공개 전 실기기 스피커 청취 확인(lib/bgmAsset RELEASED 전에는 이 실행 동안만) */}
                 <BigButton

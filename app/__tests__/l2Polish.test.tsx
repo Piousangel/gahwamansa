@@ -8,6 +8,10 @@ import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {confirmDeleteAll, press, pressBackLink, pressLast, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // 글자 배율: jest 기본(2)과 같게 두고, 해님 크기 테스트만 바꾼다
 let mockFontScale = 2;

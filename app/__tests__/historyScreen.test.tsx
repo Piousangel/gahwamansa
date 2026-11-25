@@ -5,6 +5,10 @@ import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import type {HistoryDay} from '../src/api/contract/history';
 import {historyDateLabel} from '../src/features/course/stamps';
 import {press} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 // P15 지난 날(동결 시안 P15_history): 폴라로이드 한 장 = 하루, 최신이 위, 빈 날 없음(달력 금지), 보기만.
 const d1: HistoryDay = {

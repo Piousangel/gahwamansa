@@ -7,6 +7,10 @@ import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-na
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {pressCourseNext} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 test('P6 글자 입력마다: 다시 그리기 1번, 서버·TTS·소리·앱 상태·접근성 알림 호출 0', async () => {
   const api = createFakeApi({linked: true, consented: true, completedSteps: ['photo', 'question']});

@@ -12,11 +12,36 @@ import {join} from 'node:path';
 /** 0038 check 가 받던 키(0060 없는 DB 가 받는 전부) */
 export const PRE_0060_CHEER_KEYS = ['love_you', 'warm_day', 'thanks_always', 'peaceful_day'];
 
-/** cheers.ts 원문에서 CHEER_KEYS 배열을 읽는다. 모양이 바뀌어 못 읽으면 예외(조용히 빈 목록 금지). */
+/** TS/JS 원문에서 주석(// …, /* … *\/)을 지운다. 문자열('…' "…" `…`) 속 주석 기호는 그대로 둔다(대기열 15). */
+export function stripComments(src) {
+  let out = '';
+  for (let i = 0; i < src.length; ) {
+    const c = src[i];
+    if (c === "'" || c === '"' || c === '`') {
+      let j = i + 1;
+      while (j < src.length && src[j] !== c) j += src[j] === '\\' ? 2 : 1;
+      out += src.slice(i, j + 1);
+      i = j + 1;
+    } else if (src.startsWith('//', i)) {
+      const end = src.indexOf('\n', i);
+      i = end === -1 ? src.length : end; // 줄바꿈은 남긴다
+    } else if (src.startsWith('/*', i)) {
+      const end = src.indexOf('*/', i + 2);
+      i = end === -1 ? src.length : end + 2;
+      out += ' ';
+    } else {
+      out += c;
+      i++;
+    }
+  }
+  return out;
+}
+
+/** cheers.ts 원문에서 CHEER_KEYS 배열을 읽는다. 주석 속 선언 글자는 건너뛴다. 모양이 바뀌어 못 읽으면 예외(조용히 빈 목록 금지). */
 export function parseCheerKeys(tsSource) {
-  const m = /export\s+const\s+CHEER_KEYS\s*=\s*\[([\s\S]*?)\]\s*as\s+const\s*;/.exec(tsSource);
+  const m = /export\s+const\s+CHEER_KEYS\s*=\s*\[([\s\S]*?)\]\s*as\s+const\s*;/.exec(stripComments(tsSource));
   if (!m) throw new Error('cheers.ts 에서 `export const CHEER_KEYS = [...] as const;` 를 찾지 못했어요');
-  const body = m[1].replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const body = m[1];
   const keys = [...body.matchAll(/'([^']*)'|"([^"]*)"/g)].map((x) => x[1] ?? x[2]);
   if (keys.length === 0 || keys.some((k) => !/^[a-z_]{1,32}$/.test(k))) throw new Error(`cheers.ts CHEER_KEYS 를 읽지 못했어요: ${JSON.stringify(keys)}`);
   return keys;

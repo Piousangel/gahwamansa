@@ -37,7 +37,7 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
   const [reading, setReading] = useState(false); // 읽어 주는 중: 읽는 글에 옅은 하늘 면
   const [hint, setHint] = useState(false);
   const polaroidRef = useRef<React.ComponentRef<typeof View>>(null);
-  const {api, content} = useSession();
+  const {api, content, five} = useSession(); // five: 5단계(스위치 + 서버 지원)면 단계 표시 '1 / 5'
   // B1: 사진을 다 불러왔을 때만 크게 보기 진입(못 불러왔으면 진입 없음). 상태는 사진 주소에 묶임(#234 L2)
   const {aspect, loaded, failed: imageFailed, onLoad, onError} = usePhotoLoad(content?.photo?.image_url);
   // B1 첫 안내(DZ-06): 크게 보기를 한 번 열 때까지, 열지 않아도 P4 세 번째 방문까지만. 시간으로 사라지지 않는다.
@@ -139,14 +139,14 @@ export function PhotoStep({navigation, route}: NativeStackScreenProps<ParentPara
     <DsScreen
       variant="step"
       back={{to: copy.course.to_home, onPress: toCourseHome}}
-      stepInfo={stepA11y(copy.course.step.photo, 1, review)}
+      stepInfo={stepA11y(copy.course.step.photo, 1, review, five)}
       scrollRef={errorTop}
       onViewport={setViewport}
       dock={dock}>
       {/* split="photo": 큰 사진이 첫 화면 끝에 걸쳐도 통째로 밀지 않는다(밀면 첫 화면에 단계 제목만 남는다). 사진은 스크롤로 이어 본다 */}
       <FoldStack viewport={viewport} gap={gap} testID="p4-body" onFold={onFold} onMeasure={onMeasure} split="photo">
         {!review && error ? <StepErrorBanner key="error" error={error} /> : null}
-        <StepHeader key="header" name={copy.course.step.photo} n={1} review={review} compact={large} />
+        <StepHeader key="header" name={copy.course.step.photo} n={1} review={review} compact={large} five={five} />
         {/* B1: 사진 전체가 누름 영역. 읽기 '오늘 사진, {caption}, AI가 만든 그림' + 힌트 '크게 보기'(copy 11-17: 두 번 누르라는 말은 TalkBack이 따로 읽음) */}
         {/* 바깥 칸은 본문 폭을 재는 자리(사진 틀이 좁아져도 폭 측정이 흔들리지 않게), 사진 틀은 그 안 가운데 */}
         <View key="photo" testID="photo-box" onLayout={e => setBoxW(Math.round(e.nativeEvent.layout.width))}>

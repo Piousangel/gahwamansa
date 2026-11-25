@@ -10,6 +10,10 @@ import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {copy} from '../src/copy/copy';
 import {press, pressCourseNext, toHome} from '../testUtils/flow';
+import {setupWarmAppRoot} from '../testUtils/warm';
+
+// 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
+setupWarmAppRoot();
 
 jest.setTimeout(20000);
 let prefs: Prefs;
