@@ -7,7 +7,7 @@
 --   기억력 확인·건강·떠난 사람·학교를 다녔다는 전제·결혼 여부 전제 없음, 성별·종교·직업 중립, 계절 무관 우선(14/16).
 --   첫마디는 자녀가 읽는 말로 "~는지 여쭤봐요"로 끝내고 60자 이하(0027 check), 고른 쪽 문장만 자녀에게 감.
 -- writer.md와 달라진 곳: 6일 낱말 '종'(1음절)→'학교종', 14일 '설빔 걸린 방'→'한복 걸린 방'(계절 무관), 25일 '결혼식 날 꽃'→'탁자 위 꽃다발'(결혼 전제 제거),
---   2026-11-25(대기열 25, 리드 결정·라이터 확인 대상): 28일 ③ '전'→'빈대떡'(⑤ 틀 문장에서 '저는'으로 읽힘), ① 첫 질문이 '기억'을 묻던 25·26·28·30일은 순서를 바꾸거나(25·30) 다듬음(26·28).
+--   2026-11-25(대기열 25, 리드 결정·라이터 확인 대상): 28일 ③ '전'→'빈대떡'(⑤ 틀 문장에서 '저는'으로 읽힘), ① 첫 질문이 '기억'을 묻던 25·26·28·30일은 순서를 바꾸거나(30) 다듬음(25·26·28, 라이터 확정 11-25: 어르신께 묻는 존대 '~보신 적 있으세요?', 숨은 둘째 질문의 '기억'도 뺌, 첫 질문에 ② 질문과 닮은 '떠오르세요' 안 씀).
 --   학교 장면(17·19·22)의 질문은 학교를 다닌 경험을 전제하지 않게, 21일(밥상) '온 가족이 모이던 때'는 떠난 가족을 떠올리게 해서 교체, 29일 '계란 프라이'→'달걀프라이'(한 낱말로 통일).
 begin;
 
@@ -23,12 +23,12 @@ insert into seed_photos values
   (22, 'pending://day-22', '등굣길 책가방', '책가방', array['어디 갈 때 꼭 챙기시는 게 있어요?', '멀리 가 본 곳 중 좋았던 데가 있어요?']),  -- 원본 22 · season=any(none) place=any era=7080 city_ok=n
   (23, 'pending://day-23', '장터 국밥집', '국자', array['장터에서 뭘 드셔 보셨어요?', '따끈한 국물 하면 뭐가 떠올라요?']),  -- 원본 20 · season=any(none) place=country era=7080 city_ok=y
   (24, 'pending://day-24', '한복 걸린 방', '한복', array['한복을 입어 본 날이 있어요?', '좋아하는 색이 있으세요?']),  -- 원본 14 · season=any(none) place=any era=7080 city_ok=n
-  (25, 'pending://day-25', '가마솥 김', '가마솥', array['김이 오르는 걸 보면 뭐가 떠올라요?', '가마솥에 뭘 끓이던 기억이 있어요?']),  -- 원본 24 · season=any(none) place=country era=7080 city_ok=n
-  (26, 'pending://day-26', '냇가 낚시', '낚싯대', array['냇가에서 놀아 본 적 있어요?', '물소리는 어떻게 들렸어요?']),  -- 원본 28 · season=summer(image) place=country era=7080 city_ok=n
+  (25, 'pending://day-25', '가마솥 김', '가마솥', array['가마솥에 무엇을 끓이면 좋을까요?', '김이 오르는 걸 보면 뭐가 생각나세요?']),  -- 원본 24 · season=any(none) place=country era=7080 city_ok=n
+  (26, 'pending://day-26', '냇가 낚시', '낚싯대', array['냇가에서 놀아 보신 적 있으세요?', '물소리는 어떻게 들렸어요?']),  -- 원본 28 · season=summer(image) place=country era=7080 city_ok=n
   (27, 'pending://day-27', '탁자 위 꽃다발', '꽃다발', array['꽃다발을 받아 본 날이 있어요?', '꽃 하면 어떤 꽃이 먼저 떠올라요?']),  -- 원본 25 · season=any(none) place=any era=7080 city_ok=y
-  (28, 'pending://day-28', '잔치하는 앞마당', '앞마당', array['마을 잔치에 가 본 적 있어요?', '잔치 음식 중 뭐가 먼저 떠올라요?']),  -- 원본 26 · season=any(none) place=country era=7080 city_ok=n
+  (28, 'pending://day-28', '잔치하는 앞마당', '앞마당', array['마을 잔치에 가 보신 적 있으세요?', '잔치 음식 중 뭐가 먼저 떠올라요?']),  -- 원본 26 · season=any(none) place=country era=7080 city_ok=n
   (29, 'pending://day-29', '닭장 아침', '닭장', array['아침에 닭 울음소리를 들어 보셨어요?', '달걀을 꺼내 본 적 있어요?']),  -- 원본 29 · season=any(none) place=country era=7080 city_ok=n
-  (30, 'pending://day-30', '흙담 골목 저녁', '흙담', array['저녁이 되면 어떤 소리가 들렸어요?', '골목에서 놀던 기억이 있어요?'])  -- 원본 30 · season=any(none) place=country era=7080 city_ok=n
+  (30, 'pending://day-30', '흙담 골목 저녁', '흙담', array['저녁이 되면 어떤 소리가 들렸어요?', '골목에서 놀아 보신 적 있으세요?'])  -- 원본 30 · season=any(none) place=country era=7080 city_ok=n
 ;
 insert into public.content_photos (day_index, image_url, caption, keyword, recall_questions)
 select * from seed_photos on conflict (day_index) do nothing;
