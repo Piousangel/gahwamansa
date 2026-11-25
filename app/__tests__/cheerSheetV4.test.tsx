@@ -4,7 +4,7 @@ import {StyleSheet, Text as RNText} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {AudienceProvider, Sheet, SHEET_MAX_RATIO} from '../src/ui/ds';
+import {AudienceProvider, Sheet, SHEET_HANDLE_H, SHEET_MAX_RATIO} from '../src/ui/ds';
 import {roleText} from '../src/ui/ds/roles';
 import {press} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
@@ -38,10 +38,13 @@ test('시트 머리: 손잡이(끌기, 오너 C-3 — V14 ① 바뀜) + 제목(�
   expect(st.minHeight).toBeGreaterThanOrEqual(48);
   // 칸이 하나인 응원 시트: 손잡이는 화면 읽기에서 닫기 버튼(두 번 누르기)
   const handle = screen.getByTestId('sheet-handle');
+  expect(handle.props.accessible).toBe(true); // 없으면 iOS 에서 손잡이가 접근성 요소가 아니다(QA-2 M1)
   expect(handle.props.accessibilityRole).toBe('button');
   expect(handle.props.accessibilityLabel).toBe('시트 손잡이');
   expect(handle.props.accessibilityHint).toBe('두 번 누르면 닫혀요');
-  expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).maxHeight).toBe(Math.floor(640 * SHEET_MAX_RATIO));
+  // 높이 상한 88%(손잡이 줄 포함): gorhom 동적 높이 상한(내용 + 손잡이 48 에 적용) = 88%. 200% 넘침은 에뮬레이터 증거 05·10·12
+  expect(require('@gorhom/bottom-sheet').__last().props.maxDynamicContentSize).toBe(Math.floor(640 * SHEET_MAX_RATIO));
+  expect(StyleSheet.flatten(handle.props.style).height).toBe(SHEET_HANDLE_H);
   await act(async () => fireEvent.press(close));
   await waitFor(() => expect(screen.queryByText('어떤 말을 보낼까요?')).toBeNull());
 });
@@ -86,7 +89,9 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
         <RNText>내용</RNText>
       </Sheet>,
     );
+    // 모달 표시는 손잡이·몸통을 함께 감싼 뿌리에(몸통에 두면 형제인 손잡이가 화면 읽기에서 빠진다, gorhom 이전 11-25)
     expect(screen.getByTestId('s').props.accessibilityViewIsModal).toBe(true);
+    expect(screen.getByTestId('sheet-handle')).toBeTruthy();
     jest.useFakeTimers();
     try {
       act(() => screen.UNSAFE_getByType(RN.Modal).props.onShow?.());
@@ -131,7 +136,8 @@ describe('ds Sheet(공용, PR #93 L4)', () => {
           <RNText>내용</RNText>
         </Sheet>,
       );
-      expect(StyleSheet.flatten(screen.getByTestId('s').props.style).paddingBottom).toBe(48);
+      // 아래 줄(gorhom footerComponent)의 바닥 여백 = inset. gorhom 이 이 줄 높이만큼 스크롤 아래 여백을 더해 내용도 내비 위(gorhom 이전 11-25)
+      expect(StyleSheet.flatten(screen.getByTestId('s-bottom').props.style).paddingBottom).toBe(48);
     } finally {
       screen.unmount();
       insets.mockImplementation(orig);
@@ -168,6 +174,10 @@ test('ds Sheet footer(PR #100 리뷰 L3): 스크롤 밖 아래에 고정(내용�
   }
 });
 
+// gorhom 이전(11-25): 띠는 스크롤 밖 아래 줄에 있어 높이가 바뀌면 gorhom 이 맞춘 스크롤 아래 여백이 바뀌어 끝에서 튄다
+// → 넘치는 동안은 자리를 두고, 끝까지 내리면 보이지 않게만(불투명도 0, 띠는 원래 화면 읽기에서 숨김)
+const bandShown = () => StyleSheet.flatten(screen.getByTestId('s-more').props.style)?.opacity !== 0;
+
 test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(L1)', () => {
   render(
     <AudienceProvider value="child">
@@ -186,10 +196,31 @@ test('ds Sheet: 넘칠 때만 아래 더 있음 띠, 끝까지 내리면 숨김(
     fireEvent(scroll, 'contentSizeChange', 360, 700);
   });
   expect(screen.getByTestId('more-band', {includeHiddenElements: true})).toBeTruthy();
+  expect(bandShown()).toBe(true);
   act(() => {
     fireEvent.scroll(scroll, {nativeEvent: {contentOffset: {x: 0, y: 300}, contentSize: {width: 360, height: 700}, layoutMeasurement: {width: 360, height: 400}}});
   });
-  expect(screen.queryByTestId('more-band', {includeHiddenElements: true})).toBeNull();
+  expect(bandShown()).toBe(false);
+});
+
+test('ds Sheet: 관성 스크롤이 끝에서 멈춘 위치(onMomentumScrollEnd)로도 띠를 숨긴다 — onScroll 쓰로틀로 마지막 위치가 안 올 수 있음(QA-2 L3)', () => {
+  render(
+    <AudienceProvider value="child">
+      <Sheet visible {...sheetProps} onClose={() => {}} returnFocusRef={opener}>
+        <RNText>내용</RNText>
+      </Sheet>
+    </AudienceProvider>,
+  );
+  const scroll = screen.getByTestId('s-scroll');
+  act(() => {
+    fireEvent(scroll, 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 400}}});
+    fireEvent(scroll, 'contentSizeChange', 360, 700);
+  });
+  expect(bandShown()).toBe(true);
+  act(() => {
+    fireEvent(scroll, 'momentumScrollEnd', {nativeEvent: {contentOffset: {x: 0, y: 300}}});
+  });
+  expect(bandShown()).toBe(false);
 });
 
 test('M1: 응원 시트를 닫으면 화면 읽기 포커스가 \'응원 보내기\'로 돌아간다', async () => {

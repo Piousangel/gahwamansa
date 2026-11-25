@@ -17,6 +17,9 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+// Reanimated 4 공식 jest 설정(useAnimatedStyle 등 애니메이션 값 검사 도우미, 기본 60fps) — gorhom 바텀시트(11-25)
+require('react-native-reanimated').setUpTests();
+
 // QA-13: waitFor 기본 대기(1초)가 부하에서 모자라 date-line 대기가 가끔 실패 → 5초로(testTimeout 20초 안)
 // 부하 정리 2차(2026-11-19): 전체 2벌 동시(워커 8×2)에서 첫 화면 대기(historyScreen date-line·termsAgreement 동의 화면)가 5초를 넘음 → 10초.
 // 조건이 맞는 즉시 끝나므로 통과하는 테스트는 느려지지 않는다. 테스트마다 따로 주던 {timeout: 3000~8000} 은 지웠다(기본이 더 길다).
