@@ -73,19 +73,25 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 행 위치는 자연 위치(접힘 여백 없음). 내려야 하는 날은 아래 FoldStack 이 여백을 끄므로 실제 위치와 같다(#254 캡처 문제 1)
   const nowAt = (): ReturnType<typeof nowRowRange> =>
     nowStep && rowsAt ? nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH) : null;
-  // '실제로 내렸다'를 단계별로 고정(latch, #259 QA-2 M1). 내린 뒤에는 높이가 바뀌어도(안내 띠가 생기고 사라짐) 접힘 여백을 다시 켜지 않는다
-  // — 켜면 내린 화면 안에 빈칸이 생긴다. 아직 내리지 않았으면 매 측정마다 다시 판정해, 늦게 끼어든 안내가 지금 행을 접힘 밖으로 밀면 그때 내린다
-  const [scrolledFor, setScrolledFor] = useState<string | null>(null);
+  // 내릴지는 지금 행마다 한 번, 열린 뒤 첫 측정 묶음(모든 요소를 처음 다 잰 때)으로 정하고 고정한다(#259 QA-2 M1·재확인 M, 리드 결정).
+  // - 내렸으면: 뒤에 높이가 바뀌어도 접힘 여백을 다시 켜지 않는다(켜면 내린 화면 안에 빈칸).
+  // - 안 내렸으면: 뒤에 위쪽 안내(여기까지 실패·동기화 오류)가 끼어들어 행이 밀려도 내리지 않는다 — 막 뜬 실패 안내가 화면에 보여야 한다.
+  //   그때는 접힘 여백 규칙(R-15) 그대로.
+  // 단계가 바뀌면(④ → ⑤) 새 지금 행으로 다시 정한다
+  const [decided, setDecided] = useState<{step: string; scrolled: boolean} | null>(null);
   useEffect(() => {
-    if (!nowStep || !rowsAt || viewH <= 0 || scrolledFor === nowStep) {
+    if (!nowStep || !rowsAt || viewH <= 0 || decided?.step === nowStep) {
       return;
     }
     const at = nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH);
-    if (at?.scroll) {
-      scrollRef.current?.showRange(at.top, at.bottom);
-      setScrolledFor(nowStep);
+    if (!at) {
+      return; // 아직 다 재지 않음
     }
-  }, [nowStep, rowsAt, viewH, scrolledFor]);
+    if (at.scroll) {
+      scrollRef.current?.showRange(at.top, at.bottom);
+    }
+    setDecided({step: nowStep, scrolled: at.scroll});
+  }, [nowStep, rowsAt, viewH, decided]);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -354,9 +360,10 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   order.current = items.filter(Boolean).map(x => String((x as React.ReactElement).key));
   // 5단계에서 지금 행으로 내리는 날(또는 아직 재는 중)은 접힘 여백을 끈다: 사용자가 처음 보는 화면은 내린 화면이고, 그 아래 끝은
   // 지금 행 끝 + 간격 12(showRange 여유) = 다음 행 위 끝이라 줄 경계가 맞는다. 여백을 두면 내린 화면 위에 빈칸이 생기고 위치도 어긋난다
-  // 내린 뒤(scrolledFor 고정)는 측정이 바뀌어도 끈 채로 둔다(QA-2 M1)
+  // 정한 뒤(decided)는 그 결정대로 고정, 정하기 전(재는 중)은 내릴 것 같으면 끈다(QA-2 M1·재확인 M)
   const now = nowAt();
-  const foldViewport = nowStep && (scrolledFor === nowStep || !now || now.scroll) ? 0 : viewH;
+  const offBeforeDecide = !now || now.scroll;
+  const foldViewport = nowStep && (decided?.step === nowStep ? decided.scrolled : offBeforeDecide) ? 0 : viewH;
 
   return (
     <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH} scrollRef={five ? scrollRef : undefined}>

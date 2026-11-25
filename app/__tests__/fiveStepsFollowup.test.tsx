@@ -97,17 +97,42 @@ describe('문제 1: 코스 홈 지금 행으로 스크롤', () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
-  test('QA-2 M1 늦은 판정: 처음엔 지금 행이 첫 화면 안이었다가, 위에 무엇이 끼어들어 접힘 밖으로 밀리면 그때 내린다', async () => {
+  test('QA-2 재확인 M: 첫 측정에서 안 내렸으면, 뒤에 위쪽 오류 안내가 끼어들어 ④가 접힘 밖으로 가도 내리지 않는다(안내가 화면 위에 남는다)', async () => {
+    const {ScrollView} = require('react-native');
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    await home(true, {completedSteps: ['photo', 'recall', 'question'], failRecord: 1});
+    await layHome(10, 60); // 첫 측정: ④ 226~286 첫 화면 안 → 내리지 않음, 걸치는 ⑤는 민다(R-15)
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(marginTop('course-steps:pass_on')).toBe(12 + (300 - 298 + 1));
+    // '여기까지' 기록이 끊겨 맨 위에 실패 안내가 생긴다 → ④가 접힘 밖으로
+    await press('오늘은 여기까지 할게요');
+    await waitFor(() => screen.getByTestId('course-stop-error'));
+    await act(async () => {
+      lay('course-steps:stop-error', 0, 100); // 10~110, ④는 338~398
+    });
+    expect(ids('course-steps:')[0]).toBe('course-steps:stop-error'); // 안내는 묶음 맨 위
+    expect(scrollTo).not.toHaveBeenCalled(); // 내리지 않는다 = 막 뜬 안내가 첫 화면에 보인다
+    // 접힘 여백 규칙 그대로: 안내 10~110 아래 ① 122~182, ② 194~254, ③ 266~326 이 접힘 300 에 걸려 ③을 통째로 민다
+    expect(marginTop('course-steps:question')).toBe(12 + (300 - 266 + 1));
+  });
+
+  test('QA-2 재확인 L-a: 단계가 바뀌면(④ → ⑤) 고정이 풀려 새 지금 행으로 다시 내린다', async () => {
     const {ScrollView} = require('react-native');
     const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
     scrollTo.mockClear();
     await home(true, {completedSteps: ['photo', 'recall', 'question']});
-    await layHome(10, 60); // ④ 226~286 첫 화면 안 → 내리지 않고, 걸치는 ⑤는 민다(R-15)
-    expect(scrollTo).not.toHaveBeenCalled();
-    expect(marginTop('course-steps:pass_on')).toBe(12 + (300 - 298 + 1));
-    const at = await layHome(10, 80); // 행이 커져 ④ 286~366 이 걸린다
+    await layHome(10, 80); // ④ 286~366 → 내림
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    // ④를 넘어가고 홈으로 → 지금 행 ⑤
+    await pressCourseNext();
+    await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
+    await press('오늘은 넘어갈게요');
+    await waitFor(() => screen.getByTestId('step-now-row'));
+    const at = await layHome(10, 80); // ⑤ 378~458
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+    expect(scrollTo).toHaveBeenLastCalledWith({y: at.pass_on.bottom - 300 + 12, animated: true});
     expect(ids('course-steps:').slice(1).map(marginTop)).toEqual(ids('course-steps:').slice(1).map(() => 12));
-    expect(scrollTo).toHaveBeenLastCalledWith({y: at.hangul.bottom - 300 + 12, animated: true});
   });
 
   test('지금 행이 첫 화면 안이면(①·② 차례) 내리지 않고 접힘 여백은 그대로(R-15)', async () => {
@@ -192,7 +217,7 @@ describe('문제 4: ② 넘어가기는 카드 아래 본문(100%도)', () => {
     await home(true, {completedSteps: ['photo']});
     await pressCourseNext();
     await waitFor(() => screen.getByTestId('recall-question'));
-    expect(screen.getByTestId('recall-confirm').props.accessibilityHint).toBe("보기를 하나 고르거나, 아래 '오늘은 넘어갈게요'를 눌러 주세요");
+    expect(screen.getByTestId('recall-confirm').props.accessibilityHint).toBe("보기를 고르면 눌려요. 넘어가려면 '오늘은 넘어갈게요'를 눌러 주세요");
     fireEvent.press(screen.getAllByRole('radio')[0]);
     expect(screen.getByTestId('recall-confirm').props.accessibilityHint).toBeUndefined();
   });
