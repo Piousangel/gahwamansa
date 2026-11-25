@@ -9,6 +9,7 @@
 -- (2) set_push_enabled(false)(받기 철회): 받기 시각을 지우는 것(0037)에 더해 이 계정의 토큰 행을 모두 지운다 — "동의 없으면 보관 0"을
 --     철회 뒤에도 같게. 다시 켜면(true) 앱이 바로 토큰을 다시 등록한다(pushClient.setReceive·childOptIn·acceptParentPrompt·FamilyPushRow,
 --     다른 기기는 앞으로 올 때 PushHost sync). 반환 모양은 그대로.
+--     등록은 동의 확인 전에 내 프로필 행을 잠가(for update) 철회와 동시에 와도 철회한 계정에 행이 남지 않는다(#264 리뷰 M1).
 -- (3) 일회 정리: 지금 남아 있는 받기 동의 없는 계정의 토큰 행을 지운다(발송에 쓰인 적 없는 행).
 -- 되돌리기: supabase/down/20261116000062_push_token_consent_gate.down.sql
 
@@ -25,6 +26,10 @@ begin
   if p_platform is null or p_platform not in ('android', 'ios') then
     return jsonb_build_object('ok', false, 'reason', 'invalid_platform');
   end if;
+  -- 내 프로필 행을 먼저 잠근다(#264 리뷰 M1): set_push_enabled의 update와 줄을 세운다. 잠그지 않으면
+  --   R1 등록이 커밋 전일 때 철회가 끝나면 철회의 delete가 새 행을 못 보고, R2 철회가 커밋 전일 때 등록이 '켬'을 읽어 저장 → 철회한 계정에 행이 남는다.
+  --   잠금 순서는 철회와 같다(profiles → device_tokens). 연결 전(프로필 없음)이면 잠글 행이 없다.
+  perform 1 from public.profiles where user_id = v_uid for update;
   -- 이 기기(토큰)의 이전 계정 행은 연결·동의 여부와 상관없이 먼저 지운다(0036 M2, 리뷰 L4: 해제 못 한 이전 계정 알림 차단)
   delete from public.device_tokens where token = p_token and user_id <> v_uid;
   if public.my_profile_id() is null then

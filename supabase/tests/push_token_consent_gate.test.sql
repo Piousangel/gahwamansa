@@ -1,9 +1,10 @@
 -- 0062 테스트 (pgTAP): 받기 동의 전에는 푸시 토큰을 서버에 두지 않는다(QA-3 #262 리뷰 M2 개선안). 실행: npx supabase test db
 -- 보호하는 것: 동의 전 등록 → 이 계정 행 0 + 같은 토큰의 다른 계정 행은 그래도 지워짐(L4) + 응답 {ok:true, stored:false}(앱 계약 유지),
 --             이미 있던 이 계정 같은 토큰 행도 지워짐, 동의 후 등록 → 행 1, 철회(set_push_enabled false) → 이 계정 행 0(다른 계정 행은 그대로),
---             철회 뒤 등록도 저장 안 함, 다시 켜고 등록하면 다시 저장, 알림을 끈(push_enabled=false) 계정은 받기 시각이 남아 있어도 저장 안 함.
+--             철회 뒤 등록도 저장 안 함, 다시 켜고 등록하면 다시 저장, 알림을 끈(push_enabled=false) 계정은 받기 시각이 남아 있어도 저장 안 함,
+--             등록이 내 프로필 행을 잠근다(#264 리뷰 M1: 철회와 동시에 와도 철회한 계정에 행이 남지 않게 줄 세우기).
 begin;
-select plan(15);
+select plan(16);
 
 insert into auth.users (id, aud, role, is_anonymous) values
   ('70620000-0000-0000-0000-0000000000c1', 'authenticated', 'authenticated', false),
@@ -71,6 +72,17 @@ update public.profiles set push_enabled = false, push_consented_at = now() where
 select pg_temp.act_as('70620000-0000-0000-0000-0000000000a2', true);
 select is(public.register_push_token(pg_temp.tok(5)) ->> 'stored', 'false', '알림 꺼짐이면 받기 시각이 있어도 저장 안 함');
 reset role;
+
+-- M1 줄 세우기: 등록이 내 프로필 행을 for update로 잠근다. 동시 실행 자체는 pgTAP(한 연결)으로 못 돌리므로, 잠금이 걸렸는지를
+--   튜플 xmax(이 트랜잭션 id로 잠김)로 확인한다. 두 연결 경합(R1·R2)은 PR #264 증거의 race 스크립트로 확인.
+insert into auth.users (id, aud, role, is_anonymous) values ('70620000-0000-0000-0000-0000000000a3', 'authenticated', 'authenticated', true);
+insert into public.profiles (id, user_id, family_id, role, push_consented_at) values
+  ('7062b000-0000-0000-0000-0000000000a3', '70620000-0000-0000-0000-0000000000a3', '7062f000-0000-0000-0000-000000000001', 'parent', now());
+select pg_temp.act_as('70620000-0000-0000-0000-0000000000a3', true);
+select public.register_push_token(pg_temp.tok(7));
+reset role;
+select is((select xmax::text from public.profiles where id = '7062b000-0000-0000-0000-0000000000a3'), pg_current_xact_id()::xid::text,
+          '등록은 내 프로필 행을 잠근다(철회 set_push_enabled와 줄 세우기)');
 
 select * from finish();
 rollback;
