@@ -46,7 +46,7 @@ function LegalShort() {
   const terms = legalLinks()[0];
   return (
     <>
-      <LegalText testID="legal-short" style={styles.legal} text={copy.legal.agree_parent_short} links={[{...terms, label: SHORT_TERMS_WORD}]} onOpen={legal.open} />
+      <LegalText testID="legal-short" style={styles.legal} text={copy.legal.agree_parent_short} links={[{...terms, label: SHORT_TERMS_WORD, a11yLabel: terms.label}]} onOpen={legal.open} />
       {legal.busy ? <Text20 testID="legal-busy" style={styles.legal} accessibilityLiveRegion="polite">{copy.app.loading}</Text20> : null}
       {legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
     </>

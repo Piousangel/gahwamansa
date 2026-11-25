@@ -5,7 +5,13 @@ import {color} from './tokens';
 import {roleText, type Audience} from './ds/roles';
 import {keepAllChildren, koreanTextProps} from './koreanText';
 
-export type LegalLink = {label: string; url: string | null; /** 호출부가 여는 곳을 고를 때 쓰는 이름(예: terms·privacy) */ key?: string};
+export type LegalLink = {
+  label: string;
+  url: string | null;
+  /** 호출부가 여는 곳을 고를 때 쓰는 이름(예: terms·privacy) */ key?: string;
+  /** 화면 읽기 이름(보이는 낱말이 줄임말일 때. 예: 짧은 고지 '약관' → '이용약관', #274 법률 판정). 없으면 label */
+  a11yLabel?: string;
+};
 
 // 약관 한 줄(감사 M7·디자인 9절, 리뷰 M2 구조).
 // - 주소가 없으면(⑥a 방침 호스팅 전) 일반 글자: 누를 수 없는데 링크처럼 보이면 안 된다.
@@ -69,7 +75,7 @@ export function LegalText({
       parts.push(rest.slice(0, h.at));
     }
     parts.push(
-      <Text key={i++} accessibilityRole="link" onPress={() => onOpen(h.l.url, h.l.label, h.l.key)} style={linkStyle}>
+      <Text key={i++} accessibilityRole="link" accessibilityLabel={h.l.a11yLabel} onPress={() => onOpen(h.l.url, h.l.label, h.l.key)} style={linkStyle}>
         {h.l.label}
       </Text>,
     );
@@ -77,7 +83,7 @@ export function LegalText({
   }
   const a11y = {
     accessibilityLabel: text,
-    accessibilityActions: live.map((l, n) => ({name: `link-${n}`, label: l.label})),
+    accessibilityActions: live.map((l, n) => ({name: `link-${n}`, label: l.a11yLabel ?? l.label})),
     onAccessibilityAction: (e: {nativeEvent: {actionName: string}}) => {
       const l = live[Number(e.nativeEvent.actionName.replace('link-', ''))];
       if (l) {
@@ -97,7 +103,7 @@ export function LegalText({
       testID={testID}
       style={[style, styles.tall]}
       accessibilityLabel={text}
-      accessibilityActions={live.map((l, n) => ({name: `link-${n}`, label: l.label}))}
+      accessibilityActions={live.map((l, n) => ({name: `link-${n}`, label: l.a11yLabel ?? l.label}))}
       onAccessibilityAction={e => {
         const n = Number(e.nativeEvent.actionName.replace('link-', ''));
         const l = live[n];

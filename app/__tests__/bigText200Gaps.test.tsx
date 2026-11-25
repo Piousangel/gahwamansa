@@ -115,7 +115,7 @@ describe('H1·M2 P1c: 글자 1.5배 이상이면(320×640 150%도 번호가 걸�
   test.each([1.6, 2])('M1 글자 %s배: 짧은 고지가 Dock 안 버튼 바로 위, 긴 문장은 본문', async scale => {
     await p1c(scale);
     expect(dockOrder()).toEqual(['confirm-legal-dock', 'big-button']);
-    expect(within(screen.getByTestId('confirm-legal-dock')).getByText('연결하면 약관에 동의해요')).toBeTruthy();
+    expect(within(screen.getByTestId('confirm-legal-dock')).getByText('연결하면 약관에 동의하게 돼요')).toBeTruthy();
     expect(within(screen.getByTestId('confirm-rest-body')).getByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
   });
 });
