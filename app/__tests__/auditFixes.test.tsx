@@ -141,7 +141,7 @@ test('#298 M1: 창보다 큰 확인 칸은 위쪽(제목)에 맞춘다, 창에 �
   expect(scrollTo).toHaveBeenLastCalledWith({y: 500 + 240 - 300 + 12, animated: true});
 });
 
-// #298 QA-3 L4·L5: 확인 칸은 동의 화면과 같은 제목·거절 안내 키를 쓰고, 글머리표 '•'는 화면 읽기가 읽지 않는다(ConsentScreen 과 같은 방식)
+// #298 QA-3 L4·L5: 확인 칸은 동의 화면과 같은 제목·다섯 줄을 쓰고(거절 안내는 이 칸 버튼에 맞춘 settings.reshow_note — QA-1 L3), 글머리표 '•'는 화면 읽기가 읽지 않는다(ConsentScreen 과 같은 방식)
 test('#298 L4·L5: 다시 보여 주기 칸 — 동의 제목·다섯 줄·거절 안내, 점은 읽지 않음', async () => {
   const {copy} = require('../src/copy/copy');
   await home({consented: false});
@@ -150,7 +150,11 @@ test('#298 L4·L5: 다시 보여 주기 칸 — 동의 제목·다섯 줄·거�
   const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
   const {within} = require('@testing-library/react-native');
   expect(within(panel).getByText(copy.consent.title)).toBeTruthy();
-  expect(within(panel).getByText(copy.consent.decline_note)).toBeTruthy();
+  // #298 QA-1 L3: 이 칸의 버튼은 좋아요·닫기 → 거절 안내도 '닫기'를 말하는 설정 전용 키. 없는 버튼('싫어요')을 말하는 동의 화면 줄은 없다
+  expect(within(panel).getByText(copy.settings.reshow_note)).toBeTruthy();
+  expect(within(panel).queryByText(copy.consent.decline_note)).toBeNull();
+  expect(within(panel).getByText(copy.settings.keep)).toBeTruthy();
+  expect(within(panel).queryByText(copy.consent.decline)).toBeNull();
   const lines = within(panel).getAllByTestId('resume-consent-point');
   expect(lines.map((l: {props: {accessibilityLabel?: string}}) => l.props.accessibilityLabel)).toEqual(copy.consent.body);
   const dots = within(panel).getAllByTestId('resume-consent-dot', {includeHiddenElements: true});

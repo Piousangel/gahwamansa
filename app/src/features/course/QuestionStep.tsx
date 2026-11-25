@@ -107,7 +107,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
   // 큰 글자(150% 이상): 단계 제목을 'n / 전체'만(P4와 같은 StepHeader compact) — 200%에서 '둘 중 고르기 · 2 / 3'의 '3'만 다음 줄로 꺾였다(#257). 읽기는 그대로
   const header = <StepHeader name={copy.course.step.question} n={n} review={review} five={five} compact={large} />;
   const title = q.prompt ?? appCopy.question_title;
-  // 고정 머리줄(DECISIONS 11-25 R-2): ③은 '요즘 마음'을 묻는다는 것을 질문 위에서 먼저 말한다(콘텐츠 행은 그대로)
+  // 고정 머리줄(DECISIONS 11-25 R-2): ③은 '요즘'을 묻는다는 것을 질문 위에서 먼저 말한다(콘텐츠 행은 그대로)
   const headline = <Text key="headline" testID="p5-headline" role="label">{copy.question.headline}</Text>;
 
   if (review) {
@@ -127,7 +127,7 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     );
   }
 
-  // 시안 P5(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제). 본문(간격 20): 단계 제목 한 줄 → 머리줄 '요즘 마음 가는 쪽을 골라요' → 질문(제목) → '정답은 없어요. 하나를…'(늘 한 줄,
+  // 시안 P5(ds4b): 위 BackLink '오늘 코스로'(U-8: 하단 링크 삭제). 본문(간격 20): 단계 제목 한 줄 → 머리줄 '요즘 생각대로 한쪽을 골라요' → 질문(제목) → '정답은 없어요. 하나를…'(늘 한 줄,
   // 가장 중요한 안내) → 선택지 2개(고른 것 테두리 5 + 면 + ✓ + '골랐어요') → 읽어 주기(R16: 화면 읽기 켜짐이면 없음). Dock '정했어요'.
   // R-15: 접힘에 걸치는 요소는 통째로 아래로(FoldStack)
   return (

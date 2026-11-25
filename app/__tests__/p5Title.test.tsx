@@ -43,11 +43,12 @@ test('질문 문장이 없는 날은 공통 문장이 제목(한 번만)', async
   expect(screen.getAllByText('마음에 드는 쪽을 골라 주세요')).toHaveLength(1);
 });
 
-test('머리줄과 안내에 「마음 가는 쪽」이 두 번 나오지 않는다(머리줄에만)', async () => {
+test('머리줄(요즘 생각대로)과 안내(정답은 없어요)가 따로, 판단어 「마음 가는 쪽」은 없다(기획 v2.1 Q1)', async () => {
   await toQuestion();
-  expect(screen.getByTestId('p5-headline').props.children).toBe('요즘 마음 가는 쪽을 골라요');
+  expect(screen.getByTestId('p5-headline').props.children).toBe('요즘 생각대로 한쪽을 골라요');
   expect(screen.getByTestId('p5-hint').props.children).toBe('정답은 없어요. 하나를 눌러 주세요');
-  expect(screen.getAllByText(/마음 가는 쪽/)).toHaveLength(1);
+  expect(screen.queryByText(/마음 가는 쪽/)).toBeNull();
+  expect(screen.getAllByText(/요즘 생각대로/)).toHaveLength(1);
 });
 
 test('200%: 단계 표시 2 / 3 만(P4와 같은 짧은 표시, 읽기는 그대로)', async () => {
