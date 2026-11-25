@@ -107,6 +107,9 @@ test('어르신 두 분: 분마다 호칭 머리 + 각자 목록(v5 인 분은 �
   const groups = within(list).getAllByTestId('month-parent');
   expect(groups).toHaveLength(2);
   expect(within(groups[0]).getByText('엄마')).toBeTruthy();
+  // #298 QA-1 L2: 분마다 호칭 머리는 머리글(화면 읽기에서 머리글로 건너뛰기)
+  expect(within(groups[0]).getByText('엄마').props.accessibilityRole).toBe('header');
+  expect(within(groups[1]).getByText('아빠').props.accessibilityRole).toBe('header');
   expect(within(groups[0]).getAllByTestId('month-row')[0].props.accessibilityLabel).toMatch(/^엄마, /); // 두 분이면 읽기에도 누구 답인지
   expect(within(groups[1]).getByText('아빠')).toBeTruthy();
   expect(within(groups[1]).getAllByTestId('month-row')).toHaveLength(1);

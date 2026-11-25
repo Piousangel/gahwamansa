@@ -31,7 +31,8 @@ export function MonthList({parents, testID = 'month-list'}: {parents: ChildParen
       {shown.map(p => (
         <View key={`month-${p.parentId}`} testID="month-parent" style={styles.group}>
           {many ? (
-            <Text role="sub" tone="muted">
+            // #298 QA-1 L2: 분마다 머리는 머리글 — 화면 읽기가 분 단위로 건너뛸 수 있게
+            <Text role="sub" tone="muted" accessibilityRole="header">
               {p.title}
             </Text>
           ) : null}
