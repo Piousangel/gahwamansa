@@ -18,6 +18,11 @@ insert into auth.users (id, aud, role, is_anonymous) values
 insert into public.families (id, created_by, parent_title) values
   ('70680000-0000-0000-0000-0000000000f1', '70680000-0000-0000-0000-0000000000c1', '엄마'),
   ('70680000-0000-0000-0000-0000000000f2', '70680000-0000-0000-0000-0000000000c2', '아빠');
+-- 0069부터 게이트는 허용 목록(consent_versions) 안의 값만 본다. 아래 'v10' 어르신은 "v10이 목록에 들어온 뒤"를 가정한다
+-- (정수 비교 고정이 이 파일의 목적 — 목록 밖 값(v7·v999)은 consent_version_allowlist.test.sql). 트랜잭션 끝에 rollback으로 원래 목록.
+create or replace function public.consent_versions() returns text[]
+language sql immutable set search_path = ''
+as $$ select array['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v10'] $$;
 insert into public.profiles (id, user_id, family_id, role, consented_at, consent_version, created_at) values
   ('70680000-0000-0000-0000-00000000c001', '70680000-0000-0000-0000-0000000000c1', '70680000-0000-0000-0000-0000000000f1', 'child', null, null, '2026-11-01 00:00+00'),
   ('70680000-0000-0000-0000-00000000a006', '70680000-0000-0000-0000-0000000000a6', '70680000-0000-0000-0000-0000000000f1', 'parent', now(), 'v6', '2026-11-02 00:00+00'),   -- v6

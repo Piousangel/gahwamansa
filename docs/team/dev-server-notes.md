@@ -152,6 +152,8 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ### give_consent(p_version text) / withdraw_consent()  (0019 변경, 0035 기본값 제거)
 - **0035부터 `p_version` 필수**(인자 없이 부르면 함수 없음 오류 42883, null은 `invalid_version`). 앱은 이미 버전을 보낸다.
 - `v2` 그대로 보내면 된다(재동의 게이트 없음). 버전이 바뀌면 동의 시각 갱신 + 이력. 같은 버전 반복은 아무것도 안 함.
+- **0069부터 허용 목록만**: `consent_versions()`(v1~v6) 밖의 버전은 `invalid_version`(형식이 맞는 v999·v7도). 게이트 `parent_month_scope`도 목록 안의 v6 이상만 true(이미 저장된 목록 밖 값은 지우지 않고 미통과).
+  **새 문구 버전(v7) 순서: 목록에 더하는 마이그레이션 먼저 → 앱 CONSENT_VERSION 올리기.** `supabase/ops/consent-version-sync.test.mjs`(CI)가 앱 값이 목록 밖이면 실패한다.
 - 이력 `consent_events(action given|withdrawn, version, at)`은 앱이 읽지 못한다(증빙, 서비스 역할만). 계정 지우기 때 함께 지워짐.
 - **정책 결정 필요(리뷰 L4)**: 어르신 본인 삭제·마지막 자녀의 가족 삭제 때 동의 증빙도 cascade로 지워진다. "모두 지워져요" 약속과는 맞지만 증빙 보관 목적과 충돌한다. 남길지(가명화해 일정 기간 보관) 정책·법무가 정해 DECISIONS에 기록할 것. 지금 구현은 함께 삭제. 파기 배치(0023)는 동의 이력을 건드리지 않는다.
 
@@ -501,6 +503,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0064 | 초대 번호 잠금 순서: redeem_invite_code·issue_invite_code가 가족 행 KEY SHARE를 먼저(#271 QA-1 L-a) | PR(server/invite-lock-order) | 미반영(0062·0063과 함께 — 데이터 변경 없음) |
 | 0065 | 챙겨 드릴 거리 문장 열 care_a·care_b(1~17자·금지어 검사), 자녀 응답 care 키(스위치 care_lines_enabled 뒤, 기본 꺼짐) | PR(server/content-axes) | 미반영(오너 승인 — 콘텐츠 재시드와 한 번에, PR '오너 승인 필요') |
 | 0068 | 부모님 동의 버전 게이트(parent_month_scope, v6 이상) — care에 더함 + child_summary parents[].month(최근 한 달 고르신 것) | PR(server/consent-gate-month-list) | 미반영(0065 뒤면 언제 반영해도 무해 — v6 동의자 0명이라 응답 변화 0) |
+| 0069 | 동의 문구 허용 버전 목록 consent_versions()(v1~v6) — give_consent는 목록만, parent_month_scope는 목록 안 v6 이상만(대기열 66, #297 QA-1) | PR(server/consent-version-allowlist) | 미반영(0068 뒤. 데이터 변경 없음 — 반영 때 notice로 목록 밖 저장 값 개수 확인) |
 - **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
