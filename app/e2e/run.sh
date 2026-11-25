@@ -2,9 +2,17 @@
 # Maestro E2E 실행(에뮬레이터, fake API 디버그 빌드). 사용법·전제: app/e2e/README.md
 #   app/e2e/run.sh                 # flows/ 전부
 #   app/e2e/run.sh flows/f1-parent-connect-course.yaml
-# 환경변수: AVD(기본 gahwa_parent) · ANDROID_SERIAL(기기 고정, 예 emulator-5556) · METRO_PORT(기본 8081) · SKIP_INSTALL=1 · SKIP_BUILD=1
+#   app/e2e/run.sh --metro-port 8091 flows/f6-cheer-roundtrip.yaml   # 맥 8081 을 다른 Metro 가 쓰고 있을 때
+# 환경변수: AVD(기본 gahwa_parent) · ANDROID_SERIAL(기기 고정, 예 emulator-5556) · METRO_PORT(기본 8081, --metro-port 와 같음) · SKIP_INSTALL=1 · SKIP_BUILD=1
 # 두 실행을 동시에: 서로 다른 ANDROID_SERIAL·AVD·METRO_PORT 를 준다(README 2절).
 set -euo pipefail
+
+# --metro-port <n>: 맨 앞 인자로 받는다(나머지는 maestro 대상)
+if [ "${1:-}" = "--metro-port" ]; then
+  [ -n "${2:-}" ] || { echo "e2e: --metro-port 뒤에 포트 번호를 주세요" >&2; exit 1; }
+  METRO_PORT="$2"
+  shift 2
+fi
 
 E2E_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$(cd "$E2E_DIR/.." && pwd)"
@@ -65,12 +73,20 @@ until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1"
 adb logcat -G 16M >/dev/null 2>&1 || true
 
 # 3) 빌드·설치(stagingDebug = JS 는 Metro 에서 받음)
+# Metro 포트는 빌드 때 APK 에 넣는다(-PreactNativeDevServerPort, RN gradle 플러그인 → 리소스 react_native_dev_server_port).
+# 에뮬레이터의 앱은 adb reverse 가 아니라 10.0.2.2:<포트>(맥)로 붙는다. 포트를 넣지 않으면 맥 8081 의 다른 Metro 에 붙어 404 가 난다(#272).
+# 앱 코드 기본값(8081)은 그대로다 — e2e 빌드만 바뀐다. clearState 로도 지워지지 않는다(개발 메뉴 debug_http_host 와 다름).
+PORT_MARK="$APK.metro-port"
 if [ "${SKIP_INSTALL:-0}" != "1" ]; then
   if [ "${SKIP_BUILD:-0}" != "1" ] || [ ! -f "$APK" ]; then
     # 기기 ABI 하나만 빌드(전 ABI 빌드보다 훨씬 빠름)
     ABI="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
-    (cd "$APP_DIR/android" && ./gradlew assembleStagingDebug --console=plain -q -PreactNativeArchitectures="$ABI")
+    (cd "$APP_DIR/android" && ./gradlew assembleStagingDebug --console=plain -q -PreactNativeArchitectures="$ABI" -PreactNativeDevServerPort="$METRO_PORT")
+    echo "$METRO_PORT" >"$PORT_MARK"
   fi
+  # SKIP_BUILD 로 옛 APK 를 쓸 때 포트가 다르면 앱이 엉뚱한 Metro 에 붙는다 → 멈춘다(표시가 없으면 8081 로 빌드된 것)
+  BUILT_PORT="$(cat "$PORT_MARK" 2>/dev/null || echo 8081)"
+  [ "$BUILT_PORT" = "$METRO_PORT" ] || fail "APK 는 Metro 포트 $BUILT_PORT 로 빌드됐어요(지금 $METRO_PORT). SKIP_BUILD 없이 다시 빌드하세요."
   adb install -r "$APK" >/dev/null
 fi
 
@@ -78,7 +94,10 @@ fi
 METRO_PID=""
 HIDE_CHANGED=0
 PREV_HIDE_DIALOGS=""
-cleanup() { if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi; }
+cleanup() {
+  adb reverse --remove "tcp:$METRO_PORT" >/dev/null 2>&1 || true
+  if [ -n "$METRO_PID" ]; then pkill -P "$METRO_PID" 2>/dev/null || true; kill "$METRO_PID" 2>/dev/null || true; fi
+}
 restore_dialogs() {
   [ "$HIDE_CHANGED" = "1" ] || return 0
   if [ "$PREV_HIDE_DIALOGS" = "null" ]; then
@@ -89,8 +108,8 @@ restore_dialogs() {
 }
 trap 'restore_dialogs; cleanup' EXIT
 
-# Metro: 기기의 localhost:8081 → 맥의 METRO_PORT. 이미 떠 있으면 그대로 쓴다
-adb reverse tcp:8081 "tcp:$METRO_PORT" >/dev/null
+# Metro: 에뮬레이터는 10.0.2.2:$METRO_PORT 로 바로 붙는다. 실기기(USB)는 localhost:$METRO_PORT 라 같은 포트로 reverse. 이미 떠 있으면 그대로 쓴다
+adb reverse "tcp:$METRO_PORT" "tcp:$METRO_PORT" >/dev/null
 if ! curl -fs "http://localhost:$METRO_PORT/status" | grep -q running; then
   echo "e2e: Metro 시작(port $METRO_PORT)"
   (cd "$APP_DIR" && nohup npx react-native start --port "$METRO_PORT" >"$E2E_DIR/out-metro.log" 2>&1) &

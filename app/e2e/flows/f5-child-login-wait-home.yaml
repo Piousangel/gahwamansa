@@ -19,6 +19,13 @@ tags:
       - tapOn: '복사하기'
       # Android 13+ 는 시스템이 '복사됨'을 띄우므로 앱 토스트를 생략할 수 있다(AC-08) → 단언 없이 바로 캡처
       - takeScreenshot: f5-c3-toast
+      # 복사가 내는 개발 경고 알림(LogBox)이 뜨면 닫는다(뒤 '앱 정보' 탭을 덮음, common/dismiss-logbox.yaml)
+      - extendedWaitUntil:
+          visible: 'Open debugger to view warnings.*'
+          timeout: 5000
+          optional: true
+      - runFlow:
+          file: ../common/dismiss-logbox.yaml
 - runFlow:
     file: ../common/child-linked-home.yaml
     env:
