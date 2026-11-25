@@ -10,6 +10,7 @@ import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
 import {setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {press, pressCourseNext} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
+import {renderParentScreen} from '../testUtils/parentScreen';
 
 // 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
 setupWarmAppRoot();
@@ -98,8 +99,7 @@ test('P7 완료 1회 권유(첫날 다음부터, 출처 줄 포함) → 들어 �
 
 test('P13 "배경 음악" 행: 기본 꺼짐, 누르면 켜짐', async () => {
   setBgmAssetForTest('bgm_test');
-  await home();
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, consented: true})}); // 설정만(대기열 71)
   const row = await waitFor(() => screen.getByRole('switch', {name: '배경 음악'}));
   await waitFor(() => expect(screen.getByRole('switch', {name: '배경 음악'}).props.accessibilityState.checked).toBe(false));
   expect(row.props.accessibilityHint).toBe('오늘 코스 화면과 마친 화면에서만 나와요');

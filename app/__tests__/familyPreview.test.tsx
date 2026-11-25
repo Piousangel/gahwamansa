@@ -5,6 +5,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi, FakeOptions} from '../src/features/fakeApi';
 import {stackScreenOptions, backGestureOptions} from '../src/navigation/stackOptions';
 import {press} from '../testUtils/flow';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // DV-1(2026-11-25): 파일의 첫 테스트가 콜드 스타트(첫 변환·로드)를 혼자 떠안아 부하 때 'Unable to find an element with testID: date-line'
@@ -21,19 +22,16 @@ const HISTORY = [
 ];
 const DATA = {latest: LATEST, history: HISTORY};
 
+// 설정(P13)만 바로 그리고 미리보기로(대기열 71, 진짜 어르신 스택 — 홈 → 설정 이동은 검사 대상 아님)
 async function openPreview(opts: FakeOptions) {
-  render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', ...opts})} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, parentTitle: '엄마', ...opts})});
   await press('가족에게 이렇게 보여요');
   await waitFor(() => expect(screen.queryByTestId('preview-loading')).toBeNull());
   return screen.getByTestId('preview-device');
 }
 
 test('설정: 답 보여 주기 행 아래 "가족에게 이렇게 보여요" › 행', async () => {
-  render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, consented: true})});
   const ids = screen.UNSAFE_root.findAll(n => ['settings-row-share', 'settings-row-preview', 'settings-row-family'].includes(n.props?.testID)).map(n => n.props.testID);
   expect([...new Set(ids)]).toEqual(['settings-row-share', 'settings-row-preview', 'settings-row-family']);
 });
@@ -84,9 +82,7 @@ test('스와이프 뒤로 자리(iOS 감사 2.4): 지금은 두 플랫폼 모두
 });
 
 test('리뷰 M2: 불러오기 실패(오프라인)면 빈 상태·기본 호칭을 보이지 않고 오류 줄 + 다시 하기 → 다시 불러오면 정상', async () => {
-  render(<AppRoot api={createFakeApi({linked: true, parentTitle: '엄마', consented: true, ...DATA, failParentHistory: 1})} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, parentTitle: '엄마', consented: true, ...DATA, failParentHistory: 1})});
   await press('가족에게 이렇게 보여요');
   const failed = await waitFor(() => screen.getByTestId('preview-failed'));
   const device = screen.getByTestId('preview-device');

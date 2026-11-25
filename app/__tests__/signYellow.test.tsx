@@ -7,7 +7,8 @@ import {AudienceProvider, Sign} from '../src/ui/ds';
 import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
-import {press, pressCourseNext} from '../testUtils/flow';
+import {pressCourseNext} from '../testUtils/flow';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {signViolations} from '../testUtils/designRules';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
@@ -110,9 +111,7 @@ test('② 렌더: 첫 화면·코스 홈·P4·설정·자녀 홈에 Sign 밖 노
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   look('P4');
   screen.unmount();
-  render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, consented: true})}); // 설정만 바로(대기열 71 — 홈 → 설정 이동은 검사 대상 아님)
   await waitFor(() => screen.getByText('설정'));
   look('설정');
   screen.unmount();

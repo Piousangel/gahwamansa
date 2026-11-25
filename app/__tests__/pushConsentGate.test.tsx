@@ -13,7 +13,7 @@ import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushDevice, setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {createRealApi} from '../src/features/realApi';
-import {press} from '../testUtils/flow';
+import {renderChildScreen} from '../testUtils/childScreen';
 
 const RN = require('react-native');
 const TOKEN_A = 'fcm_token_AAAAAAAAAAAAAAAAAAAAAAAAAAAA';
@@ -238,9 +238,7 @@ describe('리드 결정 11-25: 동의가 없어지면 SDK 자동 초기화도 �
     setTokenSourceForTest(fcm.source);
     const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true}); // 받는 중(기본 켬)
     const reg = jest.spyOn(api, 'registerPushToken');
-    render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await renderChildScreen({api}); // C7 만 바로(대기열 71)
     await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
     fcm.mod.setAutoInitEnabled.mockClear();
     fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));

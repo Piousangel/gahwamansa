@@ -12,6 +12,7 @@ import {createStampFeedback, setStampFeedbackForTest} from '../src/features/cour
 import {color} from '../src/ui/tokens';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
+import {renderLinkedSettings, renderParentScreen} from '../testUtils/parentScreen';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
 beforeEach(() => setWeekStripForO6(true));
@@ -203,8 +204,7 @@ describe('U-8(사용자 결정 11-19): P4·P5 하단 "오늘 코스로" 링크 �
 
 describe('U8 설정 행 목록(시안 P13_more v2)', () => {
   test('구역 제목 가족·알림과 소리·앱, 안심 줄, 행 순서, 위험 행은 맨 아래', async () => {
-    await toHomeConsented(createFakeApi({linked: true, consented: true}));
-    await press('설정');
+    await renderLinkedSettings(createFakeApi({linked: true, consented: true})); // 설정만(대기열 71)
     await waitFor(() => screen.getByText('고르신 답과 날짜가 한 달 동안 모여 가족에게 보여요. 답에 따라 챙겨 드릴 거리 한 줄이 함께 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요'));
     for (const h of ['가족', '알림과 소리', '앱']) {
       expect(screen.getByRole('header', {name: h})).toBeTruthy();
@@ -220,8 +220,7 @@ describe('U8 설정 행 목록(시안 P13_more v2)', () => {
     }
   });
   test('보여 주기 행을 누르면 확인(그만 보여 주기)이 열린다', async () => {
-    await toHomeConsented(createFakeApi({linked: true, consented: true}));
-    await press('설정');
+    await renderLinkedSettings(createFakeApi({linked: true, consented: true})); // 설정만(대기열 71)
     const verb = screen.getByTestId('share-verb');
     expect(verb.props.accessibilityState?.expanded).toBe(false);
     await press('그만 보여 주기'); // W0 ②: 오른쪽 동사 버튼 → 행 아래 확인 펼침
@@ -256,9 +255,7 @@ describe('리뷰 낮음 반영', () => {
     expect(within(btn).getByTestId('icon-photo', {includeHiddenElements: true})).toBeTruthy();
   });
   test("설정: 보여 주기 행은 '›' 없음(같은 화면 확인), 보여 주지 않는 중이면 행 오른쪽 '다시 보여 주기'", async () => {
-    render(<AppRoot api={createFakeApi({linked: true, consented: false})} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('date-line'));
-    await press('설정');
+    await renderParentScreen({api: createFakeApi({linked: true, consented: false})}); // 설정만(대기열 71)
     const row = await waitFor(() => screen.getByTestId('settings-row-share'));
     expect(within(row).queryByTestId('icon-chevron-right', {includeHiddenElements: true})).toBeNull();
     await press('다시 보여 주기');

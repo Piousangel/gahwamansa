@@ -10,7 +10,8 @@ import {finishFlight} from '../src/app/splash';
 import {resetFirstScreenMotion} from '../src/features/link/RoleSelect';
 import {relationOrder} from '../src/features/child/RelationScreen';
 import {BIG_TEXT_SCALE, isBigText} from '../src/ui/bigText';
-import {press, typeCode} from '../testUtils/flow';
+import {typeCode} from '../testUtils/flow';
+import {renderChildScreen} from '../testUtils/childScreen';
 
 let mockFontScale = 1;
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -164,9 +165,7 @@ describe('M3 C1: 1열(1.5 이상)이면 기본값 부모님을 맨 위로, 1.6 �
 describe('M4 C7: 묶음(제목 + 카드) 단위 접힘', () => {
   test('200%: 첫 화면 끝이 계정 묶음(제목 + 가족 연결 카드)을 가르면 묶음째 접힘 아래로, 첫 묶음은 그대로', async () => {
     mockFontScale = 2;
-    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await renderChildScreen({api: createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})}); // C7 만(대기열 71)
     await waitFor(() => screen.getByTestId('c7-item-account'));
     const ids = screen.UNSAFE_root.findAll(n => typeof n.type === 'string' && /^c7-item-/.test(n.props?.testID ?? '')).map(n => n.props.testID as string);
     // 큰 글자: 계정 묶음(접힘 창보다 길다)을 '가족 연결' 카드 묶음과 나머지 카드로 나눠 각각 접힘 단위
@@ -190,9 +189,7 @@ describe('M4 C7: 묶음(제목 + 카드) 단위 접힘', () => {
     Object.defineProperty(RN.Platform, 'OS', {value: 'android', configurable: true, writable: true});
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
     try {
-      render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})} role="child" />);
-      await waitFor(() => screen.getByRole('button', {name: '설정'}));
-      await press('설정');
+      await renderChildScreen({api: createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})}); // C7 만(대기열 71)
       await waitFor(() => screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     } finally {
       Object.defineProperty(RN.Platform, 'OS', {value: prevOS, configurable: true, writable: true});
@@ -201,17 +198,13 @@ describe('M4 C7: 묶음(제목 + 카드) 단위 접힘', () => {
 });
 
 test('C7 100%: 계정 묶음은 예전처럼 한 카드(나누지 않음)', async () => {
-  render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '설정'}));
-  await press('설정');
+  await renderChildScreen({api: createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})}); // C7 만(대기열 71)
   await waitFor(() => screen.getByTestId('c7-item-account'));
   expect(screen.queryByTestId('c7-item-account-rest')).toBeNull();
 });
 
 test('C7 100%: 첫 화면 끝이 계정 묶음을 갈라도 밀지 않는다(통째로 밀면 첫 화면 절반이 빈다, 에뮬레이터 실측)', async () => {
-  render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '설정'}));
-  await press('설정');
+  await renderChildScreen({api: createFakeApi({consented: true, parentTitle: '엄마', childFamily: true, childLinked: true})}); // C7 만(대기열 71)
   await waitFor(() => screen.getByTestId('c7-item-account'));
   const ids = screen.UNSAFE_root.findAll(n => typeof n.type === 'string' && /^c7-item-/.test(n.props?.testID ?? '')).map(n => n.props.testID as string);
   const lay = (id: string, y: number, h: number) => fireEvent(screen.getByTestId(id), 'layout', {nativeEvent: {layout: {x: 0, y, width: 312, height: h}}});

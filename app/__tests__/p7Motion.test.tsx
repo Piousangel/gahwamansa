@@ -12,6 +12,7 @@ import {kstWeekdayIndex} from '../src/features/course/stamps';
 import {press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 import {setupWarmAppRoot} from '../testUtils/warm';
+import {renderLinkedSettings} from '../testUtils/parentScreen';
 
 // RN jest 기본 화면 값은 글자 2배라 P7 이 '본문 먼저'(1.6 이상, #263) 분기로 들어간다. 이 파일은 시안 타임라인(마운트 먼저)을 보므로 100%로 고정한다.
 // 본문 먼저일 때의 도장 때는 p7BodyFirst200.test
@@ -211,8 +212,7 @@ describe('P3 단계 체크 모션', () => {
 
 describe('설정 도장 소리 토글(P13)', () => {
   test('"도장 소리" 스위치(기본 켜짐), 행 전체를 눌러도 바뀌고 저장, 위험 구역(모두 지우기)보다 위', async () => {
-    await toHomeConsented(createFakeApi({linked: true, consented: true}));
-    await press('설정');
+    await renderLinkedSettings(createFakeApi({linked: true, consented: true})); // 설정만(대기열 71)
     const row = await waitFor(() => screen.getByRole('switch', {name: '도장 소리'}));
     await waitFor(() => expect(screen.getByRole('switch', {name: '도장 소리'}).props.accessibilityState?.checked).toBe(true));
     expect(row.props.accessibilityHint).toBe('도장을 찍을 때 짧은 소리');
@@ -228,8 +228,7 @@ describe('설정 도장 소리 토글(P13)', () => {
   });
   test('저장값을 읽기 전에는 스위치를 그리지 않는다(켜짐→꺼짐 깜빡임 없음)', async () => {
     await prefs.setSfxEnabled(false);
-    await toHomeConsented(createFakeApi({linked: true, consented: true}));
-    await press('설정');
+    await renderLinkedSettings(createFakeApi({linked: true, consented: true})); // 설정만(대기열 71)
     await waitFor(() => expect(screen.getByRole('switch', {name: '도장 소리'}).props.accessibilityState?.checked).toBe(false));
   });
 });
