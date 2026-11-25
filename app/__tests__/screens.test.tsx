@@ -72,7 +72,7 @@ test('질문 화면(시안 P5 ds4b): 서버 prompt 가 제목, 공통 지시문 
   await pressCourseNext();
   await waitFor(() => screen.getByText('나들이를 간다면요?'));
   expect(screen.queryByText('마음에 드는 쪽을 골라 주세요')).toBeNull();
-  expect(screen.getByText('정답은 없어요. 마음 가는 쪽을 눌러 주세요')).toBeTruthy();
+  expect(screen.getByText('정답은 없어요. 하나를 눌러 주세요')).toBeTruthy();
 });
 
 test('prompt 가 null 이면 공통 문장으로 대체한다', async () => {
