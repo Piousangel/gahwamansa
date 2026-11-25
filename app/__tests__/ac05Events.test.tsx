@@ -12,7 +12,7 @@ import {memoryStore} from '../src/lib/kvStore';
 import {daysSinceYmd} from '../src/lib/childFormat';
 import {trackOnce} from '../src/features/track';
 import {EVENT_NAMES, EVENT_PROP_VALUES} from '../src/api/contract/events';
-import {enterCode, press, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {enterCode, press, pressCourseNext, pressWhenEnabled, toHomeConsented} from '../testUtils/flow';
 import type {Api} from '../src/features/types';
 import * as clipboard from '../src/ui/clipboard';
 import {setupWarmAppRoot} from '../testUtils/warm';
@@ -209,7 +209,7 @@ describe('자녀 퍼널', () => {
     expect(JSON.stringify(log.mock.calls)).not.toContain('봄');
     unmount();
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
     await act(async () => {});
     expect(callsOf(log, 'child_first_answer_viewed')).toHaveLength(1);
   });
@@ -218,7 +218,7 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({consented: true, parents: [{parentId: 'p1', title: '엄마', latest: null}]});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
     await act(async () => {});
     expect(events(log)).not.toContain('child_first_answer_viewed');
   });
@@ -240,8 +240,8 @@ describe('자녀 퍼널', () => {
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const log = jest.spyOn(api, 'logEvent');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
-    await press('응원 보내기');
+    await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
+    await pressWhenEnabled('응원 보내기');
     await press('늘 고마워요');
     await act(async () => {
       jest.advanceTimersByTime(4300); // 취소 가능 시간이 지나야 보낸다

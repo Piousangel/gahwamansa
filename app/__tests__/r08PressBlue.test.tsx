@@ -126,7 +126,7 @@ test('대표 화면(첫 화면·코스 홈·P4·P1·설정·자녀 홈): 파랑 
   look('설정');
   screen.unmount();
   render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마'})} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '응원 보내기'}));
+  await waitFor(() => expect(screen.getByRole('button', {name: '응원 보내기'})).toBeEnabled()); // 불러오는 중의 꺼진 버튼이 아니라 켜진 버튼(대기열 46)
   look('자녀 홈');
   expect(seen).toEqual({'첫 화면': [], P1: [], '코스 홈': [], P4: [], 설정: [], '자녀 홈': []});
 });
