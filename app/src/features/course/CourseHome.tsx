@@ -170,7 +170,9 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
     }
   };
   // 다 마친 뒤 넘긴 ④·⑤는 다시 할 수 있게 연다(DECISIONS 5단계 화면 — 넘김도 '했어요'라 도장은 그대로). 넘긴 목록은 서버 skipped_steps(앱을 다시 켜도 남는다)
-  const reopen = (step: StepName) => five && all && (step === 'hangul' || step === 'pass_on') && skippedOf(content).includes(step);
+  // 앱이 스스로 넘긴 단계(⑤ 서버 스위치 꺼짐 — 할 수도 없다)는 열지 않는다(리드 결정 #254 QA-1 L3: 행은 '했어요'로 두고 누르면 보기 전용). ②는 원래 다시 하기 대상이 아니다
+  const reopen = (step: StepName) =>
+    five && all && (step === 'hangul' || (step === 'pass_on' && !!content.pass_on?.enabled)) && skippedOf(content).includes(step);
   const dock: DockProps | undefined = current
     ? {
         primary: {label: c.step[current.step], testID: 'course-next', buttonRef: bind('dock'), onPress: () => go(current.route, 'dock')},

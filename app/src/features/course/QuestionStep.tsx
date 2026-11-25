@@ -16,7 +16,7 @@ import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {stepA11y} from './StepHeader';
 import {isServerError} from '../types';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
-import {skippedOf, stepNumber} from './fiveSteps';
+import {stepNumber} from './fiveSteps';
 import {SkipInline} from './FiveStepParts';
 
 // review: 다 마친 뒤 보기 전용(동결 P5_P6_review). 고른 답은 바꿀 수 없고 기록 호출 0, 하단 '돌아가기'.
@@ -53,19 +53,16 @@ export function QuestionStep({navigation, route}: NativeStackScreenProps<ParentP
     setSaving(true);
     setError(null);
     try {
-      // 5단계: 넘긴 ③을 다시 하면 기록(p_skipped:false)을 먼저 — 서버는 넘긴 단계 답을 예외 'skipped' 로 거부한다(0061 계약 규칙)
+      // 5단계: 저장 먼저(②·⑤ saveAndFinish 와 같은 순서, 리드 결정 #254 L3). 넘긴 ③을 다시 하면 서버가 예외 'skipped' →
+      // 기록(p_skipped:false) → 재저장 1회
       let finished = false;
-      if (five && skippedOf(content).includes('question')) {
-        if (!(await finish('question'))) return;
-        finished = true;
-      }
       // 동의한 경우에만 답변 저장. 거부 시 보기만 하고 저장 함수는 호출하지 않는다.
       if (consented) { // 미연결 열람은 consented=false 로 온다
         try {
           try {
             await api.saveAnswer({questionId: q.id, choice});
           } catch (e) {
-            // 넘긴 줄 몰랐는데 skipped 가 오면 기록 먼저 → 한 번 더(5단계만)
+            // 넘긴 ③: 기록 → 한 번 더(5단계만)
             if (!(five && !finished && isServerError(e, 'skipped'))) throw e;
             if (!(await finish('question'))) return;
             finished = true;

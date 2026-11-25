@@ -10,7 +10,7 @@ import type {PassOnKey} from '../../api/contract/fiveSteps';
 import {StepHeader, stepA11y} from './StepHeader';
 import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
-import {allStepsDone, passOnCards, questionLabelOf, recallWordOf, skippedOf, stepNumber} from './fiveSteps';
+import {allStepsDone, passOnCards, questionLabelOf, recallWordOf, stepNumber} from './fiveSteps';
 import {FIVE_CARD_MIN_H, ReviewCards, SkipInline, saveAndFinish} from './FiveStepParts';
 
 const p = copy.pass_on;
@@ -71,7 +71,6 @@ export function PassOnStep({navigation, route}: {navigation: Nav; route: {params
         return;
       }
       const out = await saveAndFinish({
-        redo: skippedOf(content).includes('pass_on'),
         save: consented && content.linked ? () => api.savePassOn(content.day_index, key) : null,
         finish: () => finish('pass_on'),
       });

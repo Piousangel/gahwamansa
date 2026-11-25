@@ -35,42 +35,35 @@ export function SkipInline({onPress, disabled}: {onPress: () => void; disabled?:
 
 type SaveResult = {ok: true} | {ok: false; reason: string};
 /**
- * ②·⑤(·③) 확정 = 저장(동의일 때) + 단계 기록. 계약 규칙(api/contract/fiveSteps.ts):
- * - 넘긴 단계를 다시 하면(redo, 서버 skipped_steps) 기록(p_skipped:false)을 먼저 보내고 저장한다 — 서버는 넘긴 단계 저장을 skipped 로 거부한다.
- *   넘긴 줄 몰랐는데 skipped 가 오면 그때 기록 먼저 → 한 번 더 저장.
- * - 저장 거절(consent_required·disabled·no_content·invalid_option·missing_value)은 저장 없이 진행(경고만), stale_day 는 'stale'(호출부가 다시 불러 홈으로).
+ * ②·⑤ 확정 = 저장(동의일 때) + 단계 기록. 순서는 **저장 먼저**(리드 결정 #254 QA-2 L3 — 자정을 넘긴 뒤 누르면 기록이 새 날에 먼저 찍히지 않게):
+ * - 저장 ok(또는 저장 안 함) → 기록
+ * - skipped(넘긴 단계를 다시 함 — 서버는 넘긴 단계 저장을 거부) → 기록(p_skipped:false) → 재저장 1회 → 끝(기록은 이미 함)
+ * - stale_day(지난 날 화면) → 기록 없이 'stale'(호출부가 다시 불러 홈으로 — 홈이 새 날로 바뀌는 것이 안내)
+ * - 그 밖 거절(consent_required·disabled·no_content·invalid_option·missing_value)은 저장 없이 기록(경고만)
  * - 끊김 등 예외는 그대로 던진다(호출부가 오류 + 다시 하기). 기록 실패는 finish 가 오류를 띄우고 'fail'.
  */
-export async function saveAndFinish(a: {redo: boolean; save: (() => Promise<SaveResult>) | null; finish: () => Promise<boolean>}): Promise<{result: 'ok' | 'stale' | 'fail'; saved: boolean}> {
-  let finished = false;
-  if (a.redo) {
+export async function saveAndFinish(a: {save: (() => Promise<SaveResult>) | null; finish: () => Promise<boolean>}): Promise<{result: 'ok' | 'stale' | 'fail'; saved: boolean}> {
+  if (!a.save) {
+    return {result: (await a.finish()) ? 'ok' : 'fail', saved: false};
+  }
+  let r = await a.save();
+  if (!r.ok && r.reason === 'stale_day') {
+    return {result: 'stale', saved: false};
+  }
+  if (!r.ok && r.reason === 'skipped') {
     if (!(await a.finish())) {
       return {result: 'fail', saved: false};
     }
-    finished = true;
-  }
-  let saved = false;
-  if (a.save) {
-    let r = await a.save();
-    if (!r.ok && r.reason === 'skipped' && !finished) {
-      if (!(await a.finish())) {
-        return {result: 'fail', saved: false};
-      }
-      finished = true;
-      r = await a.save();
-    }
-    if (!r.ok && r.reason === 'stale_day') {
-      return {result: 'stale', saved: false};
-    }
+    r = await a.save();
     if (!r.ok) {
       console.warn(`[5단계] 저장하지 않음: ${r.reason}`);
     }
-    saved = r.ok;
+    return {result: r.ok || r.reason !== 'stale_day' ? 'ok' : 'stale', saved: r.ok};
   }
-  if (!finished && !(await a.finish())) {
-    return {result: 'fail', saved};
+  if (!r.ok) {
+    console.warn(`[5단계] 저장하지 않음: ${r.reason}`);
   }
-  return {result: 'ok', saved};
+  return {result: (await a.finish()) ? 'ok' : 'fail', saved: r.ok};
 }
 
 /** 보기 전용 카드(다 마친 뒤 다시 보기): 고른 것만 '고른 답' + ✓(P5 보기 전용과 같은 모양). 누르지 않는다 */

@@ -72,7 +72,7 @@ test('③ ⑤ 서버 스위치가 꺼진 날: 카드를 골라 [건넬게요]여
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
 });
 
-test('④ 넘긴 ③을 다시 하면 record_session_step(p_skipped:false) 먼저, 그다음 save_answer(서버는 넘긴 단계 답을 skipped 로 거부)', async () => {
+test('④ 넘긴 ③을 다시 하면 save_answer 먼저 → 예외 skipped → 기록(p_skipped:false) → 재저장 1회(성공)', async () => {
   const s = await home({completedSteps: ['photo', 'recall', 'question'], skippedSteps: ['question']});
   await act(async () => {
     navRef.navigate('QuestionStep');
@@ -82,12 +82,15 @@ test('④ 넘긴 ③을 다시 하면 record_session_step(p_skipped:false) 먼�
   await press('정했어요');
   await backHome();
   expect(recArgs(s.rec)).toEqual([['question', false]]);
-  expect(s.answer).toHaveBeenCalledTimes(1);
-  await expect(s.answer.mock.results[0].value).resolves.toBeUndefined(); // 저장 성공(skipped 예외 없음)
-  expect(s.rec.mock.invocationCallOrder[0]).toBeLessThan(s.answer.mock.invocationCallOrder[0]);
+  expect(s.answer).toHaveBeenCalledTimes(2);
+  await expect(s.answer.mock.results[0].value).rejects.toMatchObject({reason: 'skipped'});
+  await expect(s.answer.mock.results[1].value).resolves.toBeUndefined();
+  const [a1, a2] = s.answer.mock.invocationCallOrder;
+  expect(a1).toBeLessThan(s.rec.mock.invocationCallOrder[0]);
+  expect(s.rec.mock.invocationCallOrder[0]).toBeLessThan(a2);
 });
 
-test('④ ③ 뒤 여기까지로 넘긴 ⑤를 홈에서 다시 하면 기록 먼저 → save_pass_on 성공, P7 은 다시 뜨지 않는다', async () => {
+test('④ ③ 뒤 여기까지로 넘긴 ⑤를 홈에서 다시 하면 저장 먼저 → skipped → 기록 → 재저장 성공, P7 은 다시 뜨지 않는다', async () => {
   const s = await home({completedSteps: ['photo', 'recall', 'question']});
   await press('오늘은 여기까지 할게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
@@ -101,10 +104,68 @@ test('④ ③ 뒤 여기까지로 넘긴 ⑤를 홈에서 다시 하면 기록 �
   await press('건넬게요');
   await backHome();
   expect(screen.queryByText('오늘 코스를 마쳤어요')).toBeNull();
-  const recPassOn = s.rec.mock.invocationCallOrder[s.rec.mock.calls.findIndex(c => c[0] === 'pass_on')];
   expect(recArgs(s.rec).slice(-1)).toEqual([['pass_on', false]]);
-  expect(recPassOn).toBeLessThan(s.passOn.mock.invocationCallOrder[0]);
-  expect(await s.passOn.mock.results[0].value).toEqual({ok: true});
+  expect(s.passOn).toHaveBeenCalledTimes(2);
+  expect(await s.passOn.mock.results[0].value).toEqual({ok: false, reason: 'skipped'});
+  expect(await s.passOn.mock.results[1].value).toEqual({ok: true});
+  const recPassOn = s.rec.mock.invocationCallOrder[s.rec.mock.calls.findIndex(c => c[0] === 'pass_on' && c[2]?.skipped === false)];
+  expect(s.passOn.mock.invocationCallOrder[0]).toBeLessThan(recPassOn);
+  expect(recPassOn).toBeLessThan(s.passOn.mock.invocationCallOrder[1]);
+});
+
+test('QA-2 L3: 자정을 넘겨 ⑤ 저장이 stale_day 면 record_session_step 호출 0 — 다시 불러 홈으로(새 날 ⑤가 먼저 찍히지 않게)', async () => {
+  const s = await home({completedSteps: ['photo', 'recall', 'question', 'hangul', 'pass_on'], skippedSteps: ['hangul', 'pass_on']});
+  s.passOn.mockResolvedValue({ok: false, reason: 'stale_day'});
+  const before = s.today.mock.calls.length;
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-pass_on'));
+  });
+  await waitFor(() => screen.getByTestId('pass-on-title'));
+  fireEvent.press(screen.getByText('오늘 사진이 좋아요'));
+  await press('건넬게요');
+  await backHome();
+  expect(s.passOn).toHaveBeenCalledTimes(1);
+  expect(s.rec).not.toHaveBeenCalled();
+  await waitFor(() => expect(s.today.mock.calls.length).toBeGreaterThan(before));
+});
+
+test('QA-2 L3: ② 저장이 stale_day 여도 record_session_step 호출 0', async () => {
+  const s = await home({completedSteps: ['photo']});
+  s.recall.mockResolvedValue({ok: false, reason: 'stale_day'});
+  await pressCourseNext();
+  await waitFor(() => screen.getByTestId('recall-question'));
+  fireEvent.press(screen.getByText('참새'));
+  await press('이걸로 할게요');
+  await backHome();
+  expect(s.rec).not.toHaveBeenCalled();
+});
+
+test('QA-2 L2: 앱을 다시 켠 뒤(서버 skipped_steps 에 ④·⑤) 다 마친 홈에서 넘긴 ④·⑤ 행은 그 단계를 다시 할 수 있게 연다', async () => {
+  await home({completedSteps: ['photo', 'recall', 'question', 'hangul', 'pass_on'], skippedSteps: ['hangul', 'pass_on']});
+  expect(screen.getByTestId('course-done-head')).toBeTruthy();
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-hangul'));
+  });
+  await waitFor(() => screen.getByLabelText('낱말 쓰는 칸')); // 보기 전용이 아니라 입력 칸
+  await act(async () => {
+    navRef.goBack();
+  });
+  await backHome();
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-pass_on'));
+  });
+  await waitFor(() => screen.getByTestId('pass-on-choice')); // 고를 수 있는 카드(보기 전용 아님)
+  expect(screen.getByRole('button', {name: '건넬게요'})).toBeTruthy();
+  // 넘기지 않은 ②는 보기 전용
+  await act(async () => {
+    navRef.goBack();
+  });
+  await backHome();
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-recall'));
+  });
+  await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
+  expect(screen.queryByRole('button', {name: '이걸로 할게요'})).toBeNull();
 });
 
 test('⑤ 옛 서버(five_steps_supported 없음): 스위치가 켜져 있어도 3단계 — 3행, 기록은 옛 2인자', async () => {
@@ -129,4 +190,33 @@ test('⑥ 여기까지가 stop_before_question(자정을 넘겨 새 날)이면 �
   expect(screen.queryByText(copy.errors.server.title)).toBeNull();
   expect(screen.queryByTestId('course-stop-error')).toBeNull();
   expect(within(screen.getByTestId('screen-dock')).getByText('낱말 쓰기')).toBeTruthy();
+});
+
+test('QA-1 L3(리드 결정): 앱이 스스로 넘긴 ⑤(서버 스위치 꺼짐)는 다 마친 홈에서 다시 하기로 열지 않는다 — 누르면 보기 전용', async () => {
+  await home({passOnEnabled: false, completedSteps: ['photo', 'recall', 'question', 'hangul', 'pass_on'], skippedSteps: ['pass_on']});
+  const row = screen.getByTestId('step-done-pass_on');
+  expect(row.props.accessibilityHint).toBe(copy.course.review_row_hint); // 다시 보기 힌트(다시 하기 아님)
+  await act(async () => {
+    fireEvent.press(row);
+  });
+  await waitFor(() => screen.getByRole('button', {name: '오늘 코스로'}));
+  expect(screen.queryByTestId('pass-on-choice')).toBeNull();
+  expect(screen.queryByRole('button', {name: '건넬게요'})).toBeNull();
+});
+
+test('QA-1 L1: course_completed 는 처음 완료될 때 한 번만 — 다 마친 뒤 넘긴 ④를 다시 해도(서버 completed=true) 다시 보내지 않는다', async () => {
+  const s = await home({completedSteps: ['photo', 'recall', 'question']});
+  const log = jest.spyOn(s.api, 'logEvent');
+  await press('오늘은 여기까지 할게요');
+  await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
+  await press('알겠어요');
+  await waitFor(() => screen.getByTestId('course-done-head'));
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('step-done-hangul'));
+  });
+  await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
+  await press('오늘은 넘어갈게요');
+  await backHome();
+  expect(await s.rec.mock.results[s.rec.mock.results.length - 1].value).toMatchObject({completed: true});
+  expect(log.mock.calls.filter(c => c[0] === 'course_completed')).toHaveLength(1);
 });

@@ -9,7 +9,7 @@ import {copy} from '../../copy/copy';
 import {StepHeader, stepA11y} from './StepHeader';
 import {StepErrorBanner, stepErrorDock, useErrorTop} from './StepError';
 import {errorMessage, useFinishStep, useStepStarted} from './useFinishStep';
-import {skippedOf, stepNumber} from './fiveSteps';
+import {stepNumber} from './fiveSteps';
 import {FIVE_CARD_MIN_H, PhotoThumbRow, ReviewCards, SkipInline, saveAndFinish} from './FiveStepParts';
 
 const r = copy.recall;
@@ -66,7 +66,6 @@ export function RecallStep({navigation, route}: {navigation: Nav; route: {params
       }
       setPicks({recall: picked});
       const out = await saveAndFinish({
-        redo: skippedOf(content).includes('recall'),
         save: consented && content.linked ? () => api.saveRecall(content.day_index, picked) : null,
         finish: () => finish('recall'),
       });
