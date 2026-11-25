@@ -1,5 +1,6 @@
 // 서버 0061 계약 규칙(api/contract/fiveSteps.ts 주석, 리드 #254 ③~⑥)을 화면 흐름으로 고정한다.
-// ③ ② 보기 없는 날도 그 단계를 p_skipped:true 로 기록. 4단계(기획 v2.1 Q7): ⑤ 화면은 없고 ④까지 마치면 앱이 pass_on 을 p_skipped:true 로 대신 기록 ④ 넘긴 단계를 다시 하면 기록(p_skipped:false) 먼저, 그다음 저장
+// ③ ② 보기 없는 날도 그 단계를 p_skipped:true 로 기록. 4단계(기획 v2.1 Q7·서버 0067): ⑤ 화면도 ⑤ 기록도 없다 — 이 파일의 모든 시험이 끝에서
+//   'pass_on 기록 호출 0'을 단언한다(#287 리뷰 L1: 어떤 경로에서도) ④ 넘긴 단계를 다시 하면 기록(p_skipped:false) 먼저, 그다음 저장
 // ⑤ 옛 서버(five_steps_supported 없음)면 스위치가 켜져 있어도 3단계 ⑥ 여기까지가 stop_before_question 이면 다시 불러 홈에서 이어 하기(막히지 않음)
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
@@ -28,9 +29,14 @@ beforeEach(async () => {
   await p.markFirstGreetingSeen();
   setPrefsForTest(p);
 });
+let lastRec: jest.SpyInstance | null = null;
 afterEach(() => {
+  // 4단계(0067): 서버가 ①~④로 완료를 본다 — 앱은 어떤 경로에서도 pass_on 을 기록하지 않는다(#287 대신 기록 제거, 리뷰 L1)
+  const passOnCalls = lastRec?.mock.calls.filter(c => c[0] === 'pass_on') ?? [];
+  lastRec = null;
   resetFeaturesForTest();
   setPrefsForTest(null);
+  expect(passOnCalls).toEqual([]);
 });
 
 async function home(opts: FakeOptions = {}) {
@@ -42,6 +48,7 @@ async function home(opts: FakeOptions = {}) {
     answer: jest.spyOn(api, 'saveAnswer'),
     today: jest.spyOn(api, 'getTodayContent'),
   };
+  lastRec = spies.rec;
   render(<AppRoot api={api} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   return {api, ...spies};
@@ -60,34 +67,26 @@ test('③ ② 보기가 없는 날: 넘어가기 하나만 → recall 을 p_skip
   expect(s.recall).not.toHaveBeenCalled();
 });
 
-test('4단계(기획 v2.1 Q7): ④를 마치면 ⑤ 화면 없이 P7 — 앱이 pass_on 을 p_skipped:true 로 대신 기록해 서버(course_len 5) 도장이 찍힌다', async () => {
+test('4단계(기획 v2.1 Q7·서버 0067): ④를 마치면 ⑤ 화면 없이 P7 — ④ 기록 한 번에 서버가 완료(도장), ⑤ 기록 없음', async () => {
   const s = await home({completedSteps: ['photo', 'recall', 'question']});
   const log = jest.spyOn(s.api, 'logEvent');
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰기, 4단계 중 4단계'));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
-  expect(recArgs(s.rec)).toEqual([['hangul', true], ['pass_on', true]]);
-  expect(await s.rec.mock.results[1].value).toMatchObject({completed: true});
+  expect(recArgs(s.rec)).toEqual([['hangul', true]]);
+  expect(await s.rec.mock.results[0].value).toMatchObject({completed: true});
   expect(s.passOn).not.toHaveBeenCalled();
   expect(screen.queryByTestId('pass-on-title')).toBeNull();
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
-  // 계측: 사람이 한 단계만(대신 기록한 ⑤는 course_step_completed 없음), 완료는 한 번
+  // 계측: 사람이 한 단계만, 완료는 한 번
   expect(log.mock.calls.filter(c => c[0] === 'course_step_completed').map(c => (c[1] as {step: string}).step)).toEqual(['hangul']);
   expect(log.mock.calls.filter(c => c[0] === 'course_completed')).toHaveLength(1);
 });
 
-test('4단계: ⑤ 대신 기록이 끊기면 P7 로 가지 않고 오류 + 다시 하기, 다시 하면 도장', async () => {
+test('4단계: ④ 기록이 끊기면 P7 로 가지 않고 오류 + 다시 하기, 다시 하면 도장(⑤ 기록 없음)', async () => {
   const s = await home({completedSteps: ['photo', 'recall', 'question']});
-  const real = s.rec.getMockImplementation();
-  let failed = false;
-  s.rec.mockImplementation(async (step, sec, opts) => {
-    if (step === 'pass_on' && !failed) {
-      failed = true;
-      throw new OfflineError('x');
-    }
-    return real!(step, sec, opts);
-  });
+  s.rec.mockRejectedValueOnce(new OfflineError('x'));
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
   await press('오늘은 넘어갈게요');
@@ -95,7 +94,18 @@ test('4단계: ⑤ 대신 기록이 끊기면 P7 로 가지 않고 오류 + 다�
   expect(screen.queryByText(/도장을 찍었어요/)).toBeNull();
   await press('다시 하기'); // P6 오류 줄의 다시 하기 = 마지막 동작(넘어가기)을 다시
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
-  expect(recArgs(s.rec)).toEqual([['hangul', true], ['pass_on', true], ['hangul', true], ['pass_on', true]]);
+  expect(recArgs(s.rec)).toEqual([['hangul', true], ['hangul', true]]);
+});
+
+test('0067 전 서버(four_steps_supported 없음): 스위치가 켜져 있어도 3단계 — p_course_len 4 를 보내지 않는다', async () => {
+  const s = await home({fourStepsSupported: false});
+  const ids = screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && /^step-(now-row|wait-)/.test(n.props.testID) && typeof n.type === 'string').map(n => n.props.testID);
+  expect([...new Set(ids)]).toEqual(['step-now-row', 'step-wait-question', 'step-wait-hangul']);
+  await pressCourseNext();
+  await waitFor(() => screen.getByLabelText('사진 보기, 3단계 중 1단계'));
+  await press('다 봤어요');
+  await backHome();
+  expect(s.rec.mock.calls).toEqual([['photo', expect.any(Number)]]);
 });
 
 test('④ 넘긴 ③을 다시 하면 save_answer 먼저 → 예외 skipped → 기록(p_skipped:false) → 재저장 1회(성공)', async () => {
@@ -122,7 +132,7 @@ test('4단계: ③ 뒤 여기까지로 마친 홈에는 ⑤ 행이 없고(서버
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('course-done-head'));
-  expect(recArgs(s.rec)).toEqual([['stop_here', undefined]]); // 서버가 ④·⑤를 채운다 — 앱은 ⑤를 따로 기록하지 않는다
+  expect(recArgs(s.rec)).toEqual([['stop_here', undefined]]); // 서버가 ④를 채운다(0067: 4로 부르면 ⑤는 없음) — 앱은 ⑤를 기록하지 않는다
   expect(screen.queryByTestId('step-done-pass_on')).toBeNull();
   expect(screen.getByTestId('step-done-hangul').props.accessibilityHint).not.toBe(copy.course.review_row_hint);
 });

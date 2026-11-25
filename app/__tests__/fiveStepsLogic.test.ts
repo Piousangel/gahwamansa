@@ -146,11 +146,13 @@ test('고른 값: 화면에서 고른 slot 이 먼저, 없으면 서버 picked_s
   expect(questionLabelOf(content, {...EMPTY_PICKS, question: 'A'})).toBe('봄');
 });
 
-test('5단계로 도는 조건 = 스위치 켜짐 + 서버 지원(five_steps_supported)', () => {
-  const c = (v?: boolean) => ({five_steps_supported: v}) as unknown as TodayContent;
+test('5단계로 도는 조건 = 스위치 켜짐 + 서버 지원(five_steps_supported 0061 + four_steps_supported 0067)', () => {
+  const c = (v?: boolean, four: boolean | null = v ?? null) =>
+    (four === null ? {five_steps_supported: v} : {five_steps_supported: v, four_steps_supported: four}) as unknown as TodayContent;
   expect(fiveStepsActive(true, c(true))).toBe(true);
   expect(fiveStepsActive(false, c(true))).toBe(false);
-  expect(fiveStepsActive(true, c(undefined))).toBe(false); // 옛 서버
+  expect(fiveStepsActive(true, c(undefined))).toBe(false); // 옛 서버(0061 전)
+  expect(fiveStepsActive(true, c(true, null))).toBe(false); // 0067 전 서버(p_course_len 4 를 못 받는다)
   expect(fiveStepsActive(true, null)).toBe(false);
 });
 
@@ -177,4 +179,51 @@ test('문구: 라이터 확정 값 그대로(five-steps-copy 1절·4.2절)', () 
   ]);
   expect(copy.nav.to.RecallStep).toBe('떠올려 보기로');
   expect(copy.nav.to.PassOnStep).toBe('이야기 건네기로');
+});
+
+// #287 리뷰 L2: saveAndFinish 의 'skipped → 기록 → 재저장' 갈래. ⑤가 빠져 화면에서 닿는 길은 줄었지만 죽은 코드는 아니다 —
+// ②를 넘어감으로 보낸 기록이 서버엔 들어가고 응답만 끊긴 뒤(오류 + 다시 하기) 어르신이 보기를 골라 확정하면 save_recall 이 'skipped' 를 돌려준다.
+// 그래서 지우지 않고 순서·결과를 단위 시험으로 고정한다.
+describe('saveAndFinish(②·⑤ 확정)', () => {
+  const {saveAndFinish} = require('../src/features/course/FiveStepParts') as typeof import('../src/features/course/FiveStepParts');
+  const run = (saves: ({ok: true} | {ok: false; reason: string})[], finishOk = true) => {
+    const order: string[] = [];
+    const save = jest.fn(async () => {
+      order.push('save');
+      return saves.shift()!;
+    });
+    const finish = jest.fn(async () => {
+      order.push('finish');
+      return finishOk;
+    });
+    return {order, out: saveAndFinish({save, finish})};
+  };
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test('넘긴 단계를 다시 함(skipped): 저장 → 기록(넘어감 해제) → 재저장 1회', async () => {
+    const r = run([{ok: false, reason: 'skipped'}, {ok: true}]);
+    await expect(r.out).resolves.toEqual({result: 'ok', saved: true});
+    expect(r.order).toEqual(['save', 'finish', 'save']);
+  });
+  test('skipped 뒤 기록이 실패하면 재저장하지 않고 fail', async () => {
+    const r = run([{ok: false, reason: 'skipped'}], false);
+    await expect(r.out).resolves.toEqual({result: 'fail', saved: false});
+    expect(r.order).toEqual(['save', 'finish']);
+  });
+  test('skipped 뒤 재저장이 stale_day 면 stale(기록은 이미 함)', async () => {
+    const r = run([{ok: false, reason: 'skipped'}, {ok: false, reason: 'stale_day'}]);
+    await expect(r.out).resolves.toEqual({result: 'stale', saved: false});
+    expect(r.order).toEqual(['save', 'finish', 'save']);
+  });
+  test('보통: 저장 ok → 기록 / stale_day → 기록 없이 stale', async () => {
+    const a = run([{ok: true}]);
+    await expect(a.out).resolves.toEqual({result: 'ok', saved: true});
+    expect(a.order).toEqual(['save', 'finish']);
+    const b = run([{ok: false, reason: 'stale_day'}]);
+    await expect(b.out).resolves.toEqual({result: 'stale', saved: false});
+    expect(b.order).toEqual(['save']);
+  });
 });

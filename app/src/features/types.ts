@@ -129,7 +129,7 @@ export interface Api {
   logEvent(name: EventName, props?: EventProps): Promise<LogEventResult>;
   // save_answer RPC. 동의 후에만 호출. 같은 질문에 다시 답하면 서버가 갱신한다.
   saveAnswer(input: {questionId: string; choice: 'A' | 'B'}): Promise<void>;
-  // record_session_step(0061). opts 없이 부르면 옛 2인자 그대로. 5단계(스위치 켜짐 + 서버 지원)면 realApi 한 곳이 모든 호출에 p_course_len 5 를 붙인다.
+  // record_session_step(0061·0067). opts 없이 부르면 옛 2인자 그대로. 스위치 경로(스위치 켜짐 + 서버 지원)면 realApi 한 곳이 모든 호출에 p_course_len 4 를 붙인다.
   // skipped = 「오늘은 넘어갈게요」(p_skipped). step 'stop_here' = 「오늘은 여기까지 할게요」(③ 뒤만, 아니면 예외 stop_before_question)
   recordSessionStep(step: StepName | 'stop_here', durationSec: number, opts?: {skipped?: boolean}): Promise<RecordStepResult>;
   // 5단계 ② 저장 save_recall(p_day_index, p_slot) / ⑤ save_pass_on(p_day_index, p_key). 거절은 값({ok:false, reason})

@@ -1,6 +1,6 @@
 // 오늘 코스 5단계(기능 스위치 fiveSteps, 기본 꺼짐) — 단계 순서·값 고르기·⑤ 문장 만들기 한 곳.
 // 근거: DECISIONS 2026-11-25 '3단계 → 5단계'·'5단계 화면 결정'·'5단계 문구 확정', docs/team/copy/2026-11-25-five-steps-copy.md.
-// 5단계로 도는 조건 = 스위치 켜짐 + 서버가 지원(get_today_content.five_steps_supported, 0061). 둘 중 하나라도 아니면 옛 3단계(LEGACY_STEPS)
+// 5단계로 도는 조건 = 스위치 켜짐 + 서버가 지원(get_today_content.five_steps_supported 0061 + four_steps_supported 0067). 하나라도 아니면 옛 3단계(LEGACY_STEPS)
 // — 3단계 화면은 한 줄도 바뀌지 않는다. 화면은 세션의 five(AppRoot 가 계산)를 읽는다.
 import {useSyncExternalStore} from 'react';
 import {isFeatureOn, subscribeFeatures} from '../../lib/features';
@@ -15,8 +15,7 @@ export type StepEntry = {readonly step: StepName; readonly route: StepRoute};
 export const LEGACY_STEPS: readonly LegacyStepName[] = ['photo', 'question', 'hangul'];
 /**
  * 스위치 경로 순서(이름은 옛 '5단계' 그대로): 보기 → 떠올리기 → 고르기 → 쓰기. 기획 v2.1 Q7(오너 확정 11-26)로 ⑤ '이야기 건네기'를 뺀 4단계.
- * 서버(0061)는 course_len 3|5 만 받아 5단계 세션 완료에 pass_on 기록이 필요하다 → 앱이 ④까지 마치면 pass_on 을 넘어감으로 대신 기록한다
- * (useFinishStep.completeServerCourse, 0061 계약 규칙 '⑤ 스위치가 꺼진 날도 p_skipped:true 로 기록'과 같은 길). 화면·단계 수에는 ⑤가 없다.
+ * 서버(0067)는 p_course_len 4 로 ①~④를 다 하면 완료로 본다 — 앱은 ⑤를 기록하지 않는다(#287 의 대신 기록은 0067 에서 지움). 화면·단계 수에는 ⑤가 없다.
  */
 export const FIVE_STEP_ORDER: readonly StepEntry[] = [
   {step: 'photo', route: 'PhotoStep'} as const,
@@ -36,9 +35,9 @@ export function useFiveSteps(): boolean {
   return useSyncExternalStore(subscribeFeatures, fiveStepsOn, fiveStepsOn);
 }
 
-/** 5단계로 도는가: 스위치 켜짐 + 오늘 콘텐츠가 5단계를 지원(옛 서버면 키가 없다 → 3단계) */
+/** 5단계로 도는가: 스위치 켜짐 + 오늘 콘텐츠가 4단계 완료 판정까지 지원(0061·0067 표지, 옛 서버면 키가 없다 → 3단계) */
 export const fiveStepsActive = (switchOn: boolean, content: TodayContent | null | undefined): boolean =>
-  switchOn && content?.five_steps_supported === true;
+  switchOn && content?.five_steps_supported === true && content?.four_steps_supported === true;
 
 /** 오늘 코스 단계 이름(순서대로) */
 export const courseStepNames = (five: boolean): readonly StepName[] => (five ? FIVE_NAMES : LEGACY_STEPS);

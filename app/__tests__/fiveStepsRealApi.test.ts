@@ -1,9 +1,10 @@
-// realApi ↔ 서버 0061 계약(api/contract/fiveSteps.ts): record_session_step 인자(한 곳에서 p_course_len 5)·옛 서버 3단계·save_recall/save_pass_on.
+// realApi ↔ 서버 0061·0067 계약(api/contract/fiveSteps.ts): record_session_step 인자(한 곳에서 p_course_len 4)·옛 서버 3단계·save_recall/save_pass_on.
 import {createRealApi} from '../src/features/realApi';
 import {resetFeaturesForTest, setFeature} from '../src/lib/features';
 
 const FIVE_FIELDS = {
   five_steps_supported: true,
+  four_steps_supported: true,
   skipped_steps: [],
   recall: {options: [{slot: 1, label: '그늘'}, {slot: 2, label: '참새'}, {slot: 3, label: '산들바람'}], picked_slot: null},
   pass_on: {enabled: false, picked_key: null},
@@ -33,7 +34,7 @@ test('스위치 꺼짐: 새 서버(5단계 칸 있음)여도 record_session_step
   expect(recordArgs(rpc)).toEqual([{p_step: 'photo', p_duration: 3}]);
 });
 
-test('스위치 켜짐 + 서버 지원: 모든 호출에 p_skipped·p_course_len 5(realApi 한 곳), 여기까지는 p_step stop_here', async () => {
+test('스위치 켜짐 + 서버 지원: 모든 호출에 p_skipped·p_course_len 4(realApi 한 곳, 0067), 여기까지는 p_step stop_here', async () => {
   setFeature('fiveSteps', true);
   const {sb, rpc} = fakeSb({...BASE, ...FIVE_FIELDS});
   const api = createRealApi(sb as never);
@@ -44,10 +45,22 @@ test('스위치 켜짐 + 서버 지원: 모든 호출에 p_skipped·p_course_len
   await api.recordSessionStep('recall', 2, {skipped: true});
   await api.recordSessionStep('stop_here', 0);
   expect(recordArgs(rpc)).toEqual([
-    {p_step: 'photo', p_duration: 3, p_skipped: false, p_course_len: 5},
-    {p_step: 'recall', p_duration: 2, p_skipped: true, p_course_len: 5},
-    {p_step: 'stop_here', p_duration: 0, p_skipped: false, p_course_len: 5},
+    {p_step: 'photo', p_duration: 3, p_skipped: false, p_course_len: 4},
+    {p_step: 'recall', p_duration: 2, p_skipped: true, p_course_len: 4},
+    {p_step: 'stop_here', p_duration: 0, p_skipped: false, p_course_len: 4},
   ]);
+});
+
+test('0067 전 서버(four_steps_supported 없음): 스위치가 켜져 있어도 칸을 빼고(앱은 3단계) p_course_len 4 를 보내지 않는다', async () => {
+  setFeature('fiveSteps', true);
+  const only0061: Record<string, unknown> = {...FIVE_FIELDS};
+  delete only0061.four_steps_supported;
+  const {sb, rpc} = fakeSb({...BASE, ...only0061});
+  const api = createRealApi(sb as never);
+  const c = await api.getTodayContent();
+  expect(c && 'five_steps_supported' in c).toBe(false);
+  await api.recordSessionStep('photo', 1);
+  expect(recordArgs(rpc)).toEqual([{p_step: 'photo', p_duration: 1}]);
 });
 
 test('옛 서버(five_steps_supported 없음): 스위치가 켜져 있어도 5단계 칸을 빼고(앱은 3단계) 새 인자를 보내지 않는다', async () => {

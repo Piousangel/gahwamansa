@@ -1,4 +1,4 @@
-// 오늘 코스 5단계 계약(서버 0061 five_steps). 플랫폼 무관 TS만(React·RN·copy import 금지). 화면은 앱 레인 몫 — 이 파일은 모양·파서만.
+// 오늘 코스 5단계 계약(서버 0061 five_steps, 0067 4단계 완료 판정). 플랫폼 무관 TS만(React·RN·copy import 금지). 화면은 앱 레인 몫 — 이 파일은 모양·파서만.
 // 근거: supabase/migrations/20261116000061_five_steps.sql, docs/team/dev-server-notes.md "오늘 코스 5단계(0061)", DECISIONS 11-25 R-1·R-3.
 // 서버가 바뀌면 이 파일만 맞춘다. 단계·⑤ 키 목록은 __tests__/fiveStepsContract.test.ts 가 마이그레이션 글자와 대조한다.
 
@@ -9,13 +9,16 @@ export const COURSE_STEPS = ['photo', 'recall', 'question', 'hangul', 'pass_on']
 export type CourseStep = (typeof COURSE_STEPS)[number];
 /** 옛 앱 3단계(서버가 p_course_len 기본 3으로 판정) */
 export const LEGACY_STEPS = ['photo', 'question', 'hangul'] as const;
-/** 새 앱은 record_session_step 모든 호출에 이 값을 보낸다 — 그래야 ⑤ 전에 도장이 찍히지 않는다 */
-export const FIVE_STEP_COURSE_LEN = 5;
+/**
+ * 스위치 경로(4단계, 기획 v2.1 Q7)는 record_session_step 모든 호출에 이 값을 보낸다(서버 0067) — ①~④를 다 하면 서버가 완료로 본다
+ * (⑤ 기록 없이, ② 전에는 찍히지 않음). 0067 전 서버는 4를 거부하므로 four_steps_supported 가 있는 서버에서만 스위치 경로로 돈다.
+ */
+export const FOUR_STEP_COURSE_LEN = 4;
 
 /**
  * record_session_step 인자(0061). 옛 2인자 호출({p_step, p_duration})도 그대로 풀린다(기본값).
  * - p_skipped: 「오늘은 넘어갈게요」. 넘긴 단계도 '했어요'로 치고, 그 단계에 저장된 값(②·③·⑤)은 서버가 지운다. ①은 넘길 수 없다(invalid_step).
- * - p_step 'stop_here': 「오늘은 여기까지 할게요」(③을 마친 뒤만, 아니면 예외 stop_before_question). 남은 ④·⑤를 넘어감으로 채워 완료.
+ * - p_step 'stop_here': 「오늘은 여기까지 할게요」(③을 마친 뒤만, 아니면 예외 stop_before_question). 남은 ④(p_course_len 4, 0067)를 넘어감으로 채워 완료.
  * - 넘긴 단계를 나중에 p_skipped=false 로 다시 기록하면 skipped_steps 에서 빠진다(홈에서 다시 하기).
  * 반환은 지금과 같다: {completed, steps, streak}.
  */
@@ -23,7 +26,7 @@ export type RecordStepArgs = {
   p_step: CourseStep | 'stop_here';
   p_duration: number;
   p_skipped?: boolean;
-  p_course_len?: 3 | 5;
+  p_course_len?: 3 | 4 | 5; // 4 = 0067(지금 앱), 5 = 0061 5단계 빌드·#287 대신 기록 빌드(서버는 계속 받는다)
 };
 
 /** ⑤ 틀 문장 키(서버 pass_on_key_ok). 문장은 copy(라이터 확정·법률 승인 키만 화면에). 응원 키(CHEER_KEYS)와 다른 목록 */
@@ -33,13 +36,14 @@ export const PASS_ON_KEYS = ['recall_story', 'photo_memory', 'choice_like', 'pho
 export type PassOnKey = (typeof PASS_ON_KEYS)[number];
 export const isPassOnKey = (k: unknown): k is PassOnKey => typeof k === 'string' && (PASS_ON_KEYS as readonly string[]).includes(k);
 
-// ---- 어르신: get_today_content·start_today 추가 키(0061) ----
+// ---- 어르신: get_today_content·start_today 추가 키(0061, 0067 four_steps_supported) ----
 export type RecallOption = {slot: number; label: string};
 /**
  * get_today_content·start_today 가 0061 에서 더한 최상위 키(계약 시험이 마이그레이션과 대조).
  * five_steps_supported 가 없는 서버(0061 전)면 앱은 3단계로 돈다 — 새 인자(p_skipped·p_course_len)를 보내면 함수 없음 오류.
+ * four_steps_supported 가 없는 서버(0067 전)도 3단계로 돈다 — p_course_len 4 를 보내면 invalid_course_len.
  */
-export const TODAY_FIVE_STEP_KEYS = ['five_steps_supported', 'skipped_steps', 'recall', 'pass_on'] as const;
+export const TODAY_FIVE_STEP_KEYS = ['five_steps_supported', 'four_steps_supported', 'skipped_steps', 'recall', 'pass_on'] as const;
 
 /**
  * 앱 계약 규칙(서버 리뷰 QA-1 M1·L6, 리드 결정):
@@ -51,6 +55,8 @@ export const TODAY_FIVE_STEP_KEYS = ['five_steps_supported', 'skipped_steps', 'r
  */
 export type TodayFiveSteps = {
   five_steps_supported: boolean;
+  /** 0067: p_course_len 4(①~④로 완료)를 받는 서버. 스위치 경로는 five·four 둘 다 true 일 때만 */
+  four_steps_supported: boolean;
   skipped_steps: CourseStep[];
   recall: {options: RecallOption[]; picked_slot: number | null};
   /** enabled=false: 서버 스위치 꺼짐(법률 L-11 전). 저장은 disabled 로 거부되고 자녀에게도 안 보인다 → ⑤를 '건넸어요'로 보여 주면 안 된다 */
@@ -71,6 +77,7 @@ export function parseTodayFiveSteps(v: unknown): TodayFiveSteps | null {
     return null;
   }
   const supported = v.five_steps_supported === true;
+  const four = v.four_steps_supported === true;
   const skipped = v.skipped_steps ?? [];
   const recall = v.recall ?? {options: [], picked_slot: null};
   const passOn = v.pass_on ?? {enabled: false, picked_key: null};
@@ -88,6 +95,7 @@ export function parseTodayFiveSteps(v: unknown): TodayFiveSteps | null {
   }
   return {
     five_steps_supported: supported,
+    four_steps_supported: four,
     skipped_steps: skipped,
     recall: {options: opts.map(o => ({slot: o.slot as number, label: o.label as string})), picked_slot: picked},
     pass_on: {enabled: passOn.enabled, picked_key: key},

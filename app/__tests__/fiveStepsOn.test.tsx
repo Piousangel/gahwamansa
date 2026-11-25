@@ -1,6 +1,6 @@
 // 기능 스위치 fiveSteps 켜짐: 4단계 흐름(기획 v2.1 Q7 11-26 — ⑤ '이야기 건네기' 뺌. 이전: DECISIONS 2026-11-25 '3단계 → 5단계'·'5단계 화면 결정'·'5단계 문구 확정',
 // 시안 docs/design/2026-11-25-five-steps, 문구 docs/team/copy/2026-11-25-five-steps-copy.md).
-// 흐름·넘어가기·여기까지·이어 하기·A′·도장 1개·P7(건넨 줄 없음)·오늘 한 장·저장 조건(동의)·200% 배치·⑤ 대신 기록(서버 course_len 5)을 단언한다.
+// 흐름·넘어가기·여기까지·이어 하기·A′·도장 1개·P7(건넨 줄 없음)·오늘 한 장·저장 조건(동의)·200% 배치·⑤ 기록 없음(서버 0067 course_len 4)을 단언한다.
 import React from 'react';
 import {StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
@@ -146,14 +146,14 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기로, 저장은 동�
   });
   await act(async () => new Promise<void>(r => setTimeout(() => r(), 1600)));
   await press('마칠게요');
-  // ④가 마지막 단계 → 바로 P7(⑤ 없음). 서버(course_len 5) 도장은 앱이 pass_on 을 넘어감으로 대신 기록해 찍는다
+  // ④가 마지막 단계 → 바로 P7(⑤ 없음). 서버(0067, course_len 4)가 ④ 기록으로 도장을 찍는다 — ⑤ 기록 없음
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText('가족에게 건넸어요')).toBeNull();
   expect(screen.queryByTestId('pass-on-title')).toBeNull();
   expect(s.passOn).not.toHaveBeenCalled();
   expect(s.answer).toHaveBeenCalledWith({questionId: 'q-1', choice: 'A'});
-  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false], ['pass_on', true]]);
+  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false]]);
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('course-done-head'));
   expect(screen.getAllByTestId('done-title-stamp', {includeHiddenElements: true})).toHaveLength(1);
@@ -182,8 +182,8 @@ test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ④ 뒤 
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
-  // 넘어감은 p_skipped:true(①은 넘길 수 없다). 마지막 pass_on 은 앱이 대신 기록한 것
-  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', true], ['question', true], ['hangul', true], ['pass_on', true]]);
+  // 넘어감은 p_skipped:true(①은 넘길 수 없다). ⑤ 기록 없음(0067)
+  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', true], ['question', true], ['hangul', true]]);
   expect(s.recall).not.toHaveBeenCalled();
   expect(s.answer).not.toHaveBeenCalled();
   expect(s.passOn).not.toHaveBeenCalled();
