@@ -17,7 +17,9 @@ export const P7_MOUNT = {
   // 도장: 사진 오른쪽 아래 모서리(100%) — 200%는 캡션 두 줄이 길어져 겹치므로 캡션 위(사진 오른쪽 위)로 올린다(#95)
   seal: {size: 116, right: -26, top: {base: 90, large: -2}, tilt: '-8deg'},
   inkRatio: 60 / 64, // 번짐 원 지름 = 도장 칸 × 60/64(시안 SVG r=30)
-  margin: {top: 8, bottom: 22},
+  // afterBody: 200%에서 본문 뒤로 갈 때(대기열 33) 위 여백. 테이프(-12, 3° 기울임)·카드 기울임이 마운트 칸 위로 약 7 넘쳐서,
+  // R-15 로 마운트를 접힘 아래로 밀었을 때 테이프 끝이 접힘선 위에 걸쳐 보였다(에뮬레이터 실측) → 넘침보다 크게 둔다
+  margin: {top: 8, afterBody: 20, bottom: 22},
 } as const;
 
 export type MountMotion = {
@@ -32,14 +34,14 @@ export type MountMotion = {
  * 사진 한 장(마운트 모서리) + 테이프 + 큰 인장 '家'. 캡션 두 줄 'AI가 만든 그림 / 실제 장소가 아니에요'(sub, 법무 고지, #95).
  * 장식(사진·테이프·도장)은 화면 읽기에서 숨기고 캡션만 읽는다. 사진이 아직 없으면(pending·실패) 옅은 면 + 사진 아이콘.
  */
-export function AlbumMount({photoUrl, large, motion}: {photoUrl: string | null; large: boolean; motion: MountMotion}) {
+export function AlbumMount({photoUrl, large, motion, afterBody = false}: {photoUrl: string | null; large: boolean; motion: MountMotion; afterBody?: boolean}) {
   const [failed, setFailed] = useState(false);
   const w = large ? P7_MOUNT.width.large : P7_MOUNT.width.base;
   const photoH = large ? P7_MOUNT.photoH.large : P7_MOUNT.photoH.base;
   const show = !!photoUrl && !photoUrl.startsWith('pending://') && !failed;
   const ink = P7_MOUNT.seal.size * P7_MOUNT.inkRatio;
   return (
-    <View testID="p7-mount" style={[styles.wrap, {width: w}]}>
+    <View testID="p7-mount" style={[styles.wrap, {width: w}, afterBody ? styles.afterBody : null]}>
       <Animated.View testID="p7-mount-fade" style={{opacity: motion.mount}}>
         <View style={styles.card}>
           <View style={[styles.photo, {height: photoH}]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -80,6 +82,7 @@ export function AlbumMount({photoUrl, large, motion}: {photoUrl: string | null; 
 const S = P7_MOUNT.seal.size;
 const styles = StyleSheet.create({
   wrap: {alignSelf: 'center', marginTop: P7_MOUNT.margin.top, marginBottom: P7_MOUNT.margin.bottom},
+  afterBody: {marginTop: P7_MOUNT.margin.afterBody},
   card: {
     backgroundColor: ds.color.card,
     paddingHorizontal: P7_MOUNT.pad.x,
