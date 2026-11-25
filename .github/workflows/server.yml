@@ -10,6 +10,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/server.yml'
       - 'app/src/api/contract/cheers.ts' # load-push-copy 가 CHEER_KEYS 를 글자로 읽는다(ops 시험, #244)
+      - 'app/src/copy/copy.ts' # consent-version-sync 가 CONSENT_VERSION 을 글자로 읽는다(0069, 대기열 66)
   push:
     branches: [main]
     paths:
@@ -19,6 +20,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/server.yml'
       - 'app/src/api/contract/cheers.ts' # load-push-copy 가 CHEER_KEYS 를 글자로 읽는다(ops 시험, #244)
+      - 'app/src/copy/copy.ts' # consent-version-sync 가 CONSENT_VERSION 을 글자로 읽는다(0069, 대기열 66)
 
 permissions:
   contents: read
