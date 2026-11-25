@@ -742,3 +742,6 @@
   - 실패 확인: 시간 제한을 빼면 '끝나지 않음' 테스트가 시간 초과로 실패하는지 본다.
 - 위험 영역: 인증·삭제 경로를 건드리므로 리뷰 2명이 필요하다.
 - 서버 확인 3건(send_cheer·delete_my_account·save_answer 의 재전송 결과)을 먼저 서버 레인에 묻는다.
+
+## jest 실행 중 맥 잠자기(대기열 65, 2026-11-26)
+- 밤 루틴 맥은 DarkWake(45~60초)와 Maintenance Sleep(900~1040초)을 되풀이한다. jest 가 그 사이에 걸리면 돌던 스위트가 모두 ~920초 멈췄다가 시간 초과로 실패한다. 이제 jest 는 darwin 에서만 `caffeinate -i -s -w <jest pid>` 를 걸고(testUtils/jestGlobalSetup.js), 그래도 잠들었으면 끝에 [잠자기 감지] 경고를 찍는다(실패로 만들지는 않음). -s 는 전원 연결 때만 듣고 jest 시작 전·jest 밖 명령(supabase·빌드)은 덮지 않는다. 루틴이 거는 caffeinate 는 -i 뿐이라 유지보수 잠자기를 못 막는다 — 루틴을 -s 로 바꿀지는 리드가 판단.
