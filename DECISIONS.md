@@ -822,3 +822,22 @@
 - 선택(리드): 앱이 **받기 동의를 아는 경우에만** getToken. `registerToken(deps, consented)` — 동의 직후 경로(N1 '알려 주세요'·자녀 '알림 켜기'·P13/C7 켬)는 set_push_enabled(true) 성공 값을, PushHost sync(시작·깨어남·토큰 갱신)는 `registerIfConsented`(my_push_settings true)를 넘긴다. 확인 못 하면(오프라인) 부르지 않는다. onTokenRefresh 구독은 JS 이벤트 듣기뿐이라 토큰을 만들지 않는다(RNFB 27.1).
 - 바뀐 것: 옛 리뷰 L4('연결 전에도 등록해 같은 토큰의 이전 계정 행 정리')는 버린다 — 그 역할은 #262 로그아웃 정리(해제·시간 초과/실패 시 deleteToken)가 맡고, 서버 0062도 동의 전 등록을 저장하지 않는다. 동의를 오프라인으로 못 보낸 N1(yes_pending)은 재시도가 성공한 뒤 sync 가 등록.
 - 남는 것: 한 번 동의해 `setAutoInitEnabled(true)`가 저장된 기기는 끈 뒤·로그아웃 뒤에도 SDK가 앱 시작 때 스스로 토큰을 갱신할 수 있다(앱의 getToken·서버 등록은 없음). 끌 때·로그아웃 때 `setAutoInitEnabled(false)`로 되돌릴지는 후속 결정.
+
+## 2026-11-25 fix(server): 0063 심사 가족 정리 잠금 순서 통일 + race 판정 보강 (#264 QA-1 L-a·L-b) (#271)
+<!-- collected: #271 -->
+- 심사 가족 정리의 잠금은 **가족 행 → 어르신 프로필(user_id, id 순서)**이다. 리드 지시인 `order by user_id, id for update`에 가족 행 잠금 한 줄을 더했다.
+  - 이유: 프로필만 먼저 잠그면 cursor가 프로필을 잡은 뒤 첫 `account_delete_core`가 families를 잡는다. 그러면 같은 가족의 자녀 삭제(families → profiles)와 반대 순서가 된다.
+  - 그래서 `account_delete_core`와 같은 families → profiles 순서를 지키려고 가족 행을 먼저 잡는다.
+- 정리된 전체 규칙: **families → profiles(user_id 순서) → device_tokens.** device_tokens만 쓰는 경로는 순서와 상관없다.
+- race 판정: "행이 0"만으로는 PASS가 아니다. 두 쪽 모두 정상 응답을 받아야 한다.
+- (DECISIONS.md는 다른 레인이 구조를 바꾸는 중이라 건드리지 않고, 결정은 이 절에만 적었다.)
+
+## 2026-11-25 feat(push): 받기 동의 뒤에만 FCM 토큰 요청 — 동의 전 getToken 0회(대기열 38) (#269)
+<!-- collected: #269 -->
+- (리드 11-25) **받기 동의가 없어지는 때 SDK 자동 초기화를 끈다**: 앱에서 알림 끄기(P13 `setReceive(false)`·C7 토글), 로그아웃(`releasePushTokenOnSignOut`, 정상 해제 경로 포함), 계정 삭제(`deleteMyAccount`) 때 `setAutoInitEnabled(false)`. 동의가 없는 동안 SDK가 앱 시작 때 스스로 토큰을 만들거나 갱신하지 않게 — 이 PR의 '동의 전 토큰 0'과 같은 선. 다시 켜면(동의) 지금처럼 `getToken`이 `true`로 켠다.
+- (#269 QA-3 L1) PushHost sync(앱 시작·깨어남·토큰 갱신)에서 서버 받기 상태가 **분명히** 동의 없음(false·연결 전 null)이면 `stopAutoInit()`(멱등). #262 빌드에서 동의 없이 켜진 기기, 로그아웃 정리의 끄기가 3초 제한으로 실패한 기기에 남은 '켜짐'을 정리한다. 오프라인(모름)이면 건드리지 않는다. 알림 권한이 꺼진 기기는 sync 가 서버를 읽지 않으므로 이 정리도 하지 않는다(그 기기는 #262 에서도 getToken 을 부르지 않았다).
+- (#269 QA-3 L2) 위 '법률 #266 답' (a)(b)는 **코드·시험 기준**이다. 데이터 보안 양식의 '선택' 전환 등 법률 문서를 바꾸는 근거로는 API 31(Android 12) 실기기 재관찰 ①(동의 전 설치 ID 파일·Installations/Messaging 로그 0)을 함께 적은 뒤에 한다.
+- (#269 QA-1 2차 L1) `registerIfConsented`는 동의 조회를 시작할 때 로그아웃 차수를 잡고, 조회 뒤 차수가 달라졌거나 로그아웃 중이면 `'stale'` — 조회 중 계정이 바뀌어도 이전 계정의 답으로 토큰을 요청하거나 자동 초기화를 끄지 않는다.
+- (#269 QA-1 2차 L2, 받아들임) 켜는 순간과 앞서 시작된 sync 조회가 겹쳐 '동의 없음' 답이 늦게 오면, 켜기가 켠 자동 초기화를 sync 가 다시 끌 수 있다. 토큰은 켜기 경로가 이미 등록했고, 다음 앱 복귀 sync 가 '동의 있음'을 보고 getToken 으로 다시 켜서 회복된다.
+- (#269 QA-1 2차 L3, 받아들임) 로그아웃 정리에 자동 초기화 끄기(최대 3초 제한)가 더해져, 오프라인 최악 로그아웃 시간이 약 14초 → 약 17초. 진행 표시는 S25 확인 목록.
+- 이 결정은 DECISIONS.md 대신 여기 적는다(결정 기록 구조 변경 중). 앞서 DECISIONS.md에 넣은 '받기 동의 뒤에만 FCM 토큰 요청' 항목의 '남는 것'(자동 초기화)은 이 결정으로 해소.
