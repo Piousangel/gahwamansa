@@ -5,7 +5,7 @@ import {render, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
-import {createFcmTokenSourceFrom, FCM_WIRED} from '../src/push/fcmTokenSource';
+import {createFcmTokenSourceFrom, registerBackgroundHandler} from '../src/push/fcmTokenSource';
 import {registerToken, setReceive, childOptIn} from '../src/push/pushClient';
 import {setTokenSourceForTest} from '../src/push/tokenSource';
 import {setPushDepsForTest} from '../src/push/runtime';
@@ -67,20 +67,6 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('FCM_WIRED 켬(리뷰 M1 조건 충족: P13 NotifyRows·C7 FamilyPushRow 가 main 에 있음)', () => {
-  test('real 모드는 Firebase 모듈이 있으면 FCM 공급자, fake 모드는 그대로 가짜', () => {
-    expect(FCM_WIRED).toBe(true);
-    // 모듈이 있는 빌드(google-services.json 있음). 같은 파일 안에서 doMock 은 모듈 모의 등록부에 남으므로(isolateModules 로도 안 갈림)
-    // '모듈은 있지만 Firebase 앱이 없는 빌드 → 토큰 없음'은 fcmTokenSource.test(전역 모의 그대로)가 본다. 이 파일의 다른 시험은 공급자를 직접 넣는다
-    jest.isolateModules(() => {
-      jest.doMock('@react-native-firebase/messaging', () => fakeMessaging().mod);
-      const ts: typeof import('../src/push/tokenSource') = require('../src/push/tokenSource');
-      expect(ts.pickTokenSource('real').kind).toBe('fcm');
-      expect(ts.pickTokenSource('fake').kind).toBe('fake');
-    });
-  });
-});
-
 describe('토큰 등록·갱신(PushHost)', () => {
   test('권한이 허용된 기기: 역할이 정해지면 FCM 토큰을 받아(자동 초기화 켬) 등록하고, 성공한 토큰만 기기에 둔다', async () => {
     setAndroid(34);
@@ -117,16 +103,20 @@ describe('토큰 등록·갱신(PushHost)', () => {
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const api = createFakeApi({linked: true, consented: true});
     const reg = jest.spyOn(api, 'registerPushToken');
-    const tag = jest.spyOn(api, 'accountTag');
+    const check = RN.PermissionsAndroid.check as jest.Mock;
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => expect(tag).toHaveBeenCalled()); // 조립이 돌았다(retryPending)
+    // 판정 지점(권한 확인)이 실제로 '거부'를 돌려준 뒤에 본다 — 고정 시간만 기다리면 늦게 부르는 회귀를 놓친다(#262 리뷰)
+    await waitFor(() => expect(check).toHaveBeenCalled());
     await settle();
     expect(fcm.mod.getToken).not.toHaveBeenCalled();
     expect(fcm.mod.setAutoInitEnabled).not.toHaveBeenCalled();
     expect(reg).not.toHaveBeenCalled();
-    // 거부 상태에서 토큰이 바뀌었다는 신호가 와도 등록하지 않는다
+    // 거부 상태에서 토큰이 바뀌었다는 신호가 와도 등록하지 않는다(갱신도 권한을 다시 확인)
+    const before = check.mock.calls.length;
     fcm.rotate(TOKEN_B);
+    await waitFor(() => expect(check.mock.calls.length).toBeGreaterThan(before));
     await settle();
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
     expect(reg).not.toHaveBeenCalled();
   });
 
@@ -137,8 +127,10 @@ describe('토큰 등록·갱신(PushHost)', () => {
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
     const api = createFakeApi();
     const reg = jest.spyOn(api, 'registerPushToken');
+    const check = RN.PermissionsAndroid.check as jest.Mock;
     render(<AppRoot api={api} />);
     await settle();
+    expect(check).not.toHaveBeenCalled(); // 등록 판정 자체가 시작되지 않는다(역할 관문)
     expect(fcm.mod.getToken).not.toHaveBeenCalled();
     expect(reg).not.toHaveBeenCalled();
   });
@@ -205,6 +197,33 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     expect(await readPushToken()).toBeNull();
   });
 
+  test('#262 리뷰: 등록이 진행 중일 때 로그아웃하면 그 등록이 끝나기를 기다렸다가 해제한다(해제 뒤 다시 기억되지 않음)', async () => {
+    setAndroid(34);
+    const order: string[] = [];
+    let releaseRegister: () => void = () => {};
+    const rpc = jest.fn((name: string) => {
+      order.push(name);
+      if (name === 'register_push_token') {
+        return new Promise(r => {
+          releaseRegister = () => r({data: {ok: true}, error: null});
+        });
+      }
+      return Promise.resolve({data: {ok: true}, error: null});
+    });
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    await waitFor(() => expect(order).toContain('register_push_token'));
+    const out = api.signOut();
+    await settle();
+    expect(order).not.toContain('unregister_push_token'); // 등록이 끝나기 전에는 해제·지우기를 하지 않는다
+    releaseRegister();
+    expect(await reg).toBe('ok');
+    await out;
+    expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
+    expect(await readPushToken()).toBeNull();
+  });
+
   test('계정 삭제: 서버가 토큰 행을 함께 지우므로(0032) 해제 호출 없이 기기 기억만 지운다', async () => {
     setAndroid(34);
     const rpc = jest.fn((name: string) =>
@@ -214,8 +233,31 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const fcm = fakeMessaging();
     expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
     expect(await readPushToken()).toBe(TOKEN_A);
-    await api.deleteMyAccount().catch(() => {}); // 기기 정리 일부(소셜 SDK)는 모의 밖 — 토큰 기억만 본다
+    await api.deleteMyAccount();
     expect(rpc).not.toHaveBeenCalledWith('unregister_push_token', expect.anything());
     expect(await readPushToken()).toBeNull();
+  });
+});
+
+describe('앱이 뒤에 있을 때(머리 없는 작업, #262 리뷰)', () => {
+  test('메시징 모듈이 있으면 빈 백그라운드 처리기를 등록하고 토큰은 요청하지 않는다. 모듈·Firebase 앱이 없으면 아무것도 안 함', async () => {
+    const fcm = fakeMessaging();
+    const set = jest.fn();
+    expect(registerBackgroundHandler({...fcm.mod, setBackgroundMessageHandler: set} as never)).toBe(true);
+    expect(set).toHaveBeenCalledTimes(1);
+    await expect(set.mock.calls[0][1]({data: {kind: 'daily'}})).resolves.toBeUndefined();
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
+    expect(fcm.mod.setAutoInitEnabled).not.toHaveBeenCalled();
+    expect(registerBackgroundHandler(null)).toBe(false);
+    const noApp = {
+      ...fcm.mod,
+      setBackgroundMessageHandler: set,
+      getMessaging: () => {
+        throw new Error('No Firebase App');
+      },
+    };
+    expect(registerBackgroundHandler(noApp as never)).toBe(false);
+    // 기본값(jest 전역 모의 = Firebase 앱 없음)도 조용히 false
+    expect(registerBackgroundHandler()).toBe(false);
   });
 });

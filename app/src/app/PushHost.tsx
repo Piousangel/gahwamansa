@@ -61,8 +61,11 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         sync();
       }
     });
+    // 토큰이 바뀌면 등록만 다시(받기 재시도·서버 상태 읽기는 하지 않음 — 첫 발급 때도 불리므로 #262 리뷰). 권한 확인은 그대로
     const refresh = source.onTokenRefresh(() => {
-      sync();
+      readNotifyPermission()
+        .then(p => (p === 'granted' ? registerToken(deps) : undefined))
+        .catch(() => {});
     });
     return () => {
       app.remove();

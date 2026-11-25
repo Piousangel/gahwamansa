@@ -14,7 +14,16 @@ type MessagingModule = {
   onNotificationOpenedApp(m: Messaging, cb: (msg: RemoteMessage) => void): () => void;
   onMessage(m: Messaging, cb: (msg: RemoteMessage) => void): () => void;
   setAutoInitEnabled(m: Messaging, enabled: boolean): Promise<void>;
+  setBackgroundMessageHandler?(m: Messaging, handler: (msg: RemoteMessage) => Promise<void>): void;
 };
+
+function requireMessaging(): MessagingModule | null {
+  try {
+    return require('@react-native-firebase/messaging');
+  } catch {
+    return null;
+  }
+}
 
 /** 서버 메시지 data 는 {kind} 하나(0033·0038). 다른 키는 버린다(개인 정보가 실려 와도 앱이 쓰지 않게) */
 export function dataOf(msg: RemoteMessage): PushData | null {
@@ -82,18 +91,32 @@ export function createFcmTokenSourceFrom(mod: MessagingModule | null): PushToken
 }
 
 export function createFcmTokenSource(): PushTokenSource | null {
-  let mod: MessagingModule | null;
-  try {
-    mod = require('@react-native-firebase/messaging');
-  } catch {
-    mod = null;
+  return createFcmTokenSourceFrom(requireMessaging());
+}
+
+/**
+ * 앱이 뒤에 있거나 꺼져 있을 때 온 메시지(#262 리뷰): RNFB 는 그때 머리 없는 작업 'ReactNativeFirebaseMessagingHeadlessTask' 를 띄우는데,
+ * 그 작업은 메시징 모듈을 만들 때 등록된다. index.js 에서 앱보다 먼저 부른다(RNFB 안내). 할 일은 없다 — 알림은 OS 가 그리고
+ * 탭은 getInitialNotification·onNotificationOpenedApp 이 받는다. 토큰을 요청하지 않으므로 설치 ID·토큰은 생기지 않는다(자동 초기화 끔).
+ * 모듈이 없거나 Firebase 앱이 없는 빌드면 아무것도 하지 않고 false.
+ */
+export function registerBackgroundHandler(mod: MessagingModule | null = FCM_WIRED ? requireMessaging() : null): boolean {
+  if (!mod?.setBackgroundMessageHandler) {
+    return false;
   }
-  return createFcmTokenSourceFrom(mod);
+  try {
+    mod.setBackgroundMessageHandler(mod.getMessaging(), async () => {});
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * real 모드가 FCM 토큰을 쓴다(내부 테스트 N1, DECISIONS 2026-11-25 'FCM_WIRED 켬'). 켜는 조건이던 리뷰 M1(앱 안 끄기 토글 P13·C7)은 main 에 있다.
- * 토큰 요청은 알림 권한이 허용되고 역할이 정해진 뒤에만(PushHost·pushClient) — 거부 기기는 설치 ID·토큰이 생기지 않는다(데이터 보안 양식 15행).
+ * 남겨 두는 이유: 실발송에 문제가 생기면 이 한 줄로 앱 쪽 FCM(토큰·머리 없는 작업)을 통째로 끄는 스위치.
+ * 토큰 요청은 알림이 허용된 상태이고 역할이 정해진 뒤에만(PushHost·pushClient). 13 이상은 사용자가 시스템 창에서 허용한 뒤,
+ * **12 이하는 OS 가 기본 허용이라 앱 단위로 끄지 않았으면 역할을 고른 뒤 바로** 요청한다(데이터 보안 양식 15행 문구 확인 필요 — DECISIONS 11-25).
  * google-services.json 이 없는 빌드는 createFcmTokenSource 가 null → 토큰 없음(지금과 같음).
  */
 export const FCM_WIRED = true;

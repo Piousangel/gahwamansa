@@ -8,7 +8,7 @@ import {parseLogEventResult, type EventName, type EventProps} from '../api/contr
 import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
-import {clearPushToken, readPushToken} from '../lib/pushToken';
+import {clearPushToken, readPushToken, settlePushRegistrations} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
@@ -484,6 +484,8 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
     async signOut() {
       waiting.length = 0; // 리뷰 L1
       // 푸시 토큰 해제가 먼저(0032: 로그아웃 뒤에는 auth.uid 가 없어 해제가 실패한다). 등록한 토큰이 없으면 부르지 않는다. 실패해도 로그아웃은 계속
+      // 진행 중인 등록이 있으면 끝나기를 기다린 뒤 읽는다(#262 리뷰: 해제 뒤에 등록이 끝나 다시 기억되는 경합)
+      await settlePushRegistrations();
       const token = await readPushToken();
       if (token) {
         try {

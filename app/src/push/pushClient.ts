@@ -8,7 +8,7 @@ import type {Api} from '../features/types';
 import {accountKey, PUSH_PROMPT_KEY, PUSH_SKIP_DAY_KEY} from '../lib/accountStore';
 import {kstDate} from '../lib/localStamps';
 import type {KeyValueStore} from '../lib/kvStore';
-import {readPushToken, savePushToken} from '../lib/pushToken';
+import {readPushToken, savePushToken, trackPushRegistration} from '../lib/pushToken';
 import type {PushTokenSource} from './tokenSource';
 import type {NotifyPermission} from './notifyNative';
 
@@ -16,7 +16,11 @@ export type PushDeps = {api: Api; source: PushTokenSource; store: KeyValueStore}
 export type RegisterOutcome = 'ok' | 'no_token' | 'no_profile' | 'failed';
 
 /** 이 기기 토큰을 서버에 등록. 권한 판단은 호출부(권한이 없으면 FCM 이 토큰을 주더라도 알림이 보이지 않는다) */
-export async function registerToken({api, source}: PushDeps): Promise<RegisterOutcome> {
+export function registerToken(deps: PushDeps): Promise<RegisterOutcome> {
+  return trackPushRegistration(registerTokenNow(deps)); // 로그아웃이 진행 중인 등록을 기다린다(lib/pushToken)
+}
+
+async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcome> {
   let token: string | null;
   try {
     token = await source.getToken();
