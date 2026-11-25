@@ -132,6 +132,8 @@ describe('자녀: 시작 단계에서 우리 말 한 장 → 시스템 창', () 
     await waitFor(() => expect(getToken).toHaveBeenCalledTimes(1));
     expect(request.mock.invocationCallOrder[0]).toBeLessThan(en.mock.invocationCallOrder[0]);
     expect(en).toHaveBeenCalledWith(true);
+    await expect(en.mock.results[0].value).resolves.toEqual({ok: true, enabled: true}); // #293 QA-3 L1: 받기 동의 성공 →
+    expect(en.mock.invocationCallOrder[0]).toBeLessThan(getToken.mock.invocationCallOrder[0]); // 그 뒤에야 getToken
     await waitFor(() => expect(screen.queryByTestId('child-notify')).toBeNull());
     await waitFor(() => expect(screen.queryByTestId('wait-notify')).toBeNull());
   });
@@ -145,12 +147,16 @@ describe('자녀: 시작 단계에서 우리 말 한 장 → 시스템 창', () 
     const settings = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
     mockShare();
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const en = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByTestId('wait-code'));
     await settle();
     expect(getToken).not.toHaveBeenCalled(); // 기본 허용 기기라도 동의 전 0회
     await shareCode();
     await waitFor(() => screen.getByTestId('child-notify'));
+    await settle();
+    expect(getToken).not.toHaveBeenCalled(); // #293 QA-3 L1: 한 장이 뜬 직후에도 0회(답하기 전)
+    expect(en).not.toHaveBeenCalled();
     expect(screen.queryByTestId('child-notify-action-hint', {includeHiddenElements: true})).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByTestId('child-notify-action'));
