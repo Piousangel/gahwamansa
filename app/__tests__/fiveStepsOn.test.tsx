@@ -1,6 +1,6 @@
-// 기능 스위치 fiveSteps 켜짐: 5단계 흐름(DECISIONS 2026-11-25 '3단계 → 5단계'·'5단계 화면 결정'·'5단계 문구 확정',
+// 기능 스위치 fiveSteps 켜짐: 4단계 흐름(기획 v2.1 Q7 11-26 — ⑤ '이야기 건네기' 뺌. 이전: DECISIONS 2026-11-25 '3단계 → 5단계'·'5단계 화면 결정'·'5단계 문구 확정',
 // 시안 docs/design/2026-11-25-five-steps, 문구 docs/team/copy/2026-11-25-five-steps-copy.md).
-// 흐름·넘어가기·여기까지·이어 하기·A′·도장 1개·P7 첫 줄·오늘 한 장·저장 조건(동의·플래그)·200% 배치를 단언한다.
+// 흐름·넘어가기·여기까지·이어 하기·A′·도장 1개·P7(건넨 줄 없음)·오늘 한 장·저장 조건(동의)·200% 배치·⑤ 대신 기록(서버 course_len 5)을 단언한다.
 import React from 'react';
 import {StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
@@ -69,7 +69,7 @@ function expectTagBelow(row: ReturnType<typeof screen.getByTestId>) {
 
 async function doPhoto() {
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('사진 보기, 5단계 중 1단계'));
+  await waitFor(() => screen.getByLabelText('사진 보기, 4단계 중 1단계'));
   await press('다 봤어요');
   await backHome();
 }
@@ -86,7 +86,7 @@ async function doRecall(word: string | null) {
 }
 async function doQuestion(choice: string | null) {
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+  await waitFor(() => screen.getByLabelText('둘 중 고르기, 4단계 중 3단계'));
   if (choice) {
     fireEvent.press(screen.getByText(choice));
     await press('정했어요');
@@ -95,38 +95,24 @@ async function doQuestion(choice: string | null) {
   }
   await backHome();
 }
-async function doHangul(text: string | null) {
-  await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
-  if (text) {
-    await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('낱말 쓰는 칸'), text);
-    });
-    await act(async () => new Promise<void>(r => setTimeout(() => r(), 1600)));
-    await press('마칠게요');
-  } else {
-    await press('오늘은 넘어갈게요');
-  }
-  await backHome();
-}
-
-test('코스 홈 5행(사진 보기 → 떠올려 보기 → 둘 중 고르기 → 낱말 쓰기 → 이야기 건네기), A′: 다음 행은 이름만·읽기 "{단계}, 5단계 중 {n}단계"', async () => {
+test('코스 홈 4행(사진 보기 → 떠올려 보기 → 둘 중 고르기 → 낱말 쓰기, ⑤ 없음), A′: 다음 행은 이름만·읽기 "{단계}, 4단계 중 {n}단계"', async () => {
   await home();
-  expect(rowIds()).toEqual(['step-now-row', 'step-wait-recall', 'step-wait-question', 'step-wait-hangul', 'step-wait-pass_on']);
+  expect(rowIds()).toEqual(['step-now-row', 'step-wait-recall', 'step-wait-question', 'step-wait-hangul']);
   expect(screen.queryByText('다음 차례')).toBeNull();
-  expect(screen.getByLabelText('떠올려 보기, 5단계 중 2단계')).toBeTruthy();
-  expect(screen.getByLabelText('이야기 건네기, 5단계 중 5단계')).toBeTruthy();
+  expect(screen.getByLabelText('떠올려 보기, 4단계 중 2단계')).toBeTruthy();
+  expect(screen.getByLabelText('낱말 쓰기, 4단계 중 4단계')).toBeTruthy();
+  expect(screen.queryByText('이야기 건네기')).toBeNull();
   expect(screen.queryByText(/남았어요/)).toBeNull();
   expect(screen.queryByText('오늘은 여기까지 할게요')).toBeNull(); // ③ 전에는 없다
 });
 
-test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로, 저장은 동의 조건대로, P7 첫 줄 「가족에게 건넸어요」, 다 마치면 제목 옆 도장 1개', async () => {
+test('끝까지 고르기: ② 고른 낱말이 ④ 본보기로, 저장은 동의 조건대로, ④ 뒤 바로 P7(건넨 줄 없음), 다 마치면 제목 옆 도장 1개', async () => {
   const s = await home();
   await doPhoto();
   // ② 떠올려 보기: 사진 80 + AI 고지, 질문, 정답은 없어요, 보기 3장(라이터 CSV 1일), 넘어가기는 카드 아래 본문, Dock [이걸로 할게요]만
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('recall-question'));
-  expect(screen.getByText('떠올려 보기 · 2 / 5')).toBeTruthy();
+  expect(screen.getByText('떠올려 보기 · 2 / 4')).toBeTruthy();
   expect(screen.getByTestId('five-photo')).toBeTruthy();
   expect(within(screen.getByTestId('five-photo')).getByText('AI가 만든 그림·실제 장소가 아니에요')).toBeTruthy();
   expect(screen.getByText('이 사진을 보면 무엇이 먼저 떠오르세요?')).toBeTruthy();
@@ -148,7 +134,7 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   // ④ 낱말 쓰기: ②에서 고른 낱말
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('낱말 쓰는 칸'));
-  expect(screen.getByText('낱말 쓰기 · 4 / 5')).toBeTruthy();
+  expect(screen.getByText('낱말 쓰기 · 4 / 4')).toBeTruthy();
   expect(screen.getByText('떠올리신 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('따라 쓸 낱말, 참새')).toBeTruthy();
   // P6 회의 11-25: ④도 같은 영역 구분 — 보기 판에 고른 낱말, 쓰기 칸 이름표는 떠올리신 낱말 안내
@@ -160,38 +146,30 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   });
   await act(async () => new Promise<void>(r => setTimeout(() => r(), 1600)));
   await press('마칠게요');
-  await backHome(); // ⑤가 남아 P7 이 아니라 코스 홈
-  // ⑤ 이야기 건네기: 카드 3장
-  await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-title'));
-  expect(screen.getByText('이야기 건네기 · 5 / 5')).toBeTruthy();
-  expect(screen.getByText('가족에게 건넬 한 줄을 골라요')).toBeTruthy();
-  const cards = within(screen.getByTestId('pass-on-choice'));
-  expect(cards.getAllByRole('radio').map(n => n.props.accessibilityLabel)).toEqual(['참새 얘기할게요', '봄, 그게 좋아요', '어느 쪽일지 궁금해요']);
-  expect(cards.getByText('봄 · 가을')).toBeTruthy();
-  fireEvent.press(screen.getByText('참새 얘기할게요'));
-  await press('건넬게요');
+  // ④가 마지막 단계 → 바로 P7(⑤ 없음). 서버(course_len 5) 도장은 앱이 pass_on 을 넘어감으로 대신 기록해 찍는다
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  await waitFor(() => screen.getByText('가족에게 건넸어요') /* 본문 첫 줄 — 따로 접힘 단위(#254 캡처 문제 3, fiveStepsFollowup) */);
-  expect(s.passOn).toHaveBeenCalledWith(1, 'recall_story'); // save_pass_on(p_day_index, p_key)
+  await waitFor(() => screen.getByText(/도장을 찍었어요/));
+  expect(screen.queryByText('가족에게 건넸어요')).toBeNull();
+  expect(screen.queryByTestId('pass-on-title')).toBeNull();
+  expect(s.passOn).not.toHaveBeenCalled();
   expect(s.answer).toHaveBeenCalledWith({questionId: 'q-1', choice: 'A'});
-  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false], ['pass_on', false]]);
+  expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false], ['pass_on', true]]);
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('course-done-head'));
   expect(screen.getAllByTestId('done-title-stamp', {includeHiddenElements: true})).toHaveLength(1);
   expect(screen.queryByTestId('done-stamp', {includeHiddenElements: true})).toBeNull(); // 행마다 도장 없음
-  expect(rowIds()).toEqual(['step-done-photo', 'step-done-recall', 'step-done-question', 'step-done-hangul', 'step-done-pass_on']);
-  // 오늘 한 장: '먼저 떠올리신 것'이 '오늘 낱말'을 대신, 맨 아래 '건넨 말'
+  expect(rowIds()).toEqual(['step-done-photo', 'step-done-recall', 'step-done-question', 'step-done-hangul']);
+  // 오늘 한 장: '먼저 떠올리신 것'이 '오늘 낱말'을 대신, '건넨 말'은 없다
   await press('오늘 코스 다시 보기');
   await waitFor(() => screen.getByTestId('today-review'));
   expect(within(screen.getByTestId('review-recall')).getByText('먼저 떠올리신 것')).toBeTruthy();
   expect(within(screen.getByTestId('review-recall')).getByText('참새')).toBeTruthy();
   expect(screen.queryByText('오늘 낱말')).toBeNull();
-  expect(within(screen.getByTestId('review-pass-on')).getByText('건넨 말')).toBeTruthy();
-  expect(within(screen.getByTestId('review-pass-on')).getByText('참새 얘기할게요')).toBeTruthy();
+  expect(screen.queryByTestId('review-pass-on')).toBeNull();
+  expect(screen.queryByText('건넨 말')).toBeNull();
 });
 
-test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ⑤는 대신 문장 3장, 저장 0, P7 에 「가족에게 건넸어요」 없음', async () => {
+test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ④ 뒤 바로 P7, 저장 0, P7 에 「가족에게 건넸어요」 없음', async () => {
   const s = await home();
   await doPhoto();
   await doRecall(null);
@@ -201,19 +179,10 @@ test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ⑤는 �
   expect(screen.getByText('보이는 낱말을 아래 칸에 써요')).toBeTruthy();
   expect(screen.getByLabelText('따라 쓸 낱말, 나무')).toBeTruthy();
   await press('오늘은 넘어갈게요');
-  await backHome();
-  await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-title'));
-  expect(within(screen.getByTestId('pass-on-choice')).getAllByRole('radio').map(n => n.props.accessibilityLabel)).toEqual([
-    '사진 보니 옛 생각 나요',
-    '오늘 사진이 좋아요',
-    '어느 쪽일지 궁금해요',
-  ]);
-  await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
-  // 넘어감은 p_skipped:true(①은 넘길 수 없다)
+  // 넘어감은 p_skipped:true(①은 넘길 수 없다). 마지막 pass_on 은 앱이 대신 기록한 것
   expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', true], ['question', true], ['hangul', true], ['pass_on', true]]);
   expect(s.recall).not.toHaveBeenCalled();
   expect(s.answer).not.toHaveBeenCalled();
@@ -226,7 +195,7 @@ test('모두 넘어가기: 넘김도 "했어요", ④는 사진 낱말, ⑤는 �
   expect(screen.queryByText('건넨 말')).toBeNull();
 });
 
-test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남은 ④·⑤를 넘어감으로 기록 → P7(몇 단계 했는지 말하지 않음) → 넘긴 ④는 홈에서 다시 할 수 있다', async () => {
+test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남은 ④(서버는 ⑤도)를 넘어감으로 기록 → P7(몇 단계 했는지 말하지 않음) → 넘긴 ④는 홈에서 다시 할 수 있다', async () => {
   const s = await home();
   await doPhoto();
   await doRecall('그늘');
@@ -265,7 +234,7 @@ test('③ 뒤 "오늘은 여기까지 할게요": 확인 대화상자 없이 남
 
 test('이어 하기: 앱이 꺼져도 하던 단계부터(서버 기록) — 지금 행 = 다음 단계, ④는 서버에 저장된 ② 낱말', async () => {
   await home({completedSteps: ['photo', 'recall'], recallSlot: 3});
-  expect(rowIds()).toEqual(['step-done-photo', 'step-done-recall', 'step-now-row', 'step-wait-hangul', 'step-wait-pass_on']);
+  expect(rowIds()).toEqual(['step-done-photo', 'step-done-recall', 'step-now-row', 'step-wait-hangul']);
   expect(within(screen.getByTestId('step-now-row')).getByText('둘 중 고르기')).toBeTruthy();
   await doQuestion('봄');
   await pressCourseNext();
@@ -273,18 +242,14 @@ test('이어 하기: 앱이 꺼져도 하던 단계부터(서버 기록) — 지
   expect(screen.getByLabelText('따라 쓸 낱말, 산들바람')).toBeTruthy();
 });
 
-test('동의 안 함: ②·③·⑤ 저장 호출 0, 그래도 ④·⑤는 화면에서 고른 값을 쓰고, P7 첫 줄은 없다(가족에게 안 보임)', async () => {
+test('동의 안 함: ②·③ 저장 호출 0, 그래도 ④는 화면에서 고른 ② 낱말을 쓰고, ④ 뒤 바로 P7(건넨 줄 없음)', async () => {
   const s = await home({consented: false});
   await doPhoto();
   await doRecall('산들바람');
   await doQuestion('가을');
-  await doHangul('산들바람');
   await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-title'));
-  expect(screen.getByText('산들바람 얘기할게요')).toBeTruthy();
-  expect(screen.getByText('가을, 그게 좋아요')).toBeTruthy();
-  fireEvent.press(screen.getByText('가을, 그게 좋아요'));
-  await press('건넬게요');
+  await waitFor(() => screen.getByLabelText('따라 쓸 낱말, 산들바람'));
+  await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText(/도장을 찍었어요/));
   expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
   expect(s.recall).not.toHaveBeenCalled();
@@ -295,7 +260,7 @@ test('동의 안 함: ②·③·⑤ 저장 호출 0, 그래도 ④·⑤는 화�
 test('QA-2 H1: ③ 보기를 누른 뒤 넘어가기 → 기록 끊김 → [다시 하기]도 넘어가기(답 저장 0 — 넘긴 날 자녀에게 무표시)', async () => {
   const s = await home({completedSteps: ['photo', 'recall'], failRecord: 1});
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+  await waitFor(() => screen.getByLabelText('둘 중 고르기, 4단계 중 3단계'));
   fireEvent.press(screen.getByText('봄'));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText(copy.errors.offline.title));
@@ -308,7 +273,7 @@ test('QA-2 H1: ③ 보기를 누른 뒤 넘어가기 → 기록 끊김 → [다�
 test('QA-2 H1: 보기를 고르지 않고 넘어가기 → 끊김 → [다시 하기]가 동작한다', async () => {
   const s = await home({completedSteps: ['photo', 'recall'], failRecord: 1});
   await pressCourseNext();
-  await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+  await waitFor(() => screen.getByLabelText('둘 중 고르기, 4단계 중 3단계'));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText(copy.errors.offline.title));
   await press(copy.errors.offline.button);
@@ -345,41 +310,19 @@ test('QA-2 M2: 켜짐 첫날 인사는 「하나씩 차례로 해요」(남은 �
   await home();
   expect(screen.getByTestId('first-greeting').props.accessibilityLabel).toBe('안녕하세요, 해님이에요, 하나씩 차례로 해요');
   expect(screen.queryByText(/세 가지/)).toBeNull();
-  expect(screen.getByTestId('step-wait-pass_on')).toBeTruthy();
+  expect(screen.getByTestId('step-wait-hangul')).toBeTruthy();
+  expect(screen.queryByTestId('step-wait-pass_on')).toBeNull();
 });
 
-test('QA-2 L1: ⑤ 다시 보기는 화면에서 고른 카드도 표시(②와 같게 — 저장 안 된 날도)', async () => {
-  await home({consented: false, completedSteps: ['photo', 'recall', 'question', 'hangul']});
-  await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-title'));
-  fireEvent.press(screen.getByText('오늘 사진이 좋아요'));
-  await press('건넬게요');
-  await waitFor(() => screen.getByText(/도장을 찍었어요/));
-  await press('알겠어요');
-  await waitFor(() => screen.getByTestId('course-done-head'));
-  await act(async () => {
-    fireEvent.press(screen.getByTestId('step-done-pass_on'));
-  });
-  await waitFor(() => screen.getByTestId('five-review-photo_like'));
-  expect(screen.getByLabelText('고른 답, 오늘 사진이 좋아요')).toBeTruthy();
-});
-
-test('QA-2 L4: ②·⑤ 보기 묶음(radiogroup)은 질문·제목으로 읽힌다', async () => {
+test('QA-2 L4: ② 보기 묶음(radiogroup)은 질문으로 읽힌다', async () => {
   await home({completedSteps: ['photo']});
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('recall-choice'));
   expect(screen.getByTestId('recall-choice').props.accessibilityRole).toBe('radiogroup');
   expect(screen.getByTestId('recall-choice').props.accessibilityLabel).toBe('이 사진을 보면 무엇이 먼저 떠오르세요?');
-  await press('오늘은 넘어갈게요');
-  await backHome();
-  await doQuestion(null);
-  await doHangul(null);
-  await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-choice'));
-  expect(screen.getByTestId('pass-on-choice').props.accessibilityLabel).toBe('가족에게 건넬 한 줄을 골라요');
 });
 
-test('QA-1 L1: 켜짐에서 일일 알림을 열면 5단계 순서의 다음 단계(① 뒤 = ② 떠올려 보기)로', async () => {
+test('QA-1 L1: 켜짐에서 일일 알림을 열면 4단계 순서의 다음 단계(① 뒤 = ② 떠올려 보기)로', async () => {
   const src = createFakeTokenSource();
   setTokenSourceForTest(src);
   setPushTokenStoreForTest(memoryStore());
@@ -392,17 +335,6 @@ test('QA-1 L1: 켜짐에서 일일 알림을 열면 5단계 순서의 다음 단
   } finally {
     setTokenSourceForTest(null);
   }
-});
-
-test('⑤ 서버 플래그 꺼짐: 건네도 저장하지 않고 P7 첫 줄도 없다', async () => {
-  const s = await home({passOnEnabled: false, completedSteps: ['photo', 'recall', 'question', 'hangul']});
-  await pressCourseNext();
-  await waitFor(() => screen.getByTestId('pass-on-title'));
-  fireEvent.press(screen.getByText('어느 쪽일지 궁금해요'));
-  await press('건넬게요');
-  await waitFor(() => screen.getByText(/도장을 찍었어요/));
-  expect(s.passOn).not.toHaveBeenCalled();
-  expect(screen.queryByText(/가족에게 건넸어요/)).toBeNull();
 });
 
 test('② 저장이 끊기면 알리고 멈춘다(단계 기록 0) → 다시 하기로 저장·진행', async () => {
@@ -423,11 +355,11 @@ describe('200%', () => {
   beforeEach(() => {
     mockFontScale = 2;
   });
-  test('② 넘어가기는 Dock 이 아니라 카드 아래 본문, "골랐어요"는 낱말 아래 줄, 단계 표시는 "2 / 5"', async () => {
+  test('② 넘어가기는 Dock 이 아니라 카드 아래 본문, "골랐어요"는 낱말 아래 줄, 단계 표시는 "2 / 4"', async () => {
     await home({completedSteps: ['photo']});
     await pressCourseNext();
     await waitFor(() => screen.getByTestId('recall-question'));
-    expect(screen.getByText('2 / 5')).toBeTruthy();
+    expect(screen.getByText('2 / 4')).toBeTruthy();
     expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
     const body = screen.getByTestId('recall-body');
     expect(within(body).getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
@@ -444,31 +376,21 @@ describe('200%', () => {
     expect(within(screen.getByTestId('course-steps')).getByRole('button', {name: '오늘은 여기까지 할게요'})).toBeTruthy();
     const keys = screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && /^course-steps:/.test(n.props.testID) && typeof n.type === 'string').map(n => n.props.testID);
     const order = [...new Set(keys)];
-    expect(order.indexOf('course-steps:stop')).toBe(order.indexOf('course-steps:pass_on') + 1);
+    expect(order.indexOf('course-steps:stop')).toBe(order.indexOf('course-steps:hangul') + 1);
   });
   test('③ 넘어가기도 본문', async () => {
     await home({completedSteps: ['photo', 'recall']});
     await pressCourseNext();
-    await waitFor(() => screen.getByLabelText('둘 중 고르기, 5단계 중 3단계'));
+    await waitFor(() => screen.getByLabelText('둘 중 고르기, 4단계 중 3단계'));
     expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
     expect(screen.getByTestId('five-skip-inline')).toBeTruthy();
   });
-  test('③ 단계 표시는 "3 / 5"만(P4와 같은 짧은 표시, #257), 읽기는 그대로', async () => {
+  test('③ 단계 표시는 "3 / 4"만(P4와 같은 짧은 표시, #257), 읽기는 그대로', async () => {
     await home({completedSteps: ['photo', 'recall']});
     await pressCourseNext();
     await waitFor(() => screen.getByTestId('choice-group'));
-    expect(screen.getByText('3 / 5')).toBeTruthy();
-    expect(screen.queryByText('둘 중 고르기 · 3 / 5')).toBeNull();
-    expect(screen.getByTestId('step-header').props.accessibilityLabel).toBe('둘 중 고르기, 5단계 중 3단계');
-  });
-  test('⑤ 넘어가기는 본문, "골랐어요"는 늘 문장 아래 줄', async () => {
-    await home({completedSteps: ['photo', 'recall', 'question', 'hangul']});
-    await pressCourseNext();
-    await waitFor(() => screen.getByTestId('pass-on-title'));
-    expect(screen.getByText('5 / 5')).toBeTruthy();
-    expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
-    expect(within(screen.getByTestId('pass-on-body')).getByTestId('five-skip-inline')).toBeTruthy();
-    const row = screen.getByTestId('pass-on-choice-ask_which');
-    expectTagBelow(row);
+    expect(screen.getByText('3 / 4')).toBeTruthy();
+    expect(screen.queryByText('둘 중 고르기 · 3 / 4')).toBeNull();
+    expect(screen.getByTestId('step-header').props.accessibilityLabel).toBe('둘 중 고르기, 4단계 중 3단계');
   });
 });
