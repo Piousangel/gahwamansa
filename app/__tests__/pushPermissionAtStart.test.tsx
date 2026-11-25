@@ -443,7 +443,9 @@ describe('자녀 한 장 — #296 QA-2 후속', () => {
   test('QA-3 L2 판정을 읽는 사이 [설정]으로 가면 설정 화면 위에 한 장을 띄우지 않는다. C3 로 돌아오면 그때 묻는다', async () => {
     setPlatform('android', 34);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
-    setTokenSourceForTest(createFakeTokenSource());
+    const source = createFakeTokenSource();
+    const getToken = jest.spyOn(source, 'getToken');
+    setTokenSourceForTest(source);
     mockShare();
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
     const realMy = api.myPushSettings.bind(api);
@@ -473,6 +475,7 @@ describe('자녀 한 장 — #296 QA-2 후속', () => {
     });
     await waitFor(() => screen.getByTestId('child-notify'));
     expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
+    expect(getToken).not.toHaveBeenCalled(); // #300 QA-1 L2: 판정 지연·되돌림·다시 묻기 내내 받기 동의 전 getToken 0회
   });
 
   test('L1 언마운트 뒤에는 C3 의 AppState 구독이 떨어져 복귀해도 판정 읽기 0회', async () => {
