@@ -8,6 +8,9 @@ import {isCheerKey, type MyCheers} from '../api/contract/cheers';
 import type {HistoryDay} from '../api/contract/history';
 import type {FailReason} from '../copy/copy';
 import {pairShort} from '../lib/childFormat';
+import {isFeatureOn} from '../lib/features';
+import type {PassOnKey, SavePassOnResult, SaveRecallResult} from '../api/contract/fiveSteps';
+import {fakeRecallFor} from './fakeRecallOptions';
 
 const FAIL_CODES: Record<string, FailReason> = {
   '000000': 'used', '111111': 'expired', '222222': 'rate_limited', '333333': 'busy',
@@ -72,6 +75,15 @@ export type FakeOptions = {
   failParentHistory?: number; // parentHistory 가 처음 N번 실패(오프라인)
   accountTag?: string | null; // 기기 기억값 계정 가명값(기본 'fake-account')
   pushEnabled?: boolean; // 서버 알림 받기 상태(켬 + 받기 시각, 0036). 기본 true, false 면 어르신 N1 이 뜬다
+  // ── 5단계(기능 스위치 fiveSteps 가 켜졌을 때만 콘텐츠에 칸이 생긴다 — 서버 계약 api/contract/fiveSteps.ts 제안) ──
+  // 서버 0061 흉내(api/contract/fiveSteps.ts). 칸은 늘 준다(새 서버) — fiveStepsSupported:false 면 옛 서버처럼 칸이 없다
+  fiveStepsSupported?: boolean; // 기본 true
+  recallSlot?: number | null; // 오늘 이미 저장된 ② slot
+  passOnKey?: PassOnKey | null; // 오늘 이미 저장된 ⑤ 키
+  passOnEnabled?: boolean; // ⑤ 서버 스위치(기본 true — 개발 화면 확인용. false 면 save_pass_on 이 disabled)
+  noRecall?: boolean; // 그날 ② 보기가 없음(recall.options = [])
+  skippedSteps?: StepName[]; // 오늘 이미 넘긴 단계
+  failFiveSave?: number; // saveRecall·savePassOn 이 처음 N번 실패(오프라인)
 };
 export type FakeParent = {
   parentId?: string;
@@ -96,6 +108,18 @@ export type FakeDevHooks = {
 export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHooks} {
   let answered: 'A' | 'B' | null = opts.answeredChoice ?? null;
   const steps = new Set<StepName>(opts.completedSteps ?? []);
+  // 서버 완료 판정(0061): 옛 3단계가 모두 있고, 5단계로 기록된 날(course_len 5)이면 ②·⑤까지 있어야 완료
+  const supported = opts.fiveStepsSupported ?? true;
+  const fiveCalls = () => supported && isFeatureOn('fiveSteps'); // realApi 가 p_course_len 5 를 붙이는 조건과 같다
+  let courseLen: 3 | 5 = 3;
+  const legacyDone = () =>
+    steps.has('photo') && steps.has('question') && steps.has('hangul') && (courseLen === 3 || (steps.has('recall') && steps.has('pass_on')));
+  const skipped = new Set<StepName>(opts.skippedSteps ?? []);
+  let recallSaved: number | null = opts.recallSlot ?? null;
+  let passOnSaved: PassOnKey | null = opts.passOnKey ?? null;
+  let failFiveSave = opts.failFiveSave ?? 0;
+  const todayRecall = () => (opts.noRecall ? [] : (fakeRecallFor(FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length].caption) ?? []).map((label, i) => ({slot: i + 1, label})));
+  const dayIdx = () => ((contentDay - 1) % FAKE_CONTENT.length) + 1;
   let consented = opts.consented ?? false;
   let parentTitle = opts.parentTitle ?? '부모님';
   let savedLabel: string | null = null;
@@ -168,11 +192,19 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       steps.clear();
       answered = null;
       savedLabel = null;
+      recallSaved = null;
+      passOnSaved = null;
+      skipped.clear();
+      courseLen = 3;
     },
     nextDay() {
       contentDay += 1;
       steps.clear();
       answered = null;
+      recallSaved = null;
+      passOnSaved = null;
+      skipped.clear();
+      courseLen = 3;
     },
     switchParentAccount(id: string) {
       me = id;
@@ -389,7 +421,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       const mon = new Date(kst.getTime() - idx * 86400e3);
       const day = (i: number) => new Date(mon.getTime() + i * 86400e3).toISOString().slice(0, 10);
       const set = new Set((opts.weekDone ?? []).map(day));
-      if (steps.size === 3) {
+      if (legacyDone()) {
         set.add(day(idx));
       }
       return {weekStart: day(0), doneDates: [...set].sort()};
@@ -420,6 +452,15 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       }
       const idx = (contentDay - 1) % FAKE_CONTENT.length;
       const c = FAKE_CONTENT[idx];
+      // 5단계 칸(0061): 새 서버는 스위치와 상관없이 늘 준다. 보기는 라이터 CSV(fakeRecallOptions)
+      const five = supported
+        ? {
+            five_steps_supported: true,
+            skipped_steps: linked ? [...skipped] : [],
+            recall: {options: todayRecall(), picked_slot: linked && consented ? recallSaved : null},
+            pass_on: {enabled: opts.passOnEnabled ?? true, picked_key: linked && consented && (opts.passOnEnabled ?? true) ? passOnSaved : null},
+          }
+        : {};
       return {
         day_index: idx + 1,
         photo: {caption: c.caption, image_url: opts.realImage ? `https://example.test/day-${idx + 1}.jpg` : `pending://day-${idx + 1}`, keyword: c.keyword, recall_questions: c.recall},
@@ -427,26 +468,94 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         answered_choice: linked ? answered : null,
         consented: linked && consented,
         completed_steps: linked ? [...steps] : [],
-        streak: !linked ? 0 : steps.size === 3 ? Math.max(1, baseStreak) : baseStreak,
+        streak: !linked ? 0 : legacyDone() ? Math.max(1, baseStreak) : baseStreak,
         linked,
+        ...five,
       };
     },
     async saveAnswer({choice}) {
       if (!consented) {
         throw new ServerError('save_answer', 'consent_required', 'P0001'); // 서버와 같게
       }
+      if (skipped.has('question')) {
+        throw new ServerError('save_answer', 'skipped', 'P0001'); // 0061: 넘긴 ③에는 답을 저장하지 않는다
+      }
       answered = choice;
       const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
       savedLabel = choice === 'A' ? c.a : c.b;
     },
-    async recordSessionStep(step) {
+    // record_session_step(0061 흉내): 3단계 호출이면 옛 판정 그대로. 5단계(fiveCalls)면 넘어감·여기까지·course_len 5
+    async recordSessionStep(step, _sec, o) {
       if (failRecord > 0) {
         failRecord -= 1;
         throw new OfflineError('offline');
       }
-      steps.add(step);
-      const completed = steps.size === 3;
+      const five = fiveCalls();
+      const skip = five && !!o?.skipped;
+      if (!five && step !== 'photo' && step !== 'question' && step !== 'hangul') {
+        throw new ServerError('record_session_step', 'invalid_step', 'P0001'); // 옛 서버에 새 단계(방어 시험용)
+      }
+      if (skip && (step === 'photo' || step === 'stop_here')) {
+        throw new ServerError('record_session_step', 'invalid_step', 'P0001');
+      }
+      if (five || step === 'recall' || step === 'pass_on' || step === 'stop_here') {
+        courseLen = 5;
+      }
+      if (step === 'stop_here') {
+        if (!steps.has('question')) {
+          throw new ServerError('record_session_step', 'stop_before_question', 'P0001');
+        }
+        for (const s of ['recall', 'hangul', 'pass_on'] as const) {
+          if (!steps.has(s)) {
+            steps.add(s);
+            skipped.add(s);
+          }
+        }
+      } else {
+        steps.add(step);
+        if (skip) {
+          skipped.add(step);
+          // 넘긴 단계의 값은 지운다(넘긴 날 자녀에게 무표시)
+          if (step === 'recall') recallSaved = null;
+          if (step === 'pass_on') passOnSaved = null;
+          if (step === 'question') {
+            answered = null;
+            savedLabel = null;
+            if (passOnSaved === 'choice_like') passOnSaved = null;
+          }
+        } else {
+          skipped.delete(step);
+        }
+      }
+      const completed = legacyDone();
       return {completed, streak: completed ? Math.max(1, baseStreak) : baseStreak, steps: [...steps]};
+    },
+    // 5단계 ② save_recall·⑤ save_pass_on(0061 흉내): 거절은 값
+    async saveRecall(dayIndex, slot): Promise<SaveRecallResult> {
+      if (failFiveSave > 0) {
+        failFiveSave -= 1;
+        throw new OfflineError('offline');
+      }
+      if (!consented) return {ok: false, reason: 'consent_required'};
+      if (todayRecall().length === 0) return {ok: false, reason: 'no_content'};
+      if (dayIndex !== dayIdx()) return {ok: false, reason: 'stale_day'};
+      if (skipped.has('recall')) return {ok: false, reason: 'skipped'};
+      if (!todayRecall().some(x => x.slot === slot)) return {ok: false, reason: 'invalid_option'};
+      recallSaved = slot;
+      return {ok: true};
+    },
+    async savePassOn(dayIndex, key): Promise<SavePassOnResult> {
+      if (failFiveSave > 0) {
+        failFiveSave -= 1;
+        throw new OfflineError('offline');
+      }
+      if (!(opts.passOnEnabled ?? true)) return {ok: false, reason: 'disabled'};
+      if (!consented) return {ok: false, reason: 'consent_required'};
+      if (dayIndex !== dayIdx()) return {ok: false, reason: 'stale_day'};
+      if (skipped.has('pass_on')) return {ok: false, reason: 'skipped'};
+      if ((key === 'recall_story' && recallSaved == null) || (key === 'choice_like' && answered == null)) return {ok: false, reason: 'missing_value'};
+      passOnSaved = key;
+      return {ok: true};
     },
     async fetchChildSummary(): Promise<ChildSummary> {
       if (failChildHome > 0) {
@@ -485,6 +594,8 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
       consented = false;
       answered = null;
       savedLabel = null;
+      recallSaved = null;
+      passOnSaved = null;
     },
     async getMyCheers() {
       if (opts.failCheers) {

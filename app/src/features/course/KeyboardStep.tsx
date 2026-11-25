@@ -22,10 +22,9 @@ import {useFinishStep, useStepStarted, type HangulResult} from './useFinishStep'
 import {StepHeader, stepA11y} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {confirmedCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
-import type {StepName} from '../types';
+import {allStepsDone, courseStepNames, recallWordOf, stepNumber} from './fiveSteps';
 
 const k = copy.keyboard;
-const STEP_ORDER: StepName[] = ['photo', 'question', 'hangul'];
 // '읽어 주세요'(PX_read_aloud): 오디오 스파이크(공용 줄) 결론 전까지 자리(낱말 카드 안)만 두고 그리지 않는다(빈 버튼 노출 금지).
 /** 일치 뒤 "낱말을 다 쓰셨어요"를 최소한 보여 주는 시간(시안: 1.5초 이상, 이동은 마치기로만). */
 export const MATCH_HOLD_MS = 1500;
@@ -52,7 +51,9 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const {finish, error, busy} = useFinishStep();
   useStepStarted('hangul', review); // AC-05
   const lastResult = useRef<HangulResult>('finished'); // 저장 실패 뒤 '다시 하기'도 같은 결과(finished/skipped)로
-  const {content, done} = useSession();
+  // five(스위치 + 서버 지원): ②에서 고른 낱말을 쓴다(넘긴 날은 사진 낱말 그대로). 번호 4/5, 넘어가기는 p_skipped. 아니면 사진 낱말·3/3 그대로
+  const {content, done, picks, five} = useSession();
+  const n = stepNumber('hangul', five);
   const {fontScale} = useWindowDimensions();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const finishRef = useRef<React.ComponentRef<typeof Pressable>>(null);
@@ -106,7 +107,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   if (!photo) {
     return null;
   }
-  const word = photo.keyword;
+  const recallWord = five ? recallWordOf(content, picks) : null;
+  const word = recallWord ?? photo.keyword;
   const cells = syllables(word);
   if (review) {
     const hasImage = !photo.image_url.startsWith('pending://') && !imageFailed;
@@ -115,7 +117,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
         top={
           <>
             <BackBar course onBack={toCourseHome} />
-            <StepHeader name={copy.course.step.hangul} n={3} review />
+            <StepHeader name={copy.course.step.hangul} n={n} review five={five} />
           </>
         }
         bottom={<BigButton label={copy.review.back} accessibilityLabel={copy.nav.back_course_a11y} onPress={toCourseHome} />}>
@@ -191,8 +193,10 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const complete = async (result: HangulResult) => {
     lastResult.current = result;
     setPhase(p => (p === 'sheet' ? 'writing' : p));
-    const willFinishCourse = STEP_ORDER.every(s => s === 'hangul' || done.includes(s));
-    if (await finish('hangul', {attemptNo: attempts, result})) {
+    // 다 마친 뒤 홈에서 다시 연 경우(5단계 '여기까지'로 넘긴 ④ 다시 하기)는 P7 을 다시 보이지 않는다
+    const wasAll = five && allStepsDone(done, five);
+    const willFinishCourse = !wasAll && courseStepNames(five).every(s => s === 'hangul' || done.includes(s));
+    if (await finish('hangul', {hangul: {attemptNo: attempts, result}, skipped: result === 'skipped'})) {
       if (willFinishCourse) {
         navigation.replace('CourseDone'); // P7: 알겠어요 → 코스 홈
       } else {
@@ -238,8 +242,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
       variant="step"
       back={{to: copy.course.to_home, onPress: toCourseHome}}
       backAside={asideSkip}
-      header={<StepHeader name={copy.course.step.hangul} n={3} />}
-      stepInfo={stepA11y(copy.course.step.hangul, 3)}
+      header={<StepHeader name={copy.course.step.hangul} n={n} five={five} />}
+      stepInfo={stepA11y(copy.course.step.hangul, n, false, five)}
       onViewport={setViewport}
       dock={releaseDock ? undefined : dock}>
       {!error ? null : <StepErrorBanner error={error} />}
@@ -268,7 +272,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
             </View>
           ) : null}
           <View style={styles.guide}>
-            <Text role="body">{k.guide}</Text>
+            <Text role="body">{recallWord ? k.guide_recall : k.guide}</Text>
             <Text role="sub">{k.need_one}</Text>
           </View>
         </>
