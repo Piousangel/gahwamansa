@@ -9,9 +9,10 @@ insert into auth.users (id, aud, role, is_anonymous) values
   ('70320000-0000-0000-0000-0000000000a1', 'authenticated', 'authenticated', true),
   ('70320000-0000-0000-0000-0000000000e1', 'authenticated', 'authenticated', true); -- 연결 전 기기
 insert into public.families (id, created_by) values ('7032f000-0000-0000-0000-000000000001', '70320000-0000-0000-0000-0000000000c1');
-insert into public.profiles (id, user_id, family_id, role) values
-  ('7032b000-0000-0000-0000-0000000000c1', '70320000-0000-0000-0000-0000000000c1', '7032f000-0000-0000-0000-000000000001', 'child'),
-  ('7032b000-0000-0000-0000-0000000000a1', '70320000-0000-0000-0000-0000000000a1', '7032f000-0000-0000-0000-000000000001', 'parent');
+-- 0062부터 받기 동의(push_consented_at)가 있어야 저장된다 — 이 파일은 저장 규칙을 보므로 둘 다 받기 동의한 상태로 둔다
+insert into public.profiles (id, user_id, family_id, role, push_consented_at) values
+  ('7032b000-0000-0000-0000-0000000000c1', '70320000-0000-0000-0000-0000000000c1', '7032f000-0000-0000-0000-000000000001', 'child', now()),
+  ('7032b000-0000-0000-0000-0000000000a1', '70320000-0000-0000-0000-0000000000a1', '7032f000-0000-0000-0000-000000000001', 'parent', now());
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -25,8 +26,8 @@ grant execute on function pg_temp.tok(int) to public;
 
 -- 등록
 select pg_temp.act_as('70320000-0000-0000-0000-0000000000a1', true);
-select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true}'::jsonb, '어르신이 토큰을 등록한다');
-select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true}'::jsonb, '같은 토큰 재등록은 멱등');
+select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true, "stored": true}'::jsonb, '어르신이 토큰을 등록한다');
+select is(public.register_push_token(pg_temp.tok(1)), '{"ok": true, "stored": true}'::jsonb, '같은 토큰 재등록은 멱등');
 select is((select count(*)::int from public.device_tokens), 1, '본인 토큰 1개만 보인다'); -- rls:의도 RLS 확인(본인 토큰만 보임)
 select is(public.register_push_token('short') ->> 'reason', 'invalid_token', '형식이 틀린 토큰은 거부');
 select is(public.register_push_token(pg_temp.tok(2) || ' x') ->> 'reason', 'invalid_token', '공백이 든 토큰은 거부');

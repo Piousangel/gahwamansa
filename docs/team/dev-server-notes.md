@@ -154,13 +154,14 @@ type MyCheers = { unread_count: number; cheers: { id: string; message_key: Cheer
 ### register_push_token(p_token text, p_platform text default 'android') / unregister_push_token(p_token text)  (0032, SV-01)
 ```ts
 // 호출: sb.rpc('register_push_token', { p_token: fcmToken, p_platform: 'android' })
-type RegisterPushToken = { ok: true } | { ok: false; reason: 'invalid_token' | 'invalid_platform' | 'no_profile' };
+type RegisterPushToken = { ok: true; stored?: boolean } | { ok: false; reason: 'invalid_token' | 'invalid_platform' | 'no_profile' }; // stored: 0062부터
 // 호출: sb.rpc('unregister_push_token', { p_token: fcmToken })
 type UnregisterPushToken = { ok: true; removed: number };
 ```
 - 어르신·자녀 모두(가족에 연결된 사용자). 연결 전 기기는 `no_profile` → 앱은 연결 성공 뒤 다시 등록한다.
 - 언제 부르나: 알림 권한 허용 직후·앱 시작 시·FCM 토큰 갱신 시 등록(멱등). 로그아웃·알림 끄기 시 해제. 계정 지우기는 서버가 정리하므로 따로 안 불러도 된다.
 - 같은 토큰을 다른 계정이 등록하면 이전 계정의 행은 지워진다(한 기기 한 역할, 오배달 방지). **연결 전 계정이 등록해도(no_profile) 이전 계정 행은 지워진다**(0036). 토큰은 표 전체에서 유일. 사용자당 최근 5개, 270일 넘게 갱신 안 된 토큰은 파기 배치가 지운다.
+- **0062부터 받기 동의(알림 켬 + `push_consented_at`) 전에는 저장하지 않는다** → `{ok:true, stored:false}`(같은 토큰의 다른 계정 행 정리는 그대로 함). 동의 후 `{ok:true, stored:true}`. 앱은 `set_push_enabled(true)` 직후 다시 등록한다(pushClient `acceptParentPrompt`·`childOptIn`·`setReceive`, `FamilyPushRow`, 다른 기기는 PushHost 앞으로 올 때 sync).
 - 로그아웃 순서: `unregister_push_token` → 그다음 `signOut`(로그아웃 뒤에는 auth.uid가 없어 해제가 실패한다).
 - `device_tokens`는 앱이 직접 쓸 수 없다(읽기는 본인 것만). 기존에 직접 insert하던 코드가 있으면 이 RPC로 바꿔야 한다.
 
@@ -169,7 +170,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 // sb.rpc('set_push_enabled', { p_enabled: true|false }) → { ok: true; enabled: boolean } | { ok: false; reason: 'no_profile' | 'invalid' }
 // sb.rpc('my_push_settings') → { enabled: boolean | null }   // = 실제로 받는 상태(켬 + 받기 시각), 연결 전 기기는 null
 ```
-- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). **0056부터 일일 알림은 답 공유 동의(`consented_at`, P2)를 보지 않는다** — 알림 받기 동의(`push_consented_at`)와 답 공유 동의는 별개라(DECISIONS 11-19), 답을 가족에게 보여 주지 않기로 한 어르신도 알림을 켜면 "오늘의 사진" 알림을 받는다. #10 ④(N1 동의 시각 저장·그 시각이 있는 사람에게만)와 그대로 맞는다: 대상 조건은 알림 켬 + `push_consented_at` + 연결·토큰·심사 아님·08~20시. 자녀에게 가는 알림은 그대로 — 첫 답(0052)은 어르신이 답을 보여 주는 중일 때만, 답 공유 미동의 어르신은 답 저장 자체가 막힌다(`consent_required`). `false`면 시각이 지워진다. `null`은 `invalid`. 0037부터 이미 받기 시각이 있으면 `true`를 다시 불러도 **처음 시각을 유지**(끄고 다시 켜면 새 시각) — 그래도 앱은 N1에서 사용자가 눌렀을 때만 부르는 것을 원칙으로 한다.
+- **0036부터 N1 "알림 받기"를 누를 때 `set_push_enabled(true)`를 꼭 부른다** — 서버가 그 시각(`push_consented_at`)을 남기고, 이 시각이 있는 사람만 일일 알림 대상이다(법률 체크리스트 #10 ④, OS 권한·토큰만으로는 보내지 않음). **0056부터 일일 알림은 답 공유 동의(`consented_at`, P2)를 보지 않는다** — 알림 받기 동의(`push_consented_at`)와 답 공유 동의는 별개라(DECISIONS 11-19), 답을 가족에게 보여 주지 않기로 한 어르신도 알림을 켜면 "오늘의 사진" 알림을 받는다. #10 ④(N1 동의 시각 저장·그 시각이 있는 사람에게만)와 그대로 맞는다: 대상 조건은 알림 켬 + `push_consented_at` + 연결·토큰·심사 아님·08~20시. 자녀에게 가는 알림은 그대로 — 첫 답(0052)은 어르신이 답을 보여 주는 중일 때만, 답 공유 미동의 어르신은 답 저장 자체가 막힌다(`consent_required`). `false`면 시각이 지워지고 **0062부터 이 계정의 토큰 행도 모두 지워진다**(다시 켜면 앱이 재등록). `null`은 `invalid`. 0037부터 이미 받기 시각이 있으면 `true`를 다시 불러도 **처음 시각을 유지**(끄고 다시 켜면 새 시각) — 그래도 앱은 N1에서 사용자가 눌렀을 때만 부르는 것을 원칙으로 한다.
 - 서버 쪽 알림 끄기(어르신·자녀 공통, 기기 여러 대에 한 번에 적용). 일일 알림·응원 도착·연결 성공 알림 모두 이 값을 따른다.
 - 시스템 알림 권한과는 별개다(권한 거부면 애초에 토큰이 없음). 토큰 해제(`unregister_push_token`)는 로그아웃용.
 
