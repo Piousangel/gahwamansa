@@ -763,3 +763,7 @@
 ## 2026-11-25 크래시 수집·테스터 단계(리드, #260 내부 테스트 완성 기준)
 - 크래시 수집 = Crashlytics(로드맵 D-04 정본, 357행 'Crashlytics·AD_ID 제거'는 AD_ID 제거로 읽음). `@react-native-firebase/crashlytics` 설치는 오너 승인. 스토어 문서 6절 3행('Crashlytics 제거')은 정리 필요
 - 테스터에게 줄 단계: staging 0061 반영·법률 L-11 회신·② 보기 적재가 모두 끝나면 5단계, 하나라도 남으면 3단계(스위치 끔)로 시작
+
+## 2026-11-25 푸시 토큰 등록 응답 stored:false(DV-2, #264 QA-1 L2)
+- 0062부터 받기 동의 전 `register_push_token`은 `{ok:true, stored:false}`(서버 저장 없음). 앱은 지금 이것도 성공으로 보고 토큰을 로컬(`lib/pushToken`)에 둔다 — 로그아웃 해제용이라 무해(해제는 removed:0 멱등). 그대로 둔다
+- 앱에 '로컬 토큰과 같으면 서버 등록 호출 생략' 최적화를 넣지 않는다 — 동의 전 등록분은 서버에 없어서, 동의 뒤 재등록(set_push_enabled(true) 직후·앞으로 올 때 sync)이 건너뛰어지면 알림이 오지 않는다. 앱 코드 변경은 이 PR 밖
