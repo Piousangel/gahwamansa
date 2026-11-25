@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState, type RefObject} from 'react';
 import {Animated, Modal, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useModalFocus} from '../a11y';
 import {useToastModalGuard} from '../toastPlacement';
 import {useFadeIn} from '../useFadeIn';
@@ -72,6 +73,10 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
   const openFocus = useModalFocus(visible, titleRef, returnFocusRef ?? undefined);
   useToastModalGuard(visible);
   const {opacity, start} = useFadeIn(visible);
+  // #293 QA-2 L4: Modal 이 statusBarTranslucent·navigationBarTranslucent 라 상태 표시줄·내비게이션 막대 밑까지 그린다.
+  //   위아래 여백은 '안전 영역 + 12'와 기존 32 중 큰 쪽 — 200%로 카드가 화면을 꽉 채워도 시계·아이콘과 겹치지 않는다
+  const insets = useSafeAreaInsets();
+  const edge = {paddingTop: Math.max(SCRIM_Y, insets.top + SAFE_GAP), paddingBottom: Math.max(SCRIM_Y, insets.bottom + SAFE_GAP)};
   // 두 번 누름 방지: 한 번 누르면 다시 그려질 때(로딩·오류)까지 무시
   const fired = useRef(false);
   useEffect(() => {
@@ -129,7 +134,7 @@ function DialogInner({visible, title, body, children, action, actionHint, dismis
           (onBack ?? onDismiss)();
         }
       }}>
-      <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
+      <Animated.View testID={`${testID}-scrim`} style={[styles.scrim, edge, {opacity, paddingHorizontal: ds.space.screenX[a]}]}>
         <View testID={testID} role="alertdialog" accessibilityViewIsModal style={styles.card}>
           {/* 200%·좁은 폭에서 넘치면 띠·제목·본문이 함께 스크롤되고 버튼 묶음만 밖(아래)에 남는다(#217 리뷰 M, 방법 1) */}
           <ScrollView
@@ -191,10 +196,15 @@ function Hint({text, testID}: {text: string; testID: string}) {
   );
 }
 
+/** 카드 위아래 최소 여백(기존 값) */
+const SCRIM_Y = 32;
+/** 상태 표시줄·내비게이션 막대 끝에서 카드까지 띄우는 간격 */
+const SAFE_GAP = 12;
+
 const styles = StyleSheet.create({
   hint: {textAlign: 'center', marginTop: -4},
   none: {display: 'none'},
-  scrim: {flex: 1, backgroundColor: ds.scrim, justifyContent: 'center', paddingVertical: 32}, // 좌우 여백은 audience 별(리뷰 L1)
+  scrim: {flex: 1, backgroundColor: ds.scrim, justifyContent: 'center'}, // 위아래는 안전 영역(edge), 좌우 여백은 audience 별(리뷰 L1)
   card: {backgroundColor: c.card, borderRadius: ds.radius.sheet, paddingHorizontal: 20, paddingVertical: 24, gap: 12, maxHeight: '100%'},
   // 200%에서 화면을 넘으면 본문만 스크롤, 버튼은 아래에 남는다
   bodyScroll: {flexGrow: 0, flexShrink: 1},

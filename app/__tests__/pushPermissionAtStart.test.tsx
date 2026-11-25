@@ -12,6 +12,7 @@ import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
 import {setPushTokenStoreForTest} from '../src/lib/pushToken';
 import {press, toHome} from '../testUtils/flow';
+import * as clipboard from '../src/ui/clipboard';
 
 const RN = require('react-native');
 const t = copy.push.permission;
@@ -48,9 +49,9 @@ function captureAppState() {
     }
     return {remove: () => {}};
   }) as never);
-  return () =>
+  return (state: string = 'active') =>
     act(async () => {
-      handlers.forEach(h => h('active'));
+      handlers.forEach(h => h(state));
     });
 }
 async function shareCode() {
@@ -261,5 +262,97 @@ describe('자녀: 시작 단계에서 우리 말 한 장 → 시스템 창', () 
     await shareCode();
     await settle();
     expect(screen.queryByTestId('child-notify')).toBeNull();
+  });
+});
+
+// #293 QA-2 후속(대기열 60): L2 복사 경로는 바로 묻지 않는다 · L3 열린 채 연결되면 제목을 연결된 상태로
+describe('자녀 한 장 — QA-2 후속', () => {
+  const copyCode = () =>
+    act(async () => {
+      fireEvent.press(screen.getAllByTestId('wait-copy')[0]);
+    });
+
+  test('L2 복사: 바로 뜨지 않고(복사했어요 띠가 보임) 메신저에 다녀와(앱 복귀) 돌아왔을 때 한 번', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    const source = createFakeTokenSource();
+    const getToken = jest.spyOn(source, 'getToken');
+    setTokenSourceForTest(source);
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const app = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await copyCode();
+    await settle();
+    expect(screen.getByTestId('wait-copied')).toBeTruthy();
+    expect(screen.queryByTestId('child-notify')).toBeNull(); // 복사 직후에는 묻지 않는다
+    await app('active'); // 앱을 떠나지 않은 active 만으로는 묻지 않는다
+    await settle();
+    expect(screen.queryByTestId('child-notify')).toBeNull();
+    await app('background'); // 메신저로 감
+    await app('active'); // 돌아옴
+    await waitFor(() => screen.getByTestId('child-notify'));
+    expect(screen.getByText(withTitle(cp.title_wait, '엄마'), {normalizer: wj})).toBeTruthy();
+    expect(getToken).not.toHaveBeenCalled(); // 받기 동의 전 0회
+    await app('background'); // 한 화면에서 한 번 — 또 다녀와도 다시 열지 않는다
+    act(() => screen.UNSAFE_getByType(RN.Modal).props.onRequestClose());
+    await waitFor(() => expect(screen.queryByTestId('child-notify')).toBeNull());
+    await app('active');
+    await settle();
+    expect(screen.queryByTestId('child-notify')).toBeNull();
+  });
+
+  test('L2 복사하지 않고 앱을 나갔다 오면 묻지 않는다(복사·공유가 계기일 때만)', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    const app = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await app('background');
+    await app('active');
+    await settle();
+    expect(screen.queryByTestId('child-notify')).toBeNull();
+  });
+
+  test('L2 복사하고 나간 사이 연결됐다면 돌아왔을 때 연결 직후 제목으로 한 번', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    jest.spyOn(clipboard, 'copyText').mockReturnValue(true);
+    const app = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await copyCode();
+    await app('background');
+    await api.redeemInviteCode('123456');
+    await app('active');
+    await waitFor(() => screen.getByText(copy.connect_done.title, {normalizer: wj}));
+    await waitFor(() => screen.getByText(withTitle(cp.title_done, '엄마'), {normalizer: wj}));
+    expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
+  });
+
+  test('L3 한 장이 열린 채 연결되면 제목이 연결 직후 것으로 바뀐다(한 장은 하나 그대로, 바뀐 제목을 한 번 읽어 줌)', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    mockShare();
+    const announce = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
+    const wake = captureAppState();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await shareCode();
+    await waitFor(() => screen.getByText(withTitle(cp.title_wait, '엄마'), {normalizer: wj}));
+    await api.redeemInviteCode('123456');
+    await wake();
+    await waitFor(() => screen.getByText(copy.connect_done.title, {normalizer: wj}));
+    await waitFor(() => screen.getByText(withTitle(cp.title_done, '엄마'), {normalizer: wj}));
+    expect(screen.queryByText(withTitle(cp.title_wait, '엄마'), {normalizer: wj})).toBeNull();
+    expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
+    expect(announce.mock.calls.map(c => wj(String(c[0])))).toContain(wj(withTitle(cp.title_done, '엄마')));
   });
 });

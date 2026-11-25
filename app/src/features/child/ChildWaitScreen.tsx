@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Share, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {AppState, Share, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {CommonActions} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
@@ -68,10 +68,28 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   useEffect(() => {
     if (linked) {
       offer('done');
-    } else if (sent || copied > 0) {
+    } else if (sent) {
       offer('wait');
     }
-  }, [linked, sent, copied, offer]);
+  }, [linked, sent, offer]);
+  // #293 QA-2 L2(리드 결정): 복사한 사람은 곧 메신저로 가서 붙여 넣으려는 참이라 바로 묻지 않는다('복사했어요' 띠도 가린다).
+  //   복사한 뒤 앱을 떠났다(background) 돌아오면(active) 그때 묻는다. 돌아오기 전에 연결됐으면 연결 직후 제목으로(L3와 같은 규칙).
+  //   떠나지 않고 연결되면 위 effect 의 연결 직후 1회가 맡는다.
+  const didCopy = useRef(false);
+  const leftAfterCopy = useRef(false);
+  const linkedNow = useRef(linked);
+  linkedNow.current = linked;
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'background') {
+        leftAfterCopy.current = didCopy.current;
+      } else if (s === 'active' && leftAfterCopy.current) {
+        leftAfterCopy.current = false;
+        offer(linkedNow.current ? 'done' : 'wait');
+      }
+    });
+    return () => sub.remove();
+  }, [offer]);
 
   // 쓸 수 있는 번호가 없을 때만 새로 만든다(만료·받은 적 없음)
   const makeCode = async () => {
@@ -99,7 +117,9 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
       Share.share({message: buildShareMessage(copy.code.share, copy.safe.money, code.code, formatExpiry(code.expiresAt), appShareLink(code.code))})
         .then(r => {
           if (r?.action !== Share.dismissedAction) {
-            setSent(true); // 공유 창에서 돌아왔다(Android 는 보냈는지 알 수 없어 돌아온 것을 기준으로)
+            // 공유 창에서 돌아왔다. RN Android Share 는 창이 열리는 순간 늘 sharedAction 으로 끝나(dismissedAction 없음) 앱을 고르지 않고
+            //   닫아도 여기로 온다 — 보냈는지 알 수 없어 돌아온 것을 기준으로 한다(#293 QA-2 L1, 결정은 PR 본문)
+            setSent(true);
           }
         })
         .catch(() => {});
@@ -108,6 +128,7 @@ export function ChildWaitScreen({navigation}: NativeStackScreenProps<ChildParams
   const copyCode = () => {
     if (code && copyText(code.code)) {
       track(api, 'invite_share_tapped', {channel: 'copy'}); // AC-05
+      didCopy.current = true;
       setCopied(n => n + 1);
     }
   };
