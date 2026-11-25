@@ -30,13 +30,13 @@ let settleMs = SETTLE_MS;
 // - 그 전에 시작해 서버 등록까지 끝난 등록은 기억에 쓰지 않고 lateTokens 에 남긴다 → 정리가 함께 해제한다.
 // - 로그아웃이 끝날 때까지(세션을 지울 때까지) 새로 시작하는 등록은 서버를 부르지 않는다(signingOut).
 let generation = 0;
-let signingOut = false;
+let signingOut = 0; // 진행 중인 로그아웃 수(#262 QA-1 L3: 동시에 둘 돌아도 먼저 끝난 쪽이 막기를 풀지 않게)
 const lateTokens = new Set<string>();
 export function pushGeneration(): number {
   return generation;
 }
 export function pushSigningOut(): boolean {
-  return signingOut;
+  return signingOut > 0;
 }
 /** 서버 등록은 됐지만 그사이 로그아웃 정리가 시작돼 기억하지 않은 토큰(정리가 해제한다) */
 export function noteLateRegistration(token: string) {
@@ -44,7 +44,7 @@ export function noteLateRegistration(token: string) {
 }
 /** 로그아웃이 세션까지 지운 뒤(또는 실패로 끝난 뒤) 부른다 — 새 등록을 다시 받는다 */
 export function endPushSignOut() {
-  signingOut = false;
+  signingOut = Math.max(0, signingOut - 1);
 }
 
 /** 이 기기 푸시 토큰 손잡이(PushHost 의 토큰 공급자 — runtime.configurePush 가 넣는다). 로그아웃 정리가 쓴다 */
@@ -91,7 +91,7 @@ export async function settlePushRegistrations(ms: number = settleMs): Promise<bo
  * 반환: unregister 결과(true 성공 · false 실패 · null 해제할 토큰 없음)
  */
 export async function releasePushTokenOnSignOut(unregister: (token: string) => Promise<boolean>): Promise<boolean | null> {
-  signingOut = true;
+  signingOut += 1;
   generation += 1;
   const timedOut = await settlePushRegistrations();
   const tokens = new Set<string>(lateTokens);
@@ -121,7 +121,7 @@ export async function releasePushTokenOnSignOut(unregister: (token: string) => P
 /** 테스트용: 로그아웃 기다림 시간(null 이면 원래대로)·로그아웃 상태 초기화 */
 export function setSettleMsForTest(ms: number | null) {
   settleMs = ms ?? SETTLE_MS;
-  signingOut = false;
+  signingOut = 0;
   lateTokens.clear();
 }
 

@@ -12,6 +12,7 @@ import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
 import {readPushToken, setPushDevice, setPushTokenStoreForTest, setSettleMsForTest, SETTLE_MS} from '../src/lib/pushToken';
 
+declare const __dirname: string;
 const RN = require('react-native');
 const TOKEN_A = 'fcm_token_AAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 const TOKEN_B = 'fcm_token_BBBBBBBBBBBBBBBBBBBBBBBBBBBB';
@@ -123,6 +124,28 @@ describe('토큰 등록·갱신(PushHost)', () => {
     await settle();
     expect(fcm.mod.getToken).not.toHaveBeenCalled();
     expect(reg).not.toHaveBeenCalled();
+  });
+
+  test('QA-1 재확인 L1: 화면을 내리면 토큰 갱신·앱 상태 구독을 모두 푼다', async () => {
+    setAndroid(34);
+    const fcm = fakeMessaging();
+    setTokenSourceForTest(fcm.source);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
+    const subs: {remove: jest.Mock}[] = [];
+    jest.spyOn(RN.AppState, 'addEventListener').mockImplementation(() => {
+      const sub = {remove: jest.fn()};
+      subs.push(sub);
+      return sub;
+    });
+    const api = createFakeApi({linked: true, consented: true});
+    const reg = jest.spyOn(api, 'registerPushToken');
+    const view = render(<AppRoot api={api} role="parent" restore />);
+    await waitFor(() => expect(reg).toHaveBeenCalledWith(TOKEN_A));
+    expect(fcm.subscribers()).toBeGreaterThan(0);
+    expect(subs.length).toBeGreaterThan(0);
+    view.unmount();
+    expect(fcm.subscribers()).toBe(0);
+    expect(subs.filter(x => x.remove.mock.calls.length === 0)).toHaveLength(0);
   });
 
   test('역할을 고르기 전(첫 화면)에는 권한이 있어도 토큰을 요청하지 않는다', async () => {
@@ -377,6 +400,53 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     expect(await registerToken(deps)).toBe('ok'); // 로그아웃이 끝난 뒤(다음 계정)에는 다시
   });
 
+  test('QA-1 재확인 L2: 로그아웃이 예외로 끝나도 막기가 풀려 다음 등록이 된다(finally)', async () => {
+    setAndroid(34);
+    const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+    const sb = {
+      rpc,
+      auth: {
+        getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})),
+        signOut: jest.fn(() => Promise.resolve({error: {message: 'server exploded', status: 500}})), // 오프라인 아님 → fail 로 던짐
+      },
+    };
+    const api = createRealApi(sb as never, social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    await expect(api.signOut()).rejects.toBeTruthy();
+    expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
+  });
+
+  test('QA-1 재확인 L3: 로그아웃 둘이 겹치면 먼저 끝난 쪽이 막기를 풀지 않는다(남은 로그아웃이 끝나야 다시 등록)', async () => {
+    setAndroid(34);
+    const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+    let releaseSlow: () => void = () => {};
+    const slowSb = {
+      rpc,
+      auth: {
+        getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})),
+        signOut: jest.fn(
+          () =>
+            new Promise(r => {
+              releaseSlow = () => r({error: null});
+            }),
+        ),
+      },
+    };
+    const slow = createRealApi(slowSb as never, social as never);
+    const fast = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    const deps = {api: fast, source: fcm.source, store: memoryStore()};
+    const slowOut = slow.signOut();
+    await waitFor(() => expect(slowSb.auth.signOut).toHaveBeenCalled());
+    await fast.signOut();
+    expect(await registerToken(deps)).toBe('stale'); // 느린 로그아웃이 아직 진행 중
+    releaseSlow();
+    await slowOut;
+    expect(await registerToken(deps)).toBe('ok');
+  });
+
   test('계정 삭제: 서버가 토큰 행을 함께 지우므로(0032) 해제 호출 없이 기기 기억만 지운다', async () => {
     setAndroid(34);
     const rpc = jest.fn((name: string) =>
@@ -413,4 +483,13 @@ describe('앱이 뒤에 있을 때(머리 없는 작업, #262 리뷰)', () => {
     // 기본값(jest 전역 모의 = Firebase 앱 없음)도 조용히 false
     expect(registerBackgroundHandler()).toBe(false);
   });
+});
+
+test('QA-1 재확인 L1: index.js 가 앱을 등록하기 전에 백그라운드 처리기를 등록한다', () => {
+  const fs: {readFileSync(f: string, e: 'utf8'): string} = require('fs');
+  const path: {join(...p: string[]): string} = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8').replace(/\/\/.*$/gm, ''); // 주석 제외
+  const call = src.indexOf('registerBackgroundHandler();');
+  expect(call).toBeGreaterThan(-1);
+  expect(call).toBeLessThan(src.indexOf('AppRegistry.registerComponent('));
 });
