@@ -34,11 +34,18 @@ export function registerToken(deps: PushDeps, consented: boolean): Promise<Regis
  * 로그아웃 정리의 끄기가 시간 제한으로 실패한 기기에 남은 '켜짐'을 정리한다.
  */
 export async function registerIfConsented(deps: PushDeps): Promise<RegisterOutcome> {
+  if (pushSigningOut()) {
+    return 'stale';
+  }
+  const gen = pushGeneration(); // 조회 중에 로그아웃(계정 바뀜)이 끼면 이전 계정의 답으로 움직이지 않는다(#269 QA-1 L1)
   let enabled: boolean | null;
   try {
     enabled = (await deps.api.myPushSettings()).enabled;
   } catch {
     return 'no_consent';
+  }
+  if (pushSigningOut() || gen !== pushGeneration()) {
+    return 'stale';
   }
   if (enabled !== true) {
     await deps.source.stopAutoInit().catch(() => {});

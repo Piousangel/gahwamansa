@@ -318,3 +318,30 @@ describe('#269 QA-3 L1: sync 가 남은 자동 초기화 켜짐을 정리', () =
     expect(fcm.mod.getToken).not.toHaveBeenCalled();
   });
 });
+
+test('#269 QA-1 L1: 동의 조회 중에 로그아웃(계정 바뀜)이 끼면 이전 계정의 동의로 토큰을 요청하지 않는다', async () => {
+  android12();
+  const fcm = fakeMessaging();
+  const social = {init: jest.fn(), kakao: jest.fn(), google: jest.fn(), signOut: jest.fn(() => Promise.resolve()), unlinkKakao: jest.fn()};
+  const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+  const sb = {
+    rpc,
+    auth: {getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})), signOut: jest.fn(() => Promise.resolve({error: null}))},
+  };
+  const real = createRealApi(sb as never, social as never);
+  let answer: (v: {enabled: boolean | null}) => void = () => {};
+  const api = {
+    ...real,
+    myPushSettings: () =>
+      new Promise<{enabled: boolean | null}>(r => {
+        answer = r;
+      }),
+  };
+  const pending = registerIfConsented({api, source: fcm.source, store: memoryStore()});
+  await real.signOut(); // 조회가 끝나기 전에 로그아웃 정리
+  answer({enabled: true}); // 이전 계정은 받는 중이었다
+  expect(await pending).toBe('stale');
+  expect(fcm.mod.getToken).not.toHaveBeenCalled();
+  expect(fcm.mod.setAutoInitEnabled).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalledWith('register_push_token', expect.anything());
+});
