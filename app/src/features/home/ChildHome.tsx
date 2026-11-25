@@ -1,6 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, useWindowDimensions, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {AppState, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {ChildParams} from '../../app/ChildStack';
 import {useSession} from '../../app/session';
@@ -20,7 +20,7 @@ import {formatAnswerDate} from './formatDate';
 import {BrandSymbol} from '../../ui/assets/brandSymbol';
 import {childErrorMessage} from '../../shared/childError';
 import {daysSinceYmd} from '../../lib/childFormat';
-import {track, trackOnce} from '../track';
+import {track, trackDaily, trackOnce} from '../track';
 import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
 
@@ -87,6 +87,25 @@ export function ChildHome() {
       trackOnce(api, 'child_first_answer_viewed', firstSeenDays !== null ? {days_since_connect: firstSeenDays} : {}).catch(() => {});
     }
   }, [hasAnswer, firstSeenDays, api]);
+
+  // 기획 v2.1 측정: 자녀 홈을 연 날 하루 한 번(child_home_viewed, 속성 없음). 이 화면에 들어올 때 + 앱이 다시 앞으로 올 때
+  //   (자정을 넘겨 켜 둔 채 다음 날 다시 보는 경우). 같은 날 두 번째부터는 trackDaily 가 기기에서, 0066 서버가 한 번 더 거른다
+  useFocusEffect(
+    useCallback(() => {
+      const fire = () => {
+        trackDaily(api, 'child_home_viewed').catch(() => {});
+      };
+      if (AppState.currentState !== 'background') {
+        fire();
+      }
+      const sub = AppState.addEventListener('change', s => {
+        if (s === 'active') {
+          fire();
+        }
+      });
+      return () => sub.remove();
+    }, [api]),
+  );
 
   const makeCode = async (p: ChildParent) => {
     if (making) {

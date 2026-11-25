@@ -1,4 +1,4 @@
-// 이벤트 계약(서버 0022 log_event + 0029 연결 퍼널 + 0034 빌드 1 추가 + 0053 AC-05). 플랫폼 무관 TS만. 이름·속성 키·값은 서버 화이트리스트
+// 이벤트 계약(서버 0022 log_event + 0029 연결 퍼널 + 0034 빌드 1 추가 + 0053 AC-05 + 0066 child_home_viewed). 플랫폼 무관 TS만. 이름·속성 키·값은 서버 화이트리스트
 // (log_event 이름 목록 · event_prop_ok)와 글자까지 같아야 한다 — __tests__/eventsContract.test.ts 가 마이그레이션을 읽어 비교한다.
 // 근거: migrations/20261116000022_events.sql·…029_events_funnel.sql·…034_events_build1.sql, dev-server-notes 3절.
 // 앱은 쓰기만, 글자 내용(입력 낱말 등)·번호 값은 절대 싣지 않는다.
@@ -17,6 +17,8 @@ export const EVENT_NAMES = [
   'paid_sheet_opened', 'paid_interest_tapped', 'photo_zoom_opened', 'child_first_answer_viewed', 'push_opened',
   // AC-05(0053): 단계 시작(단계별 이탈 = 시작 − 완료)
   'course_step_started',
+  // 기획 v2.1 측정(0066): 자녀 홈 열람 — KST 하루 1회(서버가 같은 날 두 번째부터 저장하지 않음), 속성 없음
+  'child_home_viewed',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
