@@ -251,6 +251,9 @@ export async function setReceive(deps: PushDeps, enabled: boolean, permission: (
   if (enabled && (await permission()) === 'granted') {
     await registerToken(deps, r.enabled);
   }
+  if (!r.enabled) {
+    await deps.source.stopAutoInit().catch(() => {}); // 끄면 SDK 자동 초기화도 끔(리드 결정 11-25). 다시 켜면 getToken 이 true 로
+  }
   return {ok: true, enabled: r.enabled};
 }
 

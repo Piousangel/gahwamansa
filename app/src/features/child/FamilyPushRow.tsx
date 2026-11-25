@@ -83,6 +83,9 @@ export function FamilyPushRow({api}: {api: Api}) {
       if (next && d) {
         registerToken(d, r.enabled).catch(() => {}); // 받기 동의가 막 생겼을 때만 토큰(대기열 38)
       }
+      if (!r.enabled && d) {
+        d.source.stopAutoInit().catch(() => {}); // 끄면 SDK 자동 초기화도 끔(리드 결정 11-25)
+      }
     } catch (e) {
       setEnabled(!next);
       show({text: isOffline(e) ? copy.errors.offline.title : copy.errors.server.title});

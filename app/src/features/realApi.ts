@@ -8,7 +8,7 @@ import {parseLogEventResult, type EventName, type EventProps} from '../api/contr
 import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
-import {clearPushToken, endPushSignOut, releasePushTokenOnSignOut} from '../lib/pushToken';
+import {clearPushToken, endPushSignOut, releasePushTokenOnSignOut, stopPushAutoInit} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
@@ -231,6 +231,7 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       const {data, error} = res as {data: {scope: DeleteScope}; error: never};
       if (error) fail('delete_my_account', error);
       await clearPushToken(); // 서버가 토큰 행을 함께 지웠다(0032). 이 기기 기억만 지운다
+      await stopPushAutoInit(); // 동의한 계정이 없어졌다 — SDK 가 스스로 토큰을 갱신하지 않게(리드 결정 11-25)
       // 서버가 앱 데이터와 함께 본인 인증 계정(소셜 식별 정보 포함)까지 지웠다(0017). 이 기기의 정리만 남는다.
       // 소셜 SDK 세션: 연결된 방법 전체(providers, 자동 합쳐진 경우 포함)를 정리하고, 카카오는 연결 끊기(unlink, 기기 토큰 기준).
       // 기기 토큰이 없으면 unlink 는 조용히 실패한다 → 서버(Admin 키) unlink 는 설계만(TODO). 실패해도 다음 정리는 계속.

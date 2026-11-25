@@ -68,6 +68,13 @@ export function createFcmTokenSourceFrom(mod: MessagingModule | null): PushToken
         await mod.deleteToken(m);
       } catch {}
     },
+    // 받기 동의가 없어지는 때(끄기·로그아웃·계정 삭제): getToken 이 켠 자동 초기화를 되돌려, SDK 가 앱 시작 때 스스로
+    // 토큰을 만들거나 갱신하지 않게(리드 결정 11-25, 대기열 38과 같은 선). 다시 켜면 getToken 이 true 로
+    stopAutoInit: async () => {
+      try {
+        await mod.setAutoInitEnabled(m, false);
+      } catch {}
+    },
     onTokenRefresh: cb => safeSub(() => mod.onTokenRefresh(m, cb)),
     getInitialOpen: async () => {
       try {

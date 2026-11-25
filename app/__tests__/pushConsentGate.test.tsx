@@ -2,7 +2,7 @@
 // 설치 ID·토큰이 생기지 않게. 법률 #266 확인 사실 (a) 동의 전 getToken 0회 (b) 앱에서 끈 뒤 sync 가 등록을 부르는지 를 고정한다.
 // FCM 모듈은 가짜(createFcmTokenSourceFrom), 앱 조립은 PushHost(AppRoot) 그대로.
 import React from 'react';
-import {act, render, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createFcmTokenSourceFrom} from '../src/push/fcmTokenSource';
@@ -11,7 +11,9 @@ import {setPushReceive} from '../src/push/runtime';
 import {setTokenSourceForTest} from '../src/push/tokenSource';
 import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
-import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
+import {readPushToken, setPushDevice, setPushTokenStoreForTest} from '../src/lib/pushToken';
+import {createRealApi} from '../src/features/realApi';
+import {press} from '../testUtils/flow';
 
 const RN = require('react-native');
 const TOKEN_A = 'fcm_token_AAAAAAAAAAAAAAAAAAAAAAAAAAAA';
@@ -43,8 +45,9 @@ function fakeMessaging() {
       current = next;
       refreshers.forEach(f => f(next));
     },
-    /** 토큰 요청·설치 ID 를 만들 수 있는 호출 수(getToken·자동 초기화 켜기) */
-    tokenCalls: () => mod.getToken.mock.calls.length + mod.setAutoInitEnabled.mock.calls.length,
+    /** 토큰 요청·설치 ID 를 만들 수 있는 호출 수(getToken·자동 초기화 **켜기**). 끄기(false)는 세지 않는다 */
+    tokenCalls: () =>
+      mod.getToken.mock.calls.length + mod.setAutoInitEnabled.mock.calls.filter(c => (c as unknown[])[1] === true).length,
   };
 }
 
@@ -200,5 +203,85 @@ describe('(b) 앱에서 끈 뒤', () => {
     await settle();
     expect(fcm.tokenCalls()).toBe(before);
     expect(reg.mock.calls.length).toBe(regBefore);
+  });
+});
+
+describe('리드 결정 11-25: 동의가 없어지면 SDK 자동 초기화도 끔(끄기·로그아웃·계정 삭제), 다시 동의하면 켬', () => {
+  const autoInit = (fcm: ReturnType<typeof fakeMessaging>) => fcm.mod.setAutoInitEnabled.mock.calls.map(c => (c as unknown[])[1]);
+  const social = {init: jest.fn(), kakao: jest.fn(), google: jest.fn(), signOut: jest.fn(() => Promise.resolve()), unlinkKakao: jest.fn()};
+  function sbWith(rpc: jest.Mock) {
+    const sb = {
+      rpc,
+      auth: {getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})), signOut: jest.fn(() => Promise.resolve({error: null}))},
+    };
+    return sb as never;
+  }
+
+  test('P13 끄기(setReceive false) → 자동 초기화 false, 다시 켜기 → getToken 이 true', async () => {
+    android12();
+    const fcm = fakeMessaging();
+    const api = createFakeApi({linked: true, consented: true, pushEnabled: true});
+    const deps = {api, source: fcm.source, store: memoryStore()};
+    await setReceive(deps, false, async () => 'granted');
+    expect(autoInit(fcm)).toEqual([false]);
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
+    await setReceive(deps, true, async () => 'granted');
+    expect(autoInit(fcm)).toEqual([false, true]);
+    expect(fcm.mod.getToken).toHaveBeenCalledTimes(1);
+  });
+
+  test('C7 자녀 토글 끄기 → 자동 초기화 false, 다시 켜기 → true + 등록', async () => {
+    Object.defineProperty(RN.Platform, 'OS', {value: 'android', configurable: true, writable: true});
+    Object.defineProperty(RN.Platform, 'Version', {value: 34, configurable: true, writable: true});
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
+    const fcm = fakeMessaging();
+    setTokenSourceForTest(fcm.source);
+    const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true}); // 받는 중(기본 켬)
+    const reg = jest.spyOn(api, 'registerPushToken');
+    render(<AppRoot api={api} role="child" />);
+    await waitFor(() => screen.getByRole('button', {name: '설정'}));
+    await press('설정');
+    await waitFor(() => screen.getByRole('switch', {name: '가족 연결'}));
+    fcm.mod.setAutoInitEnabled.mockClear();
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => expect(autoInit(fcm)).toEqual([false]));
+    await waitFor(() => expect(screen.getByRole('switch', {name: '가족 연결'}).props.accessibilityState.disabled).toBe(false));
+    reg.mockClear();
+    fireEvent.press(screen.getByRole('switch', {name: '가족 연결'}));
+    await waitFor(() => expect(reg).toHaveBeenCalledWith(TOKEN_A));
+    expect(autoInit(fcm)).toEqual([false, true]);
+  });
+
+  test('로그아웃 → 자동 초기화 false(정상 해제 경로에서도)', async () => {
+    android12();
+    const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    try {
+      await registerIfConsented({api: {...api, myPushSettings: async () => ({enabled: true})}, source: fcm.source, store: memoryStore()});
+      expect(autoInit(fcm)).toEqual([true]);
+      await api.signOut();
+      expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
+      expect(fcm.mod.deleteToken).not.toHaveBeenCalled(); // 정상 해제면 토큰은 두고
+      expect(autoInit(fcm)).toEqual([true, false]); // 자동 초기화만 끔
+    } finally {
+      setPushDevice(null);
+    }
+  });
+
+  test('계정 삭제 → 자동 초기화 false', async () => {
+    android12();
+    const rpc = jest.fn((name: string) => Promise.resolve({data: name === 'delete_my_account' ? {scope: 'none'} : {ok: true}, error: null}));
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    try {
+      await api.deleteMyAccount();
+      expect(autoInit(fcm)).toEqual([false]);
+      expect(fcm.mod.getToken).not.toHaveBeenCalled();
+    } finally {
+      setPushDevice(null);
+    }
   });
 });
