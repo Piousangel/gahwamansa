@@ -753,3 +753,10 @@
 ## 2026-11-25 크래시 수집·테스터 단계(리드, #260 내부 테스트 완성 기준)
 - 크래시 수집 = Crashlytics(로드맵 D-04 정본, 357행 'Crashlytics·AD_ID 제거'는 AD_ID 제거로 읽음). `@react-native-firebase/crashlytics` 설치는 오너 승인. 스토어 문서 6절 3행('Crashlytics 제거')은 정리 필요
 - 테스터에게 줄 단계: staging 0061 반영·법률 L-11 회신·② 보기 적재가 모두 끝나면 5단계, 하나라도 남으면 3단계(스위치 끔)로 시작
+
+## 2026-11-25 FCM_WIRED 켬 — 내부 테스트 N1 '푸시 살리기'(DV-1, push/fcm-wired)
+- 맥락: 11-18 리뷰 M1 조건(앱 안 끄기 토글 P13 어르신 `NotifyRows`·C7 자녀 `FamilyPushRow` → `set_push_enabled`)이 main 에 모두 있다. 11-19 '`FCM_WIRED` false 유지'의 이유(C7 없음)도 사라졌다. 서버의 모든 발송 경로(일일 0056·응원·연결·첫 답 0052)는 `push_reachable`/`push_enabled and push_consented_at` 으로 거른다.
+- 선택: `FCM_WIRED = true`. 앱 쪽 흐름은 그대로 — 토큰 요청은 알림 권한 허용 + 역할이 정해진 뒤에만(거부 기기는 설치 ID·토큰 0, 11-19 에뮬레이터 관찰 C/B3), 갱신은 `onTokenRefresh` → 다시 등록, 로그아웃은 `unregister_push_token`, 계정 삭제는 서버가 토큰 행을 지움. google-services.json 없는 빌드는 지금처럼 토큰 없음.
+- (PR #19 리뷰 L4 결정) 앱 안에서 끄면 **서버 받기만 끈다**. 토큰 해제·`deleteToken`·`setAutoInitEnabled(false)` 는 하지 않는다: 발송 대상은 서버가 `push_enabled` 로 거르고, 등록을 계속해야 같은 토큰의 다른 계정 행(로그아웃 해제 실패분)을 서버가 지운다(리뷰 L4). 끄는 동작 자체는 토큰을 새로 요청·등록하지 않는다(시험 `fcmWired`).
+- 버린 안: 끄면 토큰 해제(다시 켤 때 권한·토큰 왕복이 늘고, 위 L4 정리가 끊김), 앞에 있을 때 받은 알림을 앱이 그리기(알림 그리기 패키지 필요 — 새 설치 금지, 빌드 1은 앱 안 화면이 이미 그 내용을 보여 줌).
+- 남는 것(앱 밖): staging Vault·함수 배포·문구 적재·`PUSH_DRY_RUN` 해제는 오너 승인(PR 본문 순서). 0052 첫 답 알림은 발송 차례에 자녀 토큰이 없으면 `no_token`(받기 꺼짐이면 `skipped`)으로 한 번만 기록하고 다시 보내지 않는다(3일 지난 대기분도 버림). 그래서 실수신 시험(N4)은 자녀 폰이 FCM 빌드로 '알림 켜기'까지 마친 **뒤에** 어르신이 첫 답을 하는 순서로.

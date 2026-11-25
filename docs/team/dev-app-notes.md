@@ -475,7 +475,7 @@
 ### Firebase 연결 계획(US-10 와 함께, 설치는 리드 지시 뒤) · 2026-11-18
 **이미 들어간 준비(설치 없이 지금 빌드·동작 그대로)**
 - `src/push/fcmTokenSource.ts`: `createFcmTokenSource()` — `@react-native-firebase/messaging` 을 try 안에서만 require(없으면 null), Firebase 초기화 실패(그 flavor 에 json 없음)도 null. 모듈러 API(getMessaging·getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage). 토큰 요청 때만 `setAutoInitEnabled(true)`. 알림 data 는 `{kind}` 만 남김. 테스트 `fcmTokenSource.test`(가짜 모듈).
-- `pickTokenSource('real')` 는 `FCM_WIRED`(지금 false)일 때만 FCM — **리뷰 M1: P13·C7 끄기 토글이 main 에 들어온 뒤 true**.
+- `pickTokenSource('real')` 는 `FCM_WIRED` 일 때 FCM — **11-25 true**(리뷰 M1 조건 P13·C7 끄기 토글 충족, DECISIONS 11-25 'FCM_WIRED 켬').
 - Gradle: flavor 폴더 `app/android/app/src/<staging|production>/google-services.json` 이 하나라도 있을 때만 `com.google.gms:google-services:4.5.0` classpath + 플러그인 적용, 파일 없는 flavor 는 `process…GoogleServices` 를 끔. 없으면 지금과 같음. `app/android/app/google-services.json`(flavor 밖)은 빌드 실패(섞임 방지). 루트 .gitignore 에 이미 `google-services.json`.
 - `app/firebase.json`: 데이터 수집 기본 끔·메시징 자동 초기화 끔(권한 허용 뒤 첫 토큰 요청 때 켬 — 알림 거부 기기의 설치 ID 생성 최소화, QA-07)·기본 채널 `daily`·전달 지표 BigQuery 끔·알림 위임 끔·설치 ID 메시징 끔.
 
@@ -529,7 +529,7 @@
 - `@react-native-firebase/app`·`messaging` **27.1.0** 정확 고정. 함께 들어온 npm 의존성: 웹 `firebase` 13.1.0 묶음(@firebase/*, grpc·protobuf 등 — RNFB 의 웹·기타 플랫폼용). Android 번들에 들어가는지는 아래 '번들 확인'.
 - 병합 매니페스트(stagingDebug): 새 권한 `WAKE_LOCK`·`ACCESS_NETWORK_STATE`·`com.google.android.c2dm.permission.RECEIVE`. **AD_ID 없음**, 위치 없음. 수신기 `ReactNativeFirebaseMessagingReceiver`·`FirebaseInstanceIdReceiver` 는 exported=true 이지만 `c2dm.permission.SEND`(GMS 만 가짐)로 보호. 서비스는 모두 exported=false. meta: 자동 초기화 false·설치 ID 메시징 false·알림 위임 false·기본 채널 `daily`. datatransport(Firelog) 구성 요소가 함께 들어온다 — 전달 지표 내보내기는 꺼 둠(firebase.json), 데이터 보안 양식(LG-05)에 "Firebase 진단(datatransport)" 확인 필요.
 - production release 게이트: `src/production/google-services.json` 이 없으면 빌드 실패.
-- `FCM_WIRED` 는 **false 유지**(리드 지시): P13 어르신 토글은 main 에 있으나 C7 자녀 '가족 연결' 토글이 아직 없음(DECISIONS 11-18: 둘 다 필요).
+- `FCM_WIRED` 는 11-19 당시 **false 유지**(C7 자녀 토글 없음) → **11-25 true**(C7 `FamilyPushRow` main 반영, DECISIONS 11-25). 시험 `__tests__/fcmWired.test.tsx`.
 - 토큰 시험(2026-11-19, emulator-5554 Google APIs 이미지, staging 디버그 + 임시 real 모드·임시 시험 코드 — 커밋 안 함): `createFcmTokenSource().getToken()` → **발급됨**(길이만 기록, 값은 로그·출력 안 함). POST_NOTIFICATIONS 허용 상태. 실제 수신(QA-07)은 FCM_WIRED 를 켠 뒤.
 
 ### Firebase 리뷰 M2 — 설치 ID·FCM 등록이 언제 생기나(기기 관찰) · 2026-11-19

@@ -1,6 +1,6 @@
 // FCM 토큰 공급자(AU-04 후속 — Firebase 연결 준비). @react-native-firebase/messaging 이 **설치되기 전에도** 앱·테스트가 깨지지 않게
 // 모듈을 try 블록 바로 안에서 require 한다(Metro 는 이 모양만 선택적 의존성으로 다룬다, lib/env.ts 와 같은 방식). 없으면 null.
-// 아직 pickTokenSource 에 연결하지 않는다(DECISIONS 11-18 리뷰 M1: 앱 안 끄기 토글 P13·C7 이 main 에 들어온 뒤 FCM_WIRED 를 켬).
+// pickTokenSource('real') 가 FCM_WIRED 일 때 쓴다(DECISIONS 11-18 리뷰 M1 조건 = 앱 안 끄기 토글 P13 NotifyRows·C7 FamilyPushRow, 11-25 충족).
 // 모듈러 API(v22+): getMessaging·getToken·onTokenRefresh·getInitialNotification·onNotificationOpenedApp·onMessage·setAutoInitEnabled.
 import type {PushData, PushTokenSource} from './tokenSource';
 
@@ -91,5 +91,9 @@ export function createFcmTokenSource(): PushTokenSource | null {
   return createFcmTokenSourceFrom(mod);
 }
 
-/** M1 조건(앱 안 끄기 토글 main 반영) 전까지 false. 켜면 real 모드가 FCM 토큰을 쓴다 */
-export const FCM_WIRED = false;
+/**
+ * real 모드가 FCM 토큰을 쓴다(내부 테스트 N1, DECISIONS 2026-11-25 'FCM_WIRED 켬'). 켜는 조건이던 리뷰 M1(앱 안 끄기 토글 P13·C7)은 main 에 있다.
+ * 토큰 요청은 알림 권한이 허용되고 역할이 정해진 뒤에만(PushHost·pushClient) — 거부 기기는 설치 ID·토큰이 생기지 않는다(데이터 보안 양식 15행).
+ * google-services.json 이 없는 빌드는 createFcmTokenSource 가 null → 토큰 없음(지금과 같음).
+ */
+export const FCM_WIRED = true;
