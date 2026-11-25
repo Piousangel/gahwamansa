@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 마이그레이션 0001→끝 순차 재생 검증(로드맵 SV-09, 리뷰 M3).
-# 공유 로컬 DB(bumo-jasik, 54322)는 다른 레인 통합 테스트가 쓰므로 reset 금지 → 별도 project_id·포트(553xx)의 임시 스택에서
+# 공유 로컬 DB(bumo-jasik, 54322)는 다른 레인 통합 테스트가 쓰므로 reset 금지 → 별도 project_id·포트(기본 553xx, 차 있으면 빈 대역 — temp-stack-lib.sh)의 임시 스택에서
 # `db reset`(마이그레이션 전체 + 시드) 후 `test db`(pgTAP 전체)를 돌리고, 끝나면 그 스택만 지운다(--no-backup).
 #   사용: supabase/ops/replay-check.sh            → 결과를 화면과 저장소 밖 로그(${TMPDIR:-/tmp}/bumo-replay-check.log)에 남김(로컬 키는 출력하지 않음)
 # 전제: Docker 실행 중. 공유 스택과 동시에 떠도 포트가 겹치지 않는다. 메모리 절약을 위해 재생·테스트에 필요 없는 서비스는 띄우지 않는다
@@ -8,6 +8,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+. "$ROOT/supabase/ops/temp-stack-lib.sh"
 WORK="$(mktemp -d)"
 LOG="${TMPDIR:-/tmp}/bumo-replay-check.log"
 PROJECT="bumo-jasik-replay-$$" # 실행마다 고유(두 레인이 동시에 돌려도 서로의 스택을 지우지 않게)
@@ -21,9 +22,7 @@ trap cleanup EXIT
 mkdir -p "$WORK/supabase"
 cp -R "$ROOT/supabase/migrations" "$ROOT/supabase/tests" "$ROOT/supabase/templates" "$WORK/supabase/"
 cp "$ROOT"/supabase/*.sql "$WORK/supabase/" 2>/dev/null || true
-# project_id 와 543xx 포트를 553xx 로 바꾼 설정 사본
-sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)/= 553\1/' \
-  "$ROOT/supabase/config.toml" >"$WORK/supabase/config.toml"
+# 설정 사본은 temp_stack_start 가 만든다: project_id 와 543xx 포트 → 기본 553xx, 차 있으면 550~599 중 빈 대역(PORT_BASE=세 자리로 직접 지정 가능)
 
 {
   echo "== replay-check $(date '+%Y-%m-%d %H:%M:%S') HEAD=$(git -C "$ROOT" rev-parse --short HEAD)"
@@ -33,13 +32,12 @@ sed -e "s/^project_id = .*/project_id = \"$PROJECT\"/" -e 's/= 543\([0-9][0-9]\)
     echo "== test-rls-lint 실패 — 위 줄을 고친 뒤 다시"
     exit 1
   fi
-  if ! npx --yes supabase start --workdir "$WORK" \
-    -x realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta >"$WORK/start.log" 2>&1; then
+  if ! temp_stack_start "$ROOT" "$WORK" "$PROJECT" 553; then
     echo "== 임시 스택 시작 실패 — 마지막 출력(키 줄 제외):"
-    grep -v -i -E "eyJ[A-Za-z0-9_-]{10,}|sb_(secret|publishable)_|S3_PROTOCOL_ACCESS|JWT_SECRET|jwt secret|secret key|access key|new version|recommend" "$WORK/start.log" | tail -15
+    grep -v -i -E "eyJ[A-Za-z0-9_-]{10,}|sb_(secret|publishable)_|S3_PROTOCOL_ACCESS|JWT_SECRET|jwt secret|secret key|access key|new version|recommend" "$WORK/start.log" 2>/dev/null | tail -15
     exit 1
   fi
-  echo "== 임시 스택 시작($PROJECT, db 55322)"
+  echo "== 임시 스택 시작($PROJECT, db ${TEMP_STACK_BASE}22)"
   echo "== db reset(임시 스택만)"
   if ! npx --yes supabase db reset --workdir "$WORK" >"$WORK/reset.log" 2>&1; then
     echo "== db reset 실패 — 마지막 출력:"
