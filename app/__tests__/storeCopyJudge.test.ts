@@ -1,11 +1,14 @@
 // 대기열 64(11-26): 기획 v2.1 Q1 — 앱의 판단어는 화면·동의뿐 아니라 스토어에서도 뺀다(writer.md).
 // 앱 문구는 monthContract.test.ts 판단어 검사가 붙잡는다. 이 시험은 저장소 밖으로 나가는 스토어·홍보 문안만 본다.
 // 팀 메모(왜 바꿨는지 적은 줄)는 검사하지 않는다 — 콘솔·그래픽·인쇄물에 그대로 들어가는 칸만 잘라 본다.
-import {readFileSync} from 'fs';
-import {join} from 'path';
+// fs·path 는 require(앱 tsconfig 에 node 타입이 없다 — audioEngines.test.ts 와 같은 꼴)
+// export {} 로 모듈 범위(이름이 다른 시험 파일 전역과 부딪히지 않게)
+export {};
+const fs = require('fs');
+const path = require('path');
 
 const JUDGE = /취향|좋아하시|알아서|마음 ?가는/; // monthContract.test.ts 와 같은 식
-const docs = (p: string) => readFileSync(join(__dirname, '../../docs', p), 'utf8');
+const docs = (p: string): string => fs.readFileSync(path.join(__dirname, '../../docs', p), 'utf8');
 
 // play-console-draft: §2(짧은 설명 인용줄)~§3.2(출시 노트)의 ``` 블록·인용줄·3.1 캡션 표 행
 function playConsoleShipped(md: string): string[] {
