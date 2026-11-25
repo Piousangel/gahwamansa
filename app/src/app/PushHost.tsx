@@ -25,7 +25,7 @@ const isChildKind = (k: PushKind) => k === 'parent_connected' || k === 'parent_r
 const tagOf = (api: {accountTag(): Promise<string | null>}) => api.accountTag().catch(() => null);
 
 // 푸시 조립(AU-04): 채널 만들기 · 토큰 등록·갱신 · 어르신 N1 띄우기 · 알림 탭 라우팅(U1·AC-03) · push_opened.
-// 그리는 것은 N1(ds Dialog, P7 뒤 코스 홈 위) 하나뿐. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = Firebase(US-10) 전까지 없음).
+// 그리는 것은 N1(ds Dialog, P7 뒤 코스 홈 위) 하나뿐. 토큰 공급자는 API 모드로 고른다(fake 모드 = 가짜 토큰, real = FCM — google-services.json 없는 빌드는 토큰 없음).
 export function PushHost({role, source: given}: {role: Role; source?: PushTokenSource}) {
   const {api, content} = useSession();
   const source = useMemo(() => given ?? pickTokenSource(getAppEnv().API_MODE), [given]);
@@ -61,8 +61,11 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         sync();
       }
     });
+    // 토큰이 바뀌면 등록만 다시(받기 재시도·서버 상태 읽기는 하지 않음 — 첫 발급 때도 불리므로 #262 리뷰). 권한 확인은 그대로
     const refresh = source.onTokenRefresh(() => {
-      sync();
+      readNotifyPermission()
+        .then(p => (p === 'granted' ? registerToken(deps) : undefined))
+        .catch(() => {});
     });
     return () => {
       app.remove();

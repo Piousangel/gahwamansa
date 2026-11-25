@@ -85,6 +85,7 @@
 | 채널 | Android 채널 daily·cheer·family(`app/src/push/channels.ts`, 서버 `supabase/functions/_shared/push.mts:14,25`) | iOS에 채널 없음. 끄기는 앱 안 토글(P13·C7 → set_push_enabled, `DECISIONS.md:382`)로 이미 서버 쪽이라 iOS에도 그대로 통한다. P13 '그 채널만 꺼짐' 안내(`notifyNative.ts:73-83`의 채널 설정 열기)는 iOS에서 숨겨야 함. 계약 타입 이름 `AndroidPushChannel`은 그대로 둬도 됨 | B2 | 앱 | 2h |
 | 발송 페이로드 | `notification{title,body}` + `android{priority, channel_id}`(`push.mts:24-25`) | FCM이 notification 블록을 APNs 알림으로 바꿔 보내므로 기본 동작은 됨(추정). 소리·배지·잠금화면 공개 수준이 필요하면 `apns` 블록 추가. platform 열이 정확해야 분기 가능 → N3 | B2(N3만 지금) | 서버 | 1h |
 | firebase.json | `messaging_android_*`만, `messaging_auto_init_enabled false`(`app/firebase.json`) | iOS 자동 초기화도 같은 키로 꺼짐(추정). iOS에서 `getToken` 전에 `registerDeviceForRemoteMessages` 필요 여부 확인(자동 등록 끈 경우) | B2 | 앱 | 포함 |
+| 백그라운드 시작·APNs 등록(#262 QA-1 L3, 11-25 추가) | Android는 `index.js`에서 빈 `setBackgroundMessageHandler` 등록(`fcmTokenSource.registerBackgroundHandler`). iOS 미설정 | iOS는 APNs 등록(`registerDeviceForRemoteMessages`·auto-register 확인)과 RNFB가 안내하는 `isHeadless` 시작 속성 처리(백그라운드로 깨어날 때 앱 화면을 그리지 않기, AppDelegate·루트 컴포넌트) 필요 | B2 | 앱 | 0.5일 |
 
 ### 2.4 Platform 분기·Android 전용 가정 (grep `Platform.OS`, BackHandler 등)
 

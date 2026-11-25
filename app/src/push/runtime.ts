@@ -1,6 +1,7 @@
 // 푸시 실행 중 의존성 한 벌(PushHost 가 앱 시작 때 채운다). 화면(자녀 useNotifyPermission·P13·C7 토글)이 api 를 따로 받지 않고 쓰게.
 // 화면이 쓰는 API(리뷰 M1): pushReceive()(서버 받기 상태 읽기), setPushReceive(on)(앱 안 끄기·켜기), childNotifyOptIn(p)(C3 '알림 켜기').
 import {defaultStore} from '../lib/kvStore';
+import {setPushDevice} from '../lib/pushToken';
 import type {Api} from '../features/types';
 import {childOptIn, logPermissionResult, readReceive, setReceive, type PushDeps, type ReceiveResult} from './pushClient';
 import {readNotifyPermission, requestNotifyPermission, type NotifyPermission} from './notifyNative';
@@ -10,6 +11,7 @@ let deps: PushDeps | null = null;
 
 export function configurePush(api: Api, source: PushTokenSource = nullTokenSource): PushDeps {
   deps = {api, source, store: deps?.store ?? defaultStore()};
+  setPushDevice(source); // 로그아웃 정리(realApi.signOut → lib/pushToken)가 기기 토큰을 읽고 무효화할 수 있게
   return deps;
 }
 export function pushDeps(): PushDeps | null {

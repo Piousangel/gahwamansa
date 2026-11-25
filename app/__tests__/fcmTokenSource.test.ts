@@ -49,7 +49,7 @@ test('토큰은 요청 때 자동 초기화를 켠 뒤 받고, 알림 data 는 k
   expect(dataOf(null)).toBeNull();
 });
 
-test('리뷰 M1: 끄기 토글 전에는 real 모드가 FCM 을 쓰지 않는다', () => {
-  expect(FCM_WIRED).toBe(false);
+test('리뷰 M1 충족(11-25 FCM_WIRED 켬): real 모드라도 Firebase 앱이 없는 빌드(jest 전역 모의)는 토큰 없음으로 — 켜진 경로는 fcmWired.test', () => {
+  expect(FCM_WIRED).toBe(true);
   expect(pickTokenSource('real').kind).toBe('none');
 });
