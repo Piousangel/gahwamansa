@@ -88,11 +88,11 @@
 | ID | 기준 | 어떻게 확인하나 | 구분 | 지금 | 근거 |
 |---|---|---|---|---|---|
 | S1 | 자동 검사 초록: tsc·lint·jest·서버 pgTAP | CI(app.yml·server.yml) 초록 | 필수 | ✅ | main tsc 0, jest 159/1845(progress 214). GitHub Actions 복구(progress 176) |
-| S2 | Maestro 흐름 5개 초록 | `app/e2e/run.sh` 실행 로그 | 필수 | 확인 필요 | 흐름 5개 있음(f1·f2·f5·f6·f9). CI에 없고 최근 실행 기록 못 찾음 |
-| S3 | release 빌드 콜드 스타트 10회(강제 종료 포함) 크래시 0 | S25 staging release로 10회, 시간 기록(G-13, D-36) | 필수 | ❌ | D-36 '열림'. 11-19 첫 실행 1회 237ms만 있음 |
-| S4 | 개발 빌드 'Error: undefined' 경고 원인 확인 | logcat 재현 → 원인 → 고침 또는 무해 판정 | 필수 | ❌ | progress 148·152 대기열 14 |
+| S2 | Maestro 흐름 5개 초록 | `app/e2e/run.sh` 실행 로그 | 필수 | ⚠️ | 5개 모두 초록 마지막 11-19 07:46(`~/.maestro/tests`), f1·f2 단독 11-20. 그 뒤 응원 시트 gorhom(#255) 등 변경 → 재실행 필요. 선택자 55개 정적 점검은 모두 소스에 있음. CI에 없음(`qa/evidence/2026-11-25-stability` 5절) |
+| S3 | release 빌드 콜드 스타트 10회(강제 종료 포함) 크래시 0 | S25 staging release로 10회, 시간 기록(G-13, D-36) | 필수 | ❌ | D-36 '열림'. 11-19 첫 실행 1회 237ms만 있음. S25 확인 목록으로 넘김(`qa/evidence/2026-11-25-stability` 6절) |
+| S4 | 개발 빌드 'Error: undefined' 경고 원인 확인 | logcat 재현 → 원인 → 고침 또는 무해 판정 | 필수 | ⚠️ | 원인 찾음·무해 판정: RN Fast Refresh 가 Metro 웹소켓을 잃을 때 내는 경고의 마지막 줄(WebSocket 오류 Event 에 message 없음). release 에 없는 코드, 앱 수정 없음, 시험 `devMetroDisconnectWarning` 으로 고정. logcat 재현 1회만 남음(`qa/evidence/2026-11-25-stability` 1절) |
 | S5 | 느린 기기에서 첫 화면·코스가 끊기지 않는다 | 저사양 에뮬레이터 프로필(또는 저가 실기기) 첫 화면·P3·P4 녹화 | 함께 | ❌ | D-36 '저가 기기' 열림 |
-| S6 | release 번들에 비밀값·개발 메뉴 없음 | release-gates A9 grep 0건 | 필수 | 확인 필요 | 기록 못 찾음 |
+| S6 | release 번들에 비밀값·개발 메뉴 없음 | release-gates A9 grep 0건 | 필수 | ⚠️ | JS release 번들(staging·production) 비밀 키 모양 0건, production 개발 메뉴 0건. A9 식은 `localhost`(라이브러리 기본값 7건) → `:54321` 로 고침(리드 결정, #268), 새 식으로 JS 번들 0건. APK(Hermes) 산출물 검사는 출시 빌드 때(`qa/evidence/2026-11-25-stability` 2·3절) |
 
 ### 1.7 푸시
 
@@ -170,12 +170,12 @@
 
 | ✅ | ⚠️ | ❌ | 확인 필요 |
 |---|---|---|---|
-| 6 | 20 | 31 | 17 |
+| 6 | 23 | 30 | 15 |
 
 - ✅: F1·F2·F8·S1·M1·M3
-- ⚠️: E1·E2·E4·E5·E10·E11·C1·C4·C5·C7·L2·L3·A1·A2·N5·D1·D2·T4·T5·O2
-- ❌: E8·E9·C3·L1·L5·F3·F4·F5·F6·F7·A4·S3·S4·S5·N1·N2·N3·N4·N6·D4·D6·G1·G2·G3·G4·G5·T2·T3·O1·O3·M4
-- 확인 필요: E3·E6·E7·C2·C6·L4·A3·S2·S6·D3·D5·T1·O4·O5·M2·K1·K2
+- ⚠️: E1·E2·E4·E5·E10·E11·C1·C4·C5·C7·L2·L3·A1·A2·S2·S4·S6·N5·D1·D2·T4·T5·O2
+- ❌: E8·E9·C3·L1·L5·F3·F4·F5·F6·F7·A4·S3·S5·N1·N2·N3·N4·N6·D4·D6·G1·G2·G3·G4·G5·T2·T3·O1·O3·M4
+- 확인 필요: E3·E6·E7·C2·C6·L4·A3·D3·D5·T1·O4·O5·M2·K1·K2
 - 읽는 법: 화면(어르신·자녀)은 에뮬레이터 캡처까지는 많이 왔다. 비어 있는 곳은 **실서버 두 대 왕복, 푸시, 크래시 수집, 게시물, production** 다섯 덩어리다.
 - `qa/device-backlog.md` D-38(#16)·D-40(#45) 상태 칸을 '수정 병합, 실기기 재확인 필요'로 이 PR에서 고쳤다.
 

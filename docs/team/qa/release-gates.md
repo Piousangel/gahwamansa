@@ -23,7 +23,7 @@
 | A6 | 문구 금지어 | A3 안 `copyBan.test.ts` + 아래 G-CLOSED 확장 grep | 0건 | **부분**: copyBan은 `아직·못 했·미완료·N일째·틀렸·치매·치료·예방`만 검사. 13 §1.1이 요구하는 `두뇌·안부·안심·칭찬류`는 없음 → §6 제안 1 |
 | A7 | 하드코딩 한글 0 | A3 안 `noPlaceholder`·copy 테스트(추정: 하드코딩 검사 범위 확인 필요) | 0건 | 불명 → QA가 W1에 범위 확인 |
 | A8 | release 번들 비밀값 | `npm run check:dev-menu`(dev-menu 브랜치 병합 후) + 아래 grep | 0건 | dev-menu 미병합(AU-01). 병합 전에는 grep만 |
-| A9 | release 번들 grep | `unzip -p app-production-release.apk assets/index.android.bundle \| strings \| grep -E 'sb_secret_\|service_role\|devTestChild\|localhost\|10\.0\.2\.2\|bumojasik-dev-menu-impl'` | 0건 | 수동 실행. Hermes는 한글을 UTF-16으로 담아 한글 표식은 strings로 못 잡음(R-DM 사실) |
+| A9 | release 번들 grep | `unzip -p app-production-release.apk assets/index.android.bundle \| strings \| grep -E 'sb_secret_\|service_role\|devTestChild\|:54321\|10\.0\.2\.2\|bumojasik-dev-menu-impl'` | 0건 | 수동 실행. `localhost` 는 빼고 로컬 Supabase 주소 `:54321` 로 바꿈(리드 결정 11-25, #268): RN 개발 서버·supabase-js·URL 폴리필 기본값이라 늘 7건 나옴(`qa/evidence/2026-11-25-stability` 2절). 개발 메뉴 표식은 production APK 에서만 0건(staging 은 설계상 있음). Hermes는 한글을 UTF-16으로 담아 한글 표식은 strings로 못 잡음(R-DM 사실) |
 | A10 | 병합 매니페스트 권한 | `bundletool dump manifest --bundle app-production-release.aab \| grep uses-permission` | `INTERNET`·`POST_NOTIFICATIONS`·FCM·Crashlytics 필수분만, `AD_ID`·`ACCESS_*_LOCATION` 0 | AU-05 이후 |
 | A11 | 출시 빌드 안전장치 | `scripts/build-production.sh` | 성공(작업 트리 깨끗·서명·versionCode > 기록) | 있음 |
 | A12 | 에뮬레이터 흐름 | `maestro test .maestro/` | 흐름 5개 초록 | **없음**(AU-12 W0 착수) |
