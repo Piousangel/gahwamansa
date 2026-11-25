@@ -9,6 +9,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import * as appLink from '../src/shared/appLink';
 import {press} from '../testUtils/flow';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -25,19 +26,22 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function settings() {
+// 앱 전체(AppRoot)를 처음부터 그려 홈 → '설정'으로 가는 길. 이동 자체를 확인하는 첫 테스트 하나만 쓴다
+async function settingsFromHome() {
   render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
   await press('설정');
   await waitFor(() => screen.getByTestId('settings-row-oss'));
 }
+// 나머지는 설정 화면(P13)만 바로 그린다 — 연결·동의한 기기, 진짜 어르신 스택(대기열 67, QA-1 L2: 테스트마다 앱 전체를 그리던 것을 정리)
+const settings = () => renderParentScreen();
 const order = (ids: string[]) => {
   const found = screen.UNSAFE_root.findAll(n => ids.includes(n.props?.testID)).map(n => n.props.testID as string);
   return [...new Set(found)];
 };
 
-test('순서: 약관 → 방침 → 오픈소스 → AI → 병원 아님 → 사업자 → 문의하기 → 버전(값이 없어도 숨기지 않음)', async () => {
-  await settings();
+test('홈 → 설정(앱 전체) / 순서: 약관 → 방침 → 오픈소스 → AI → 병원 아님 → 사업자 → 문의하기 → 버전(값이 없어도 숨기지 않음)', async () => {
+  await settingsFromHome();
   const ids = ['settings-row-terms', 'settings-row-privacy', 'settings-row-oss', 'settings-ai-notice', 'settings-not-medical', 'settings-row-business', 'settings-row-contact', 'version-line', 'version-tap'];
   expect(order(ids).filter(x => !x.startsWith('version'))).toEqual(ids.slice(0, 7));
   // 값이 없으면 개발·staging 은 '[설정 필요]'
