@@ -344,7 +344,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 - 콘솔 경고 2건(익명 로그인 허용·유출 비밀번호 보호)은 DB가 아니라 Auth 설정이라 `docs/team/RELEASE.md` §9 사용자 체크리스트에 적었다.
 
 ## 8. 재생 검증·원격 확인 (SV-09)
-- **푸시 토큰 잠금 경합 재현**(0062, #264): `supabase/ops/push-lock-race.sh` — 자체 임시 스택(project `bumo-race-<pid>`, 557xx)을 띄워 두 연결을 실제로 겹친다. R1·R2(등록 ↔ 철회: 철회한 계정 토큰 행 0), D1~D3(삭제 코어 ↔ 등록·철회, 가족 전체 삭제 ↔ 등록: 교착 없음). 시험용 멈춤 트리거를 설치하므로 **임시 스택 전용**(공유 54322·staging 금지), CI에는 안 넣음(약 2분). `PATCH_SQL=파일`로 다른 정의를 얹어 실패하는지 볼 수 있다(예: register 잠금을 동의 확인 뒤로 옮기면 R2 FAIL, 0058 삭제 순서면 D1~D3 교착 FAIL). 규칙: **profiles와 device_tokens를 함께 잠그는 함수는 profiles를 먼저(여러 행이면 user_id 순서)**. device_tokens만 쓰는 경로(unregister·push_record 무효 토큰·파기 배치·user_delete_core)는 순서 문제 없음.
+- **푸시 토큰 잠금 경합 재현**(0062, #264): `supabase/ops/push-lock-race.sh` — 자체 임시 스택(project `bumo-race-<pid>`, 557xx)을 띄워 두 연결을 실제로 겹친다. R1·R2(등록 ↔ 철회: 철회한 계정 토큰 행 0), D1~D3(삭제 코어 ↔ 등록·철회, 가족 전체 삭제 ↔ 등록: 교착 없음), C1(심사 가족 정리 ↔ 같은 토큰 등록: 교착 없음, 0063). 판정은 교착 문구·남은 행 수에 더해 **두 연결 모두 결과 줄이 있고 ERROR가 없어야** PASS(0063 PR, 한쪽이 다른 오류로 끝나도 PASS로 보이던 구멍 막음). 시험용 멈춤 트리거를 설치하므로 **임시 스택 전용**(공유 54322·staging 금지), CI에는 안 넣음(약 2분). `PATCH_SQL=파일`로 다른 정의를 얹어 실패하는지 볼 수 있다(예: register 잠금을 동의 확인 뒤로 옮기면 R2 FAIL, 0058 삭제 순서면 D1~D3 교착 FAIL, 0063 down이면 C1 교착 FAIL). 규칙: **profiles와 device_tokens를 함께 잠그는 함수는 profiles를 먼저(여러 행이면 user_id 순서, 가족 행도 잡으면 families → profiles)**. device_tokens만 쓰는 경로(unregister·push_record 무효 토큰·파기 배치·user_delete_core)는 순서 문제 없음.
 - **로컬 순차 재생**: `supabase/ops/replay-check.sh` — 공유 DB(54322)를 건드리지 않고 별도 임시 스택(project_id `bumo-jasik-replay-<pid>` 실행마다 고유, db 55322 — 포트가 같아 동시에 두 개는 못 돌림)에서 `db reset`(0001→끝 + 시드) → `test db` → 스택 삭제. 로그는 저장소 밖 `${TMPDIR}/bumo-replay-check.log`. 11-18 결과: 마이그레이션 31개 재생 + pgTAP 29파일 **446/446 PASS**(리뷰 M3 해소).
 - **원격 확인(staging, 리드·사용자 실행 — SQL Editor)**:
   ```sql
@@ -483,6 +483,7 @@ type UnregisterPushToken = { ok: true; removed: number };
 | 0060 | 응원 키 확대 ②: cheer_key_ok 하나로 send_cheer·cheer_texts check·이벤트 message_key 통합, 새 13키 | PR #244 | 미반영(언제 반영해도 무해 — 관문은 ③ 자녀 새 시트, DECISIONS 11-25) |
 | 0061 | 오늘 코스 5단계: 완료 판정(옛 3단계·5단계·여기까지·넘어감), ② 떠올린 것·⑤ 건넨 말(스위치 기본 꺼짐) 저장·파기 연쇄, 자녀 recalls·pass_ons | PR(server/five-steps) | 미반영(서버 먼저 무해 — 새 앱보다 먼저) |
 | 0062 | 받기 동의 전 푸시 토큰 저장 안 함·철회 시 토큰 삭제·일회 정리, 잠금 순서 profiles → device_tokens 통일(register·set_push_enabled·account_delete_core) | PR #264 | 미반영(오너 승인 — 반영 전 지울 행 수 세기, 0050~0061과 함께 db push) |
+| 0063 | 심사 가족 정리(admin_cleanup_review_family) 잠금 순서: 가족 → 어르신 프로필 user_id 순서(#264 QA-1 L-a) | PR(server/lock-order-followup) | 미반영(0062와 함께 — 데이터 변경 없음) |
 - **0060 반영 전·새 키 법률 리뷰 전에는 새 응원 키를 `cheer-legal-approved.mjs`에 넣고 `load-push-copy --approved`를 돌리지 않는다**(#244). 스크립트도 대상 DB가 키를 받지 않으면 쓰지 않고 멈춘다(exit 4).
 - staging 반영 전 순서: Vault·확장(§9 #16~18) → `scripts/db-push.sh staging` → `load-push-copy.mjs`(법률 리뷰 뒤) → 함수 배포 3개(push-daily·push-events·kakao-unlink) → secrets. 반영 뒤 §8 원격 확인 SQL.
 - 공유 로컬 DB(54322)에는 main에 들어간 번호만 둔다. 미병합 번호는 `supabase/ops/replay-check.sh`로.
