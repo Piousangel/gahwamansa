@@ -54,7 +54,7 @@ test('동의 좋아요를 두 번 빨리 눌러도 한 번', async () => {
   const give = jest.spyOn(api, 'giveConsent');
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await twice(screen.getByRole('button', {name: '좋아요'}));
   await waitFor(() => screen.getByTestId('date-line'));
   expect(give).toHaveBeenCalledTimes(1);

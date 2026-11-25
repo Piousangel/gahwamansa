@@ -106,6 +106,19 @@ export function ParentSettings() {
               <View ref={resumeTitleRef} accessible accessibilityRole="header" accessibilityLabel={t.resume_confirm}>
                 <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
               </View>
+              {/* P2 v6 리뷰: 좋아요는 CONSENT_VERSION 으로 기록된다 → 그 버전 동의 화면과 같은 다섯 줄(같은 글자)을 버튼 앞에 보인다.
+                  v5 로 동의했다가 멈춘 분이 여기서 v6 범위(모아 보기·챙겨 드릴 거리)를 보지 않고 동의되는 일을 막는다 */}
+              {/* #298 QA-3 L4: 동의 화면과 같은 제목·다섯 줄·거절 안내 키(같은 버전 글). L5: 점 '•'는 읽지 않게 감춘다(ConsentScreen 과 같은 방식) */}
+              <Text20 weight="bold">{copy.consent.title}</Text20>
+              {copy.consent.body.map(line => (
+                <View key={line} testID="resume-consent-point" accessible accessibilityLabel={line} style={styles.resumePoint}>
+                  <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    <Text20 testID="resume-consent-dot">•</Text20>
+                  </View>
+                  <Text20 style={styles.resumePointText}>{line}</Text20>
+                </View>
+              ))}
+              <Text20>{copy.consent.decline_note}</Text20>
               <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
               <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
             </View>
@@ -285,6 +298,8 @@ const styles = StyleSheet.create({
   toggleText: {flex: 1, gap: 4},
   title: {paddingBottom: 8},
   section: {backgroundColor: color.card, borderRadius: radius.card, paddingVertical: 16, paddingHorizontal: 16, gap: 12},
+  resumePoint: {flexDirection: 'row', gap: 8},
+  resumePointText: {flex: 1},
   confirm: {backgroundColor: color.noticeSoft, borderRadius: radius.card, borderWidth: 4, borderColor: color.action, padding: 14, gap: 12},
   error: {backgroundColor: color.dangerSoft, borderRadius: radius.card, borderWidth: 3, borderColor: color.dangerInk, paddingVertical: 10, paddingHorizontal: 16, gap: 4},
   errorTitle: {color: color.dangerInk},

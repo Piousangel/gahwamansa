@@ -104,7 +104,7 @@ describe('동의(P2): consent_shown · parent_consent_accepted · parent_consent
   async function toConsent(api: Api) {
     render(<AppRoot api={api} role="parent" />);
     await enterCode('123456');
-    await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+    await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   }
 
   test('보이면 consent_shown, 좋아요 → 저장된 뒤 accepted{consent_version}', async () => {

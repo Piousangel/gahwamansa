@@ -2,7 +2,7 @@ import {OfflineError, ServerError} from './types';
 import {ChildSummary, PARENT_TITLES} from './types';
 import type {
   PeekResult,
-  Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
+  Api, ChildParent, HistoryItem, LatestAnswer, LoginMethod, MonthItem, ParentHistory, RedeemResult, SendCheerResult, StepName, TodayContent,
 } from './types';
 import {isCheerKey, type MyCheers} from '../api/contract/cheers';
 import type {HistoryDay} from '../api/contract/history';
@@ -57,6 +57,9 @@ export type FakeOptions = {
   // ── 자녀 화면 v3(가정 계약) ──
   disconnected?: boolean; // 기본 어르신 한 명의 연결이 풀림
   history?: HistoryItem[]; // 기본 어르신 한 명의 지난 답(미지정이면 저장한 답에서 만든다)
+  // 서버 0068 동의 버전 게이트 흉내: 기본 어르신의 동의 버전(consented:true 만 주면 v5 = month 없음). giveConsent 가 바꾼다
+  consentVersion?: string;
+  month?: MonthItem[]; // 기본 어르신 한 명의 '최근 한 달 고르신 것'(v6 이상일 때만 보인다. 미지정이면 지난 답에서 만든다)
   cheerDailyLimit?: number; // 같은 어르신에게 하루 보낼 수 있는 응원 수(서버 가정 2)
   parents?: FakeParent[]; // 어르신 여러 명(지정하면 위 한 명 옵션 대신 쓴다)
   failHistory?: number; // fetchAnswerHistory 가 처음 N번 실패(오프라인)
@@ -95,7 +98,11 @@ export type FakeParent = {
   history?: HistoryItem[];
   starter?: string | null;
   connectedDate?: string | null;
+  month?: MonthItem[]; // 있으면 이 분은 v6 이상 동의(서버 0068 게이트 통과). 없으면 키 없음(v5)
 };
+// 화면 확인용 '챙겨 드릴 거리' 예시(고르신 보기마다 미리 쓴 한 줄 — 서버 content_questions.care_a/b 흉내). 없는 보기는 null(줄 숨김)
+const FAKE_CARE: Record<string, string> = {봄: '봄꽃 길 같이 걷기', 가을: '가을 산 같이 걷기', '시장 구경': '가까운 시장 같이 구경 가기'};
+const consentNum = (v: string | null) => (v && /^v\d+$/.test(v) ? Number(v.slice(1)) : 0);
 const todayKst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
 export type FakeDevHooks = {
@@ -123,6 +130,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
   const todayRecall = () => (opts.noRecall ? [] : (fakeRecallFor(FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length].caption) ?? []).map((label, i) => ({slot: i + 1, label})));
   const dayIdx = () => ((contentDay - 1) % FAKE_CONTENT.length) + 1;
   let consented = opts.consented ?? false;
+  let consentVersion: string | null = opts.consentVersion ?? (opts.consented ? 'v5' : null);
   let parentTitle = opts.parentTitle ?? '부모님';
   let savedLabel: string | null = null;
   let linked = opts.linked ?? false;
@@ -161,7 +169,12 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
           ? {prompt: null, choiceLabel: savedLabel, answeredDate: todayKst()}
           : null;
     const on = shared && !!latest;
-    return {parentId: 'parent-1', title: parentTitle, shared, connected: !opts.disconnected, latest: shared ? latest : null, starter: on ? (opts.starter ?? null) : null};
+    const base: ChildParent = {parentId: 'parent-1', title: parentTitle, shared, connected: !opts.disconnected, latest: shared ? latest : null, starter: on ? (opts.starter ?? null) : null};
+    // 서버 0068: 나누는 중 + 동의 v6 이상일 때만 month 키
+    if (shared && consentNum(consentVersion) >= 6) {
+      base.month = opts.month ?? singleHistory().map(it => ({...it, care: FAKE_CARE[it.choiceLabel] ?? null}));
+    }
+    return base;
   };
   const parentList = (): ChildParent[] =>
     opts.parents
@@ -173,18 +186,21 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
           latest: (p.shared ?? true) ? (p.latest ?? null) : null,
           starter: (p.shared ?? true) && p.latest ? (p.starter ?? null) : null,
           connectedDate: p.connectedDate ?? null,
+          ...((p.shared ?? true) && p.month ? {month: p.month} : {}),
         }))
       : [single()];
+  // 기본 어르신 한 명의 지난 답(나누는 중인지는 부르는 쪽이 본다)
+  const singleHistory = (): HistoryItem[] => {
+    const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
+    return opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), optionA: c.a, optionB: c.b, choiceLabel: savedLabel}] : []);
+  };
   // 자녀 C5 지난 답(child_answer_history 모양). 어르신 미리보기(0050)도 같은 값을 쓴다
   const historyList = (): ParentHistory[] => {
     if (opts.parents) {
       return many.map(p => ({parentId: p.parentId, title: p.title, shared: p.shared ?? true, items: (p.shared ?? true) ? (p.history ?? []) : []}));
     }
     const s = single();
-    const c = FAKE_CONTENT[(contentDay - 1) % FAKE_CONTENT.length];
-    const items: HistoryItem[] =
-      opts.history ?? (savedLabel ? [{answeredDate: todayKst(), promptShort: pairShort(c.a, c.b), optionA: c.a, optionB: c.b, choiceLabel: savedLabel}] : []);
-    return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? items : []}];
+    return [{parentId: s.parentId, title: s.title, shared: s.shared, items: s.shared ? singleHistory() : []}];
   };
   let unread: MyCheers['cheers'] = (opts.cheers ?? []).map((message_key, i) => ({id: `cheer-${i + 1}`, message_key, sent_at: '2026-11-20T00:00:00Z'}));
   let contentDay = opts.day ?? 1; // 개발자 메뉴 "하루 넘기기"가 바꾼다
@@ -416,6 +432,7 @@ export function createFakeApi(opts: FakeOptions = {}): Api & {__dev: FakeDevHook
         throw new ServerError('give_consent', 'invalid_version', 'P0001');
       }
       consented = true;
+      consentVersion = version;
     },
     async getWeekStamps() {
       const kst = new Date(Date.now() + 9 * 3600e3);

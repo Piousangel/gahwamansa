@@ -1,7 +1,7 @@
 // P2 동의 v4(시안 P6_P7_N1_P2_ds4b P2 + 전문가 리뷰 N-12·7:42 + #175 리뷰 법률 M1·L, AI 티 M1·M2):
-// - 카드 안 세 줄은 ✓ 대신 점 머리표(V4), 150% 이상은 점 칸 없이 전폭. 안내 두 줄(안심·거절)은 카드 밖, 기본 글자색.
+// - 카드 안 줄들(v6 다섯 줄)은 ✓ 대신 점 머리표(V4), 150% 이상은 점 칸 없이 전폭. 안내 두 줄(안심·거절)은 카드 밖, 기본 글자색.
 // - 두 버튼은 본문이 Dock 위 창에 들어가면 Dock, 넘치면 본문 끝(실측). 같은 높이·글자.
-// - 읽기 순서: 세 줄 → 안심 줄 → 거절 안내 → (오류) → 좋아요 → 싫어요. 문구는 그대로(CONSENT_VERSION·법률 확인 전 버튼 문구).
+// - 읽기 순서: 다섯 줄 → 안심 줄 → 거절 안내 → (오류) → 좋아요 → 싫어요. P2 v6(11-26) 문구, 버튼 문구는 법률 확인 전이라 그대로.
 import React from 'react';
 import {StyleSheet} from 'react-native';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
@@ -55,12 +55,12 @@ const minHeightOf = (name: string) => {
   return StyleSheet.flatten(typeof st === 'function' ? st({pressed: false}) : st).minHeight;
 };
 
-test('100%: 카드 안 세 줄은 점 머리표(체크 아님), 거절 안내는 카드 밖, 두 버튼은 Dock·같은 높이', async () => {
+test('100%: 카드 안 다섯 줄(v6)은 점 머리표(체크 아님), 거절 안내는 카드 밖, 두 버튼은 Dock·같은 높이', async () => {
   await toConsent();
   const card = screen.getByTestId('consent-points');
   const rows = within(card).getAllByTestId('consent-point');
-  expect(rows).toHaveLength(3);
-  expect(within(card).getAllByTestId('consent-dot', H)).toHaveLength(3);
+  expect(rows).toHaveLength(5); // P2 v6 다섯 줄
+  expect(within(card).getAllByTestId('consent-dot', H)).toHaveLength(5);
   expect(within(card).queryByTestId('icon-check', H)).toBeNull();
   expect(within(card).queryByText(NOTE)).toBeNull();
   expect(screen.getByTestId('consent-decline-note')).toBeTruthy();
@@ -100,17 +100,17 @@ test('본문이 Dock 위 창에 다 들어가면 Dock 그대로(글자 배율이
   expect(screen.getByTestId('screen-dock')).toBeTruthy();
 });
 
-test('넘치면(N-12) 버튼은 본문 끝 — 순서는 세 줄 → 안심 줄 → 거절 안내 → 좋아요 → 싫어요(법률 #175 M1), 200%는 점 칸 없이 전폭', async () => {
+test('넘치면(N-12) 버튼은 본문 끝 — 순서는 다섯 줄 → 안심 줄 → 거절 안내 → 좋아요 → 싫어요(법률 #175 M1), 200%는 점 칸 없이 전폭', async () => {
   mockDims = {width: 320, height: 640, scale: 3, fontScale: 2};
   await toConsent();
   expect(screen.queryAllByTestId('consent-dot', H)).toHaveLength(0);
-  expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
+  expect(screen.getAllByTestId('consent-point')).toHaveLength(5); // P2 v6 다섯 줄
   await overflow();
   await waitFor(() => expect(screen.queryByTestId('screen-dock')).toBeNull());
   const body = screen.getByTestId('screen-body');
   expect(within(body).getByRole('button', {name: copy.consent.accept})).toBeTruthy();
   const seq = order();
-  const iLast = seq.indexOf(copy.consent.body[2]);
+  const iLast = seq.indexOf(copy.consent.body[copy.consent.body.length - 1]);
   const iReassure = seq.indexOf(copy.consent.reassure);
   const iNote = seq.indexOf(NOTE);
   const iYes = seq.indexOf(`[${copy.consent.accept}]`);

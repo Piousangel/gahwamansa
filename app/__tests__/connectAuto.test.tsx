@@ -62,7 +62,7 @@ test('6번째 숫자 뒤 300ms 에 저절로 확인(그 전에는 부르지 않�
     expect(redeem).not.toHaveBeenCalled(); // 자동 연결 금지
     await press('이 번호로 연결하기');
     expect(redeem).toHaveBeenCalledWith('123456');
-    await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+    await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   } finally {
     jest.useRealTimers();
   }
@@ -124,7 +124,7 @@ test('M1 회귀: 연결 중 이전(하드웨어 뒤로 포함)은 막고, 결과
   await press('번호 쓰기로');
   expect(screen.queryByLabelText('연결 번호 6자리 쓰는 칸')).toBeNull(); // 빈 번호 쓰기로 가지 않음
   await act(async () => release());
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
 });
 
 test('다른 번호 쓰기: 확인 화면에서 비우고 번호 쓰기로', async () => {
@@ -152,7 +152,7 @@ test('연결 중 인터넷이 끊기면 다시 하기로 같은 번호를 다시
   await press('이 번호로 연결하기');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   expect(redeem).toHaveBeenCalledTimes(2);
 });
 
@@ -169,7 +169,7 @@ test('#181 리뷰 H1: 서버는 번호를 썼는데 응답이 끊김 → 다시 
   await press('이 번호로 연결하기');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요')); // 'used' 로 막히지 않는다
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요')); // 'used' 로 막히지 않는다
   expect(redeem).toHaveBeenCalledTimes(2);
 });
 
@@ -183,7 +183,7 @@ test('이벤트: 연결 성공은 parent_code_redeemed, 실패는 이유만(번�
   await typeCode('123456');
   await waitFor(() => screen.getByRole('button', {name: '이 번호로 연결하기'}));
   await press('이 번호로 연결하기');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   expect(log).toHaveBeenCalledWith('parent_code_failed', {reason: 'expired'});
   expect(log).toHaveBeenCalledWith('parent_code_redeemed', undefined);
   expect(JSON.stringify(log.mock.calls)).not.toMatch(/123456|111111/);
