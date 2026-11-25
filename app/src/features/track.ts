@@ -1,5 +1,6 @@
 import {isQuietEventFailure, type EventName, type EventProps} from '../api/contract/events';
-import {prefs, type OnceEvent} from '../lib/prefs';
+import {prefs, type DailyEvent, type OnceEvent} from '../lib/prefs';
+import {kstDate} from '../lib/localStamps';
 import type {Api} from './types';
 
 // 계측(log_event, 0022)을 화면 흐름과 떼어 보낸다: 기다리지 않고, 실패해도 화면은 그대로.
@@ -44,6 +45,39 @@ export async function trackOnce(api: Api, name: OnceEvent, props?: EventProps): 
     }
     await prefs().markEventOnceSent(name, scope);
     track(api, name, props);
+  } finally {
+    inflight.delete(key);
+  }
+}
+
+// 하루 한 번(KST) 보내는 이벤트(기획 v2.1 측정, 0066): child_home_viewed. 계정(accountTag) 기준 — 같은 기기에서 다른 자녀 계정이면 따로.
+// 정확한 하루 1회는 서버가 정한다(같은 계정·같은 KST 날짜 두 번째부터 저장 없이 ok). 여기서 거르는 건 요청 수를 줄이려는 것이라
+// 기기 시계(KST로 바꾼 날짜)를 써도 된다 — 시계가 틀려 한 번 더 보내도 서버에서 한 행이다.
+// trackOnce 와 달리 응답을 받은 뒤 표시한다: 네트워크·서버 오류(예외)면 표시하지 않아 다음 진입·복귀 때 다시 보낸다.
+// 응답이 왔으면(ok·한도·지워진 계정·계약 어긋남 모두) 표시한다 — 같은 날 다시 보내도 결과가 같다.
+// 가명값은 기기 저장 키에만 쓰고 이벤트에는 싣지 않는다(속성 없음).
+export async function trackDaily(api: Api, name: DailyEvent, today: string = kstDate(new Date())): Promise<void> {
+  const scope = await api.accountTag().catch(() => null);
+  if (!scope) {
+    return;
+  }
+  const key = `day:${name}:${scope}`;
+  if (inflight.has(key)) {
+    return;
+  }
+  inflight.add(key);
+  try {
+    if ((await prefs().eventDaySent(name, scope)) === today) {
+      return;
+    }
+    const r = await api.logEvent(name, {}).catch(() => null);
+    if (!r) {
+      return; // 오류: 표시 없이 다음에 다시
+    }
+    if (!r.ok && !isQuietEventFailure(r) && __DEV__) {
+      console.warn(`[log_event] ${name}: ${r.reason}`);
+    }
+    await prefs().markEventDaySent(name, scope, today);
   } finally {
     inflight.delete(key);
   }

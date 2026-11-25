@@ -118,3 +118,77 @@ select (e.ts at time zone 'Asia/Seoul')::date as d, count(*) as purged
    and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
  group by 1
  order by 1;
+
+-- ⑪ 7일 왕복률(기획 v2.1 성장 리뷰 3.2 ③, 스토어 문서 목표 50%): 자녀가 처음 답을 본 가족(child_first_answer_viewed, 가족별 첫 KST 날 d0가
+--    기간 안) 중 그 뒤 d0~d0+6(7일) 안에 자녀가 응원(cheer_sent)을 보낸 가족 비율. 7일이 다 지난 코호트만(d0 <= 오늘−7).
+--    첫 열람은 전체 기간에서 가족별 최소라 앞 기간에 이미 본 가족은 다시 세지 않는다. 첫 열람보다 앞선 응원은 넣지 않는다.
+with p as (select date '2026-12-01' as d_from, date '2026-12-15' as d_to),
+first_view as (
+  select e.family_id, min(e.ts) as t0, min((e.ts at time zone 'Asia/Seoul')::date) as d0
+    from public.events e join public.families f on f.id = e.family_id
+   where e.name = 'child_first_answer_viewed' and not f.is_review and not f.is_test
+   group by e.family_id
+),
+cohort as (
+  select fv.*, exists (select 1 from public.events c
+                        where c.family_id = fv.family_id and c.name = 'cheer_sent' and c.actor_role = 'child'
+                          and c.ts >= fv.t0 and (c.ts at time zone 'Asia/Seoul')::date <= fv.d0 + 6) as round_trip
+    from first_view fv, p
+   where fv.d0 >= p.d_from and fv.d0 < p.d_to and fv.d0 <= public.kst_today() - 7
+)
+select count(*) as families, count(*) filter (where round_trip) as round_trip_7d,
+       round(100.0 * count(*) filter (where round_trip) / nullif(count(*), 0), 1) as pct
+  from cohort;
+
+-- ⑫ 북극성: 주간 '양쪽이 닿은 가족'(기획 v2.1 0절, 성장 리뷰 3.1). 같은 KST 주(월요일 시작)에
+--    (부모님) 한 어르신이 course_completed 를 2일 이상 AND (자녀) cheer_sent 또는 child_home_viewed(0066) 1회 이상인 가족 수.
+--    '2일 이상'은 같은 어르신 기준(어르신 두 분이 하루씩이면 아님). '매일'을 요구하지 않는다(감시·연속 지표 아님).
+--    d_from·d_to 는 월요일로 둔다(주 중간이면 그 주는 일부만 센다). 이번 주는 아직 끝나지 않은 값.
+with p as (select date '2026-11-30' as d_from, date '2026-12-14' as d_to),
+ev as (
+  select e.family_id, e.profile_id, e.actor_role, e.name, (e.ts at time zone 'Asia/Seoul')::date as d
+    from public.events e join public.families f on f.id = e.family_id, p
+   where not f.is_review and not f.is_test
+     and e.name in ('course_completed', 'cheer_sent', 'child_home_viewed')
+     and (e.ts at time zone 'Asia/Seoul')::date >= p.d_from and (e.ts at time zone 'Asia/Seoul')::date < p.d_to
+),
+parent_side as (
+  select distinct week, family_id from (
+    select date_trunc('week', d)::date as week, family_id, profile_id from ev
+     where actor_role = 'parent' and name = 'course_completed'
+     group by 1, 2, 3 having count(distinct d) >= 2) x
+),
+child_side as (
+  select distinct date_trunc('week', d)::date as week, family_id from ev
+   where actor_role = 'child' and name in ('cheer_sent', 'child_home_viewed')
+),
+weeks as (select generate_series(date_trunc('week', p.d_from), p.d_to - 1, interval '1 week')::date as week from p)
+select w.week,
+       (select count(*) from parent_side ps where ps.week = w.week) as parent_side,
+       (select count(*) from child_side cs where cs.week = w.week) as child_side,
+       (select count(*) from parent_side ps join child_side cs using (week, family_id) where ps.week = w.week) as both_sides
+  from weeks w
+ order by w.week;
+
+-- ⑬ 자녀 D7 재방문(성장 리뷰 3.2 ①): 처음 답을 본 자녀(child_first_answer_viewed, 자녀별 첫 KST 날 d0가 기간 안) 중
+--    d0+7~d0+13 에 자녀 이벤트(child_home_viewed·child_report_viewed·cheer_sent)가 1개 이상인 비율. 14일이 다 지난 코호트만.
+--    child_home_viewed(0066) 배포 전 기간은 응원·지난 날만으로 센 하한값이다.
+with p as (select date '2026-11-20' as d_from, date '2026-12-01' as d_to),
+first_view as (
+  select e.profile_id, min((e.ts at time zone 'Asia/Seoul')::date) as d0
+    from public.events e join public.families f on f.id = e.family_id
+   where e.name = 'child_first_answer_viewed' and e.actor_role = 'child' and e.profile_id is not null
+     and not f.is_review and not f.is_test
+   group by e.profile_id
+),
+cohort as (
+  select fv.*, exists (select 1 from public.events x
+                        where x.profile_id = fv.profile_id
+                          and x.name in ('child_home_viewed', 'child_report_viewed', 'cheer_sent')
+                          and (x.ts at time zone 'Asia/Seoul')::date between fv.d0 + 7 and fv.d0 + 13) as back
+    from first_view fv, p
+   where fv.d0 >= p.d_from and fv.d0 < p.d_to and fv.d0 <= public.kst_today() - 14
+)
+select count(*) as cohort, count(*) filter (where back) as returned_d7,
+       round(100.0 * count(*) filter (where back) / nullif(count(*), 0), 1) as pct
+  from cohort;
