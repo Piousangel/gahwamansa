@@ -1,9 +1,12 @@
--- 0067 되돌리기(수동). 원칙은 앞으로 고치기(dev-server-notes §18) — 이 파일은 비상용이다.
--- 순서: ① 4단계 앱(p_course_len 4)을 쓰는 기기가 없는지 확인 — 되돌린 뒤 그 앱은 표지(four_steps_supported)가 없어 3단계로 돈다(막히지 않음).
---       ② 아래를 위에서부터 실행: 쓰는 쪽(함수 3개)을 0061 정의로 → 데이터(course_len 4 → 5) → check.
--- 함수는 0061 정의 그대로 붙여 넣었다(create or replace라 권한은 그대로).
--- 주의: course_len 4로 남은 세션은 5로 바꾼다. 이미 찍힌 도장(completed_at)은 그대로 둔다. 오늘 아직 안 끝난 4단계 세션은 ⑤(넘어감)까지 있어야
---       완료되므로, 되돌린 뒤 그날 도장은 #287 대신 기록 빌드 또는 3단계로 다시 연 앱에서만 찍힌다(오늘 하루치만 영향).
+-- 0067 되돌리기(수동). 원칙은 앞으로 고치기(dev-server-notes §18) — 이 파일은 비상용이다. 파일 전체를 한 번에 실행한다(begin … commit, 한 트랜잭션).
+-- 순서: 쓰는 쪽(함수 3개)을 0061 정의로 → 데이터 → check. 함수는 0061 정의 그대로 붙여 넣었다(create or replace라 권한은 그대로).
+-- 되돌린 뒤 앱: 4단계 앱은 표지(four_steps_supported)가 없어 3단계로 돌고 옛 2인자 호출(p_course_len 기본 3)을 보낸다(막히지 않음).
+-- 데이터(리뷰 QA-1·QA-3 L1):
+--   - 오늘(KST) 아직 완료되지 않은 course_len 4 세션 → 3. 3단계로 다시 연 앱이 ④(hangul)를 기록하면 옛 3단계(photo·question·hangul)로 그날 도장이 찍힌다
+--     (5로 올리면 그 앱은 ⑤를 보내지 않아 그날 도장이 막힌다). ②를 이미 기록한 세션이어도 3이면 ②는 판정에 쓰지 않는다.
+--   - 나머지 course_len 4 세션(완료된 날·지난 날) → 5. 완료 시각(completed_at)·도장은 그대로 둔다(길이만 바꾸고 다시 판정하지 않는다).
+
+begin;
 
 create or replace function public.record_session_step(p_step text, p_duration int default 0, p_skipped boolean default false,
                                                       p_course_len int default 3) returns jsonb
@@ -163,7 +166,11 @@ begin
     'linked', false);
 end $$;
 
+update public.daily_sessions set course_len = 3
+ where course_len = 4 and completed_at is null and session_date = public.kst_today();
 update public.daily_sessions set course_len = 5 where course_len = 4;
 alter table public.daily_sessions drop constraint daily_sessions_course_len_check,
   add constraint daily_sessions_course_len_check check (course_len in (3, 5));
 comment on column public.daily_sessions.course_len is '0061: 3 = 옛 앱 코스(photo·question·hangul로 완료), 5 = 5단계 코스(다섯 단계 모두로 완료). 줄지 않는다';
+
+commit;
