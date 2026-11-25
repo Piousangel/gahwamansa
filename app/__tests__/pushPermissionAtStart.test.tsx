@@ -348,11 +348,14 @@ describe('자녀 한 장 — QA-2 후속', () => {
   test('L3 한 장이 열린 채 연결되면 제목이 연결 직후 것으로 바뀐다(한 장은 하나 그대로, 바뀐 제목을 한 번 읽어 줌)', async () => {
     setPlatform('android', 34);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
-    setTokenSourceForTest(createFakeTokenSource());
+    const source = createFakeTokenSource();
+    const getToken = jest.spyOn(source, 'getToken');
+    setTokenSourceForTest(source);
     mockShare();
     const announce = jest.spyOn(RN.AccessibilityInfo, 'announceForAccessibility');
     const wake = captureAppState();
     const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const setPushEnabled = jest.spyOn(api, 'setPushEnabled');
     render(<AppRoot api={api} restore />);
     await waitFor(() => screen.getByTestId('wait-code'));
     await shareCode();
@@ -364,6 +367,9 @@ describe('자녀 한 장 — QA-2 후속', () => {
     expect(screen.queryByText(withTitle(cp.title_wait, '엄마'), {normalizer: wj})).toBeNull();
     expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
     expect(announce.mock.calls.map(c => wj(String(c[0])))).toContain(wj(withTitle(cp.title_done, '엄마')));
+    // #296 QA-3 L1: 제목 전환 분기도 받기 동의 전이라 토큰·받기 동의를 건드리지 않는다
+    expect(getToken).not.toHaveBeenCalled();
+    expect(setPushEnabled).not.toHaveBeenCalled();
   });
 });
 
@@ -431,6 +437,42 @@ describe('자녀 한 장 — #296 QA-2 후속', () => {
     await app('background');
     await app('active');
     await waitFor(() => screen.getByTestId('child-notify'));
+  });
+
+  // #296 QA-3 L2: 포커스 검사는 offer 때만 했다 → 판정(my_push_settings 읽기)이 끝나기 전에 [설정]으로 가면 설정 위에 한 장이 떴다
+  test('QA-3 L2 판정을 읽는 사이 [설정]으로 가면 설정 화면 위에 한 장을 띄우지 않는다. C3 로 돌아오면 그때 묻는다', async () => {
+    setPlatform('android', 34);
+    jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
+    setTokenSourceForTest(createFakeTokenSource());
+    mockShare();
+    const api = createFakeApi({who: 'child', childFamily: true, parentTitle: '엄마', pushEnabled: false});
+    const realMy = api.myPushSettings.bind(api);
+    let release: () => void = () => {};
+    const gate = new Promise<void>(r => {
+      release = r;
+    });
+    const my = jest.spyOn(api, 'myPushSettings').mockImplementation(async () => {
+      await gate; // 판정 읽기가 늦게 끝난다
+      return realMy();
+    });
+    render(<AppRoot api={api} restore />);
+    await waitFor(() => screen.getByTestId('wait-code'));
+    await shareCode();
+    await waitFor(() => expect(my).toHaveBeenCalled());
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('wait-settings'));
+    });
+    await settle();
+    await act(async () => {
+      release();
+    });
+    await settle();
+    expect(screen.queryByTestId('child-notify', HID)).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', {name: copy.nav.to.Wait}));
+    });
+    await waitFor(() => screen.getByTestId('child-notify'));
+    expect(screen.getAllByTestId('child-notify')).toHaveLength(1);
   });
 
   test('L1 언마운트 뒤에는 C3 의 AppState 구독이 떨어져 복귀해도 판정 읽기 0회', async () => {

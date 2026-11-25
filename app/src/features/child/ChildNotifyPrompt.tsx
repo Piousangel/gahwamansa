@@ -23,7 +23,12 @@ export type ChildAskMoment = 'wait' | 'done';
  *   다시 묻지 않음이면 휴대폰 설정 → 서버 받기 동의 → 허용이면 토큰. 받기 동의 전에는 getToken 0회(대기열 38) — 이 한 장은 토큰을 건드리지 않는다.
  * - [안 받을게요] = 다시 묻지 않음(켜는 길은 C3 줄·C7 토글), 안드로이드 뒤로 = 오늘은 넘김.
  */
-export function useChildNotifyAsk(notify: {state: NotifyState; open: () => void}, title: string) {
+export function useChildNotifyAsk(
+  notify: {state: NotifyState; open: () => void},
+  title: string,
+  /** 지금 이 화면이 보이는지(판정이 끝난 때 다시 본다). 없으면 늘 보이는 것으로 */
+  visibleNow?: {readonly current: boolean},
+) {
   const [moment, setMoment] = useState<ChildAskMoment | null>(null);
   const asked = useRef(false);
   // 띄울(띄운) 자리. 판정을 기다리는 사이에 연결돼도 연결 직후 제목으로 뜨게 ref 로 둔다
@@ -48,6 +53,13 @@ export function useChildNotifyAsk(notify: {state: NotifyState; open: () => void}
     childPromptState(d)
       .then(s => {
         if (s === 'ask') {
+          // #296 QA-3 L2: 판정을 읽는 사이 다른 화면(설정 등)으로 갔으면 그 위에 띄우지 않는다. 이번 자리는 넘기고(asked 되돌림)
+          //   이 화면에 다시 들어와 묻는 자리(포커스 effect·복귀)에서 다시 판정한다
+          if (visibleNow && !visibleNow.current) {
+            asked.current = false;
+            want.current = null;
+            return;
+          }
           setMoment(want.current);
         } else if (s === 'retry') {
           asked.current = false; // 확인 못 함: 다음 자리(연결 직후 등)에서 다시
@@ -56,7 +68,7 @@ export function useChildNotifyAsk(notify: {state: NotifyState; open: () => void}
       .catch(() => {
         asked.current = false;
       });
-  }, []);
+  }, [visibleNow]);
 
   // 열린 채 제목이 바뀌면(L3) 화면 읽기 사용자는 초점이 그대로라 모른다 → 바뀐 제목을 한 번 읽어 준다(처음 열릴 때는 제목 초점이 읽음)
   const shown = useRef<ChildAskMoment | null>(null);
