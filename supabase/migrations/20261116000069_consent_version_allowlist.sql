@@ -28,7 +28,7 @@ declare
   v_prev_ver text;
 begin
   if public.my_role() is distinct from 'parent' then raise exception 'parent_required'; end if;
-  if p_version is null or not (p_version = any (public.consent_versions())) then raise exception 'invalid_version'; end if; -- 0069: 형식 → 목록
+  if p_version is null or p_version !~ '^v[0-9]{1,3}$' then raise exception 'invalid_version'; end if; -- 0069: 형식 → 목록
   select consented_at, consent_version into v_prev_at, v_prev_ver from public.profiles where id = v_me for update;
   if v_prev_at is not null and v_prev_ver is not distinct from p_version then
     return;
@@ -45,7 +45,7 @@ language sql stable security definer set search_path = ''
 as $$
   select coalesce((
     select p.consented_at is not null
-           and (case when p.consent_version = any (public.consent_versions()) then substr(p.consent_version, 2)::int else 0 end) >= 6 -- 0069: 목록 밖이면 0
+           and (case when p.consent_version ~ '^v[0-9]{1,3}$' then substr(p.consent_version, 2)::int else 0 end) >= 6 -- 0069: 목록 밖이면 0
       from public.profiles p
      where p.id = p_parent and p.role = 'parent'), false)
 $$;
