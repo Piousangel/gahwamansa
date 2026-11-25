@@ -147,6 +147,33 @@ describe('문제 1: 코스 홈 지금 행으로 스크롤', () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  test('대기열 54: nowRowRange 에 지킬 요소(keep)를 주면, 내릴 때 그 요소 위 끝이 창 위로 밀려 나가면 내리지 않는다', () => {
+    const order = ['greet', 'greet-title', 'photo', 'recall'];
+    const h = {greet: 100, 'greet-title': 100, photo: 100, recall: 100};
+    // photo 234~334 → 내리면 y = 334 − 300 + 12 = 46 > 인사 위 끝 10: 인사 카드 윗부분이 잘린다
+    expect(nowRowRange(order, 10, h, 12, 'photo', 300)).toEqual({top: 234, bottom: 334, scroll: true});
+    expect(nowRowRange(order, 10, h, 12, 'photo', 300, 'greet')).toEqual({top: 234, bottom: 334, scroll: false});
+    // 내려도 인사 위 끝이 남으면(내릴 거리 ≤ 인사 위 끝) 그대로 내린다
+    expect(nowRowRange(order, 100, {...h, greet: 40, 'greet-title': 40}, 12, 'photo', 300, 'greet')).toEqual({top: 204, bottom: 304, scroll: true}); // 16 ≤ 100
+    // keep 이 없거나 지금 행보다 아래면 예전과 같다
+    expect(nowRowRange(order, 10, h, 12, 'photo', 300, 'nope')).toEqual({top: 234, bottom: 334, scroll: true});
+  });
+
+  test('대기열 54(#287 QA-2 L3): 첫날 200% — 첫 인사 카드가 반쯤 잘리게 내리지 않고, 접힘 여백(R-15)으로 지금 행을 통째로 아래에', async () => {
+    setPrefsForTest(createPrefs(memoryStore())); // 첫 인사를 아직 안 본 기기
+    mockFontScale = 2;
+    const {ScrollView} = require('react-native');
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    await home(true);
+    await waitFor(() => screen.getByTestId('first-greeting'));
+    expect(ids('course-steps:').slice(0, 3)).toEqual(['course-steps:greet', 'course-steps:greet-title', 'course-steps:photo']);
+    // 인사 10~110, 제목 122~222, ① 사진 보기(지금) 234~334 가 접힘 300 에 걸린다
+    await layHome(10, 100);
+    expect(scrollTo).not.toHaveBeenCalled(); // 고치기 전: y 46 으로 내려 인사 카드 위 36 이 잘렸다
+    expect(marginTop('course-steps:photo')).toBe(12 + (300 - 234 + 1));
+  });
+
   test('스위치 꺼짐(3단계): 스크롤 없음, 접힘 여백은 예전 그대로', async () => {
     const {ScrollView} = require('react-native');
     const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;

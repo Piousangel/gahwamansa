@@ -107,6 +107,8 @@ export function passOnLine(key: PassOnKey, recallWord: string | null, choiceLabe
  * 코스 홈 '지금 할 차례' 행의 자연 위치(스크롤 내용 안 [top, bottom]) — 묶음 key 순서대로 높이 + 사이 간격을 쌓는다.
  * 아직 다 재지 않았거나 그 행이 없으면 null. scroll = 첫 화면(접힘 기준 창)에 다 들지 않아 열 때 그 행으로 내려야 하는가.
  * 내리는 날은 화면이 접힘 여백(R-15)을 끈다(#254 캡처 문제 1: 여백은 이 계산에 없어 행이 그만큼 덜 보였고, 내린 화면 위에는 빈칸이 남았다).
+ * keep: 지금 행보다 위에 있는, 위 끝이 잘리면 안 되는 요소(첫날 해님 인사 카드). 행 끝을 창 아래 끝(+간격)에 맞춰 내리면
+ * 그 요소 위 끝이 창 위로 밀려 나가는 날은 내리지 않는다 — 접힘 여백(R-15)이 지금 행을 통째로 첫 화면 아래로 보낸다(대기열 54, #287 QA-2 L3).
  */
 export function nowRowRange(
   order: readonly string[],
@@ -115,15 +117,24 @@ export function nowRowRange(
   gap: number,
   key: string,
   viewport: number,
+  keep?: string,
 ): {top: number; bottom: number; scroll: boolean} | null {
   let y = top;
+  let keepTop: number | null = null;
   for (const k of order) {
     const h = heights[k];
     if (h === undefined) {
       return null;
     }
     if (k === key) {
-      return {top: y, bottom: y + h, scroll: viewport > 0 && y + h > viewport};
+      const bottom = y + h;
+      const overflow = viewport > 0 && bottom > viewport;
+      // 내릴 거리(Screen showRange 와 같은 꼴: 행 끝 − 창 + 간격)가 keep 위 끝을 넘으면 그 위 끝이 잘린다
+      const cutsKeep = keepTop !== null && bottom - viewport + gap > keepTop;
+      return {top: y, bottom, scroll: overflow && !cutsKeep};
+    }
+    if (k === keep) {
+      keepTop = y;
     }
     y += h + gap;
   }
