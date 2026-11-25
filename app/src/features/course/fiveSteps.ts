@@ -100,3 +100,30 @@ export function passOnLine(key: PassOnKey, recallWord: string | null, choiceLabe
   }
   return key === 'photo_memory' ? {key, text: p.photo_memory} : key === 'photo_like' ? {key, text: p.photo_like} : null;
 }
+
+/**
+ * 코스 홈 '지금 할 차례' 행의 자연 위치(스크롤 내용 안 [top, bottom]) — 묶음 key 순서대로 높이 + 사이 간격을 쌓는다.
+ * 아직 다 재지 않았거나 그 행이 없으면 null. scroll = 첫 화면(접힘 기준 창)에 다 들지 않아 열 때 그 행으로 내려야 하는가.
+ * 내리는 날은 화면이 접힘 여백(R-15)을 끈다(#254 캡처 문제 1: 여백은 이 계산에 없어 행이 그만큼 덜 보였고, 내린 화면 위에는 빈칸이 남았다).
+ */
+export function nowRowRange(
+  order: readonly string[],
+  top: number,
+  heights: Readonly<Record<string, number>>,
+  gap: number,
+  key: string,
+  viewport: number,
+): {top: number; bottom: number; scroll: boolean} | null {
+  let y = top;
+  for (const k of order) {
+    const h = heights[k];
+    if (h === undefined) {
+      return null;
+    }
+    if (k === key) {
+      return {top: y, bottom: y + h, scroll: viewport > 0 && y + h > viewport};
+    }
+    y += h + gap;
+  }
+  return null;
+}

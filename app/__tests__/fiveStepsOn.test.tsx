@@ -123,7 +123,7 @@ test('코스 홈 5행(사진 보기 → 떠올려 보기 → 둘 중 고르기 �
 test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로, 저장은 동의 조건대로, P7 첫 줄 「가족에게 건넸어요」, 다 마치면 제목 옆 도장 1개', async () => {
   const s = await home();
   await doPhoto();
-  // ② 떠올려 보기: 사진 80 + AI 고지, 질문, 정답은 없어요, 보기 3장(라이터 CSV 1일), Dock [이걸로 할게요] + 넘어가기
+  // ② 떠올려 보기: 사진 80 + AI 고지, 질문, 정답은 없어요, 보기 3장(라이터 CSV 1일), 넘어가기는 카드 아래 본문, Dock [이걸로 할게요]만
   await pressCourseNext();
   await waitFor(() => screen.getByTestId('recall-question'));
   expect(screen.getByText('떠올려 보기 · 2 / 5')).toBeTruthy();
@@ -132,7 +132,11 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   expect(screen.getByText('이 사진을 보면 무엇이 먼저 떠오르세요?')).toBeTruthy();
   expect(screen.getByText('정답은 없어요')).toBeTruthy();
   expect(['그늘', '참새', '산들바람'].map(w => !!screen.getByRole('radio', {name: w}))).toEqual([true, true, true]);
-  expect(dock().getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
+  // 100%도 넘어가기는 본문(#254 캡처 문제 4 — Dock 보조 줄만큼 창을 넓혀 첫 카드가 첫 화면에 들게)
+  expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
+  expect(within(screen.getByTestId('recall-body')).getByRole('button', {name: '오늘은 넘어갈게요'})).toBeTruthy();
+  const order = screen.UNSAFE_root.findAll(n => typeof n.props?.testID === 'string' && /^recall-body:/.test(n.props.testID) && typeof n.type === 'string').map(n => n.props.testID);
+  expect(order.slice(-2)).toEqual(['recall-body:choice', 'recall-body:skip']);
   fireEvent.press(screen.getByText('참새'));
   expect(screen.getByText('골랐어요', {includeHiddenElements: true})).toBeTruthy(); // ✓ 표시(읽기는 radio 선택 상태가 맡음)
   await press('이걸로 할게요');
@@ -164,7 +168,7 @@ test('끝까지 고르기: ② 고른 낱말이 ④ 본보기·⑤ 첫 카드로
   fireEvent.press(screen.getByText('참새 얘기할게요'));
   await press('건넬게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
-  await waitFor(() => screen.getByText(/^가족에게 건넸어요 /) /* 첫 줄(줄바꿈은 찾기에서 공백) */);
+  await waitFor(() => screen.getByText('가족에게 건넸어요') /* 본문 첫 줄 — 따로 접힘 단위(#254 캡처 문제 3, fiveStepsFollowup) */);
   expect(s.passOn).toHaveBeenCalledWith(1, 'recall_story'); // save_pass_on(p_day_index, p_key)
   expect(s.answer).toHaveBeenCalledWith({questionId: 'q-1', choice: 'A'});
   expect(s.rec.mock.calls.map(c => [c[0], c[2]?.skipped])).toEqual([['photo', false], ['recall', false], ['question', false], ['hangul', false], ['pass_on', false]]);
