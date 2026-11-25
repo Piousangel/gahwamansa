@@ -1,6 +1,9 @@
 -- 0066 이벤트 child_home_viewed(기획 v2.1 측정 — docs/team/2026-11-26-plan-v2.md 0절, 성장 리뷰 3.1·3.2)
 -- 자녀가 자녀 홈(C4)을 연 날 하루 한 번. 북극성 '양쪽이 닿은 가족'의 자녀 쪽 열람, 자녀 D7 재방문의 재료(metrics.sql ⑫·⑬).
 -- 속성 없음: props 는 '{}' 만 받는다(다른 키를 실으면 invalid_props). 화면·답·날짜·계정 가명값 아무것도 싣지 않는다.
+-- 자녀 역할(my_role = child)만 저장한다. 어르신·연결 전(none) 계정이 보내면 invalid_name(저장 없음, #288 리뷰 QA-1 L4).
+-- 되돌리기: supabase/down/20261116000066_child_home_viewed.down.sql(0053 정의 재실행).
+-- 동시 2회 → 1행은 supabase/ops/event-day-race.sh 가 두 연결을 겹쳐 확인한다(잠금 줄을 빼면 2행으로 실패, #288 리뷰 QA-1 L2).
 -- 하루 1회는 서버가 정한다: 같은 계정(device_key = uid 해시)·같은 KST 날짜(kst_today, 기기 시계 아님)에 이미 있으면
 --   저장하지 않고 {ok:true}(앱은 성공으로 보고 다시 보내지 않음). 동시에 두 번 와도 한 행이 되게 계정별 잠금 뒤 확인한다.
 --   앱(track.ts trackDaily)도 기기에서 KST 날짜로 거르지만 그건 요청 수를 줄이려는 것 — 정확성은 여기서 보장한다.
@@ -44,6 +47,10 @@ begin
      or exists (select 1 from jsonb_each(v_props) e where not public.event_prop_ok(e.key, e.value))
      or (p_name = 'child_home_viewed' and v_props <> '{}'::jsonb) then -- 0066: 속성 없음
     return jsonb_build_object('ok', false, 'reason', 'invalid_props');
+  end if;
+  -- 0066: 자녀 계정만(어르신·연결 전 계정이면 저장하지 않음 — 북극성 자녀 쪽에 섞이지 않게)
+  if p_name = 'child_home_viewed' and v_role <> 'child' then
+    return jsonb_build_object('ok', false, 'reason', 'invalid_name');
   end if;
   v_key := public.event_device_key(v_uid);
   if p_name = 'child_home_viewed' then

@@ -172,7 +172,8 @@ select w.week,
 
 -- ⑬ 자녀 D7 재방문(성장 리뷰 3.2 ①): 처음 답을 본 자녀(child_first_answer_viewed, 자녀별 첫 KST 날 d0가 기간 안) 중
 --    d0+7~d0+13 에 자녀 이벤트(child_home_viewed·child_report_viewed·cheer_sent)가 1개 이상인 비율. 14일이 다 지난 코호트만.
---    child_home_viewed(0066) 배포 전 기간은 응원·지난 날만으로 센 하한값이다.
+--    0066 반영과 새 앱(child_home_viewed 를 보내는 판) 보급 전 기간은 응원·지난 날만으로 센 하한값이다(옛 앱 자녀는 홈 열람이 안 잡힘).
+--    ⑫ 자녀 쪽도 같은 이유로 그 기간은 낮게 나온다.
 with p as (select date '2026-11-20' as d_from, date '2026-12-01' as d_to),
 first_view as (
   select e.profile_id, min((e.ts at time zone 'Asia/Seoul')::date) as d0
