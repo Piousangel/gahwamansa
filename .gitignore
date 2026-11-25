@@ -32,6 +32,3 @@ content/audio-raw/
 # 파이썬 캐시(e2e/audit/fold-check.py, 재확인 8 L33)
 __pycache__/
 *.pyc
-
-# 결정 색인(scripts/decisions-index.sh --write 로 생성, 커밋하면 다시 충돌 지점이 된다)
-docs/decisions/INDEX.md

@@ -1,6 +1,5 @@
 ## 목적
-<!-- 무엇을 왜. 안건·리뷰 번호(예: W-09, #150 M1)
-     결정을 남길 때는 DECISIONS.md 가 아니라 docs/decisions/YYYY-MM-DD-<slug>.md 새 파일(형식: docs/decisions/README.md) -->
+<!-- 무엇을 왜. 안건·리뷰 번호(예: W-09, #150 M1) -->
 
 ## 변경
 <!-- 파일 단위로 짧게 -->

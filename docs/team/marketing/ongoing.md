@@ -13,4 +13,4 @@
 ## 바꾸는 규칙
 - **3주차부터 적용**(첫 2주는 표본이 작아 0이 흔함): 2주 연속 연결 가족 0인 채널은 빈도 절반, 4주 연속이면 중단.
 - 4주 회고에서 미룬 채널(밴드·쇼츠)·퀴즈 기둥·광고 실험 여부를 결정.
-- 결정은 `docs/decisions/YYYY-MM-DD-<slug>.md` 파일 하나(11-25부터, DECISIONS.md는 붙여 쓰지 않음), 진행은 .claude/progress.md에 기록.
+- 결정은 DECISIONS.md에 1줄, 진행은 .claude/progress.md에 기록.
