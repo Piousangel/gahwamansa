@@ -16,6 +16,8 @@ const PHOTO_VISIT_DAY = 'pref_p4_visit_day'; // 마지막으로 센 날(KST YYYY
 
 const ONCE_PREFIX = 'pref_evt_once_'; // + 이벤트 이름
 export type OnceEvent = 'app_first_open' | 'child_first_answer_viewed';
+const DAY_PREFIX = 'pref_evt_day_'; // + 이벤트 이름 + ':' + 계정 가명값 → 마지막으로 보낸 KST 날짜(YYYY-MM-DD)
+export type DailyEvent = 'child_home_viewed';
 
 export function createPrefs(store: KeyValueStore) {
   const getBool = async (key: string, fallback: boolean): Promise<boolean> => {
@@ -72,6 +74,21 @@ export function createPrefs(store: KeyValueStore) {
     // scope: 계정 가명값(accountTag)을 주면 그 계정 기준 1회(PR #61 리뷰 L2). 없으면 기기 기준 1회
     eventOnceSent: (name: OnceEvent, scope?: string) => getBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, false),
     markEventOnceSent: (name: OnceEvent, scope?: string) => setBool(`${ONCE_PREFIX}${name}${scope ? `:${scope}` : ''}`, true),
+    /** 기획 v2.1 하루 한 번 이벤트(child_home_viewed): 이 계정(scope = accountTag)으로 마지막에 보낸 KST 날짜. 없거나 읽기 실패면 null(= 보냄) */
+    eventDaySent: async (name: DailyEvent, scope: string): Promise<string | null> => {
+      try {
+        return await store.getItem(`${DAY_PREFIX}${name}:${scope}`);
+      } catch {
+        return null;
+      }
+    },
+    markEventDaySent: async (name: DailyEvent, scope: string, day: string) => {
+      try {
+        await store.setItem(`${DAY_PREFIX}${name}:${scope}`, day);
+      } catch {
+        // 무시(서버가 같은 날 두 번째를 저장하지 않는다)
+      }
+    },
     zoomOpened: () => getBool(ZOOM_OPENED, false),
     markZoomOpened: () => setBool(ZOOM_OPENED, true),
     photoVisits: async (): Promise<number> => {
