@@ -1,6 +1,6 @@
 -- preview_content 테스트 (pgTAP). 미연결 열람 모드: 연결이 끊긴(프로필 없는) 기기도 오늘 코스를 볼 수 있다. 답·세션은 없다.
 begin;
-select plan(9);
+select plan(10);
 select set_config('bumo.allow_content_delete', 'on', true); -- 테스트 픽스처: 게시 콘텐츠 삭제 금지(0024)의 명시적 예외
 delete from public.answers; delete from public.content_photos; delete from public.content_questions;
 
@@ -25,7 +25,8 @@ select is(((public.preview_content()) ->> 'day_index')::int, mod(greatest(0, pub
 select ok((public.preview_content()) -> 'photo' ->> 'caption' in ('cap1', 'cap2'), '사진을 돌려준다');
 select ok((public.preview_content()) -> 'question' ->> 'prompt' in ('p1', 'p2'), '질문을 돌려준다');
 select is((public.preview_content()) ->> 'linked', 'false', '연결되지 않았다는 표시를 돌려준다');
-select is(((public.preview_content()) - 'day_index' - 'photo' - 'question' - 'linked'), '{}'::jsonb, '답·동의·세션·연속일은 포함하지 않는다');
+select is(((public.preview_content()) - 'day_index' - 'photo' - 'question' - 'linked' - 'recall' - 'five_steps_supported'), '{}'::jsonb, '답·동의·세션·연속일은 포함하지 않는다');
+select is((public.preview_content()) -> 'recall', '{"options": [], "picked_slot": null}'::jsonb, '0061: ② 보기만(고른 것 없음 — 연결 전은 저장 안 함)');
 
 select throws_like($$ select public.save_answer('73c00000-0000-0000-0000-000000000001', 'A') $$, '%parent_required%', '연결 안 된 기기는 답을 저장할 수 없다');
 
