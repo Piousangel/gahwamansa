@@ -1,0 +1,41 @@
+# 결정 기록(11-25 대기열 42): 작업 PR은 DECISIONS.md 를 고치지 않고 PR 본문 '## 결정' 절에 쓴다.
+# 리드가 scripts/collect-decisions.sh 로 '결정 모음' PR(브랜치 decisions/collect-*)을 내 DECISIONS.md 끝에 붙인다 → DECISIONS.md 를 고치는 열린 PR이 하나라 충돌 0.
+# 막지 않는다 — 작업 PR이 DECISIONS.md 를 고치면 경고만(pr-guard 와 같은 원칙).
+name: decisions
+on:
+  pull_request:
+    paths:
+      - 'DECISIONS.md'
+      - 'scripts/collect-decisions*'
+      - '.github/workflows/decisions.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: decisions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # base 와의 갈림점이 필요
+          persist-credentials: false
+      - name: 결정 모음 스크립트 자체 시험
+        run: bash scripts/collect-decisions.test.sh
+      - name: 작업 PR의 DECISIONS.md 변경(경고만, 결정 모음 PR 예외)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          case "$HEAD_REF" in decisions/collect-*) echo "결정 모음 PR — DECISIONS.md 변경 허용"; exit 0 ;; esac
+          changed="$(git diff --numstat "$BASE_SHA...$HEAD_SHA" -- DECISIONS.md)"
+          if [ -n "$changed" ]; then
+            echo "::warning file=DECISIONS.md,title=DECISIONS.md 는 결정 모음 PR만 고칩니다::결정은 PR 본문 '## 결정' 절에 쓰세요. 병합 뒤 리드가 결정 모음 PR(decisions/collect-*)로 DECISIONS.md 에 붙입니다 — 작업 PR마다 DECISIONS.md 끝에 붙이면 서로 병합 충돌이 납니다."
+            echo "### DECISIONS.md 변경 — 결정은 PR 본문 '## 결정' 절로 옮겨 주세요(결정 모음 PR 예외: decisions/collect-*)" >> "$GITHUB_STEP_SUMMARY"
+          fi

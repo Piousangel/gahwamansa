@@ -10,7 +10,7 @@
 | `toss/` | 토스 미니앱(WebView SDK, React 18, Vite). `npm run build`로 `.ait` 생성(커밋 제외) | 토스 담당(앱 개발 에이전트가 맡을 수 있음, 서버 변경은 리드에게 요청) | 서버·앱은 읽기만 |
 | `design-system/` | 토큰·SVG 에셋·컴포넌트 명세 | 디자인팀(담당별 하위 폴더) | 읽기만 |
 | `site/` | 정적 안내 페이지(방침·삭제 안내) | 정책 담당 | 값 입력은 사용자 |
-| `docs/`, `SPEC.md`, `DECISIONS.md`, `TODO.md` | 계획·결정·팀 문서 | 리드(문서별 역할 담당은 `docs/team/<역할>.md`) | 역할별 자기 파일만 |
+| `docs/`, `SPEC.md`, `DECISIONS.md`, `TODO.md` | 계획·결정·팀 문서 | 리드(문서별 역할 담당은 `docs/team/<역할>.md`). DECISIONS.md 는 결정 모음 PR로만(작업 PR은 본문 `## 결정` 절) | 역할별 자기 파일만 |
 | 루트(`package.json`, `.gitignore`, `scripts/`) | 도구 설정 | 리드 | 변경 시 알림 |
 
 ## 서버와 앱의 계약(인터페이스)
