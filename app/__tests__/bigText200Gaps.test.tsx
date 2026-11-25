@@ -108,15 +108,15 @@ describe('H1·M2 P1c: 글자 1.5배 이상이면(320×640 150%도 번호가 걸�
     await p1c(scale);
     expect(dockOrder()).toEqual(['confirm-legal-dock', 'big-button']);
     const legalDock = within(screen.getByTestId('confirm-legal-dock'));
-    expect(legalDock.getByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
+    expect(legalDock.getByText('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인해요')).toBeTruthy();
     expect(screen.queryByTestId('legal-short')).toBeNull();
-    expect(within(screen.getByTestId('screen-body')).queryByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeNull();
+    expect(within(screen.getByTestId('screen-body')).queryByText('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인해요')).toBeNull();
   });
   test.each([1.6, 2])('M1 글자 %s배: 짧은 고지가 Dock 안 버튼 바로 위, 긴 문장은 본문', async scale => {
     await p1c(scale);
     expect(dockOrder()).toEqual(['confirm-legal-dock', 'big-button']);
     expect(within(screen.getByTestId('confirm-legal-dock')).getByText('연결하면 약관에 동의하게 돼요')).toBeTruthy();
-    expect(within(screen.getByTestId('confirm-rest-body')).getByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
+    expect(within(screen.getByTestId('confirm-rest-body')).getByText('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인해요')).toBeTruthy();
   });
 });
 

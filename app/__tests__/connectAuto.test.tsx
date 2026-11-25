@@ -26,7 +26,7 @@ test('"다음" 버튼이 없고, 안심 줄·칸 아래 안내·링크 둘·약�
   expect(screen.getByText('6자리를 다 쓰면 바로 확인해요')).toBeTruthy();
   expect(screen.getByRole('button', {name: '번호가 없어요'})).toBeTruthy();
   expect(screen.getByRole('button', {name: '코스 보기'})).toBeTruthy();
-  expect(screen.getByTestId('legal-line')).toHaveTextContent('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요');
+  expect(screen.getByTestId('legal-line')).toHaveTextContent('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인해요');
   expect(StyleSheet.flatten(screen.getByTestId('connect-links').props.style).columnGap).toBe(24);
 });
 

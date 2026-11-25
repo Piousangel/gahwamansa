@@ -129,7 +129,7 @@ test('P1 v4: 하단은 번호가 없어요·코스 보기 → 약관 한 줄("�
   const order = texts(screen.getByTestId('screen-dock'));
   expect(order).not.toContain('다음');
   expect(order.indexOf('번호가 없어요')).toBeLessThan(order.indexOf('코스 보기'));
-  expect(order.indexOf('코스 보기')).toBeLessThan(order.indexOf('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요'));
+  expect(order.indexOf('코스 보기')).toBeLessThan(order.indexOf('연결하면 이용약관에 동의하고 개인정보 처리방침을 확인해요'));
 });
 
 test('a11y R9: 선택 카드는 라디오(checked), 묶음은 radiogroup', async () => {
