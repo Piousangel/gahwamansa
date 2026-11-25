@@ -84,6 +84,32 @@ describe('문제 1: 코스 홈 지금 행으로 스크롤', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({y: at.hangul.bottom - 300 + 12, animated: true});
   });
 
+  test('QA-2 M1 고정: 내린 뒤 높이가 바뀌어(안내 띠가 사라지는 등) 지금 행이 첫 화면에 들어도 접힘 여백을 다시 켜지 않는다', async () => {
+    const {ScrollView} = require('react-native');
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    await home(true, {completedSteps: ['photo', 'recall', 'question']});
+    await layHome(10, 80); // ④ 286~366 → 내림
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    // 행 60: ④ 226~286 은 들고, ⑤ 298~358 이 접힘 300 에 걸린다 — 고정이 없으면 ⑤ 앞에 여백이 생겨 내린 화면 안에 빈칸
+    await layHome(10, 60);
+    expect(ids('course-steps:').slice(1).map(marginTop)).toEqual(ids('course-steps:').slice(1).map(() => 12));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  test('QA-2 M1 늦은 판정: 처음엔 지금 행이 첫 화면 안이었다가, 위에 무엇이 끼어들어 접힘 밖으로 밀리면 그때 내린다', async () => {
+    const {ScrollView} = require('react-native');
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    await home(true, {completedSteps: ['photo', 'recall', 'question']});
+    await layHome(10, 60); // ④ 226~286 첫 화면 안 → 내리지 않고, 걸치는 ⑤는 민다(R-15)
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(marginTop('course-steps:pass_on')).toBe(12 + (300 - 298 + 1));
+    const at = await layHome(10, 80); // 행이 커져 ④ 286~366 이 걸린다
+    expect(ids('course-steps:').slice(1).map(marginTop)).toEqual(ids('course-steps:').slice(1).map(() => 12));
+    expect(scrollTo).toHaveBeenLastCalledWith({y: at.hangul.bottom - 300 + 12, animated: true});
+  });
+
   test('지금 행이 첫 화면 안이면(①·② 차례) 내리지 않고 접힘 여백은 그대로(R-15)', async () => {
     const {ScrollView} = require('react-native');
     const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
@@ -108,14 +134,23 @@ describe('문제 1: 코스 홈 지금 행으로 스크롤', () => {
 });
 
 describe('문제 3: 건넨 날 P7 「가족에게 건넸어요」는 따로 접힘 단위', () => {
-  async function toP7() {
-    await home(true, {completedSteps: ['photo', 'recall', 'question', 'hangul']});
+  async function toP7(hold = false) {
+    const api = await home(true, {completedSteps: ['photo', 'recall', 'question', 'hangul']});
+    if (hold) {
+      jest.spyOn(api, 'getWeekStamps').mockReturnValue(new Promise(() => {})); // 이번 주 도장 응답이 아직 안 옴(본문 = null)
+    }
     await pressCourseNext();
     await waitFor(() => screen.getByTestId('pass-on-choice'));
     fireEvent.press(screen.getAllByRole('radio')[0]);
     await press('건넬게요');
-    await waitFor(() => screen.getByText('가족에게 건넸어요'));
+    await waitFor(() => (hold ? screen.getByText('오늘 코스를 마쳤어요') : screen.getByText('가족에게 건넸어요')));
   }
+
+  test('QA-2 L2: 본문이 오기 전부터 그 자리(요소)가 있다 — useFoldGap 은 첫 요소 수로 재므로 나중에 끼우면 뒤 요소를 판정하지 않는다', async () => {
+    await toP7(true);
+    expect(ids('p7-item-')).toEqual(['p7-item-mount', 'p7-item-title', 'p7-item-passed', 'p7-item-text']);
+    expect(screen.queryByText('가족에게 건넸어요')).toBeNull(); // 글은 본문과 함께 채운다
+  });
 
   test('제목 바로 아래 한 요소, 둘째 줄(도장·내일 사진)은 그 다음 요소', async () => {
     await toP7();
@@ -152,6 +187,25 @@ describe('문제 3: 건넨 날 P7 「가족에게 건넸어요」는 따로 접�
   });
 });
 
+describe('문제 4: ② 넘어가기는 카드 아래 본문(100%도)', () => {
+  test('QA-2 M2: 꺼진 [이걸로 할게요] 읽기 힌트가 아래 넘어가기를 알리고, 고르면 힌트는 없다', async () => {
+    await home(true, {completedSteps: ['photo']});
+    await pressCourseNext();
+    await waitFor(() => screen.getByTestId('recall-question'));
+    expect(screen.getByTestId('recall-confirm').props.accessibilityHint).toBe("보기를 하나 고르거나, 아래 '오늘은 넘어갈게요'를 눌러 주세요");
+    fireEvent.press(screen.getAllByRole('radio')[0]);
+    expect(screen.getByTestId('recall-confirm').props.accessibilityHint).toBeUndefined();
+  });
+
+  test('QA-2 M2: 마지막 카드와 넘어가기 사이는 묶음 간격 section(32) = 카드 사이 12보다 넓다(오누름 방지)', async () => {
+    await home(true, {completedSteps: ['photo']});
+    await pressCourseNext();
+    await waitFor(() => screen.getByTestId('recall-question'));
+    const gap = marginTop('recall-body:skip') + (StyleSheet.flatten(screen.getByTestId('recall-skip-gap').props.style)?.paddingTop ?? 0);
+    expect(gap).toBe(32);
+  });
+});
+
 describe('문제 5: 다 마친 홈 도장 1개 자리', () => {
   const ALL = ['photo', 'recall', 'question', 'hangul', 'pass_on'] as const;
   test('100%: 줄바꿈 묶음이 아니라 한 줄 — 제목이 남은 폭(flex 1), 도장은 옆에서 줄지 않는다(제목 줄 수와 무관)', async () => {
@@ -160,7 +214,7 @@ describe('문제 5: 다 마친 홈 도장 1개 자리', () => {
     expect(head.flexDirection).toBe('row');
     expect(head.flexWrap).not.toBe('wrap'); // wrap 이면 여러 줄 제목이 한 줄 전체를 차지해 도장이 아래 줄 왼쪽으로 간다(#254 캡처 02)
     expect(StyleSheet.flatten(screen.getByTestId('course-done-head-text').props.style)).toMatchObject({flex: 1, minWidth: 0});
-    expect(StyleSheet.flatten(screen.getByTestId('course-done-head-stamp').props.style)?.flexShrink ?? 0).toBe(0); // RN 기본 0 = 줄지 않음
+    expect(StyleSheet.flatten(screen.getByTestId('course-done-head-stamp').props.style)?.flexShrink).toBe(0); // 명시(QA-2 L3: 기본값에 기대면 늘 통과)
   });
 
   test('200%: 도장은 제목 아래 오른쪽 끝(줄 머리 왼쪽 원 금지), 여전히 1개', async () => {

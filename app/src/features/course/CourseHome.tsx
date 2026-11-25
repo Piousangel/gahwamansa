@@ -51,7 +51,6 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   const [rowsAt, setRowsAt] = useState<{top: number; heights: Readonly<Record<string, number>>} | null>(null);
   const onRows = useCallback((top: number, heights: Readonly<Record<string, number>>) => setRowsAt({top, heights}), []);
   const order = useRef<string[]>([]); // 본문 묶음 key 순서(지금 행 위치 계산용)
-  const scrolledFor = useRef<string | null>(null);
   const titleRef = useRef<unknown>(null); // P8 대화상자가 닫힌 뒤 포커스를 돌려줄 제목
   useLoadTodayContent();
   useBootLoading(content === undefined && !syncError); // 앱 시작 중이면 스플래시 대기 화면이 덮는다
@@ -74,19 +73,19 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   // 행 위치는 자연 위치(접힘 여백 없음). 내려야 하는 날은 아래 FoldStack 이 여백을 끄므로 실제 위치와 같다(#254 캡처 문제 1)
   const nowAt = (): ReturnType<typeof nowRowRange> =>
     nowStep && rowsAt ? nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH) : null;
+  // '실제로 내렸다'를 단계별로 고정(latch, #259 QA-2 M1). 내린 뒤에는 높이가 바뀌어도(안내 띠가 생기고 사라짐) 접힘 여백을 다시 켜지 않는다
+  // — 켜면 내린 화면 안에 빈칸이 생긴다. 아직 내리지 않았으면 매 측정마다 다시 판정해, 늦게 끼어든 안내가 지금 행을 접힘 밖으로 밀면 그때 내린다
+  const [scrolledFor, setScrolledFor] = useState<string | null>(null);
   useEffect(() => {
-    if (!nowStep || !rowsAt || viewH <= 0 || scrolledFor.current === nowStep) {
+    if (!nowStep || !rowsAt || viewH <= 0 || scrolledFor === nowStep) {
       return;
     }
     const at = nowRowRange(order.current, rowsAt.top, rowsAt.heights, BODY_GAP, nowStep, viewH);
-    if (!at) {
-      return; // 아직 다 재지 않음
-    }
-    scrolledFor.current = nowStep;
-    if (at.scroll) {
+    if (at?.scroll) {
       scrollRef.current?.showRange(at.top, at.bottom);
+      setScrolledFor(nowStep);
     }
-  }, [nowStep, rowsAt, viewH]);
+  }, [nowStep, rowsAt, viewH, scrolledFor]);
   useEffect(() => {
     if (content === undefined) {
       return;
@@ -256,7 +255,7 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
             <View testID="course-done-head-text" style={large ? undefined : styles.doneHeadText}>
               <Heading level={1} testID="course-done-title">{doneTitle}</Heading>
             </View>
-            <View testID="course-done-head-stamp" style={large ? styles.doneStampLarge : undefined}>
+            <View testID="course-done-head-stamp" style={large ? styles.doneStampLarge : styles.doneStamp}>
               <DateStamp testID="done-title-stamp" label={stampLabel} />
             </View>
           </View>
@@ -355,8 +354,9 @@ export function CourseHome({navigation}: NativeStackScreenProps<ParentParams, 'C
   order.current = items.filter(Boolean).map(x => String((x as React.ReactElement).key));
   // 5단계에서 지금 행으로 내리는 날(또는 아직 재는 중)은 접힘 여백을 끈다: 사용자가 처음 보는 화면은 내린 화면이고, 그 아래 끝은
   // 지금 행 끝 + 간격 12(showRange 여유) = 다음 행 위 끝이라 줄 경계가 맞는다. 여백을 두면 내린 화면 위에 빈칸이 생기고 위치도 어긋난다
+  // 내린 뒤(scrolledFor 고정)는 측정이 바뀌어도 끈 채로 둔다(QA-2 M1)
   const now = nowAt();
-  const foldViewport = nowStep && (!now || now.scroll) ? 0 : viewH;
+  const foldViewport = nowStep && (scrolledFor === nowStep || !now || now.scroll) ? 0 : viewH;
 
   return (
     <DsScreen variant="step" header={header(kstDateLine())} dock={dock} onViewport={setViewH} scrollRef={five ? scrollRef : undefined}>
@@ -473,6 +473,7 @@ const styles = StyleSheet.create({
   // 차지해 도장이 늘 아래 줄 왼쪽(줄 머리)으로 갔다(#254 캡처 문제 5). 150% 미만: 제목이 남은 폭을 갖고 도장은 옆(줄지 않음)
   doneHead: {flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', columnGap: 12},
   doneHeadText: {flex: 1, minWidth: 0},
+  doneStamp: {flexShrink: 0}, // 도장은 줄지 않는다(제목이 남은 폭을 갖는다)
   // 150% 이상: 옆에 두면 제목 낱말이 가운데서 꺾인다(320 200% 제목 폭 178 < '여기까지예요.' 220) → 제목 끝 아래 오른쪽(낙관 자리).
   // 줄 머리(왼쪽)에는 두지 않는다 — 왼쪽 원은 라디오 버튼으로 읽힌다(11-19 V5, 단계 행 D-2 상태 묶음과 같은 규칙)
   doneHeadLarge: {flexDirection: 'column', rowGap: 6},
