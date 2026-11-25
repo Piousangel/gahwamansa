@@ -7,6 +7,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {useBusyLatch} from '../src/ui/useBusyLatch';
 import {enterCode, press} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
+import {renderChildScreen} from '../testUtils/childScreen';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
 setupWarmAppRoot();
@@ -82,9 +83,7 @@ test('가족 만들기(번호 만들기)를 두 번 빨리 눌러도 가족·번
 test('자녀 설정 새 폰 연결 번호를 두 번 빨리 눌러도 번호는 한 번', async () => {
   const api = createFakeApi({consented: true, parentTitle: '엄마'});
   const issue = jest.spyOn(api, 'issueInviteCode');
-  render(<AppRoot api={api} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '설정'}));
-  await press('설정');
+  await renderChildScreen({api}); // C7 만 바로(대기열 71)
   await waitFor(() => screen.getByText('새 폰 연결 번호'));
   await twice(screen.getByText('새 폰 연결 번호'));
   await waitFor(() => expect(issue).toHaveBeenCalled());

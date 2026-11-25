@@ -5,6 +5,7 @@ import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import * as clipboard from '../src/ui/clipboard';
+import {renderChildScreen} from '../testUtils/childScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 import {press, pressWhenEnabled} from '../testUtils/flow';
 
@@ -568,7 +569,13 @@ describe('C5 지난 답', () => {
 });
 
 describe('C7 설정 v2', () => {
+  // C7 만 바로 그린다(대기열 71, 진짜 자녀 스택). 앨범 → 설정 이동은 '상단 설정으로 C7 에 갈 수 있다'가 본다
   const openSettings = async (api = createFakeApi({consented: true, parentTitle: '엄마'})) => {
+    await renderChildScreen({api});
+    return api;
+  };
+  // 로그아웃 뒤 첫 화면(역할 선택)은 AppRoot 가 바꾸므로 앱 전체로 그린다
+  const openSettingsFromHome = async (api: ReturnType<typeof createFakeApi>) => {
     render(<AppRoot api={api} role="child" />);
     await waitFor(() => screen.getByRole('button', {name: '설정'}));
     await press('설정');
@@ -691,7 +698,7 @@ describe('C7 설정 v2', () => {
   });
 
   test('로그아웃: 같은 방법(카카오) 안내 → 그만둘래요는 닫기, 로그아웃은 첫 화면으로', async () => {
-    const api = await openSettings(createFakeApi({who: 'child', childFamily: true, childLinked: true, consented: true}));
+    const api = await openSettingsFromHome(createFakeApi({who: 'child', childFamily: true, childLinked: true, consented: true}));
     const out = jest.spyOn(api, 'signOut');
     await waitFor(() => screen.getByText('카카오로 로그인했어요'));
     await press('로그아웃');

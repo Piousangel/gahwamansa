@@ -6,7 +6,9 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {measureStack, stackLayout} from '../src/features/link/polaroidLayout';
 import {resetFirstScreenMotion} from '../src/features/link/RoleSelect';
-import {press, toHomeConsented} from '../testUtils/flow';
+import {press} from '../testUtils/flow';
+import {renderChildScreen} from '../testUtils/childScreen';
+import {renderLinkedSettings} from '../testUtils/parentScreen';
 
 let mockFontScale = 1;
 let mockHeight = 780;
@@ -130,18 +132,13 @@ test('글자 200%: 하단 영역이 넘치면 고정을 풀고 화면 전체 스
 });
 
 test('코스 사진·설정에 AI 고지', async () => {
-  await toHomeConsented(createFakeApi({consented: true}));
-  await press('설정');
+  await renderLinkedSettings(createFakeApi({consented: true})); // 설정만 바로(대기열 71)
   await waitFor(() => screen.getByText('AI가 만든 것')); // 앱 정보 한 목록의 AI 안내(AP-06)
   expect(screen.getByText('앱의 옛날 사진은 AI가 만든 그림이에요. 실제 장소가 아니에요')).toBeTruthy();
 });
 
 test('자녀 쪽(설정 → 앱 정보)에도 AI 고지', async () => {
-  render(<AppRoot api={createFakeApi()} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '설정'}));
-  await act(async () => {
-    fireEvent.press(screen.getByRole('button', {name: '설정'}));
-  });
+  await renderChildScreen({api: createFakeApi(), ready: () => screen.getByRole('button', {name: '앱 정보, 버전 1.0.0'})}); // C7 부터(대기열 71)
   await act(async () => {
     fireEvent.press(screen.getByRole('button', {name: '앱 정보, 버전 1.0.0'}));
   });

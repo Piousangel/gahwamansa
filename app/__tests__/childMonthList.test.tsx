@@ -9,6 +9,7 @@ import type {MonthItem} from '../src/features/types';
 import {formatAnswerDate} from '../src/features/home/formatDate';
 import {press} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
+import {renderParentScreen} from '../testUtils/parentScreen';
 
 setupWarmAppRoot();
 
@@ -126,9 +127,7 @@ test('큰 글자 200%: 목록 글자는 잘리지 않는다(말줄임 없음)', 
 
 test('어르신 미리보기(P13): month 가 있으면 지난 답 두 줄 대신 같은 목록', async () => {
   const api = createFakeApi({linked: true, consented: true, parentTitle: '엄마', consentVersion: 'v6', latest: LATEST, month: MONTH});
-  render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api}); // 설정만 바로(대기열 71)
   await press('가족에게 이렇게 보여요');
   await waitFor(() => expect(screen.queryByTestId('preview-loading')).toBeNull());
   const device = screen.getByTestId('preview-device');

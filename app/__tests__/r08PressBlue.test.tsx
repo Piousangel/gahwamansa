@@ -8,6 +8,7 @@ import {tokensV4 as t} from '../src/ui/tokensV4';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, pressCourseNext} from '../testUtils/flow';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -119,9 +120,7 @@ test('대표 화면(첫 화면·코스 홈·P4·P1·설정·자녀 홈): 파랑 
   await waitFor(() => screen.getByRole('button', {name: '다 봤어요'}));
   look('P4');
   screen.unmount();
-  render(<AppRoot api={createFakeApi({linked: true, consented: true})} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi({linked: true, consented: true})}); // 설정만 바로(대기열 71 — 홈 → 설정 이동은 검사 대상 아님)
   await waitFor(() => screen.getByText('설정'));
   look('설정');
   screen.unmount();

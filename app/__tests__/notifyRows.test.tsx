@@ -8,6 +8,7 @@ import * as notify from '../src/push/notifyNative';
 import {press} from '../testUtils/flow';
 import {copy} from '../src/copy/copy';
 import {createFakeTokenSource, FAKE_PUSH_TOKEN, setTokenSourceForTest} from '../src/push/tokenSource';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
@@ -18,11 +19,11 @@ afterEach(() => jest.restoreAllMocks());
 // Android 에서는 Text20 이 한글 사이에 WJ(단어 안 줄바꿈 막기)를 넣는다 — 비교 전에 뺀다
 const wj = (t: string) => t.replace(/\u2060/g, '').trim();
 
+// 연결·동의한 기기의 설정(P13)만 바로 그린다(대기열 71, 진짜 어르신 스택). 홈 → 설정 이동은 이 파일의 검사 대상이 아니다
+// (N1 에 답한 뒤 설정으로 가는 시나리오·다음 실행·PushHost 가 함께 도는 시험은 앱 전체로 그린다)
 async function settings(opts: FakeOptions = {}) {
   const api = createFakeApi({linked: true, consented: true, ...opts});
-  render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api});
   return api;
 }
 const sw = () => screen.getByRole('switch', {name: '알림'});
@@ -93,11 +94,7 @@ test('두 채널 다 꺼짐: ", "로 이은 한 줄 + 앱 알림 화면 열기',
 });
 
 test('연결 전 기기(설정 값 없음)는 알림 행이 없다', async () => {
-  render(<AppRoot api={createFakeApi()} />);
-  await press(/부모님 휴대폰이에요/);
-  await press('코스 보기');
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api: createFakeApi()}); // 미연결 열람의 설정(대기열 71: 역할 선택 → 코스 보기 → 설정 이동은 검사 대상 아님)
   await waitFor(() => screen.getByText('도장 소리'));
   expect(screen.queryByRole('switch', {name: '알림'})).toBeNull();
 });
@@ -205,9 +202,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     setPlatform('android', 34);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const api = createFakeApi({linked: true, consented: true, accountTag: `acc-m1-${++n}`});
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('date-line'));
-    await press('설정');
+    await renderParentScreen({api});
     const row = await waitFor(() => screen.getByTestId('notify-perm-denied'));
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
     jest.spyOn(api, 'setPushEnabled').mockResolvedValue({ok: false, reason: 'invalid'});
@@ -228,9 +223,7 @@ describe('M1: 권한 denied(다시 물을 수 있음)와 blocked(휴대폰 설�
     setPlatform('android', 34);
     const check = jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(false);
     const api = createFakeApi({linked: true, consented: true, accountTag: `acc-m1-${++n}`});
-    render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => screen.getByTestId('date-line'));
-    await press('설정');
+    await renderParentScreen({api});
     const row = await waitFor(() => screen.getByTestId('notify-perm-denied'));
     jest.spyOn(RN.PermissionsAndroid, 'request').mockResolvedValue('granted');
     const set = jest.spyOn(api, 'setPushEnabled').mockResolvedValueOnce({ok: false, reason: 'invalid'});
@@ -288,9 +281,7 @@ test('재확인 N3-② L6 경쟁: 토글 중 앱 복귀(active)로 다시 읽은
     return {remove: jest.fn()};
   }) as never);
   const api = createFakeApi({linked: true, consented: true, accountTag: 'acc-l6-race'});
-  render(<AppRoot api={api} role="parent" restore />);
-  await waitFor(() => screen.getByTestId('date-line'));
-  await press('설정');
+  await renderParentScreen({api}); // 설정만(대기열 71) — 경쟁은 알림 행 안의 쓰기·다시 읽기
   await waitFor(() => expect(sw().props.accessibilityState.checked).toBe(true));
   let release: () => void = () => {};
   jest.spyOn(api, 'setPushEnabled').mockImplementation(enabled => new Promise(r => (release = () => r({ok: true, enabled}))));

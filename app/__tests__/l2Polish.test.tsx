@@ -7,7 +7,8 @@ import {StepRow} from '../src/ui/StepRow';
 import {createPrefs, setPrefsForTest, type Prefs} from '../src/lib/prefs';
 import {memoryStore} from '../src/lib/kvStore';
 import {createLocalStamps, setLocalStampsForTest} from '../src/lib/localStamps';
-import {confirmDeleteAll, press, pressBackLink, pressLast, pressCourseNext, toHomeConsented} from '../testUtils/flow';
+import {confirmDeleteAll, press, pressBackLink, pressLast, pressCourseNext} from '../testUtils/flow';
+import {renderLinkedSettings, renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -207,16 +208,21 @@ describe('AP-12 지금 행 테이프: 고정 140×28 대신 라벨 뒤를 채우
   });
 });
 
+// 설정에서 시작하는 시험은 설정(P13)만 바로 그린다(대기열 71, 진짜 어르신 스택 — 홈 → 설정 이동은 위 'AP-12' 포커스 시험이 본다)
+const settings = async (opts: FakeOptions = {}) => {
+  const api = createFakeApi({linked: true, consented: true, ...opts});
+  await renderParentScreen({api});
+  return api;
+};
+
 describe('AP-14 테스트 보강', () => {
   test('설정 상태 문장은 행 이름과 함께 한 덩어리로 읽힌다', async () => {
-    await home();
-    await press('설정');
+    await settings();
     await waitFor(() => screen.getByLabelText('가족에게 답 보여 주기, 보여 주는 중이에요'));
   });
   test('모두 지우기 확인을 두 번 빨리 눌러도 삭제는 한 번', async () => {
-    const api = await home();
+    const api = await settings();
     const del = jest.spyOn(api, 'deleteMyAccount');
-    await press('설정');
     await press('모두 지우기');
     await waitFor(() => screen.getByText('모두 지울까요?'));
     await press('모두 지우기'); // P9 1단계 → 2단계 확인 상자
@@ -232,8 +238,7 @@ describe('AP-14 테스트 보강', () => {
   test('동의 철회(설정 확인 버튼)를 두 번 빨리 눌러도 한 번', async () => {
     const api = createFakeApi({consented: true});
     const withdraw = jest.spyOn(api, 'withdrawConsent');
-    await toHomeConsented(api);
-    await press('설정');
+    await renderLinkedSettings(api);
     await press('그만 보여 주기');
     await waitFor(() => screen.getByText('가족에게 그만 보여 줄까요?'));
     const all = screen.getAllByRole('button', {name: '그만 보여 주기'});
@@ -248,8 +253,7 @@ describe('AP-14 테스트 보강', () => {
   test('연결된 가족 그만두기 시트의 그만 보여 주기를 두 번 빨리 눌러도 한 번', async () => {
     const api = createFakeApi({consented: true, familyDates: ['2026-11-12']});
     const withdraw = jest.spyOn(api, 'withdrawConsent');
-    await toHomeConsented(api);
-    await press('설정');
+    await renderLinkedSettings(api);
     await press('연결된 가족');
     await press('그만두기, 답 보여 주기만 그만두거나, 모두 지울 수 있어요');
     const btn = screen.getByRole('button', {name: '그만 보여 주기, 지난 답은 지워져요. 연결은 그대로예요'});

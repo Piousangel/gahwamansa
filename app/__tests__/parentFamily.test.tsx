@@ -5,15 +5,16 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {parseParentFamily} from '../src/api/contract/family';
-import {press, toHome, toHomeConsented} from '../testUtils/flow';
+import {press, toHome} from '../testUtils/flow';
+import {renderLinkedSettings} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
 setupWarmAppRoot();
 
+// 번호로 연결한 기기의 설정(P13)만 바로 그리고 '연결된 가족'으로(대기열 71, 진짜 어르신 스택 — 홈 → 설정 이동은 검사 대상 아님)
 async function openFamily(api: ReturnType<typeof createFakeApi>) {
-  await toHomeConsented(api);
-  await press('설정');
+  await renderLinkedSettings(api);
   await press('연결된 가족');
   await waitFor(() => screen.getByRole('header', {name: '연결된 가족'}));
 }
@@ -96,8 +97,7 @@ test('빈 상태(가족 0명): 언제 보이는지 + 번호 쓰기 → P1', asyn
 test('불러오기 실패는 오류와 다시 하기', async () => {
   const api = createFakeApi({consented: true, familyDates: ['2026-11-12']});
   jest.spyOn(api, 'parentFamilyList').mockRejectedValueOnce(new (require('../src/features/types').OfflineError)('x'));
-  await toHomeConsented(api);
-  await press('설정');
+  await renderLinkedSettings(api);
   await press('연결된 가족');
   await waitFor(() => screen.getByText('인터넷이 잠깐 끊겼어요'));
   await press('다시 하기');
@@ -105,8 +105,7 @@ test('불러오기 실패는 오류와 다시 하기', async () => {
 });
 
 test('설정 화면에 연결된 가족 행이 있다(연결된 기기만)', async () => {
-  await toHomeConsented(createFakeApi({consented: true}));
-  await press('설정');
+  await renderLinkedSettings(createFakeApi({consented: true}));
   expect(screen.getByRole('button', {name: '연결된 가족'})).toBeTruthy();
 });
 

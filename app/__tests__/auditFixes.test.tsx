@@ -10,6 +10,7 @@ import {memoryStore} from '../src/lib/kvStore';
 import {setStampFeedbackForTest} from '../src/features/course/stampFeedback';
 import {enterCode, press, pressCourseNext} from '../testUtils/flow';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
+import {renderParentScreen} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -39,6 +40,8 @@ async function home(opts: FakeOptions = {}) {
   render(<AppRoot api={createFakeApi({linked: true, consented: true, ...opts})} role="parent" restore />);
   await waitFor(() => screen.getByTestId('date-line'));
 }
+// 설정(P13) 시험은 설정만 바로 그린다(대기열 71, 진짜 어르신 스택 — 홈 → 설정 이동은 검사 대상 아님)
+const settings = (opts: FakeOptions = {}) => renderParentScreen({api: createFakeApi({linked: true, consented: true, ...opts})});
 
 test('M1(411×914 100%): 이번 주 도장이 0이면 도장 줄을 숨긴다(첫 진입 해님 인사와 겹침 해소)', async () => {
   await home({weekDone: []});
@@ -82,8 +85,7 @@ test('M9(150%): P7 제목은 첫 프레임부터 보인다(연출은 둘째 줄�
 
 test('M3(360 폭 100%): 답 보여 주기 행은 동사 버튼을 다음 줄 전체 폭으로 쌓는다', async () => {
   mockDims = {width: 360, height: 640, scale: 3, fontScale: 1};
-  await home();
-  await press('설정');
+  await settings();
   const row = await waitFor(() => screen.getByTestId('settings-row-share'));
   expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('column');
 });
@@ -101,8 +103,7 @@ test('M3: 확인 패널이 열리면 패널 끝까지 보이게 본문을 스크
   const {ScrollView} = require('react-native');
   const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
   scrollTo.mockClear();
-  await home();
-  await press('설정');
+  await settings();
   await waitFor(() => screen.getByText('도장 소리'));
   await act(async () => {
     fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
@@ -122,8 +123,7 @@ test('#298 M1: 창보다 큰 확인 칸은 위쪽(제목)에 맞춘다, 창에 �
   const {ScrollView} = require('react-native');
   const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
   scrollTo.mockClear();
-  await home({consented: false});
-  await press('설정');
+  await settings({consented: false});
   await waitFor(() => screen.getByText('도장 소리'));
   await act(async () => {
     fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
@@ -147,8 +147,7 @@ test('#298 L2: 높이가 창과 같거나 창-간격보다 크면 위쪽에 맞�
   mockDims = {width: 360, height: 640, scale: 3, fontScale: 2};
   const {ScrollView} = require('react-native');
   const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
-  await home({consented: false});
-  await press('설정');
+  await settings({consented: false});
   await waitFor(() => screen.getByText('도장 소리'));
   await act(async () => {
     fireEvent(screen.getByTestId('screen-body'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: 360, height: 300}}});
@@ -174,8 +173,7 @@ test('#298 L2: 높이가 창과 같거나 창-간격보다 크면 위쪽에 맞�
 // #298 QA-3 L4·L5: 확인 칸은 동의 화면과 같은 제목·다섯 줄을 쓰고(거절 안내는 이 칸 버튼에 맞춘 settings.reshow_note — QA-1 L3), 글머리표 '•'는 화면 읽기가 읽지 않는다(ConsentScreen 과 같은 방식)
 test('#298 L4·L5: 다시 보여 주기 칸 — 동의 제목·다섯 줄·거절 안내, 점은 읽지 않음', async () => {
   const {copy} = require('../src/copy/copy');
-  await home({consented: false});
-  await press('설정');
+  await settings({consented: false});
   await press('다시 보여 주기');
   const panel = await waitFor(() => screen.getByTestId('settings-confirm'));
   const {within} = require('@testing-library/react-native');

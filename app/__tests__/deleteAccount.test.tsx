@@ -1,12 +1,12 @@
-import React from 'react';
 import {Linking, StyleSheet} from 'react-native';
-import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
-import {AppRoot} from '../src/app/AppRoot';
+import {act, fireEvent, screen, waitFor, within} from '@testing-library/react-native';
 import {copy} from '../src/copy/copy';
 import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {confirmDeleteAll, press, pressLast, toHomeConsented} from '../testUtils/flow';
+import {renderChildScreen} from '../testUtils/childScreen';
+import {renderLinkedSettings} from '../testUtils/parentScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 문의 메일 주소(앱 정보 CONTACT_EMAIL): 기본은 없음, 어르신 문의 안내 테스트만 넣는다(contactRow.test 와 같은 방식)
@@ -23,9 +23,16 @@ const MAILTO = `mailto:help@example.test?subject=${encodeURIComponent('[가화�
 // 첫 테스트만 콜드 스타트를 떠안지 않게 파일 시작 때 한 번 그렸다 내린다(PR #101 리뷰, testUtils/warm)
 setupWarmAppRoot();
 
-async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
+// 앱 전체(AppRoot)로 홈 → 설정 → 모두 지우기. 지운 뒤 스택이 비는지(이전 화면이 남지 않음)를 보는 첫 테스트만 쓴다
+async function openParentDeleteFromHome(api: ReturnType<typeof createFakeApi>) {
   await toHomeConsented(api);
   await press('설정');
+  await press('모두 지우기');
+  await waitFor(() => screen.getByText('모두 지울까요?'));
+}
+// 나머지는 연결한 기기의 설정(P13)만 바로 그리고 '모두 지우기'로 들어간다(대기열 71, 진짜 어르신 스택 — 설정으로 돌아가기도 그대로)
+async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
+  await renderLinkedSettings(api);
   await press('모두 지우기');
   await waitFor(() => screen.getByText('모두 지울까요?'));
 }
@@ -33,7 +40,7 @@ async function openParentDelete(api: ReturnType<typeof createFakeApi>) {
 test('어르신: 설정의 모두 지우기는 확인 화면만 열고, 확인 화면의 모두 지우기에서 지운다', async () => {
   const api = createFakeApi({consented: true});
   const del = jest.spyOn(api, 'deleteMyAccount');
-  await openParentDelete(api);
+  await openParentDeleteFromHome(api);
   expect(del).not.toHaveBeenCalled();
   await confirmDeleteAll(); // P9 → 2단계 확인 상자
   expect(del).toHaveBeenCalledTimes(1);
@@ -262,10 +269,9 @@ test('어르신 삭제 화면의 버튼은 64 이상, 글자는 20 이상', asyn
   expect(t.fontSize).toBeGreaterThanOrEqual(20);
 });
 
+// 자녀 C7 설정만 바로 그리고(대기열 71, 진짜 자녀 스택) '내 계정 지우기'로 들어간다. 앨범 → 설정 이동은 childScreensV3 가 본다
 async function openChildDelete(api: ReturnType<typeof createFakeApi>, expectText = '부모님의 기록도 함께 지워져요') {
-  render(<AppRoot api={api} role="child" />);
-  await waitFor(() => screen.getByRole('button', {name: '설정'}));
-  await press('설정'); // C7 v2: 내 계정 지우기는 설정에
+  await renderChildScreen({api, ready: () => screen.getByRole('button', {name: '내 계정 지우기'})}); // C7 v2: 내 계정 지우기는 설정에
   await press('내 계정 지우기');
   await waitFor(() => screen.getByText(expectText));
 }

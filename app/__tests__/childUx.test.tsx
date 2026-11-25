@@ -17,6 +17,7 @@ import {NewConnectionBanner} from '../src/features/home/NewConnectionBanner';
 import {memoryStore} from '../src/lib/kvStore';
 import {press, pressWhenEnabled} from '../testUtils/flow';
 import type {ChildParent} from '../src/features/types';
+import {renderChildScreen} from '../testUtils/childScreen';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -581,11 +582,8 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     setPlatform(orig.OS, orig.Version);
   });
 
-  async function openSettings() {
-    render(<AppRoot api={createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
-  }
+  // C7 설정만 바로 그린다(대기열 71: 앨범 → 설정 이동은 이 묶음의 검사 대상이 아님 — 진짜 자녀 스택)
+  const openSettings = (api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true})) => renderChildScreen({api});
 
   test('Android 13+ 꺼짐: C7 알림 행 "알림이 휴대폰 설정에서 꺼져 있어요" + 눌러서 켜기(거절 상태면 휴대폰 설정)', async () => {
     const request = android(34, false);
@@ -602,9 +600,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     android(34, true);
     const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
     const set = jest.spyOn(api, 'setPushEnabled');
-    render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await openSettings(api);
     await waitFor(() => screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     const row = screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'});
     expect(row.props.accessibilityState.checked).toBe(true); // my_push_settings 기본 켬
@@ -620,9 +616,7 @@ describe('AC-04 알림 실제 권한 상태(C3 줄·C7 행)', () => {
     android(34, true);
     const api = createFakeApi({consented: true, parentTitle: '엄마', childFamily: true});
     jest.spyOn(api, 'setPushEnabled').mockResolvedValue({ok: false, reason: 'invalid'});
-    render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await openSettings(api);
     await waitFor(() => screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     fireEvent.press(screen.getByRole('switch', {name: '가족 연결, 가족 휴대폰과 연결되면 알려 드려요'}));
     await waitFor(() => screen.getByTestId('toast'));
@@ -746,9 +740,7 @@ describe('리뷰 M4: 기기 기억값은 계정별, 로그아웃 때 정리', ()
       order.push('signOut');
       await so();
     });
-    render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await renderChildScreen({api}); // C7 만 바로(대기열 71) — 검사 대상은 로그아웃 순서·키 정리, 역할 선택으로 가는 길은 AC-07 이 본다
     await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
     await press('로그아웃');
     const buttons = screen.getAllByRole('button', {name: '로그아웃'});
@@ -922,9 +914,7 @@ describe('재검토 R1·R2', () => {
     const clear = jest.spyOn(accountStore, 'clearAccountKeys');
     const api = createFakeApi({consented: true, parentTitle: '엄마', accountTag: 'acc-r2'});
     jest.spyOn(api, 'signOut').mockRejectedValue(new Error('boom'));
-    render(<AppRoot api={api} role="child" />);
-    await waitFor(() => screen.getByRole('button', {name: '설정'}));
-    await press('설정');
+    await renderChildScreen({api}); // C7 만 바로(대기열 71) — 검사 대상은 로그아웃 순서·키 정리, 역할 선택으로 가는 길은 AC-07 이 본다
     await waitFor(() => screen.getByRole('button', {name: '로그아웃'}));
     await press('로그아웃');
     const buttons = screen.getAllByRole('button', {name: '로그아웃'});
