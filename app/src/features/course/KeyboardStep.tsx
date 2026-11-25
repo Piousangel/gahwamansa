@@ -22,6 +22,7 @@ import {useFinishStep, useStepStarted, type HangulResult} from './useFinishStep'
 import {AiNotice} from '../../ui/AiNotice';
 import {PHOTO_FIT_SLACK, photoFrame} from './photoFrame';
 import {usePhotoLoad} from './usePhotoLoad';
+import {fillObject} from '../../lib/josa';
 import {StepHeader, stepA11y} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {confirmedCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
@@ -322,7 +323,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           ref={inputRef}
           testID="kb-input"
           accessibilityLabel={k.input_label}
-          accessibilityHint={k.placeholder}
+          // #265 QA-2 L1: 힌트에 따라 쓸 낱말(라벨은 그대로). 조사를 정할 수 없으면(영문 낱말) 옛 힌트
+          accessibilityHint={fillObject(k.input_hint, '낱말', word) ?? k.placeholder}
           onChangeText={onChangeText}
           onFocus={() => setKbOpen(true)}
           onBlur={() => setKbOpen(false)}
@@ -439,6 +441,8 @@ const BODY_GAP = 16; // ui/Screen 본문 형제 간격(layout.bodyPadding.gap)
  *  360×780(오너 S25 근사)에서 사진 fit 이 바닥 아래로 떨어져 사진이 접혔다(에뮬레이터 실측) */
 export const LOOK_PAD = 12;
 export const LOOK_GAP = 8;
+/** 시각 여유(#265 QA-2 M1): 입력 칸 아래 테두리와 '더 있음' 띠 사이가 눈으로도 떨어져 보이게(실측 여유 2.5dp는 붙어 보여 '잘림'으로 읽힘) */
+export const P6_FIT_GAP = 12;
 /** 사진 바닥: 이보다 낮게 줄여야 입력 칸이 첫 화면에 들면 사진을 접는다(② 떠올려 보기 썸네일 64보다 크게, 가로 약 2.5:1 띠보다 덜 납작하게) */
 export const P6_PHOTO_MIN_H = 96;
 /** AI 고지 한 줄 높이(label 역할 줄높이)와 글 폭(P4 360 폭 실측 약 305dp, 확대 상한 1.5 — AiNotice) */
@@ -459,7 +463,7 @@ export function p6PhotoFit(m: {viewport: number; lookTop?: number; notice: numbe
   if (!(m.viewport > 0) || m.lookTop === undefined || m.model === undefined || m.card === undefined) {
     return undefined;
   }
-  return m.viewport - m.lookTop - LOOK_PAD - LOOK_GAP - m.notice - LOOK_GAP - m.model - LOOK_PAD - BODY_GAP - m.card - PHOTO_FIT_SLACK;
+  return m.viewport - m.lookTop - LOOK_PAD - LOOK_GAP - m.notice - LOOK_GAP - m.model - LOOK_PAD - BODY_GAP - m.card - PHOTO_FIT_SLACK - P6_FIT_GAP;
 }
 
 const styles = StyleSheet.create({

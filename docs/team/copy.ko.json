@@ -486,6 +486,8 @@
     "guide_recall": "떠올리신 낱말을 아래 칸에 써요",
     "input_label": "낱말 쓰는 칸",
     "placeholder": "여기를 누르면 자판이 나와요",
+    "input_hint": "{낱말}{을를} 써 주세요. 여기를 누르면 자판이 나와요",
+    "_status_input_hint": "#265 QA-2 L1(DS-1 11-25): 입력 칸 읽기 힌트에 따라 쓸 낱말. 조사 자동(lib/josa fillObject), 한글로 안 끝나면 placeholder. 라이터 확인 전",
     "sub": "천천히 써 봐요",
     "need_one": "한 글자라도 쓰면 눌려요",
     "matched": "낱말을 다 쓰셨어요",

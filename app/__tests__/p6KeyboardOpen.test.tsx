@@ -121,7 +121,7 @@ test('닫힘: 입력 칸은 비운 한 줄(placeholder·multiline 없음, 높이
   const input = await toP6();
   expect(input.props.placeholder).toBeUndefined();
   expect(input.props.multiline).toBeFalsy();
-  expect(input.props.accessibilityHint).toBe('여기를 누르면 자판이 나와요');
+  expect(input.props.accessibilityHint).toBe('나무를 써 주세요. 여기를 누르면 자판이 나와요');
   const st = StyleSheet.flatten(input.props.style);
   expect(st.height).toBeUndefined();
   expect(st.minHeight).toBeGreaterThanOrEqual(56);

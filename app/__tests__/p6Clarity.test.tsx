@@ -9,7 +9,7 @@ import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {pressCourseNext} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
-import {LOOK_GAP, LOOK_PAD, P6_PHOTO_MIN_H, p6PhotoFit} from '../src/features/course/KeyboardStep';
+import {LOOK_GAP, LOOK_PAD, P6_FIT_GAP, P6_PHOTO_MIN_H, p6PhotoFit} from '../src/features/course/KeyboardStep';
 import {PHOTO_FIT_SLACK} from '../src/features/course/photoFrame';
 
 setupWarmAppRoot();
@@ -100,7 +100,7 @@ test('사진 잘림 원인 고정: 고정 띠 + cover 가 아니라 원본 비�
   await act(async () => {
     fireEvent(img, 'load', {nativeEvent: {source: {width: 1152, height: 928}}});
   });
-  const fit = 400 - LOOK_PAD - LOOK_GAP - 30 - LOOK_GAP - 50 - LOOK_PAD - 16 - 110 - PHOTO_FIT_SLACK; // 152
+  const fit = 400 - LOOK_PAD - LOOK_GAP - 30 - LOOK_GAP - 50 - LOOK_PAD - 16 - 110 - PHOTO_FIT_SLACK - P6_FIT_GAP; // 140
   const f = StyleSheet.flatten(screen.getByTestId('kb-photo', hidden).props.style);
   expect(f.height).toBe(fit);
   expect(Math.abs(f.width / f.height - 1152 / 928)).toBeLessThan(0.01); // 원본 비율(옛 띠는 312×56 = 5.6:1)
@@ -109,6 +109,25 @@ test('사진 잘림 원인 고정: 고정 띠 + cover 가 아니라 원본 비�
   const g = StyleSheet.flatten(screen.getByTestId('kb-photo', hidden).props.style);
   expect(g.width).toBe(312);
   expect(Math.abs(g.width / g.height - 1152 / 928)).toBeLessThan(0.01);
+});
+
+test('#265 QA-2 M1: 사진을 넣어도 입력 칸 아래 끝과 접힘(\'더 있음\' 띠) 사이에 시각 여유 12 이상', async () => {
+  await toP6();
+  await layout(400);
+  await act(async () => {
+    lay('kb-ai-notice-wrap', 0, 30);
+  });
+  const h = StyleSheet.flatten(screen.getByTestId('kb-photo', hidden).props.style).height as number;
+  // 보기 판 위 끝 0 → 여백 → 사진 → 간격 → 고지 → 간격 → 낱말 → 여백 → 본문 간격 16 → 쓰기 칸(110)
+  const inputBottom = 0 + LOOK_PAD + h + LOOK_GAP + 30 + LOOK_GAP + 50 + LOOK_PAD + 16 + 110;
+  expect(400 - inputBottom).toBeGreaterThanOrEqual(12);
+  expect(h).toBeGreaterThanOrEqual(P6_PHOTO_MIN_H); // 여유를 둬도 이 창에서는 사진이 접히지 않는다
+});
+
+test('#265 QA-2 L1: 입력 칸 라벨은 그대로, 힌트에 따라 쓸 낱말(조사 자동)', async () => {
+  const input = await toP6();
+  expect(input.props.accessibilityLabel).toBe('낱말 쓰는 칸');
+  expect(input.props.accessibilityHint).toBe('나무를 써 주세요. 여기를 누르면 자판이 나와요');
 });
 
 test('사진 준비 중(pending)이면 보기 판에 낱말만, AI 고지도 없다', async () => {
@@ -145,7 +164,8 @@ test('p6PhotoFit: 하나라도 못 쟀으면 undefined(사진을 아직 그리�
   expect(p6PhotoFit({viewport: 0, lookTop: 0, notice: 30, model: 50, card: 110})).toBeUndefined();
   expect(p6PhotoFit({viewport: 400, notice: 30, model: 50, card: 110})).toBeUndefined();
   expect(p6PhotoFit({viewport: 400, lookTop: 0, notice: 30, card: 110})).toBeUndefined();
-  expect(p6PhotoFit({viewport: 400, lookTop: 0, notice: 30, model: 50, card: 110})).toBe(152);
+  expect(p6PhotoFit({viewport: 400, lookTop: 0, notice: 30, model: 50, card: 110})).toBe(140);
+  expect(P6_FIT_GAP).toBe(12);
   expect(P6_PHOTO_MIN_H).toBe(96);
 });
 
