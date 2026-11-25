@@ -19,6 +19,10 @@ import {foldPush} from '../../ui/ds/foldPush';
 import {Button, DsScreen, Heading, Text, type DockProps} from '../../ui/ds';
 import {ds, roleText} from '../../ui/ds/roles';
 import {useFinishStep, useStepStarted, type HangulResult} from './useFinishStep';
+import {AiNotice} from '../../ui/AiNotice';
+import {PHOTO_FIT_SLACK, photoFrame} from './photoFrame';
+import {usePhotoLoad} from './usePhotoLoad';
+import {fillObject} from '../../lib/josa';
 import {StepHeader, stepA11y} from './StepHeader';
 import {ReadAloud, ttsText} from './ReadAloud';
 import {confirmedCount, isMatch, normalizeWord, syllables} from './keyboardMatch';
@@ -54,7 +58,7 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   // five(스위치 + 서버 지원): ②에서 고른 낱말을 쓴다(넘긴 날은 사진 낱말 그대로). 번호 4/5, 넘어가기는 p_skipped. 아니면 사진 낱말·3/3 그대로
   const {content, done, picks, five} = useSession();
   const n = stepNumber('hangul', five);
-  const {fontScale} = useWindowDimensions();
+  const {fontScale, height: winH} = useWindowDimensions();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const finishRef = useRef<React.ComponentRef<typeof Pressable>>(null);
   const doneRef = useRef<React.ComponentRef<typeof Pressable>>(null);
@@ -65,11 +69,16 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   const [lateSkip, setLateSkip] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  // #104 ②: 닫힘에서 입력 칸이 첫 화면(접힘 위)에 들어야 한다. 사진 띠가 칸을 접힘 아래로 밀면 그 크기·배율에서는 사진 띠를 접는다
-  // (본보기 낱말은 카드 안에 그대로라 따라 쓰기에 지장 없음). 정한 값은 그 창 크기·배율에서만 유지(창이 바뀌면 다시 잰다)
+  // 보기 판(사진 + AI 고지 + 따라 쓸 낱말)과 쓰기 칸(안내 + 입력 칸)을 나눈다(오너 S25 11-25, 회의록 docs/design/2026-11-25-p6-clarity).
+  // 사진은 원본 비율 그대로(P4 photoFrame) — 옛 고정 높이 56 띠 + cover 는 단풍 숲길을 가는 띠로 잘랐다.
+  // 사진 높이 = 입력 칸까지 첫 화면에 드는 높이(fit). fit 이 바닥(P6_PHOTO_MIN_H)보다 작으면 사진을 접는다(#104 ② — 입력 칸이 먼저).
+  // fit 은 사진 높이·유무와 무관한 실측값(보기 판 위 끝·고지·낱말·쓰기 칸 높이)으로만 계산해 측정 → 줄임 → 재측정 반복이 없다
   const [viewport, setViewport] = useState(0);
   const [cardBox, setCardBox] = useState<{y: number; h: number} | null>(null); // 자연 위치(넣은 여백 뺀 값)
-  const [photoOffFor, setPhotoOffFor] = useState<string | null>(null);
+  const [lookBox, setLookBox] = useState<{y: number; w: number} | null>(null);
+  const [noticeH, setNoticeH] = useState<number | undefined>(undefined);
+  const [modelH, setModelH] = useState<number | undefined>(undefined);
+  const {aspect, failed: photoFailed, onLoad: onPhotoLoad, onError: onPhotoError} = usePhotoLoad(content?.photo?.image_url);
   const [readH, setReadH] = useState<number | undefined>(undefined);
   const [doneBox, setDoneBox] = useState<{y: number; h: number} | null>(null);
   const [romanH, setRomanH] = useState<number | undefined>(undefined);
@@ -148,14 +157,14 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
   // 로마자 감지(시안 ds4b): 영어로 써지고 있으면 카드 아래 한 줄 안내
   // 리뷰 L3: 낱말 자체에 영문이 있는 날(예 'TV')에는 켜지 않는다
   const roman = phase === 'writing' && !/[A-Za-z]/.test(word) && /[A-Za-z]/.test(text);
-  const fitKey = `${viewport}|${fontScale}`;
   const cardBottom = cardBox ? cardBox.y + cardBox.h : 0;
-  const photoOff = photoOffFor === fitKey;
-  const showPhoto = !open && !photoOff && !photo.image_url.startsWith('pending://') && !imageFailed;
-  if (showPhoto && viewport > 0 && cardBottom > viewport && phase === 'writing') {
-    setPhotoOffFor(fitKey); // 렌더 중 상태 갱신(조건이 한 번만 참이 되도록 fitKey 로 막는다)
-  }
-  // R-15: 닫힘에서 카드(본보기 낱말 + 입력 칸)가 첫 화면 끝에 걸치면 통째로 아래로(200% — 시안 '닫힘 200% 입력칸은 스크롤로 닿음')
+  // 보기 판은 닫힘·다시 써 보기 대화상자 동안(일치 뒤·자판 열림에는 없음)
+  const showLook = !open && phase !== 'matched';
+  const fit = p6PhotoFit({viewport, lookTop: lookBox?.y, notice: noticeH ?? noticeGuess(lookBox?.w, fontScale), model: modelH, card: cardBox?.h});
+  const hasImage = !photo.image_url.startsWith('pending://') && !photoFailed;
+  const showPhoto = showLook && hasImage && fit !== undefined && fit >= P6_PHOTO_MIN_H && !!lookBox;
+  const frame = showPhoto && lookBox ? photoFrame(lookBox.w, aspect, winH, fit, P6_PHOTO_MIN_H) : null;
+  // R-15: 닫힘에서 쓰기 칸(안내 + 입력 칸)이 첫 화면 끝에 걸치면 통째로 아래로(200% — 시안 '닫힘 200% 입력칸은 스크롤로 닿음')
   const cardPush = open || showPhoto || !cardBox ? null : foldPush(viewport, cardBox.y, [cardBox.h], 0, true);
   cardPushRef.current = cardPush?.space ?? null;
   const readBase = cardBottom + (cardPush?.space ?? 0) + BODY_GAP;
@@ -225,7 +234,11 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
     : phase === 'matched'
       ? {primary: {label: k.finish, buttonRef: finishRef, loading: busy, testID: 'kb-finish', onPress: () => canFinish && complete('finished')}}
       : {
-          primary: {label: copy.course.next.hangul, buttonRef: doneRef, disabled: !hasText, accessibilityHint: hasText ? undefined : k.need_one, loading: busy, onPress: pressDone},
+          // 「한 글자라도 쓰면 눌려요」는 본문 안내가 아니라 버튼 상태 설명 → 꺼진 버튼 바로 위 이유 줄 + 힌트(P5 need_choice 와 같은 꼴).
+          // 자판 열림에서는 이유 줄을 그리지 않고 힌트만: 자판 위 Dock 이 한 줄만큼 커져 [낱말][입력 칸] 줄이 '더 있음' 띠에 가렸다(에뮬레이터 360×640 실측)
+          primary: open
+            ? {label: copy.course.next.hangul, buttonRef: doneRef, disabled: !hasText, accessibilityHint: hasText ? undefined : k.need_one, loading: busy, onPress: pressDone}
+            : {label: copy.course.next.hangul, buttonRef: doneRef, disabled: !hasText, disabledReason: k.need_one, loading: busy, onPress: pressDone},
           // 닫힘: 넘어가기는 Dock(넘치면 본문 끝으로, R-12). 자판 열림은 위 줄(100%) 또는 본문(200%)
           secondary: open ? undefined : skipStrong ? {kind: 'secondary', label: k.skip, disabled: busy, testID: 'kb-skip-strong', onPress: skip} : {kind: 'text', label: k.skip, disabled: busy, onPress: skip},
         };
@@ -259,24 +272,32 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
             <Text role="title">{word}</Text>
           </View>
         </View>
-      ) : open ? null : (
-        <>
-          {showPhoto ? (
-            <View testID="kb-photo" style={styles.photoCard} accessibilityElementsHidden={false}>
-              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <Image source={{uri: photo.image_url}} style={styles.photoStrip} resizeMode="cover" onError={() => setImageFailed(true)} />
+      ) : showLook ? (
+        // 보기 판: 옅은 종이 면(테두리 없음) = 보는 곳. 테두리 상자는 쓰는 곳(입력 칸) 하나뿐이다
+        <View
+          testID="kb-look"
+          style={styles.look}
+          onLayout={e => {
+            const {y, width} = e.nativeEvent.layout;
+            const next = {y: Math.round(y), w: Math.round(width)};
+            setLookBox(b => (b && b.y === next.y && b.w === next.w ? b : next));
+          }}>
+          {showPhoto && frame ? (
+            <>
+              <View testID="kb-photo" style={[styles.photo, frame]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {/* 틀이 사진 비율과 같아 잘리지 않는다(비율을 알기 전 콘텐츠 비율 틀에서도 잘라 내지 않게 contain — P4 와 같음) */}
+                <Image testID="kb-photo-image" source={{uri: photo.image_url}} style={styles.photoImg} resizeMode="contain" onLoad={onPhotoLoad} onError={onPhotoError} />
               </View>
-              <View style={styles.photoCaption}>
-                <Text role="sub">{aiNotice}</Text>
+              <View testID="kb-ai-notice-wrap" style={styles.lookNotice} onLayout={e => setNoticeH(Math.ceil(e.nativeEvent.layout.height))}>
+                <AiNotice testID="kb-ai-notice" text={aiNotice} />
               </View>
-            </View>
+            </>
           ) : null}
-          <View style={styles.guide}>
-            <Text role="body">{recallWord ? k.guide_recall : k.guide}</Text>
-            <Text role="sub">{k.need_one}</Text>
+          <View testID="kb-model" accessible accessibilityLabel={k.word_a11y.split('{낱말}').join(word)} onLayout={e => setModelH(Math.ceil(e.nativeEvent.layout.height))}>
+            <WordLine word={word} />
           </View>
-        </>
-      )}
+        </View>
+      ) : null}
       {/* 입력칸은 상태와 관계없이 같은 자리에 둔다(다시 그려지면 비제어 입력이 지워짐). 일치 뒤에는 숨기기만 */}
       <View
         testID="kb-card"
@@ -286,15 +307,24 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
           setCardBox(b => (b && Math.abs(b.y - natural.y) < 1 && b.h === natural.h ? b : natural));
         }}
         // 자판 열림: 본보기 낱말과 입력 칸을 한 줄로(실측 360×640 Gboard: 보이는 본문 약 75dp — 위아래로 두면 시스템이 입력 칸을 보이게 스크롤해 낱말이 잘렸다, r1/7 H)
-        style={[styles.wordCard, open ? styles.wordCardOpen : null, cardPush ? {marginTop: cardPush.space} : null, phase === 'matched' ? styles.hidden : null]}>
-        <View accessible accessibilityLabel={k.word_a11y.split('{낱말}').join(word)}>
-          <WordLine word={word} />
-        </View>
+        style={[styles.write, open ? styles.writeOpen : null, cardPush ? {marginTop: cardPush.space} : null, phase === 'matched' ? styles.hidden : null]}>
+        {open ? (
+          <View accessible accessibilityLabel={k.word_a11y.split('{낱말}').join(word)}>
+            <WordLine word={word} />
+          </View>
+        ) : null}
+        {/* 닫힘: 안내가 입력 칸의 보이는 이름표(바로 위 한 줄). 버튼 상태 설명(need_one)은 Dock '다 썼어요' 위 이유 줄로 옮겼다 */}
+        {showLook ? (
+          <Text testID="kb-guide" role="body">
+            {recallWord ? k.guide_recall : k.guide}
+          </Text>
+        ) : null}
         <TextInput
           ref={inputRef}
           testID="kb-input"
           accessibilityLabel={k.input_label}
-          accessibilityHint={k.placeholder}
+          // #265 QA-2 L1: 힌트에 따라 쓸 낱말(라벨은 그대로). 조사를 정할 수 없으면(영문 낱말) 옛 힌트
+          accessibilityHint={fillObject(k.input_hint, '낱말', word) ?? k.placeholder}
           onChangeText={onChangeText}
           onFocus={() => setKbOpen(true)}
           onBlur={() => setKbOpen(false)}
@@ -322,7 +352,8 @@ export function KeyboardStep({navigation, route}: NativeStackScreenProps<ParentP
             const next = {y: Math.round(y), h: Math.ceil(height)};
             setDoneBox(b => (b && b.y === next.y && b.h === next.h ? b : next));
           }}>
-          <Button label={copy.course.next.hangul} buttonRef={doneRef} disabled={!hasText} disabledReason={k.need_one} loading={busy} onPress={pressDone} />
+          {/* 이유 줄은 그리지 않고 힌트만(100% 자판 열림과 같음): 320×640 200%에서 두 줄 이유가 '다 썼어요'를 '더 있음' 띠 아래로 밀었다(에뮬레이터 실측 11-25) */}
+          <Button label={copy.course.next.hangul} buttonRef={doneRef} disabled={!hasText} accessibilityHint={hasText ? undefined : k.need_one} loading={busy} onPress={pressDone} />
         </View>
       ) : null}
       {roman ? (
@@ -406,18 +437,46 @@ function WordCells({cells, filled, big, idPrefix = 'kb-cell'}: {cells: string[];
 
 const MATCH_ICON = 36;
 const BODY_GAP = 16; // ui/Screen 본문 형제 간격(layout.bodyPadding.gap)
-const PHOTO_STRIP_H = 56; // 시안 ds4b 사진 띠(이미지 상자, 글자 상자 아님)
+/** 보기 판 위아래 여백·묶음 간격. 좌우 여백은 0 — AI 고지가 본문 폭(360 → 312)에서 한 줄(P4와 같음, #162). 판 안쪽 12를 두면 두 줄로 꺾여
+ *  360×780(오너 S25 근사)에서 사진 fit 이 바닥 아래로 떨어져 사진이 접혔다(에뮬레이터 실측) */
+export const LOOK_PAD = 12;
+export const LOOK_GAP = 8;
+/** 시각 여유(#265 QA-2 M1): 입력 칸 아래 테두리와 '더 있음' 띠 사이가 눈으로도 떨어져 보이게(실측 여유 2.5dp는 붙어 보여 '잘림'으로 읽힘) */
+export const P6_FIT_GAP = 12;
+/** 사진 바닥: 이보다 낮게 줄여야 입력 칸이 첫 화면에 들면 사진을 접는다(② 떠올려 보기 썸네일 64보다 크게, 가로 약 2.5:1 띠보다 덜 납작하게) */
+export const P6_PHOTO_MIN_H = 96;
+/** AI 고지 한 줄 높이(label 역할 줄높이)와 글 폭(P4 360 폭 실측 약 305dp, 확대 상한 1.5 — AiNotice) */
+const NOTICE_LINE = Number(roleText('label', 'elder').style.lineHeight ?? 30);
+const NOTICE_TEXT_W = 306;
+/** 고지는 사진이 있을 때만 그려 사진 전에는 잴 수 없다 → 판 폭으로 줄 수를 어림(그린 뒤에는 실측). 실측이 더 크면 사진이 접힐 뿐 다시 펴지지 않는다(실측값 유지) */
+export function noticeGuess(width: number | undefined, fontScale: number): number {
+  const scale = Math.min(fontScale, 1.5);
+  const lines = width && width > 0 ? Math.max(1, Math.ceil((NOTICE_TEXT_W * scale) / width)) : 2;
+  return Math.ceil(NOTICE_LINE * scale * lines);
+}
+
+/**
+ * P6 사진 fit: 보기 판(사진 → 고지 → 따라 쓸 낱말) + 간격 + 쓰기 칸(안내 + 입력 칸)이 첫 화면(viewport)에 드는 사진 높이.
+ * 모두 사진 높이·유무와 무관한 실측값이라 사진을 줄이거나 접어도 다시 바뀌지 않는다. 하나라도 못 쟀으면 undefined(사진 아직 안 그림).
+ */
+export function p6PhotoFit(m: {viewport: number; lookTop?: number; notice: number; model?: number; card?: number}): number | undefined {
+  if (!(m.viewport > 0) || m.lookTop === undefined || m.model === undefined || m.card === undefined) {
+    return undefined;
+  }
+  return m.viewport - m.lookTop - LOOK_PAD - LOOK_GAP - m.notice - LOOK_GAP - m.model - LOOK_PAD - BODY_GAP - m.card - PHOTO_FIT_SLACK - P6_FIT_GAP;
+}
+
 const styles = StyleSheet.create({
-  // v4(시안 ds4b): 사진 띠(높이 56) + 고지 줄, 낱말 카드(흰 면 + line 1.5), 입력 칸(흰 면, 열리면 action 3)
-  photoCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, overflow: 'hidden'},
-  photoStrip: {height: PHOTO_STRIP_H, alignSelf: 'stretch', backgroundColor: ds.color.paperSoft},
-  photoCaption: {paddingVertical: 8, paddingHorizontal: 14},
-  guide: {gap: ds.space.group},
-  // 리뷰 M2: 3음절 낱말(라디오) + 200%(글자 51)에서도 한 줄 — 320 폭 카드 안쪽 약 260 = 낱말 약 153 + 간격 8 + 입력 칸 96(카드 좌우 여백 6)
-  // 자판 열림: 보이는 본문이 약 75dp(360×640 Gboard) — 줄높이를 뺀 입력 칸(글자 51 + 위아래)이 카드째 들어가게 위아래 여백을 최소로
-  wordCardOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, paddingVertical: 2, paddingHorizontal: 6},
+  // 회의 결정(11-25): 보기 판 = 옅은 종이 면(paperSoft, 테두리 없음 — 면 규칙 '종이 = 안내·보는 것'), 쓰기 칸 = 흰 면 + 굵은 테두리 입력 칸 하나
+  look: {backgroundColor: ds.color.paperSoft, borderRadius: ds.radius.card, paddingVertical: LOOK_PAD, gap: LOOK_GAP, alignItems: 'center'},
+  photo: {borderRadius: ds.radius.card, overflow: 'hidden', backgroundColor: ds.color.paperEdge},
+  photoImg: {flex: 1, alignSelf: 'stretch'},
+  lookNotice: {alignSelf: 'stretch', alignItems: 'center'},
+  write: {gap: ds.space.group},
+  // 리뷰 M2: 3음절 낱말(라디오) + 200%(글자 51)에서도 한 줄 — 320 폭 본문 272 = 낱말 약 153 + 간격 8 + 입력 칸 96 이상
+  // 자판 열림: 보이는 본문이 약 75dp(360×640 Gboard) — 줄높이를 뺀 입력 칸(글자 51 + 위아래)이 들어가게 위아래 여백 없음
+  writeOpen: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8},
   inputOpen: {flexGrow: 1, flexBasis: 96, paddingHorizontal: 10, paddingVertical: 0},
-  wordCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 3, paddingHorizontal: 14, paddingBottom: 14, gap: 4},
   matchedGroup: {gap: 20},
   matchedHead: {flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap'},
   writtenCard: {backgroundColor: ds.color.card, borderWidth: 1.5, borderColor: ds.color.line, borderRadius: ds.radius.card, paddingVertical: 14, paddingHorizontal: 18, gap: 6},
@@ -444,7 +503,8 @@ const styles = StyleSheet.create({
   skipText: {textDecorationLine: 'underline', color: color.ink},
   hidden: {display: 'none'},
   // 입력칸(오목): 종이색 면 + 아래 밑줄, 높이 72 이상, 글자 34
-  input: {minHeight: 56, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: ds.color.card, borderRadius: ds.radius.input, borderWidth: 1.5, borderColor: ds.color.line},
+  // 화면에 하나뿐인 테두리 상자 = 쓰는 곳. 굵기 2(옛 1.5 — 카드 테두리와 같아 구분이 안 됐다), 열리면 action 3
+  input: {minHeight: 56, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: ds.color.card, borderRadius: ds.radius.input, borderWidth: 2, borderColor: ds.color.line},
   inputFocused: {borderWidth: 3, borderColor: ds.color.action},
   sub: {color: color.inkBody},
   matched: {alignItems: 'center', gap: 8, paddingVertical: 8},

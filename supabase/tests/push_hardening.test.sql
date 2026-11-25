@@ -31,6 +31,7 @@ insert into public.profiles (id, user_id, family_id, role, consented_at) values
   ('7036b000-0000-0000-0000-0000000000c2', '70360000-0000-0000-0000-0000000000c2', '7036f000-0000-0000-0000-000000000001', 'child', null),
   ('7036b000-0000-0000-0000-0000000000a1', '70360000-0000-0000-0000-0000000000a1', '7036f000-0000-0000-0000-000000000001', 'parent', now()),
   ('7036b000-0000-0000-0000-0000000000a2', '70360000-0000-0000-0000-0000000000a2', '7036f000-0000-0000-0000-000000000001', 'parent', now());
+update public.profiles set push_consented_at = now() where id = '7036b000-0000-0000-0000-0000000000c2'; -- 0062: 등록 검사용 계정은 받기 동의 상태
 
 create function pg_temp.act_as(p_uid uuid, p_anon boolean) returns void language plpgsql as $$
 begin
@@ -88,6 +89,7 @@ reset role;
 select is((select push_consented_at from public.profiles where id = '7036b000-0000-0000-0000-0000000000a1'), null, '끄면 받기 시각이 지워진다');
 select pg_temp.act_as('70360000-0000-0000-0000-0000000000a1', true);
 select public.set_push_enabled(true);
+select public.register_push_token(pg_temp.tok(11)); -- 0062: 끄면 토큰도 지워지므로 다시 켠 뒤 앱이 다시 등록한다(setReceive)
 reset role;
 
 -- ---- M4: 선점 ----

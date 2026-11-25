@@ -27,7 +27,8 @@ export function photoFloor(boxWidth: number): number {
   return Math.max(PHOTO_FLOOR_MIN, Math.round(boxWidth * PHOTO_FLOOR_WIDTH_RATIO));
 }
 
-export function photoFrame(boxWidth: number, aspect: number | null, windowHeight: number, fit?: number): PhotoFrame {
+/** floor: fit 바닥. 기본은 P4 바닥(photoFloor). P6 은 사진이 보조라(①에서 이미 봄) 더 낮은 바닥을 넘기고, 바닥보다 좁으면 사진을 접는다 */
+export function photoFrame(boxWidth: number, aspect: number | null, windowHeight: number, fit?: number, floor: number = photoFloor(boxWidth)): PhotoFrame {
   if (!(boxWidth > 0)) {
     return {width: 0, height: 0};
   }
@@ -37,7 +38,7 @@ export function photoFrame(boxWidth: number, aspect: number | null, windowHeight
     caps.push(Math.round(windowHeight * PHOTO_MAX_HEIGHT_RATIO));
   }
   if (fit !== undefined && Number.isFinite(fit)) {
-    caps.push(Math.max(Math.round(fit), photoFloor(boxWidth)));
+    caps.push(Math.max(Math.round(fit), floor));
   }
   const maxHeight = caps.length ? Math.min(...caps) : 0;
   const natural = boxWidth / ratio;
