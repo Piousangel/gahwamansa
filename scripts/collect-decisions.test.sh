@@ -116,7 +116,7 @@ check "L: COLLECT_TEST 없으면 고정 파일을 무시하고 gh 를 부른다"
   "$(COLLECT_TEST= PATH="$T/bin:$PATH" bash "$S" --dry-run 101 2>&1 >/dev/null | head -1)"
 mkdir -p "$T/bin2"; printf '#!/bin/sh\nexit 3\n' > "$T/bin2/perl"; chmod +x "$T/bin2/perl"
 check "L: perl 실패는 '절 없음'이 아니라 exit 1" "1 실패 #107: 본문 절 자르기(perl·awk) 실패" \
-  "$(PATH="$T/bin2:$PATH" bash "$S" --dry-run 107 2> "$T.err" >/dev/null; echo $?) $(head -1 "$T.err")"
+  "$(PATH="$T/bin2:$PATH" bash "$S" --dry-run 107 2> "$T.err" >/dev/null; echo $?) $(grep '^실패' "$T.err")"  # GNU tr 은 'Broken pipe' 를 먼저 찍는다 — 실패 줄만 본다
 check "인자 없으면 exit 2" 2 "$(bash "$S" 2>/dev/null; echo $?)"
 rm -f "$T.err"
 exit "$fail"
