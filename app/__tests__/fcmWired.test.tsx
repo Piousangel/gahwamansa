@@ -213,9 +213,9 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const api = createRealApi(sbWith(rpc), social as never);
     const fcm = fakeMessaging();
     const deps = {api, source: fcm.source, store: memoryStore()};
-    expect(await registerToken(deps)).toBe('ok');
+    expect(await registerToken(deps, true)).toBe('ok');
     fcm.rotate(TOKEN_B);
-    expect(await registerToken(deps)).toBe('ok');
+    expect(await registerToken(deps, true)).toBe('ok');
     expect(calls.filter(c => c[0] === 'register_push_token').map(c => c[1])).toEqual([
       {p_token: TOKEN_A, p_platform: 'android'},
       {p_token: TOKEN_B, p_platform: 'android'},
@@ -240,7 +240,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     });
     const api = createRealApi(sbWith(rpc), social as never);
     const fcm = fakeMessaging();
-    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()}, true);
     await waitFor(() => expect(order).toContain('register_push_token'));
     const out = api.signOut();
     await settle();
@@ -266,7 +266,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const api = createRealApi(sbWith(rpc), social as never);
     const fcm = fakeMessaging();
     setPushDevice(fcm.source);
-    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()}, true);
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('register_push_token', expect.anything()));
     try {
       await api.signOut(); // 등록은 아직 안 끝남(30ms 기다림을 넘김)
@@ -294,7 +294,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
       const api = createRealApi(sbWith(rpc), social as never);
       const fcm = fakeMessaging();
       setPushDevice(fcm.source);
-      expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
+      expect(await registerToken({api, source: fcm.source, store: memoryStore()}, true)).toBe('ok');
       await api.signOut();
       expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
       expect(fcm.mod.deleteToken).toHaveBeenCalledTimes(fail ? 1 : 0);
@@ -324,7 +324,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
       const api = createRealApi(sbWith(rpc), social as never);
       const fcm = fakeMessaging();
       setPushDevice(fcm.source);
-      registerToken({api, source: fcm.source, store: memoryStore()});
+      registerToken({api, source: fcm.source, store: memoryStore()}, true);
       await jest.advanceTimersByTimeAsync(0);
       expect(rpc).toHaveBeenCalledWith('register_push_token', expect.anything());
       let done = false;
@@ -359,7 +359,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
         }),
     );
     setPushDevice(fcm.source);
-    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()}, true);
     await waitFor(() => expect(fcm.mod.getToken).toHaveBeenCalledTimes(1));
     const out = api.signOut(); // 30ms 기다림을 넘김 → 기기 토큰을 읽어 해제·무효화
     try {
@@ -387,17 +387,17 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const fcm = fakeMessaging();
     setPushDevice(fcm.source);
     const deps = {api, source: fcm.source, store: memoryStore()};
-    expect(await registerToken(deps)).toBe('ok');
+    expect(await registerToken(deps, true)).toBe('ok');
     const out = api.signOut();
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A}));
     const count = () => rpc.mock.calls.filter(c => c[0] === 'register_push_token').length;
     const before = count();
-    expect(await registerToken(deps)).toBe('stale'); // 앱이 앞으로 옴·토큰 갱신이 로그아웃 사이에 와도
+    expect(await registerToken(deps, true)).toBe('stale'); // 앱이 앞으로 옴·토큰 갱신이 로그아웃 사이에 와도
     expect(count()).toBe(before);
     releaseUnregister();
     await out;
     expect(await readPushToken()).toBeNull();
-    expect(await registerToken(deps)).toBe('ok'); // 로그아웃이 끝난 뒤(다음 계정)에는 다시
+    expect(await registerToken(deps, true)).toBe('ok'); // 로그아웃이 끝난 뒤(다음 계정)에는 다시
   });
 
   test('QA-1 재확인 L2: 로그아웃이 예외로 끝나도 막기가 풀려 다음 등록이 된다(finally)', async () => {
@@ -414,7 +414,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const fcm = fakeMessaging();
     setPushDevice(fcm.source);
     await expect(api.signOut()).rejects.toBeTruthy();
-    expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
+    expect(await registerToken({api, source: fcm.source, store: memoryStore()}, true)).toBe('ok');
   });
 
   test('QA-1 재확인 L3: 로그아웃 둘이 겹치면 먼저 끝난 쪽이 막기를 풀지 않는다(남은 로그아웃이 끝나야 다시 등록)', async () => {
@@ -441,10 +441,10 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     const slowOut = slow.signOut();
     await waitFor(() => expect(slowSb.auth.signOut).toHaveBeenCalled());
     await fast.signOut();
-    expect(await registerToken(deps)).toBe('stale'); // 느린 로그아웃이 아직 진행 중
+    expect(await registerToken(deps, true)).toBe('stale'); // 느린 로그아웃이 아직 진행 중
     releaseSlow();
     await slowOut;
-    expect(await registerToken(deps)).toBe('ok');
+    expect(await registerToken(deps, true)).toBe('ok');
   });
 
   test('계정 삭제: 서버가 토큰 행을 함께 지우므로(0032) 해제 호출 없이 기기 기억만 지운다', async () => {
@@ -454,7 +454,7 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     );
     const api = createRealApi(sbWith(rpc), social as never);
     const fcm = fakeMessaging();
-    expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
+    expect(await registerToken({api, source: fcm.source, store: memoryStore()}, true)).toBe('ok');
     expect(await readPushToken()).toBe(TOKEN_A);
     await api.deleteMyAccount();
     expect(rpc).not.toHaveBeenCalledWith('unregister_push_token', expect.anything());

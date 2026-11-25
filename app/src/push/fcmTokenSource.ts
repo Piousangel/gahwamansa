@@ -68,6 +68,13 @@ export function createFcmTokenSourceFrom(mod: MessagingModule | null): PushToken
         await mod.deleteToken(m);
       } catch {}
     },
+    // 받기 동의가 없어지는 때(끄기·로그아웃·계정 삭제): getToken 이 켠 자동 초기화를 되돌려, SDK 가 앱 시작 때 스스로
+    // 토큰을 만들거나 갱신하지 않게(리드 결정 11-25, 대기열 38과 같은 선). 다시 켜면 getToken 이 true 로
+    stopAutoInit: async () => {
+      try {
+        await mod.setAutoInitEnabled(m, false);
+      } catch {}
+    },
     onTokenRefresh: cb => safeSub(() => mod.onTokenRefresh(m, cb)),
     getInitialOpen: async () => {
       try {
@@ -123,8 +130,8 @@ export function registerBackgroundHandler(mod: MessagingModule | null = FCM_WIRE
  * real 모드가 FCM 토큰을 쓴다(내부 테스트 N1, DECISIONS 2026-11-25 'FCM_WIRED 켬'). 켜는 조건이던 리뷰 M1(앱 안 끄기 토글 P13·C7)은 main 에 있다.
  * 남겨 두는 이유: 앱 쪽 FCM(토큰·머리 없는 작업)을 한 줄로 걷어 내는 스위치. **빌드 시간 상수라 바꾸면 새 빌드·스토어 배포가 필요**하다 —
  * 실발송 문제의 즉시 차단은 서버 쪽(Edge secrets `PUSH_DRY_RUN=1`, cron 중지, `push_enabled` 필터)이 맡는다(#262 QA-1 L4).
- * 토큰 요청은 알림이 허용된 상태이고 역할이 정해진 뒤에만(PushHost·pushClient). 13 이상은 사용자가 시스템 창에서 허용한 뒤,
- * **12 이하는 OS 가 기본 허용이라 앱 단위로 끄지 않았으면 역할을 고른 뒤 바로** 요청한다(데이터 보안 양식 15행 문구 확인 필요 — DECISIONS 11-25).
+ * 토큰 요청은 알림이 허용된 상태이고 **받기 동의가 확인된 뒤에만**(N1 '알려 주세요'·자녀 '알림 켜기'·P13/C7 켬 성공, 또는 서버 my_push_settings true —
+ * 대기열 38, DECISIONS 11-25 '동의 뒤에만 토큰'). Android 12 이하(알림 기본 허용)도 동의 전에는 getToken 0회.
  * google-services.json 이 없는 빌드는 createFcmTokenSource 가 null → 토큰 없음(지금과 같음).
  */
 export const FCM_WIRED = true;

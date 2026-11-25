@@ -8,7 +8,7 @@ import {pushChannelSpecs} from '../push/channels';
 import {ensureChannels, readNotifyPermission} from '../push/notifyNative';
 import {isParentKind, parentStepAfterOpen} from '../push/openRoute';
 import {FIVE_STEP_ORDER, fiveStepsActive, fiveStepsOn} from '../features/course/fiveSteps';
-import {parentPromptState, registerToken, retryPending} from '../push/pushClient';
+import {parentPromptState, registerIfConsented, retryPending} from '../push/pushClient';
 import {configurePush} from '../push/runtime';
 import {N1Prompt} from '../push/N1Prompt';
 import {pickTokenSource, type PushData, type PushTokenSource} from '../push/tokenSource';
@@ -39,8 +39,9 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
     ensureChannels(pushChannelSpecs());
   }, []);
 
-  // 토큰 등록(권한이 있을 때만): 앱 시작·역할이 정해질 때·앞으로 돌아올 때·토큰 갱신 때. 등록은 멱등.
-  // 리뷰 L4: 연결 전 어르신도 등록한다 — 서버가 no_profile 이어도 같은 토큰의 다른 계정 행을 지운다(0036, 해제 못 한 이전 계정 알림 차단).
+  // 토큰 등록(권한이 있고 **받기 동의가 확인될 때만**, 대기열 38·0062): 앱 시작·역할이 정해질 때·앞으로 돌아올 때·토큰 갱신 때. 등록은 멱등.
+  // 동의는 서버 my_push_settings 로 확인하고, 모르면(오프라인) 토큰을 요청하지 않는다 — 동의 전 getToken 0회(설치 ID·토큰 생성 없음).
+  // (옛 리뷰 L4 '연결 전에도 등록해 같은 토큰의 이전 계정 행 정리'는 #262 로그아웃 정리(해제 실패·시간 초과 → deleteToken)가 대신한다)
   // 받기 동의(set_push_enabled)는 여기서 하지 않는다(어르신 N1·자녀 '알림 켜기'·토글을 눌렀을 때만, 리뷰 L2). 어르신 N1 미반영분만 재시도.
   const ready = role === 'child' || role === 'parent';
   useEffect(() => {
@@ -52,7 +53,7 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         await retryPending(deps);
       }
       if ((await readNotifyPermission()) === 'granted') {
-        await registerToken(deps);
+        await registerIfConsented(deps);
       }
     };
     sync();
@@ -61,10 +62,11 @@ export function PushHost({role, source: given}: {role: Role; source?: PushTokenS
         sync();
       }
     });
-    // 토큰이 바뀌면 등록만 다시(받기 재시도·서버 상태 읽기는 하지 않음 — 첫 발급 때도 불리므로 #262 리뷰). 권한 확인은 그대로
+    // 토큰이 바뀌면 등록만 다시(받기 재시도는 하지 않음, #262 리뷰). 권한·받기 동의 확인은 그대로 — 동의 전이면 getToken 0회.
+    // 구독 자체는 JS 이벤트 듣기뿐이라 토큰을 만들지 않는다(RNFB 27.1 onTokenRefresh = emitter.addListener)
     const refresh = source.onTokenRefresh(() => {
       readNotifyPermission()
-        .then(p => (p === 'granted' ? registerToken(deps) : undefined))
+        .then(p => (p === 'granted' ? registerIfConsented(deps) : undefined))
         .catch(() => {});
     });
     return () => {

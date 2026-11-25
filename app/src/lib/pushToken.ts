@@ -48,7 +48,7 @@ export function endPushSignOut() {
 }
 
 /** 이 기기 푸시 토큰 손잡이(PushHost 의 토큰 공급자 — runtime.configurePush 가 넣는다). 로그아웃 정리가 쓴다 */
-export type PushDevice = {getToken(): Promise<string | null>; deleteToken(): Promise<void>};
+export type PushDevice = {getToken(): Promise<string | null>; deleteToken(): Promise<void>; stopAutoInit(): Promise<void>};
 let device: PushDevice | null = null;
 export function setPushDevice(next: PushDevice | null) {
   device = next;
@@ -114,8 +114,16 @@ export async function releasePushTokenOnSignOut(unregister: (token: string) => P
   if ((timedOut || released === false) && device) {
     await within(device.deleteToken().catch(() => {}), DEVICE_CALL_MS);
   }
+  await stopPushAutoInit(); // 로그아웃 뒤에는 동의한 계정이 없다
   await clearPushToken();
   return released;
+}
+
+/** 이 기기 SDK 자동 초기화 끔(로그아웃·계정 삭제, 리드 결정 11-25). 손잡이가 없거나 실패해도 조용히 */
+export async function stopPushAutoInit(): Promise<void> {
+  if (device) {
+    await within(device.stopAutoInit().catch(() => {}), DEVICE_CALL_MS);
+  }
 }
 
 /** 테스트용: 로그아웃 기다림 시간(null 이면 원래대로)·로그아웃 상태 초기화 */

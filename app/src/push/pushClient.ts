@@ -1,5 +1,6 @@
 // 푸시 클라이언트 핵심(AU-04). React 를 모른다 — 화면·브리지가 부른다. 서버 계약: dev-server-notes 2절(0032·0036·0037).
-// - 토큰: 권한이 있고 프로필이 있으면 등록(멱등) → 성공한 토큰만 lib/pushToken 에 둔다(로그아웃 때 realApi.signOut 이 해제).
+// - 토큰: **받기 동의가 확인된 뒤에만** FCM 토큰을 요청·등록(대기열 38, 0062) — 권한이 있어도 동의 전에는 getToken 0회
+//   (Android 12 이하 기본 허용 기기에서도 설치 ID·토큰이 생기지 않게). 성공한 토큰만 lib/pushToken 에 둔다(로그아웃 때 해제).
 // - 받기 동의(set_push_enabled true): 어르신은 N1 '알려 주세요'를 누를 때만, 자녀는 알림 권한이 허용됐을 때만(0036 받기 시각).
 //   서버가 처음 시각을 유지하므로(0037) 다시 불러도 안전하지만, 원칙대로 그때만 부른다. 보내지 못하면 '보낼 일'로 기억했다가 다시.
 import {isPushTokenShape} from '../api/contract/push';
@@ -13,12 +14,44 @@ import type {PushTokenSource} from './tokenSource';
 import type {NotifyPermission} from './notifyNative';
 
 export type PushDeps = {api: Api; source: PushTokenSource; store: KeyValueStore};
-/** stale = 로그아웃 정리와 겹쳐 기억하지 않음(정리가 해제) 또는 로그아웃 중이라 등록 안 함 */
-export type RegisterOutcome = 'ok' | 'no_token' | 'no_profile' | 'failed' | 'stale';
+/** stale = 로그아웃 정리와 겹쳐 기억하지 않음(정리가 해제) 또는 로그아웃 중이라 등록 안 함 · no_consent = 받기 동의가 확인되지 않아 토큰을 요청하지 않음 */
+export type RegisterOutcome = 'ok' | 'no_token' | 'no_profile' | 'failed' | 'stale' | 'no_consent';
 
-/** 이 기기 토큰을 서버에 등록. 권한 판단은 호출부(권한이 없으면 FCM 이 토큰을 주더라도 알림이 보이지 않는다) */
-export function registerToken(deps: PushDeps): Promise<RegisterOutcome> {
+/**
+ * 이 기기 토큰을 서버에 등록. 권한 판단은 호출부(권한이 없으면 FCM 이 토큰을 주더라도 알림이 보이지 않는다).
+ * consented = 호출부가 **이미 아는** 받기 동의(set_push_enabled(true) 성공·my_push_settings true). false 면 getToken 을 부르지 않는다(대기열 38).
+ */
+export function registerToken(deps: PushDeps, consented: boolean): Promise<RegisterOutcome> {
+  if (!consented) {
+    return Promise.resolve('no_consent');
+  }
   return trackPushRegistration(registerTokenNow(deps)); // 로그아웃이 진행 중인 등록을 기다린다(lib/pushToken)
+}
+
+/**
+ * 동의를 모를 때(앱 시작·앞으로 돌아옴·토큰 갱신): 서버 받기 상태를 읽어 true 일 때만 등록. 못 읽으면(오프라인 등) 아무것도 하지 않는다.
+ * 서버가 **분명히** 동의 없음(false·연결 전 null)이면 SDK 자동 초기화도 끈다(#269 QA-3 L1, 멱등) — #262 빌드에서 동의 없이 켜진 기기·
+ * 로그아웃 정리의 끄기가 시간 제한으로 실패한 기기에 남은 '켜짐'을 정리한다.
+ */
+export async function registerIfConsented(deps: PushDeps): Promise<RegisterOutcome> {
+  if (pushSigningOut()) {
+    return 'stale';
+  }
+  const gen = pushGeneration(); // 조회 중에 로그아웃(계정 바뀜)이 끼면 이전 계정의 답으로 움직이지 않는다(#269 QA-1 L1)
+  let enabled: boolean | null;
+  try {
+    enabled = (await deps.api.myPushSettings()).enabled;
+  } catch {
+    return 'no_consent';
+  }
+  if (pushSigningOut() || gen !== pushGeneration()) {
+    return 'stale';
+  }
+  if (enabled !== true) {
+    await deps.source.stopAutoInit().catch(() => {});
+    return 'no_consent';
+  }
+  return registerToken(deps, true);
 }
 
 async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcome> {
@@ -151,7 +184,7 @@ export async function acceptParentPrompt(
   const p = await request();
   logPermissionResult(api, p);
   if (p === 'granted') {
-    await registerToken(deps);
+    await registerToken(deps, ok); // 동의를 못 보냈으면(yes_pending) 토큰도 아직 — 재시도가 성공한 뒤 PushHost sync 가 등록
   }
   return p;
 }
@@ -203,7 +236,7 @@ export async function retryPending({api, store}: PushDeps): Promise<void> {
 export async function childOptIn(deps: PushDeps, permission: () => Promise<NotifyPermission>): Promise<boolean> {
   const ok = await setEnabledTrue(deps.api);
   if ((await permission()) === 'granted') {
-    await registerToken(deps);
+    await registerToken(deps, ok);
   }
   return ok;
 }
@@ -231,7 +264,10 @@ export async function setReceive(deps: PushDeps, enabled: boolean, permission: (
     await writeAnswer(store, accountKey(PUSH_PROMPT_KEY, tag), enabled ? 'yes' : 'off');
   }
   if (enabled && (await permission()) === 'granted') {
-    await registerToken(deps);
+    await registerToken(deps, r.enabled);
+  }
+  if (!r.enabled) {
+    await deps.source.stopAutoInit().catch(() => {}); // 끄면 SDK 자동 초기화도 끔(리드 결정 11-25). 다시 켜면 getToken 이 true 로
   }
   return {ok: true, enabled: r.enabled};
 }
