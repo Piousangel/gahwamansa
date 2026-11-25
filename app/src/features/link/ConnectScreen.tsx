@@ -22,6 +22,7 @@ import {useConnectFlow} from './useConnectFlow';
 import {LegalText} from '../../ui/LegalText';
 import {Banner} from '../../ui/Banner';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
+import {isBigText} from '../../ui/bigText';
 import {legalLinks, useLegalOpen} from '../../shared/legalLinks';
 import {consumeInvite, subscribeInvite} from '../../lib/linkSources';
 import type {Prefill} from './useConnectFlow';
@@ -37,6 +38,22 @@ function failMessage(reason: FailKind): Message {
   }
   return reasonToMessage(reason === 'locked' ? 'rate_limited' : reason);
 }
+
+// P1c 큰 글자(1.6 이상) Dock 짧은 고지(#274 QA-2 M1 리드 결정): 긴 약관 줄(200%에서 191dp)이 Dock 상한 40%(256dp)를 넘쳐
+// [이 번호로 연결하기]가 Dock 스크롤 뒤로 밀렸다(에뮬레이터 실측). 누르는 순간 보이는 짧은 고지 + '약관' 링크, 긴 문장은 본문에 그대로
+function LegalShort() {
+  const legal = useLegalOpen();
+  const terms = legalLinks()[0];
+  return (
+    <>
+      <LegalText testID="legal-short" style={styles.legal} text={copy.legal.agree_parent_short} links={[{...terms, label: SHORT_TERMS_WORD}]} onOpen={legal.open} />
+      {legal.busy ? <Text20 testID="legal-busy" style={styles.legal} accessibilityLiveRegion="polite">{copy.app.loading}</Text20> : null}
+      {legal.offline ? <Banner testID="legal-offline" kind="offline" text={copy.app_info.link_offline} /> : null}
+    </>
+  );
+}
+const SHORT_TERMS_WORD = '약관';
+const CODE_ONE_LINE_CAP = 1.2;
 
 // 번호 칸 묶음 읽기(라이터 확정 11-2 #12)
 function groupA11y(code: string): string {
@@ -368,14 +385,14 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
   // 글자 1.5배 이상(대기열 44 H1·M2): Dock 에는 [이 번호로 연결하기]만 두고 약관 줄·'다른 번호 쓰기'는 본문 끝으로.
   //   Dock 이 40%(상한)를 채워 본문 창이 41%뿐이라 확인할 번호가 첫 화면에 없었고, 약관 줄이 잘리고 '다른 번호 쓰기'는 Dock 을 밀어야 보였다(#272 p1c-1)
   // P1c 만 150%부터: 320×640 150%에서도 번호 둘째 줄이 첫 화면 끝에 걸쳤다(에뮬레이터 실측, 대기열 44). 공용 문턱(1.6)보다 낮다
-  const big = useWindowDimensions().fontScale >= P1C_BIG_SCALE;
-  const rest = (
-    <>
-      <LegalLine />
-      <View style={styles.links}>
-        <TextLink label={c.other} touch={64} disabled={busy} onPress={onOther} />
-      </View>
-    </>
+  const {fontScale} = useWindowDimensions();
+  const big = fontScale >= P1C_BIG_SCALE;
+  const shortLegal = isBigText(fontScale);
+  // 약관 고지는 누르는 순간 보여야 한다(리드 결정 #274 QA-2 M1): 모든 배율에서 Dock 안 [이 번호로 연결하기] 바로 위. 본문 스크롤 아래 금지
+  const other = (
+    <View style={styles.links}>
+      <TextLink label={c.other} touch={64} disabled={busy} onPress={onOther} />
+    </View>
   );
   const a11y = copy.code.show_a11y.split('{앞}').join(state.code.slice(0, 3).split('').join(' ')).split('{뒤}').join(state.code.slice(3).split('').join(' '));
   const title = <Text20 size={30} weight="bold" accessibilityRole="header" style={styles.title}>{typed ? c.title_typed : c.title}</Text20>;
@@ -384,7 +401,10 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
   ) : null;
   const code = (
     <View testID="confirm-code" accessible accessibilityLabel={a11y}>
-      <Text20 size={52} weight="bold" style={styles.code}>{formatCode(state.code)}</Text20>
+      {/* 짧은 고지(1.6 이상)로 Dock 이 커진 만큼 본문 창이 줄어(280dp) 두 줄 번호 카드(190)가 걸쳤다(실측) → 번호를 한 줄로(확대 상한 1.2 = 62dp, 100%의 52보다 크다) */}
+      <Text20 size={52} weight="bold" style={[styles.code, shortLegal ? styles.codeOneLine : null]} {...(shortLegal ? {maxFontSizeMultiplier: CODE_ONE_LINE_CAP} : null)}>
+        {formatCode(state.code)}
+      </Text20>
     </View>
   );
   const safe = <Text20>{copy.safe.money}</Text20>;
@@ -396,14 +416,23 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
     {
       key: 'card',
       node: (
-        <View testID="confirm-card" style={styles.card}>
+        <View testID="confirm-card" style={[styles.card, shortLegal ? styles.cardOneLine : null]}>
           {code}
         </View>
       ),
     },
     ...(from ? [{key: 'from', node: from}] : []),
     {key: 'safe', node: safe},
-    {key: 'rest', node: <View testID="confirm-rest-body" style={styles.restBody}>{rest}</View>},
+    {
+      key: 'rest',
+      node: (
+        <View testID="confirm-rest-body" style={styles.restBody}>
+          {/* 짧은 고지를 쓸 때 긴 약관 문장(두 문서 이름·링크)은 본문에 그대로 */}
+          {shortLegal ? <LegalLine /> : null}
+          {other}
+        </View>
+      ),
+    },
   ];
   const fold = useFoldGap(items.length, layout.bodyPadding.gap, 2);
   return (
@@ -412,8 +441,9 @@ function ConfirmView({state, typed, onYes, onOther}: {state: Extract<ConnectStat
       onViewport={big ? fold.onViewport : undefined}
       bottom={
         <>
+          <View testID="confirm-legal-dock">{shortLegal ? <LegalShort /> : <LegalLine />}</View>
           <BigButton label={c.yes} loading={busy} loadingLabel={c.busy} onPress={onYes} />
-          {big ? null : rest}
+          {big ? null : other}
         </>
       }>
       {big ? (
@@ -467,4 +497,6 @@ const styles = StyleSheet.create({
   card: {backgroundColor: color.card, borderWidth: 3, borderColor: color.action, borderRadius: radius.card, padding: 20, gap: 10},
   center: {textAlign: 'center', color: color.inkTitle},
   code: {letterSpacing: 6, textAlign: 'center', color: color.inkTitle},
+  codeOneLine: {letterSpacing: 1},
+  cardOneLine: {paddingHorizontal: 12}, // 한 줄 번호 칸 폭(320 폭에서 '123 456' 이 한 줄에 들게)
 });

@@ -67,7 +67,7 @@ describe('M1 FS: 글자 1.6배 이상이면 질문 → 두 버튼 → 워드마�
   });
 });
 
-describe('H1·M2 P1c: 글자 1.5배 이상이면(320×640 150%도 번호가 걸쳐 P1c 만 1.5부터) Dock 에는 [이 번호로 연결하기]만, 약관 줄·다른 번호 쓰기는 본문 끝', () => {
+describe('H1·M2 P1c: 글자 1.5배 이상이면(320×640 150%도 번호가 걸쳐 P1c 만 1.5부터) 다른 번호 쓰기는 본문 끝, 번호 카드 먼저', () => {
   async function p1c(scale: number) {
     mockFontScale = scale;
     render(<AppRoot api={createFakeApi()} role="parent" />);
@@ -95,6 +95,28 @@ describe('H1·M2 P1c: 글자 1.5배 이상이면(320×640 150%도 번호가 걸�
     expect(dock.getByRole('button', {name: '이 번호로 연결하기'})).toBeTruthy();
     expect(dock.getByText('다른 번호 쓰기')).toBeTruthy();
     expect(screen.queryByTestId('confirm-rest-body')).toBeNull();
+  });
+
+  // #274 QA-2 M1 리드 결정: 누르는 것이 곧 동의 → 모든 배율에서 약관 고지는 Dock 안 [이 번호로 연결하기] 바로 위(본문 스크롤 아래 금지).
+  // 1.6 이상은 긴 줄이 Dock 상한을 넘쳐(200% 실측 191dp > 256 중 남는 칸) 짧은 고지 + '약관' 링크, 긴 문장은 본문에 그대로
+  const dockOrder = () => {
+    const dock = screen.getByTestId('screen-dock');
+    const ids = dock.findAll((n: {type: unknown; props: {testID?: string}}) => typeof n.type === 'string' && ['confirm-legal-dock', 'big-button'].includes(n.props?.testID ?? '')).map((n: {props: {testID?: string}}) => n.props.testID);
+    return [...new Set(ids)];
+  };
+  test.each([1, 1.3, 1.49, 1.5, 1.59])('M1 글자 %s배: 긴 약관 줄이 Dock 안 버튼 바로 위', async scale => {
+    await p1c(scale);
+    expect(dockOrder()).toEqual(['confirm-legal-dock', 'big-button']);
+    const legalDock = within(screen.getByTestId('confirm-legal-dock'));
+    expect(legalDock.getByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
+    expect(screen.queryByTestId('legal-short')).toBeNull();
+    expect(within(screen.getByTestId('screen-body')).queryByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeNull();
+  });
+  test.each([1.6, 2])('M1 글자 %s배: 짧은 고지가 Dock 안 버튼 바로 위, 긴 문장은 본문', async scale => {
+    await p1c(scale);
+    expect(dockOrder()).toEqual(['confirm-legal-dock', 'big-button']);
+    expect(within(screen.getByTestId('confirm-legal-dock')).getByText('연결하면 약관에 동의해요')).toBeTruthy();
+    expect(within(screen.getByTestId('confirm-rest-body')).getByText('연결하면 이용약관과 개인정보 처리방침에 동의하게 돼요')).toBeTruthy();
   });
 });
 
