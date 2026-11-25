@@ -8,7 +8,7 @@ import {parseLogEventResult, type EventName, type EventProps} from '../api/contr
 import {clampDays, parseParentHistory} from '../api/contract/history';
 import {pairShort} from '../lib/childFormat';
 import {parsePeekResult} from '../api/contract/invite';
-import {clearPushToken, readPushToken, settlePushRegistrations} from '../lib/pushToken';
+import {clearPushToken, endPushSignOut, releasePushTokenOnSignOut} from '../lib/pushToken';
 import {parseParentFamily} from '../api/contract/family';
 import {parseMyPushSettings, parseRegisterPushToken, parseSetPushEnabled, type PushPlatform} from '../api/contract/push';
 import {parseMyTermsStatus, parseRecordTerms} from '../api/contract/terms';
@@ -161,6 +161,40 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       fail(rpc, error);
     }
     return data ? withFive({...data, linked: true} as TodayContent, data) : null;
+  };
+  // 로그아웃 본문(signOut 이 감싸 푸시 로그아웃 상태를 끝낸다)
+  const signOutNow = async (): Promise<void> => {
+    waiting.length = 0; // 리뷰 L1
+    // 푸시 토큰 해제가 먼저(0032: 로그아웃 뒤에는 auth.uid 가 없어 해제가 실패한다). 등록한 토큰이 없으면 부르지 않는다. 실패해도 로그아웃은 계속
+    // 진행 중인 등록 기다림·늦은 등록 무시·해제 실패 시 기기 토큰 무효화는 lib/pushToken(#262 리뷰·QA-3 M1)
+    await releasePushTokenOnSignOut(async token => {
+      const {error} = await sb.rpc('unregister_push_token', {p_token: token});
+      return !error;
+    });
+    // 소셜 SDK 세션 정리(실패해도 계속) → 이 기기 세션만 지운다(다른 기기 로그인은 그대로)
+    try {
+      const {data} = await sb.auth.getSession();
+      const meta = data.session?.user.app_metadata ?? {};
+      const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
+      const auth = socialAuth();
+      if (list.includes('kakao')) {
+        await auth.signOut('kakao');
+      }
+      if (list.includes('google')) {
+        await auth.signOut('google');
+      }
+    } catch {
+      // 무시
+    }
+    const {error} = await sb.auth.signOut({scope: 'local'});
+    if (error) {
+      // 리뷰 L5(리드 결정): 오프라인이면 supabase-js 가 세션을 남긴다 → 이 기기 저장 세션을 직접 지운다(서버 토큰은 만료로 정리)
+      const removeLocal = (sb.auth as unknown as {_removeSession?: () => Promise<void>})._removeSession;
+      if (!looksOffline(error) || !removeLocal) {
+        fail('로그아웃', error);
+      }
+      await removeLocal.call(sb.auth);
+    }
   };
   return {
     async signUpChild(email, password) {
@@ -482,42 +516,10 @@ export function createRealApi(sb: SupabaseClient, social?: SocialAuth, platform:
       return id ? sha256Hex(id).slice(0, 16) : null;
     },
     async signOut() {
-      waiting.length = 0; // 리뷰 L1
-      // 푸시 토큰 해제가 먼저(0032: 로그아웃 뒤에는 auth.uid 가 없어 해제가 실패한다). 등록한 토큰이 없으면 부르지 않는다. 실패해도 로그아웃은 계속
-      // 진행 중인 등록이 있으면 끝나기를 기다린 뒤 읽는다(#262 리뷰: 해제 뒤에 등록이 끝나 다시 기억되는 경합)
-      await settlePushRegistrations();
-      const token = await readPushToken();
-      if (token) {
-        try {
-          await sb.rpc('unregister_push_token', {p_token: token});
-        } catch {
-          // 무시(서버 파기 배치가 오래된 토큰을 지운다)
-        }
-        await clearPushToken();
-      }
-      // 소셜 SDK 세션 정리(실패해도 계속) → 이 기기 세션만 지운다(다른 기기 로그인은 그대로)
       try {
-        const {data} = await sb.auth.getSession();
-        const meta = data.session?.user.app_metadata ?? {};
-        const list: string[] = Array.isArray(meta.providers) ? meta.providers : meta.provider ? [meta.provider] : [];
-        const auth = socialAuth();
-        if (list.includes('kakao')) {
-          await auth.signOut('kakao');
-        }
-        if (list.includes('google')) {
-          await auth.signOut('google');
-        }
-      } catch {
-        // 무시
-      }
-      const {error} = await sb.auth.signOut({scope: 'local'});
-      if (error) {
-        // 리뷰 L5(리드 결정): 오프라인이면 supabase-js 가 세션을 남긴다 → 이 기기 저장 세션을 직접 지운다(서버 토큰은 만료로 정리)
-        const removeLocal = (sb.auth as unknown as {_removeSession?: () => Promise<void>})._removeSession;
-        if (!looksOffline(error) || !removeLocal) {
-          fail('로그아웃', error);
-        }
-        await removeLocal.call(sb.auth);
+        await signOutNow();
+      } finally {
+        endPushSignOut(); // 세션을 지운 뒤(또는 실패) 푸시 등록을 다시 받는다(#262 QA-1 L2)
       }
     },
     async withdrawConsent() {

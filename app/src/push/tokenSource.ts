@@ -10,6 +10,8 @@ export interface PushTokenSource {
   readonly kind: 'none' | 'fake' | 'fcm';
   /** 이 기기 토큰. 없거나 권한이 없으면 null */
   getToken(): Promise<string | null>;
+  /** 이 기기 토큰을 무효화(로그아웃 정리가 해제에 실패했을 때, #262 QA-3 M1). 다음 getToken 은 새 토큰 */
+  deleteToken(): Promise<void>;
   /** 토큰이 바뀌면(FCM onTokenRefresh) 다시 등록한다. 반환 = 구독 해제 */
   onTokenRefresh(cb: (token: string) => void): () => void;
   /** 꺼진 앱을 알림을 눌러 열었을 때의 data(한 번만 돌려준다). 없으면 null */
@@ -26,6 +28,7 @@ const noop = () => {};
 export const nullTokenSource: PushTokenSource = {
   kind: 'none',
   getToken: async () => null,
+  deleteToken: async () => {},
   onTokenRefresh: () => noop,
   getInitialOpen: async () => null,
   onOpen: () => noop,
@@ -59,6 +62,9 @@ export function createFakeTokenSource(token: string | null = FAKE_PUSH_TOKEN): F
   return {
     kind: 'fake',
     getToken: async () => current,
+    deleteToken: async () => {
+      current = null;
+    },
     onTokenRefresh: cb => sub(refreshers, cb),
     getInitialOpen: async () => {
       const d = initial;

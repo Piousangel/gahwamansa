@@ -9,6 +9,7 @@ type Messaging = unknown;
 type MessagingModule = {
   getMessaging(): Messaging;
   getToken(m: Messaging): Promise<string>;
+  deleteToken(m: Messaging): Promise<void>;
   onTokenRefresh(m: Messaging, cb: (t: string) => void): () => void;
   getInitialNotification(m: Messaging): Promise<RemoteMessage>;
   onNotificationOpenedApp(m: Messaging, cb: (msg: RemoteMessage) => void): () => void;
@@ -60,6 +61,12 @@ export function createFcmTokenSourceFrom(mod: MessagingModule | null): PushToken
       } catch {
         return null;
       }
+    },
+    // 로그아웃 정리 실패 때만(#262 QA-3 M1). 실패해도 조용히(로그아웃은 계속)
+    deleteToken: async () => {
+      try {
+        await mod.deleteToken(m);
+      } catch {}
     },
     onTokenRefresh: cb => safeSub(() => mod.onTokenRefresh(m, cb)),
     getInitialOpen: async () => {
@@ -114,7 +121,8 @@ export function registerBackgroundHandler(mod: MessagingModule | null = FCM_WIRE
 
 /**
  * real 모드가 FCM 토큰을 쓴다(내부 테스트 N1, DECISIONS 2026-11-25 'FCM_WIRED 켬'). 켜는 조건이던 리뷰 M1(앱 안 끄기 토글 P13·C7)은 main 에 있다.
- * 남겨 두는 이유: 실발송에 문제가 생기면 이 한 줄로 앱 쪽 FCM(토큰·머리 없는 작업)을 통째로 끄는 스위치.
+ * 남겨 두는 이유: 앱 쪽 FCM(토큰·머리 없는 작업)을 한 줄로 걷어 내는 스위치. **빌드 시간 상수라 바꾸면 새 빌드·스토어 배포가 필요**하다 —
+ * 실발송 문제의 즉시 차단은 서버 쪽(Edge secrets `PUSH_DRY_RUN=1`, cron 중지, `push_enabled` 필터)이 맡는다(#262 QA-1 L4).
  * 토큰 요청은 알림이 허용된 상태이고 역할이 정해진 뒤에만(PushHost·pushClient). 13 이상은 사용자가 시스템 창에서 허용한 뒤,
  * **12 이하는 OS 가 기본 허용이라 앱 단위로 끄지 않았으면 역할을 고른 뒤 바로** 요청한다(데이터 보안 양식 15행 문구 확인 필요 — DECISIONS 11-25).
  * google-services.json 이 없는 빌드는 createFcmTokenSource 가 null → 토큰 없음(지금과 같음).

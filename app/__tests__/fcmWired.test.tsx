@@ -10,7 +10,7 @@ import {registerToken, setReceive, childOptIn} from '../src/push/pushClient';
 import {setTokenSourceForTest} from '../src/push/tokenSource';
 import {setPushDepsForTest} from '../src/push/runtime';
 import {memoryStore} from '../src/lib/kvStore';
-import {readPushToken, setPushTokenStoreForTest} from '../src/lib/pushToken';
+import {readPushToken, setPushDevice, setPushTokenStoreForTest, setSettleMsForTest, SETTLE_MS} from '../src/lib/pushToken';
 
 const RN = require('react-native');
 const TOKEN_A = 'fcm_token_AAAAAAAAAAAAAAAAAAAAAAAAAAAA';
@@ -35,6 +35,9 @@ function fakeMessaging(first = TOKEN_A) {
     onNotificationOpenedApp: jest.fn(() => () => {}),
     onMessage: jest.fn(() => () => {}),
     setAutoInitEnabled: jest.fn(async () => {}),
+    deleteToken: jest.fn(async () => {
+      current = 'fcm_token_NEWNEWNEWNEWNEWNEWNEWNEWNEWN'; // 무효화 뒤에는 새 토큰
+    }),
   };
   const source = createFcmTokenSourceFrom(mod as never)!;
   return {
@@ -61,6 +64,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   setTokenSourceForTest(null);
+  setPushDevice(null);
+  setSettleMsForTest(null);
   setPushTokenStoreForTest(null);
   Object.defineProperty(RN.Platform, 'OS', {value: orig.OS, configurable: true, writable: true});
   Object.defineProperty(RN.Platform, 'Version', {value: orig.Version, configurable: true, writable: true});
@@ -168,9 +173,9 @@ describe('앱 안 끄기·켜기(P13·C7 → set_push_enabled)', () => {
 });
 
 describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
+  const authSignOut = jest.fn(() => Promise.resolve({error: null}));
   function sbWith(rpc: jest.Mock) {
-    const signOut = jest.fn(() => Promise.resolve({error: null}));
-    const sb = {rpc, auth: {getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})), signOut}};
+    const sb = {rpc, auth: {getSession: jest.fn(() => Promise.resolve({data: {session: null}, error: null})), signOut: authSignOut}};
     return sb as never;
   }
   const social = {init: jest.fn(), kakao: jest.fn(), google: jest.fn(), signOut: jest.fn(() => Promise.resolve()), unlinkKakao: jest.fn()};
@@ -218,10 +223,130 @@ describe('로그아웃·계정 삭제 때 토큰 정리(realApi, 0032)', () => {
     await settle();
     expect(order).not.toContain('unregister_push_token'); // 등록이 끝나기 전에는 해제·지우기를 하지 않는다
     releaseRegister();
-    expect(await reg).toBe('ok');
+    expect(await reg).toBe('stale'); // 서버 등록은 됐지만 로그아웃 정리와 겹쳐 기억하지 않고 정리에 넘김
     await out;
     expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
     expect(await readPushToken()).toBeNull();
+  });
+
+  test('QA-3 M1: 등록이 기다림 시간을 넘기면 — 기기 토큰을 읽어 해제하고 기기 토큰을 무효화(deleteToken), 늦게 끝난 등록은 기억에 쓰지 않는다', async () => {
+    setAndroid(34);
+    setSettleMsForTest(30);
+    let releaseRegister: () => void = () => {};
+    const rpc = jest.fn((name: string) =>
+      name === 'register_push_token'
+        ? new Promise(r => {
+            releaseRegister = () => r({data: {ok: true}, error: null});
+          })
+        : Promise.resolve({data: {ok: true}, error: null}),
+    );
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    const reg = registerToken({api, source: fcm.source, store: memoryStore()});
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('register_push_token', expect.anything()));
+    try {
+      await api.signOut(); // 등록은 아직 안 끝남(30ms 기다림을 넘김)
+      expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A}); // 기억이 비어 기기 토큰으로
+      expect(fcm.mod.deleteToken).toHaveBeenCalledTimes(1);
+    } finally {
+      releaseRegister(); // 실패해도 묶인 등록을 풀어 다음 시험의 로그아웃이 기다리지 않게
+    }
+    expect(await reg).toBe('stale');
+    expect(await readPushToken()).toBeNull(); // 늦은 등록이 다시 쓰지 못함
+  });
+
+  test('QA-3 M1: 해제가 실패하면(서버 오류·끊김) 기기 토큰을 무효화하고 기억을 지운다. 해제가 성공하면 무효화하지 않는다', async () => {
+    setAndroid(34);
+    for (const fail of ['error', 'throw', null] as const) {
+      const rpc = jest.fn((name: string) => {
+        if (name === 'unregister_push_token' && fail === 'throw') {
+          return Promise.reject(new Error('offline'));
+        }
+        if (name === 'unregister_push_token' && fail === 'error') {
+          return Promise.resolve({data: null, error: {message: 'boom'}});
+        }
+        return Promise.resolve({data: {ok: true}, error: null});
+      });
+      const api = createRealApi(sbWith(rpc), social as never);
+      const fcm = fakeMessaging();
+      setPushDevice(fcm.source);
+      expect(await registerToken({api, source: fcm.source, store: memoryStore()})).toBe('ok');
+      await api.signOut();
+      expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
+      expect(fcm.mod.deleteToken).toHaveBeenCalledTimes(fail ? 1 : 0);
+      expect(fcm.mod.getToken).toHaveBeenCalledTimes(1); // 기억이 있으면 기기 토큰을 다시 읽지 않는다
+      expect(await readPushToken()).toBeNull();
+    }
+  });
+
+  test('QA-3 M1: 등록한 적 없는 기기(권한 거부 등)는 로그아웃 때 토큰을 만들지도 지우지도 않는다', async () => {
+    const rpc = jest.fn(() => Promise.resolve({data: {ok: true}, error: null}));
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    await api.signOut();
+    expect(fcm.mod.getToken).not.toHaveBeenCalled();
+    expect(fcm.mod.deleteToken).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('unregister_push_token', expect.anything());
+  });
+
+  test('QA-1 M1: 끝나지 않는 등록이 있어도 로그아웃은 SETTLE_MS(5초) 뒤 끝나고 세션을 지운다(가짜 시계)', async () => {
+    jest.useFakeTimers();
+    try {
+      setAndroid(34);
+      const rpc = jest.fn((name: string) =>
+        name === 'register_push_token' ? new Promise(() => {}) : Promise.resolve({data: {ok: true}, error: null}),
+      );
+      const api = createRealApi(sbWith(rpc), social as never);
+      const fcm = fakeMessaging();
+      setPushDevice(fcm.source);
+      registerToken({api, source: fcm.source, store: memoryStore()});
+      await jest.advanceTimersByTimeAsync(0);
+      expect(rpc).toHaveBeenCalledWith('register_push_token', expect.anything());
+      let done = false;
+      const out = api.signOut().then(() => {
+        done = true;
+      });
+      await jest.advanceTimersByTimeAsync(SETTLE_MS - 1);
+      expect(done).toBe(false);
+      expect(authSignOut).not.toHaveBeenCalled();
+      await jest.advanceTimersByTimeAsync(1);
+      await out;
+      expect(done).toBe(true);
+      expect(authSignOut).toHaveBeenCalledWith({scope: 'local'});
+      expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A});
+      expect(fcm.mod.deleteToken).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('QA-1 L2: 로그아웃 중에 새로 시작한 등록은 서버를 부르지 않고, 로그아웃이 끝나면 다시 등록한다', async () => {
+    setAndroid(34);
+    let releaseUnregister: () => void = () => {};
+    const rpc = jest.fn((name: string) =>
+      name === 'unregister_push_token'
+        ? new Promise(r => {
+            releaseUnregister = () => r({data: {ok: true}, error: null});
+          })
+        : Promise.resolve({data: {ok: true}, error: null}),
+    );
+    const api = createRealApi(sbWith(rpc), social as never);
+    const fcm = fakeMessaging();
+    setPushDevice(fcm.source);
+    const deps = {api, source: fcm.source, store: memoryStore()};
+    expect(await registerToken(deps)).toBe('ok');
+    const out = api.signOut();
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('unregister_push_token', {p_token: TOKEN_A}));
+    const count = () => rpc.mock.calls.filter(c => c[0] === 'register_push_token').length;
+    const before = count();
+    expect(await registerToken(deps)).toBe('stale'); // 앱이 앞으로 옴·토큰 갱신이 로그아웃 사이에 와도
+    expect(count()).toBe(before);
+    releaseUnregister();
+    await out;
+    expect(await readPushToken()).toBeNull();
+    expect(await registerToken(deps)).toBe('ok'); // 로그아웃이 끝난 뒤(다음 계정)에는 다시
   });
 
   test('계정 삭제: 서버가 토큰 행을 함께 지우므로(0032) 해제 호출 없이 기기 기억만 지운다', async () => {

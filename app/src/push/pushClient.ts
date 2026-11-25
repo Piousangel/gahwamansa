@@ -8,12 +8,13 @@ import type {Api} from '../features/types';
 import {accountKey, PUSH_PROMPT_KEY, PUSH_SKIP_DAY_KEY} from '../lib/accountStore';
 import {kstDate} from '../lib/localStamps';
 import type {KeyValueStore} from '../lib/kvStore';
-import {readPushToken, savePushToken, trackPushRegistration} from '../lib/pushToken';
+import {noteLateRegistration, pushGeneration, pushSigningOut, readPushToken, savePushToken, trackPushRegistration} from '../lib/pushToken';
 import type {PushTokenSource} from './tokenSource';
 import type {NotifyPermission} from './notifyNative';
 
 export type PushDeps = {api: Api; source: PushTokenSource; store: KeyValueStore};
-export type RegisterOutcome = 'ok' | 'no_token' | 'no_profile' | 'failed';
+/** stale = 로그아웃 정리와 겹쳐 기억하지 않음(정리가 해제) 또는 로그아웃 중이라 등록 안 함 */
+export type RegisterOutcome = 'ok' | 'no_token' | 'no_profile' | 'failed' | 'stale';
 
 /** 이 기기 토큰을 서버에 등록. 권한 판단은 호출부(권한이 없으면 FCM 이 토큰을 주더라도 알림이 보이지 않는다) */
 export function registerToken(deps: PushDeps): Promise<RegisterOutcome> {
@@ -21,6 +22,10 @@ export function registerToken(deps: PushDeps): Promise<RegisterOutcome> {
 }
 
 async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcome> {
+  if (pushSigningOut()) {
+    return 'stale'; // 로그아웃 중에는 새로 등록하지 않는다(#262 QA-1 L2)
+  }
+  const gen = pushGeneration(); // 그사이 로그아웃 정리가 시작됐으면 기억하지 않고 정리에 넘긴다(#262 QA-3 M1·QA-1 L1)
   let token: string | null;
   try {
     token = await source.getToken();
@@ -33,6 +38,10 @@ async function registerTokenNow({api, source}: PushDeps): Promise<RegisterOutcom
   try {
     const r = await api.registerPushToken(token);
     if (r.ok) {
+      if (gen !== pushGeneration()) {
+        noteLateRegistration(token);
+        return 'stale';
+      }
       if ((await readPushToken()) !== token) {
         await savePushToken(token);
       }
