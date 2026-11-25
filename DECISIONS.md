@@ -812,3 +812,9 @@
 ## 2026-11-25 푸시 토큰 등록 응답 stored:false(DV-2, #264 QA-1 L2)
 - 0062부터 받기 동의 전 `register_push_token`은 `{ok:true, stored:false}`(서버 저장 없음). 앱은 지금 이것도 성공으로 보고 토큰을 로컬(`lib/pushToken`)에 둔다 — 로그아웃 해제용이라 무해(해제는 removed:0 멱등). 그대로 둔다
 - 앱에 '로컬 토큰과 같으면 서버 등록 호출 생략' 최적화를 넣지 않는다 — 동의 전 등록분은 서버에 없어서, 동의 뒤 재등록(set_push_enabled(true) 직후·앞으로 올 때 sync)이 건너뛰어지면 알림이 오지 않는다. 앱 코드 변경은 이 PR 밖
+
+## 2026-11-25 받기 동의 뒤에만 FCM 토큰 요청(대기열 38, DV-1, push/token-after-consent)
+- 맥락: #262 QA-3 M2 — Android 12 이하는 알림 기본 허용이라 역할만 고르면 앱이 getToken → 설치 ID·토큰 생성. 서버는 0062(#264)로 동의 전 토큰을 저장하지 않게 됨.
+- 선택(리드): 앱이 **받기 동의를 아는 경우에만** getToken. `registerToken(deps, consented)` — 동의 직후 경로(N1 '알려 주세요'·자녀 '알림 켜기'·P13/C7 켬)는 set_push_enabled(true) 성공 값을, PushHost sync(시작·깨어남·토큰 갱신)는 `registerIfConsented`(my_push_settings true)를 넘긴다. 확인 못 하면(오프라인) 부르지 않는다. onTokenRefresh 구독은 JS 이벤트 듣기뿐이라 토큰을 만들지 않는다(RNFB 27.1).
+- 바뀐 것: 옛 리뷰 L4('연결 전에도 등록해 같은 토큰의 이전 계정 행 정리')는 버린다 — 그 역할은 #262 로그아웃 정리(해제·시간 초과/실패 시 deleteToken)가 맡고, 서버 0062도 동의 전 등록을 저장하지 않는다. 동의를 오프라인으로 못 보낸 N1(yes_pending)은 재시도가 성공한 뒤 sync 가 등록.
+- 남는 것: 한 번 동의해 `setAutoInitEnabled(true)`가 저장된 기기는 끈 뒤·로그아웃 뒤에도 SDK가 앱 시작 때 스스로 토큰을 갱신할 수 있다(앱의 getToken·서버 등록은 없음). 끌 때·로그아웃 때 `setAutoInitEnabled(false)`로 되돌릴지는 후속 결정.

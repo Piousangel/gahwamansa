@@ -95,20 +95,20 @@ describe('토큰 등록', () => {
   test('성공한 토큰만 기기에 둔다(로그아웃 때 해제용), 프로필이 없으면 두지 않는다', async () => {
     const d = deps();
     const reg = jest.spyOn(d.api, 'registerPushToken');
-    expect(await registerToken(d)).toBe('ok');
+    expect(await registerToken(d, true)).toBe('ok');
     expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN);
     expect(await readPushToken()).toBe(FAKE_PUSH_TOKEN);
 
     setPushTokenStoreForTest(memoryStore());
-    expect(await registerToken(deps(createFakeApi({linked: false})))).toBe('no_profile');
+    expect(await registerToken(deps(createFakeApi({linked: false})), true)).toBe('no_profile');
     expect(await readPushToken()).toBeNull();
   });
 
   test('토큰이 없거나(Firebase 전 real) 형식이 틀리면 서버를 부르지 않는다', async () => {
     const d = deps(undefined, nullTokenSource);
     const reg = jest.spyOn(d.api, 'registerPushToken');
-    expect(await registerToken(d)).toBe('no_token');
-    expect(await registerToken({...d, source: createFakeTokenSource('short')})).toBe('no_token');
+    expect(await registerToken(d, true)).toBe('no_token');
+    expect(await registerToken({...d, source: createFakeTokenSource('short')}, true)).toBe('no_token');
     expect(reg).not.toHaveBeenCalled();
   });
 });
@@ -483,26 +483,42 @@ describe('앱 조립(PushHost)', () => {
     expect(say).toHaveBeenCalledWith(copy.push.permission.turned_on);
   });
 
-  test('리뷰 L2: 자녀는 권한이 이미 허용이어도 누르기 전에는 받기 동의를 보내지 않는다(토큰 등록만)', async () => {
+  test('리뷰 L2·대기열 38: 자녀는 권한이 이미 허용이어도 누르기 전에는 받기 동의를 보내지 않고 토큰도 요청하지 않는다', async () => {
     setPlatform('android', 34);
-    setTokenSourceForTest(createFakeTokenSource());
+    const src = createFakeTokenSource();
+    const getToken = jest.spyOn(src, 'getToken');
+    setTokenSourceForTest(src);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
     const api = createFakeApi({consented: true, parentTitle: '엄마'});
     const en = jest.spyOn(api, 'setPushEnabled');
     const reg = jest.spyOn(api, 'registerPushToken');
+    const settings = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="child" />);
-    await waitFor(() => expect(reg).toHaveBeenCalledWith(FAKE_PUSH_TOKEN));
+    await waitFor(() => expect(settings).toHaveBeenCalled()); // 동의 확인까지 갔다
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 50));
+    });
     expect(en).not.toHaveBeenCalled();
+    expect(getToken).not.toHaveBeenCalled();
+    expect(reg).not.toHaveBeenCalled();
   });
 
-  test('리뷰 L4: 연결 전 어르신도 권한이 있으면 토큰 등록을 부른다(no_profile 은 정상)', async () => {
+  test('대기열 38(옛 리뷰 L4 대체): 연결 전 어르신은 권한이 있어도 받기 동의가 없어 토큰을 요청하지 않는다', async () => {
     setPlatform('android', 34);
-    setTokenSourceForTest(createFakeTokenSource());
+    const src = createFakeTokenSource();
+    const getToken = jest.spyOn(src, 'getToken');
+    setTokenSourceForTest(src);
     jest.spyOn(RN.PermissionsAndroid, 'check').mockResolvedValue(true);
     const api = createFakeApi();
     const reg = jest.spyOn(api, 'registerPushToken');
+    const settings = jest.spyOn(api, 'myPushSettings');
     render(<AppRoot api={api} role="parent" restore />);
-    await waitFor(() => expect(reg).toHaveBeenCalled());
+    await waitFor(() => expect(settings).toHaveBeenCalled());
+    await act(async () => {
+      await new Promise<void>(r => setTimeout(() => r(), 50));
+    });
+    expect(getToken).not.toHaveBeenCalled();
+    expect(reg).not.toHaveBeenCalled();
     expect(await readPushToken()).toBeNull();
   });
 
