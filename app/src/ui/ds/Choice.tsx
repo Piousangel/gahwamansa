@@ -185,7 +185,8 @@ const styles = StyleSheet.create({
   selected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 4},
   body: {flex: 1, gap: 2},
   answerBody: {flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 2},
-  answerBodyFull: {flexBasis: '100%'},
+  // 한 줄 전체 + 줄어들지 않음: flexShrink 1 이면 Yoga 가 줄을 바꾸지 않고 글 칸을 줄여 한 글자씩 꺾는다(#254 실기기 320×640 200% 캡처)
+  answerBodyFull: {flexBasis: '100%', flexShrink: 0},
   // 테두리가 1.5 → 5 로 굵어져도 내용 자리가 움직이지 않게 안쪽 여백을 그만큼 줄인다(가로·세로). 좁으면 '✓ 골랐어요'가 다음 줄로
   answer: {borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 14, flexWrap: 'wrap', alignContent: 'center'},
   answerSelected: {backgroundColor: c.actionSoft, borderColor: c.action, borderWidth: 5, paddingHorizontal: 16.5, paddingVertical: 10.5},

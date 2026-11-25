@@ -55,6 +55,18 @@ const rowIds = () => [
   ),
 ];
 
+/**
+ * 200%·⑤ '골랐어요는 아래 줄'(시안 s2·s3): jest 에는 레이아웃이 없어, 그 배치를 만드는 조건을 Yoga 규칙대로 본다(#254 캡처 문제 2).
+ * 카드 행이 줄바꿈(wrap)이고, 낱말 칸이 한 줄 전체(flexBasis 100%)이면서 **줄어들지 않아야**(flexShrink 0) 표시가 다음 줄로 간다.
+ * flexShrink 가 1이면 Yoga 는 줄을 바꾸지 않고 낱말 칸을 줄여 한 글자씩 꺾는다(실기기 320×640 200% 캡처).
+ */
+function expectTagBelow(row: ReturnType<typeof screen.getByTestId>) {
+  expect(StyleSheet.flatten(row.props.style)?.flexWrap).toBe('wrap');
+  const body = row.findAll(n => typeof n.type === 'string' && StyleSheet.flatten(n.props.style)?.flexBasis === '100%');
+  expect(body.length).toBeGreaterThan(0);
+  expect(body.map(n => StyleSheet.flatten(n.props.style)?.flexShrink)).toEqual(body.map(() => 0));
+}
+
 async function doPhoto() {
   await pressCourseNext();
   await waitFor(() => screen.getByLabelText('사진 보기, 5단계 중 1단계'));
@@ -416,8 +428,7 @@ describe('200%', () => {
     expect([...new Set(ids)]).toEqual(['recall-choice', 'five-skip-inline']);
     fireEvent.press(screen.getByText('참새'));
     const row = screen.getByTestId('recall-choice-2');
-    const textBox = row.findAll(n => typeof n.type === 'string' && StyleSheet.flatten(n.props.style)?.flexBasis === '100%');
-    expect(textBox.length).toBeGreaterThan(0); // 낱말 칸이 한 줄을 다 차지 → ✓ 골랐어요는 다음 줄
+    expectTagBelow(row); // 낱말 칸이 한 줄을 다 차지하고 줄어들지 않음 → ✓ 골랐어요는 다음 줄
   });
   test('코스 홈: "오늘은 여기까지 할게요"는 단계 행 바로 아래 본문(Dock 아님)', async () => {
     await home({completedSteps: ['photo', 'recall', 'question']});
@@ -442,6 +453,6 @@ describe('200%', () => {
     expect(dock().queryByRole('button', {name: '오늘은 넘어갈게요'})).toBeNull();
     expect(within(screen.getByTestId('pass-on-body')).getByTestId('five-skip-inline')).toBeTruthy();
     const row = screen.getByTestId('pass-on-choice-ask_which');
-    expect(row.findAll(n => typeof n.type === 'string' && StyleSheet.flatten(n.props.style)?.flexBasis === '100%').length).toBeGreaterThan(0);
+    expectTagBelow(row);
   });
 });
