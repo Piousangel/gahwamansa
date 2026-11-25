@@ -19,7 +19,8 @@ tags:
       - tapOn: '복사하기'
       # Android 13+ 는 시스템이 '복사됨'을 띄우므로 앱 토스트를 생략할 수 있다(AC-08) → 단언 없이 바로 캡처
       - takeScreenshot: f5-c3-toast
-      # 복사가 내는 개발 경고 알림(LogBox)이 뜨면 닫는다(뒤 '앱 정보' 탭을 덮음, common/dismiss-logbox.yaml)
+      # 복사가 내던 개발 경고 알림(LogBox)이 뜨면 닫는다(뒤 '앱 정보' 탭을 덮음, common/dismiss-logbox.yaml).
+      # 출처(clipboard.ts 깊은 import)는 대기열 51 에서 없앴다 — 다른 개발 경고 대비 안전망으로 남긴다(없으면 5초 기다리고 지나감)
       - extendedWaitUntil:
           visible: 'Open debugger to view warnings.*'
           timeout: 5000
