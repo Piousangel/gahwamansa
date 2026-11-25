@@ -1,0 +1,23 @@
+# 공용 흐름 배율 점검(#272 뒤 대기열 45): parent-connect · child-to-wait · child-linked-home 이 100% 와 200% 에서 모두 끝까지 가는지.
+# 200% 에서는 키 4~0 줄, P2 '좋아요', 자녀 설정 '앱 정보', 개발자 메뉴 역할 버튼이 첫 화면 밖이라 공용 흐름 안에서 스크롤한다.
+# 실행 예: ANDROID_SERIAL=emulator-5556 AVD=gahwa_small FONT_SCALE=2.0 DP_SIZE=320x640 app/e2e/run.sh --metro-port 8091 audit/common-200.yaml
+appId: com.bumojasik.app.staging
+name: 공용 흐름 배율 점검
+tags:
+  - audit
+---
+- runFlow:
+    file: ../common/parent-connect.yaml
+    env:
+      PREFIX: c200-parent
+- takeScreenshot: c200-parent-p3
+- runFlow:
+    file: ../common/child-to-wait.yaml
+    env:
+      PREFIX: c200-child
+- takeScreenshot: c200-child-c3
+- runFlow:
+    file: ../common/child-linked-home.yaml
+    env:
+      PREFIX: c200-child
+- takeScreenshot: c200-child-c4

@@ -3,13 +3,18 @@
 appId: com.bumojasik.app.staging
 ---
 - tapOn: '설정'
+# 설정 목록이 뜰 때까지(200%에서는 '앱 정보' 가 첫 화면 밖이라 목록 묶음 id 로 기다린다, #272)
 - extendedWaitUntil:
-    visible: '앱 정보'
+    visible:
+      id: 'c7-block'
     timeout: 10000
 - runFlow:
     file: edge-scroll.yaml
     env:
       TARGET: '앱 정보'
+# 개발 경고 알림이 '앱 정보' 행을 덮지 않게(dismiss-logbox.yaml)
+- runFlow:
+    file: dismiss-logbox.yaml
 - tapOn: '앱 정보'
 # C7 앱 정보 화면이 뜰 때까지(설정 화면의 '버전 1.0.0' 보조 글을 버전 줄로 잘못 누르지 않게, 2026-11-19 재검증에서 발견)
 - extendedWaitUntil:
@@ -26,6 +31,11 @@ appId: com.bumojasik.app.staging
 - tapOn: '1'
 - tapOn: '2'
 - tapOn: '3'
+# 200%: 키 4~0 줄은 첫 화면 밖(parent-connect.yaml 과 같음)
+- runFlow:
+    file: edge-scroll.yaml
+    env:
+      TARGET: '0'
 - tapOn: '4'
 - tapOn: '5'
 - tapOn: '6'
@@ -37,6 +47,11 @@ appId: com.bumojasik.app.staging
 - extendedWaitUntil:
     visible: '고른 답을.*나눠요'
     timeout: 10000
+# 200%: '좋아요' 는 본문 끝
+- runFlow:
+    file: edge-scroll.yaml
+    env:
+      TARGET: '좋아요'
 - tapOn: '좋아요'
 - extendedWaitUntil:
     visible: '설정'

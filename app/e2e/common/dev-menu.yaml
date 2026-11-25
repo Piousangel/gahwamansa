@@ -4,8 +4,9 @@
 # '연결된 가족' 행을 누른 것으로 잡혀 P16 으로 넘어갔다 → 왼쪽 9%(제스처 내비 뒤로 영역 밖)에서 천천히(600ms) 끌어 올린다(효과는 느린 속도, 리뷰 M3).
 appId: com.bumojasik.app.staging
 ---
+# 200% 어르신 설정(P13)은 본문 창이 짧고 목록이 길어 8번으로는 버전 줄에 닿지 않았다(11-25 실측) → 20번
 - repeat:
-    times: 8
+    times: 20
     while:
       notVisible: '버전.*1\.0\.0.*'
     commands:
@@ -22,4 +23,10 @@ appId: com.bumojasik.app.staging
 - extendedWaitUntil:
     visible: '개발자 메뉴'
     timeout: 5000
+# 200%: 개발자 메뉴 상자 안 역할 버튼은 상자 아래쪽(스크롤 뒤)에 있다(#272). 100% 는 바로 보여 스크롤하지 않는다
+- scrollUntilVisible:
+    element: ${ROLE_LABEL}
+    direction: DOWN
+    visibilityPercentage: 100
+    timeout: 30000
 - tapOn: ${ROLE_LABEL}

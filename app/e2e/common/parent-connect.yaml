@@ -16,6 +16,11 @@ appId: com.bumojasik.app.staging
 - tapOn: '2'
 - tapOn: '3'
 - takeScreenshot: ${PREFIX}-p1-3
+# 200%: 키 4~0 줄은 첫 화면 밖(접힘 여백으로 줄째 밀림, #272) → '0' 이 보일 때까지 천천히 민다(100% 는 그대로)
+- runFlow:
+    file: edge-scroll.yaml
+    env:
+      TARGET: '0'
 - tapOn: '4'
 - tapOn: '5'
 - tapOn: '6'
@@ -28,6 +33,11 @@ appId: com.bumojasik.app.staging
     visible: '고른 답을.*나눠요'
     timeout: 10000
 - takeScreenshot: ${PREFIX}-p2
+# 200%: '좋아요' 는 본문 끝(스크롤 뒤)
+- runFlow:
+    file: edge-scroll.yaml
+    env:
+      TARGET: '좋아요'
 - tapOn: '좋아요'
 - extendedWaitUntil:
     visible: '사진 보기.*'

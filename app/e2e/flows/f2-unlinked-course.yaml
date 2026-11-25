@@ -15,7 +15,8 @@ tags:
     timeout: 10000
 - tapOn: '코스 보기'
 - extendedWaitUntil:
-    visible: '번호를 받으면 그때부터 답이 저장돼요'
+    # 문구는 copy.ko.json course.disconnected_banner(W-05 24a8eff6 에서 줄임)
+    visible: '번호를 받으면 답이 저장돼요'
     timeout: 10000
 - takeScreenshot: f2-p3-strip
 - tapOn: '사진 보기.*'
