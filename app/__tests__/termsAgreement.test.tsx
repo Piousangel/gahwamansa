@@ -64,7 +64,7 @@ test('어르신 P1c: [이 번호로 연결하기]를 누르면 약관·방침 �
   const rec = jest.spyOn(api, 'recordTermsAgreement');
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   expect(rec).toHaveBeenCalledTimes(1);
   expect(rec).toHaveBeenCalledWith(TERMS_VERSION, PRIVACY_VERSION);
 });
@@ -74,6 +74,6 @@ test('기록이 실패해도 연결은 되고, 연결 성공 뒤 한 번 더 기
   const rec = jest.spyOn(api, 'recordTermsAgreement');
   render(<AppRoot api={api} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   await waitFor(() => expect(rec).toHaveBeenCalledTimes(2));
 });

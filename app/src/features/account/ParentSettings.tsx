@@ -106,6 +106,11 @@ export function ParentSettings() {
               <View ref={resumeTitleRef} accessible accessibilityRole="header" accessibilityLabel={t.resume_confirm}>
                 <Text20 size={26} weight="bold">{t.resume_confirm}</Text20>
               </View>
+              {/* P2 v6 리뷰: 좋아요는 CONSENT_VERSION 으로 기록된다 → 그 버전 동의 화면과 같은 다섯 줄(같은 글자)을 버튼 앞에 보인다.
+                  v5 로 동의했다가 멈춘 분이 여기서 v6 범위(모아 보기·챙겨 드릴 거리)를 보지 않고 동의되는 일을 막는다 */}
+              {copy.consent.body.map(line => (
+                <Text20 key={line}>{`• ${line}`}</Text20>
+              ))}
               <BigButton label={t.resume_yes} loading={busy} onPress={() => run(() => api.giveConsent(CONSENT_VERSION), true, null)} />
               <BigButton variant="secondary" label={t.keep} onPress={() => setConfirm('none')} />
             </View>

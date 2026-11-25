@@ -35,7 +35,7 @@ test('링크로 들어온 번호: 첫 화면 띠 → 부모님 → 바로 P1c(�
   expect(log).toHaveBeenCalledWith('link_opened', {source: 'app_link'});
   expect(log).toHaveBeenCalledWith('code_prefilled', {source: 'app_link'});
   await press('이 번호로 연결하기');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
   const seen: boolean[] = [];
   subscribeInvite(b => seen.push(b.visible))();
   expect(seen).toEqual([false]); // 쓴 번호는 지워짐

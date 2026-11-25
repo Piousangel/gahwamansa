@@ -23,6 +23,7 @@ import {daysSinceYmd} from '../../lib/childFormat';
 import {track, trackDaily, trackOnce} from '../track';
 import {ChildHomeEmpty, useEmptyFold} from './ChildHomeEmpty';
 import {useFoldGap} from '../../ui/ds/useFoldGap';
+import {MonthList} from '../../shared/MonthList';
 
 /** 카드 묶음 안 간격(본문 간격과 같게) */
 const CARD_GAP = 16;
@@ -210,6 +211,9 @@ export function ChildHome() {
                 ))}
               </View>
             )}
+            {/* 기획 v2.1 Q2: 카드 아래 '최근 한 달 고르신 것'(서버 0068 month 가 있는 분만 — v5 면 그리지 않아 지금 화면 그대로).
+                첫날 빈 상태(예시 카드)와 겹치지 않게 그때는 그리지 않는다 */}
+            {firstDay ? null : <MonthList parents={list} />}
           </>
         )}
         {/* 받기 전(로딩)·카드가 없을 때는 본문 끝 */}

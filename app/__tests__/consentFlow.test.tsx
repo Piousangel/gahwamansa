@@ -1,4 +1,5 @@
-import {fireEvent, screen, waitFor} from '@testing-library/react-native';
+import {fireEvent, screen, waitFor, within} from '@testing-library/react-native';
+import {copy} from '../src/copy/copy';
 import {createFakeApi} from '../src/features/fakeApi';
 import {press, pressWhenEnabled, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 import {pressLast} from '../testUtils/flow';
@@ -38,7 +39,14 @@ test('설정에서 다시 동의하면 그 뒤 답이 저장된다', async () =>
   await waitFor(() => screen.getByLabelText('가족에게 답 보여 주기, 보여 주지 않는 중이에요'));
   await press('다시 보여 주기'); // W0 ②: 행 오른쪽 동사 버튼 → 확인 펼침
   await waitFor(() => screen.getByText('오늘부터 고르신 답이 가족에게 보여요'));
+  // P2 v6 리뷰: 다시 보여 주기도 CONSENT_VERSION(v6)으로 기록되므로, 그 버전의 동의 다섯 줄을 좋아요 앞에 같은 글자로 보인다
+  const panel = screen.getByTestId('settings-confirm');
+  for (const line of copy.consent.body) {
+    expect(within(panel).getByText(`• ${line}`)).toBeTruthy();
+  }
+  const give = jest.spyOn(api, 'giveConsent');
   await press('좋아요');
+  expect(give).toHaveBeenCalledWith('v6');
   await waitFor(() => screen.getByLabelText('가족에게 답 보여 주기, 보여 주는 중이에요'));
   await pressLast('오늘 코스로'); // 아래 Dock(위 뒤로 바도 같은 목적지, W-09)
   await waitFor(() => screen.getByTestId('date-line'));

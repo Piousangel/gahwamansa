@@ -91,8 +91,8 @@ test('M3(360 폭 100%): 답 보여 주기 행은 동사 버튼을 다음 줄 전
 test('P2: 넷째 줄(거절 안내)은 카드 밖 한 줄(v4: 점 머리표, ⓘ 없음)', async () => {
   render(<AppRoot api={createFakeApi()} role="parent" />);
   await enterCode('123456');
-  await waitFor(() => screen.getByText('고른 답을 가족과 나눠요'));
-  expect(screen.getAllByTestId('consent-point')).toHaveLength(3);
+  await waitFor(() => screen.getByText('고르신 답을 가족과 나눠요'));
+  expect(screen.getAllByTestId('consent-point')).toHaveLength(5); // P2 v6 다섯 줄
   expect(screen.getByTestId('consent-decline-note')).toBeTruthy();
 });
 
