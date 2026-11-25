@@ -50,7 +50,7 @@ tags:
       id: 'p7-stage'
     timeout: 10000
 - extendedWaitUntil:
-    visible: '.*번호를 받으면 그때부터 고른 답이 가족에게 보여요.*'
+    visible: '.*번호를 받으면 그때부터 고르신 답이 가족에게 보여요.*'
     timeout: 10000
 - takeScreenshot: f2-p7-unlinked
 - tapOn: '알겠어요'

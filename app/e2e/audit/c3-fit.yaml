@@ -35,7 +35,7 @@ tags:
 - assertVisible: '연결 기다리는 중'
 - assertVisible: '번호 보내기'
 - scrollUntilVisible:
-    element: '답을 보여 줄지 고르면 돼요'
+    element: '답을 보여 줄지 고르시면 돼요'
     direction: DOWN
 - takeScreenshot: c3-scrolled
 - scrollUntilVisible:

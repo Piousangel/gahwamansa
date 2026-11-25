@@ -177,9 +177,9 @@ describe('AP-11 포커스(D-10: 새로 들어오면 제목, 뒤로 돌아오면 
     await new Promise<void>(r => setTimeout(() => r(), 400));
     const send = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent');
     await press('다시 정하기');
-    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('오늘부터 고른 답이 가족에게 보여요'));
+    await waitFor(() => expect(send.mock.calls.map(labelOf)).toContain('오늘부터 고르신 답이 가족에게 보여요'));
     await new Promise<void>(r => setTimeout(() => r(), 300));
-    expect(send.mock.calls.map(labelOf).at(-1)).toBe('오늘부터 고른 답이 가족에게 보여요');
+    expect(send.mock.calls.map(labelOf).at(-1)).toBe('오늘부터 고르신 답이 가족에게 보여요');
   });
 });
 
@@ -257,7 +257,7 @@ describe('AP-14 테스트 보강', () => {
       fireEvent.press(btn);
       fireEvent.press(btn);
     });
-    await waitFor(() => screen.getByText('이제 고른 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요'));
+    await waitFor(() => screen.getByText('이제 고르신 답은 가족에게 안 보여요. 설정에서 다시 보여 줄 수 있어요'));
     expect(withdraw).toHaveBeenCalledTimes(1);
   });
   test('콘텐츠가 없으면(null) "오늘 사진을 준비하고 있어요"와 다시 보기', async () => {

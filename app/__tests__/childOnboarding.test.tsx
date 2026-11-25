@@ -113,7 +113,7 @@ test('연결 대기 -> 어르신이 번호를 쓰면 연결됨(호칭께서 정�
     handlers.forEach(h => h('active'));
   });
   await waitFor(() => screen.getByText('연결됐어요'));
-  expect(screen.getByText('고른 답을 보여 줄지는 아빠께서 정해요')).toBeTruthy();
+  expect(screen.getByText('고르신 답을 보여 줄지는 아빠께서 정해요')).toBeTruthy();
   await press('앨범으로');
   await waitFor(() => screen.getByText('우리 집 앨범'));
 });

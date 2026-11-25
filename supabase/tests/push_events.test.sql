@@ -26,7 +26,7 @@ delete from public.push_copy; delete from public.cheer_texts;
 insert into public.push_copy (kind, title, body, body_fallback, body_many) values
   ('daily', '오늘의 사진이 왔어요', '{설명}', '편할 때 열어 보세요', null),
   ('cheer_arrived', '가족이 보낸 응원이 왔어요', '{응원}', null, '응원이 {n}개 왔어요'),
-  ('parent_connected', '{호칭} 폰과 연결됐어요', '고른 답을 보여 줄지는 {호칭}께서 정해요', null, null),
+  ('parent_connected', '{호칭} 폰과 연결됐어요', '고르신 답을 보여 줄지는 {호칭}께서 정해요', null, null),
   ('parent_reconnected', '{호칭} 폰과 다시 연결됐어요', '새 폰으로 이어졌어요. 지난 답은 그대로 있어요', null, null);
 insert into public.cheer_texts (message_key, text) values ('love_you', '사랑해요, 오늘도 좋은 하루예요'), ('warm_day', '덕분에 하루가 따뜻해요');
 -- 응원: 어르신1에 1개, 어르신2에 2개, 4일 전 것 1개(정리 대상)
@@ -63,7 +63,7 @@ select is(pg_temp.mine((select j from claimed), 'cheer_arrived'),
   '응원은 받는 어르신에게만: 1개면 그 문장, 여러 개면 개수(3일 지난 것 제외)');
 select is(pg_temp.mine((select j from claimed), 'parent_connected'),
   jsonb_build_array(jsonb_build_object('profile_id', '7038b000-0000-0000-0000-0000000000c1', 'kind', 'parent_connected', 'channel', 'family',
-                                       'title', '엄마 폰과 연결됐어요', 'body', '고른 답을 보여 줄지는 엄마께서 정해요')),
+                                       'title', '엄마 폰과 연결됐어요', 'body', '고르신 답을 보여 줄지는 엄마께서 정해요')),
   '연결 알림은 알림을 받기로 한 자녀에게만, 어르신 호칭을 채운다');
 select is(pg_temp.mine((select j from claimed), 'parent_reconnected'),
   jsonb_build_array(jsonb_build_object('profile_id', '7038b000-0000-0000-0000-0000000000c1', 'kind', 'parent_reconnected', 'channel', 'family',

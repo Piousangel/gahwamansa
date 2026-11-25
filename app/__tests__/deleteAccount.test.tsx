@@ -64,7 +64,7 @@ test('#198 리뷰 M: 지우는 중에는 뒤로 링크·안 지울래요·하드
   }) as never);
   const api = createFakeApi({deleteScope: 'child'});
   const del = jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {})); // 끝나지 않는 지우기
-  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
   await press('계정 지우기');
   await press('계정 지우기');
   await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
@@ -117,7 +117,7 @@ describe('#208 리뷰 H1: 지우기 화면 안전망 시간 제한(50초, 요청
   test('자녀: 응답이 오지 않으면 안전망 시간 뒤 끊김으로 보고 다시 하기', async () => {
     const api = createFakeApi({deleteScope: 'child'});
     jest.spyOn(api, 'deleteMyAccount').mockImplementation(() => new Promise(() => {}));
-    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
     const say = jest.spyOn(require('react-native').AccessibilityInfo, 'announceForAccessibility');
     say.mockClear();
     jest.useFakeTimers();
@@ -202,7 +202,7 @@ describe('#208 리뷰 H1: 지우기 화면 안전망 시간 제한(50초, 요청
       .spyOn(api, 'deleteMyAccount')
       .mockImplementationOnce(() => new Promise(() => {}))
       .mockRejectedValueOnce(new ServerError('delete_my_account', 'no_profile', 'P0001'));
-    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
     jest.useFakeTimers();
     await press('계정 지우기');
     await press('계정 지우기');
@@ -287,7 +287,7 @@ test('자녀: 항상 가장 강한 경고, 확인 입력 후에만 삭제, 결�
 
 test('자녀: 내 계정만 삭제된 경우 결과 문구', async () => {
   const api = createFakeApi({deleteScope: 'child'});
-  await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+  await openChildDelete(api, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
   expect(screen.queryByText('부모님의 기록도 함께 지워져요')).toBeNull();
   expect(screen.getByText('되돌릴 수 없어요')).toBeTruthy(); // #197: 본문에서 뺀 경고는 빨간 머리글(warn_label)이 한 번 맡는다
   await press('계정 지우기');
@@ -316,7 +316,7 @@ test('PR1 리뷰 M2: scope none 이면 호칭(가족 요약)을 묻지 않는다
   screen.unmount();
   const fam = createFakeApi({deleteScope: 'child'});
   const sumFam = jest.spyOn(fam, 'fetchChildSummary');
-  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+  await openChildDelete(fam, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
   expect(sumFam).toHaveBeenCalled();
 });
 
@@ -473,7 +473,7 @@ describe('#146 리뷰 H1: no_profile 은 지우지 못한 것(로그인 정보 �
     const {ServerError} = require('../src/features/types');
     const api = createFakeApi({deleteScope: 'child'});
     jest.spyOn(api, 'deleteMyAccount').mockRejectedValue(new ServerError('delete_my_account', 'no_profile', 'P0001'));
-    await openChildDelete(api, '내 계정만 지워져요. 부모님의 고른 답과 기록은 남아요');
+    await openChildDelete(api, '내 계정만 지워져요. 부모님의 답과 기록은 남아요');
     await press('계정 지우기');
     await press('계정 지우기');
     await waitFor(() => screen.getByText('로그인이 풀려 지워지지 않았어요'));

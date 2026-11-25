@@ -484,7 +484,7 @@ describe('N3 앱 안 배너', () => {
     render(<NewConnectionBanner api={api} onView={onView} store={store} />);
     await waitFor(() => screen.getByTestId('n3-banner'));
     expect(screen.getByText('아빠 폰과 연결됐어요')).toBeTruthy();
-    expect(screen.getByText('고른 답을 보여 줄지는 아빠께서 정해요')).toBeTruthy();
+    expect(screen.getByText('고르신 답을 보여 줄지는 아빠께서 정해요')).toBeTruthy();
     await press('보기');
     expect(onView).toHaveBeenCalled();
     expect(screen.queryByTestId('n3-banner')).toBeNull();
@@ -531,7 +531,7 @@ describe('AC-01 C6 곧 유료 시트', () => {
     const log = jest.spyOn(api, 'logEvent');
     const sheet = await openPaid(api);
     expect(within(sheet).getByText('이야기 주제 추천은 곧 유료예요')).toBeTruthy();
-    expect(within(sheet).getByText('고른 답에 맞는 이야기 주제를 추천해요')).toBeTruthy();
+    expect(within(sheet).getByText('고르신 답에 맞는 이야기 주제를 추천해요')).toBeTruthy();
     expect(within(sheet).getByText('지금은 결제되지 않아요. 관심만 표시돼요')).toBeTruthy();
     expect(within(sheet).getByText('예정 가격')).toBeTruthy();
     expect(within(sheet).getByText(/^한 달 .+원$/)).toBeTruthy();

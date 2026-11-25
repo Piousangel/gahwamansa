@@ -40,7 +40,7 @@ select is((select count(*)::int from public.cheers where to_parent = '7041b000-0
 
 insert into public.push_copy (kind, title, body, body_many) values
   ('cheer_arrived', '가족이 보낸 응원이 왔어요', '{응원}', '응원이 {n}개 왔어요'),
-  ('parent_connected', '{호칭} 폰과 연결됐어요', '고른 답을 보여 줄지는 {호칭}께서 정해요', null),
+  ('parent_connected', '{호칭} 폰과 연결됐어요', '고르신 답을 보여 줄지는 {호칭}께서 정해요', null),
   ('parent_reconnected', '{호칭} 폰과 다시 연결됐어요', '새 폰으로 이어졌어요', null);
 -- L1: 직전 실행이 dry-run이면 1시간 쉰다
 insert into public.push_runs (kind, run_at, note) values ('cheer_arrived', pg_temp.at_kst('09:30'), 'dry_run');

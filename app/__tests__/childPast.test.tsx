@@ -24,13 +24,13 @@ test('답이 있으면 지난 답 탭에 질문·고른 답·날짜가 보이고
   await waitFor(() => screen.getByTestId('child-past-item'));
   expect(screen.getByTestId('child-past-item')).toHaveTextContent(/2020년 11월 16일.*봄과 가을 중.*가을/);
   expect(screen.getAllByText('가을', {includeHiddenElements: true}).length).toBeGreaterThan(0); // 팻말 글자는 화면 읽기에서 숨김(카드 한 줄로 읽음, #239 M1)
-  expect(screen.queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
+  expect(screen.queryByText('고르신 답이 생기면 여기에 보여요')).toBeNull();
 });
 
 test('답이 없을 때만 빈 문구, 나누지 않으면 그 안내', async () => {
   const {unmount} = render(<AppRoot api={createFakeApi({consented: true, history: []})} role="child" />);
   await openPast();
-  await waitFor(() => expect(screen.getAllByText('고른 답이 생기면 여기에 보여요').length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getAllByText('고르신 답이 생기면 여기에 보여요').length).toBeGreaterThan(0));
   unmount();
   render(<AppRoot api={createFakeApi({consented: false})} role="child" />);
   await openPast();
@@ -41,5 +41,5 @@ test('불러오기 실패면 빈 문구가 아니라 오류와 다시 시도', a
   render(<AppRoot api={createFakeApi({consented: true, failHistory: 1})} role="child" />);
   await openPast();
   await waitFor(() => screen.getByTestId('child-past-error'));
-  expect(screen.queryByText('고른 답이 생기면 여기에 보여요', {includeHiddenElements: false})).toBeNull();
+  expect(screen.queryByText('고르신 답이 생기면 여기에 보여요', {includeHiddenElements: false})).toBeNull();
 });

@@ -12,7 +12,7 @@ afterEach(() => {
   mockFontScale = 1;
 });
 
-const INTRO = ['옛날 사진 보며 추억을 떠올려요', '고른 답으로 자녀가 취향을 알아 가요', '사진 속 낱말을 자판으로 써요'];
+const INTRO = ['옛날 사진 보며 추억을 떠올려요', '고르신 답으로 자녀가 취향을 알아 가요', '사진 속 낱말을 자판으로 써요'];
 const measure = async (w = 328, h = 300) =>
   act(async () => {
     fireEvent(screen.getByTestId('polaroid-area'), 'layout', {nativeEvent: {layout: {x: 0, y: 0, width: w, height: h}}});
@@ -33,7 +33,7 @@ test('소개: 워드마크 아래 제목 + 아이콘 달린 항목 3줄, 예전 
 test('소개는 한 번에 읽힌다(제목. 항목1. 항목2. 항목3)', () => {
   render(<AppRoot api={createFakeApi()} />);
   expect(
-    screen.getByLabelText('하루 한 장, 우리 집 앨범. 옛날 사진 보며 추억을 떠올려요. 고른 답으로 자녀가 취향을 알아 가요. 사진 속 낱말을 자판으로 써요'),
+    screen.getByLabelText('하루 한 장, 우리 집 앨범. 옛날 사진 보며 추억을 떠올려요. 고르신 답으로 자녀가 취향을 알아 가요. 사진 속 낱말을 자판으로 써요'),
   ).toBeTruthy();
 });
 
@@ -91,5 +91,5 @@ test('하단 고정 영역 아래 여백은 16 + inset 이상', async () => {
 
 test('셋째 줄은 마지막 세 어절을 붙여 "자녀가 / 취향을 알아 가요"로만 나뉜다', () => {
   const {keepTail} = require('../src/features/link/RoleSelect');
-  expect(keepTail('고른 답으로 자녀가 취향을 알아 가요')).toBe('고른 답으로 자녀가 취향을\u00A0알아\u00A0가요');
+  expect(keepTail('고르신 답으로 자녀가 취향을 알아 가요')).toBe('고르신 답으로 자녀가 취향을\u00A0알아\u00A0가요');
 });

@@ -28,7 +28,7 @@ test('Text20은 작은 글자 크기를 요청해도 20 이상', () => {
 test('SelectCard는 선택 상태를 글자로도 알린다', () => {
   const fn = jest.fn();
   render(<SelectCard label="봄" selected onPress={fn} />);
-  expect(screen.getByText('골랐어요')).toBeTruthy();
+  expect(screen.getByText('고르셨어요')).toBeTruthy();
   fireEvent.press(screen.getByText('봄'));
   expect(fn).toHaveBeenCalled();
 });

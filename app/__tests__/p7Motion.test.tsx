@@ -175,7 +175,7 @@ test('미연결도 같은 연출(기기에 찍힘), 문구 11-7 #19', async () =
   await waitFor(() => screen.getByRole('button', {name: '오늘은 넘어갈게요'}));
   await press('오늘은 넘어갈게요');
   await waitFor(() => screen.getByTestId('p7-mount'));
-  await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고른 답이 가족에게 보여요/));
+  await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고르신 답이 가족에게 보여요/));
   await waitFor(() => expect(vibrate).toHaveBeenCalledTimes(1));
   expect(screen.getAllByTestId(`stamp-on-${today}`, hidden).length).toBeGreaterThan(0);
 });

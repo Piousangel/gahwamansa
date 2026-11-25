@@ -39,7 +39,7 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   await pressWhenEnabled('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   // 미연결은 서버 기록 없이 도장만 기기에 찍힌다(리드 결정, P7 11-7 #19)
-  await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고른 답이 가족에게 보여요/));
+  await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고르신 답이 가족에게 보여요/));
   expect(save).not.toHaveBeenCalled();
   expect(rec).not.toHaveBeenCalled();
 });

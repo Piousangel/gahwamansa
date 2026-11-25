@@ -20,7 +20,7 @@ insert into public.device_tokens (user_id, token) values
   ('7b210000-0000-0000-0000-0000000000a1', 'h3_a1_000000000000000001');
 insert into public.push_copy (kind, title, body, body_fallback, body_many) values
   ('cheer_arrived', '가족이 보낸 응원이 왔어요', '{응원}', null, '응원이 {n}개 왔어요'),
-  ('parent_connected', '{호칭} 폰과 연결됐어요', '고른 답을 보여 줄지는 {호칭}께서 정해요', null, null),
+  ('parent_connected', '{호칭} 폰과 연결됐어요', '고르신 답을 보여 줄지는 {호칭}께서 정해요', null, null),
   ('parent_reconnected', '{호칭} 폰과 다시 연결됐어요', '새 폰으로 이어졌어요. 지난 답은 그대로 있어요', null, null),
   ('parent_first_answer', '{호칭}께서 답을 고르셨어요', '앨범에서 보고 이야기해 볼까요?', null, null);
 insert into public.cheer_texts (message_key, text) values ('love_you', '사랑해요, 오늘도 좋은 하루예요');

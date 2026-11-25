@@ -39,7 +39,7 @@ test('아직 안 고른 질문은 아무것도 선택되어 있지 않다', asyn
   await donePhoto();
   await pressCourseNext();
   await waitFor(() => screen.getByText('봄'));
-  expect(screen.queryByText('골랐어요')).toBeNull();
+  expect(screen.queryByText('고르셨어요')).toBeNull();
 });
 
 test('자판으로 쓰기 화면은 오늘의 단어(keyword)를 음절 칸으로 보여 준다', async () => {

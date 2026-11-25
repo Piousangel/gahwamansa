@@ -179,8 +179,8 @@ test('runDaily: 인증 토큰 실패면 선점분을 failed로 기록하고 conf
 });
 
 test('buildMessage(0038): 서버가 채운 대상별 문구·채널·종류를 쓴다', () => {
-  const m = buildMessage({ profile_id: 'c1', token: 'tk', platform: 'android', kind: 'parent_connected', channel: 'family', title: '엄마 폰과 연결됐어요', body: '고른 답을 보여 줄지는 엄마께서 정해요' }, null);
-  assert.deepEqual(m.message.notification, { title: '엄마 폰과 연결됐어요', body: '고른 답을 보여 줄지는 엄마께서 정해요' });
+  const m = buildMessage({ profile_id: 'c1', token: 'tk', platform: 'android', kind: 'parent_connected', channel: 'family', title: '엄마 폰과 연결됐어요', body: '고르신 답을 보여 줄지는 엄마께서 정해요' }, null);
+  assert.deepEqual(m.message.notification, { title: '엄마 폰과 연결됐어요', body: '고르신 답을 보여 줄지는 엄마께서 정해요' });
   assert.equal(m.message.android.notification.channel_id, 'family');
   assert.deepEqual(m.message.data, { kind: 'parent_connected' });
   const noBody = buildMessage({ profile_id: 'p', token: 'tk', platform: 'android', kind: 'cheer_arrived', channel: 'cheer', title: '응원', body: null }, null);

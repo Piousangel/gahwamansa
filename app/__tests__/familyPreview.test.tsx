@@ -46,7 +46,7 @@ test('답 있음: 호칭의 최근 답 카드(고른 답·날짜) + 지난 답 2
   const older = within(device).getAllByTestId('preview-older');
   expect(older.map(o => o.props.accessibilityLabel)).toEqual(['2025년 11월 15일, 산과 바다 중, 바다', '2025년 11월 13일, 곶감과 홍시 중, 홍시']);
   expect(within(device).queryByText(/나무|사진/)).toBeNull();
-  expect(screen.getByTestId('preview-sub').props.children).toBe('최근 한 달 고른 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요');
+  expect(screen.getByTestId('preview-sub').props.children).toBe('최근 한 달 고르신 답과 날짜가 보여요. 연결된 날과 답을 보여 주는 중인지도 보여요');
   expect(screen.getByText('• 사진과 자판으로 쓴 글자는 보이지 않아요')).toBeTruthy();
   await press('알겠어요');
   await waitFor(() => screen.getByTestId('settings-row-preview'));
@@ -59,7 +59,7 @@ test('동의 거부·철회: "가족 휴대폰 화면" 윗줄 유지 + "엄마�
   expect(within(card).getByText('엄마의 최근 답')).toBeTruthy();
   expect(within(card).getByText('답을 나누지 않는 중이에요')).toBeTruthy();
   expect(within(device).queryByText('가을')).toBeNull();
-  expect(screen.getByTestId('preview-sub').props.children).toBe('지금은 고른 답이 가족에게 보이지 않아요. 답을 보여 주지 않는 중인 것만 보여요'); // 라이터 sub_off
+  expect(screen.getByTestId('preview-sub').props.children).toBe('지금은 고르신 답이 가족에게 보이지 않아요. 답을 보여 주지 않는 중인 것만 보여요'); // 라이터 sub_off
   expect(screen.queryByTestId('preview-notes')).toBeNull(); // 거부 상태에서는 '보이지 않아요' 두 줄 없음
 });
 
@@ -72,7 +72,7 @@ test('0050 호칭은 summary.parents[0].title — 가족 기본 호칭(parent_ti
 
 test('아직 고른 답 없음: "고른 답이 생기면 여기에 보여요", 소개문은 그대로', async () => {
   const device = await openPreview({consented: true, latest: null, history: []});
-  expect(within(within(device).getByTestId('preview-empty')).getByText('고른 답이 생기면 여기에 보여요')).toBeTruthy();
+  expect(within(within(device).getByTestId('preview-empty')).getByText('고르신 답이 생기면 여기에 보여요')).toBeTruthy();
   expect(screen.getByTestId('preview-sub').props.children).toMatch(/^최근 한 달/);
 });
 
@@ -91,8 +91,8 @@ test('리뷰 M2: 불러오기 실패(오프라인)면 빈 상태·기본 호칭�
   const failed = await waitFor(() => screen.getByTestId('preview-failed'));
   const device = screen.getByTestId('preview-device');
   expect(within(device).getByText('가족 휴대폰 화면')).toBeTruthy();
-  expect(within(device).queryByTestId('preview-empty')).toBeNull(); // '고른 답이 생기면 여기에 보여요'(답이 없다는 뜻) 금지
-  expect(within(device).queryByText('고른 답이 생기면 여기에 보여요')).toBeNull();
+  expect(within(device).queryByTestId('preview-empty')).toBeNull(); // '고르신 답이 생기면 여기에 보여요'(답이 없다는 뜻) 금지
+  expect(within(device).queryByText('고르신 답이 생기면 여기에 보여요')).toBeNull();
   expect(within(device).queryByText(/부모님의 최근 답|엄마의 최근 답/)).toBeNull();
   await act(async () => {
     fireEvent.press(within(failed).getByRole('button'));
