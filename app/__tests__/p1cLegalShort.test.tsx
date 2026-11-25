@@ -3,6 +3,7 @@
 // ② 1.6배 이상 본문 긴 문장의 두 링크(이용약관·개인정보 처리방침)가 본문 스크롤 안에 있다(렌더 트리 = 스크롤로 닿음)
 // ③ 배율과 상관없이 연결하면 같은 동의 기록(terms_agreements 두 문서 버전) 호출
 import React from 'react';
+import {StyleSheet} from 'react-native';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
@@ -66,4 +67,16 @@ test.each([1, 1.5, 1.6, 2])('③ 글자 %s배: 연결하면 같은 동의 기록
   await press('이 번호로 연결하기');
   await waitFor(() => expect(rec).toHaveBeenCalledWith(TERMS_VERSION, PRIVACY_VERSION));
   expect(rec).toHaveBeenCalledTimes(1);
+});
+
+// 대기열 50: 짧은 고지의 '약관'은 본문 긴 문장의 링크와 같은 모양(굵게 + 밑줄 + 같은 색)이어야 링크로 보인다.
+// (캡처에서 둘 다 밑줄이 없던 것은 staging env 에 TERMS_URL·PRIVACY_URL 이 비어 있어서 — 주소가 없으면 누를 수 없으므로
+//  일부러 일반 글자로 그린다(LegalText 규칙). 주소가 정해진 빌드에서는 아래처럼 같은 모양이다)
+test.each([1.6, 2])("대기열 50 글자 %s배: 짧은 고지 '약관'은 긴 문장 링크와 같은 밑줄·굵기·색", async scale => {
+  await p1c(scale);
+  const flat = (n: {props: {style?: unknown}}) => StyleSheet.flatten(n.props.style as never) as {textDecorationLine?: string; fontWeight?: string; color?: string};
+  const short = flat(within(screen.getByTestId('legal-short')).getByRole('link'));
+  const long = flat(within(screen.getByTestId('legal-line')).getAllByRole('link')[0]);
+  expect(short.textDecorationLine).toBe('underline');
+  expect({deco: short.textDecorationLine, weight: short.fontWeight, color: short.color}).toEqual({deco: long.textDecorationLine, weight: long.fontWeight, color: long.color});
 });

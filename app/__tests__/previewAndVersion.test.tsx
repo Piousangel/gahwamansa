@@ -6,7 +6,7 @@ import {createFakeApi} from '../src/features/fakeApi';
 import {createRealApi} from '../src/features/realApi';
 import {OfflineError} from '../src/features/types';
 import {CONSENT_VERSION} from '../src/copy/copy';
-import {enterCode, press, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
+import {enterCode, press, pressWhenEnabled, toHome, toHomeConsented, pressCourseNext} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
 
 // 첫 테스트만 콜드 스타트(첫 로드·첫 렌더)를 떠안지 않게 파일 시작 때 한 번 예열(#245 M2, testUtils/warm)
@@ -34,8 +34,9 @@ test('미연결 열람: 코스를 끝까지 보되 저장·기록 API 는 부르
   fireEvent.press(screen.getByText('봄'));
   await press('정했어요');
   await pressCourseNext();
+  // 대기열 49: '다 썼어요'는 꺼진 채 화면 도착 표지로만 쓴다(누르지 않음). 누르는 '오늘은 넘어갈게요'는 저장 중(busy) 꺼질 수 있어 켜질 때까지 기다린다(#276)
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('오늘은 넘어갈게요');
+  await pressWhenEnabled('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   // 미연결은 서버 기록 없이 도장만 기기에 찍힌다(리드 결정, P7 11-7 #19)
   await waitFor(() => screen.getByText(/번호를 받으면 그때부터 고른 답이 가족에게 보여요/));

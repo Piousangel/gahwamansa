@@ -4,7 +4,7 @@ import {render, screen, waitFor, within} from '@testing-library/react-native';
 import {AppRoot} from '../src/app/AppRoot';
 import {createFakeApi} from '../src/features/fakeApi';
 import {kstDateLine, stampsFromDates} from '../src/features/course/stamps';
-import {press, pressCourseNext} from '../testUtils/flow';
+import {press, pressCourseNext, pressWhenEnabled} from '../testUtils/flow';
 import {setupWarmAppRoot} from '../testUtils/warm';
 import {setWeekStripForTest as setWeekStripForO6} from '../src/features/course/WeekStampStrip';
 // 오너 결정 O-6(11-20)으로 도장 줄은 기본 꺼짐. 이 파일은 줄이 켜진 때의 동작(컴포넌트는 남김)을 검사하므로 켜고 시작한다
@@ -80,8 +80,9 @@ test('오늘 코스를 마치면 도장 줄을 다시 불러온다', async () =>
   await waitFor(() => screen.getByTestId('course-week'));
   const n = week.mock.calls.length;
   await pressCourseNext();
+  // 대기열 49: '다 썼어요'는 꺼진 채 화면 도착 표지로만 쓴다(누르지 않음). 누르는 '오늘은 넘어갈게요'는 저장 중(busy) 꺼질 수 있어 켜질 때까지 기다린다(#276)
   await waitFor(() => screen.getByRole('button', {name: '다 썼어요'}));
-  await press('오늘은 넘어갈게요');
+  await pressWhenEnabled('오늘은 넘어갈게요');
   await waitFor(() => screen.getByText('오늘 코스를 마쳤어요'));
   await waitFor(() => expect(week.mock.calls.length).toBeGreaterThan(n));
 });
